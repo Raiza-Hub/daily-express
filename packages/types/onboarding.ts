@@ -1,7 +1,4 @@
-import z from "zod"
-
-export const SOCIALS = ["facebook", "instagram", "twitter", "linkedin"] as const
-
+import { z } from "zod"
 
 export const onboardingSchema = z.object({
   firstName: z
@@ -14,10 +11,10 @@ export const onboardingSchema = z.object({
     .min(3, { error: "Last name is required." })
     .max(256, { error: "Last name must be at most 256 characters long." }),
 
-  file: z.union([
-    z.instanceof(File),
-    z.url(),
-  ]).optional(),
+  file: z
+    .instanceof(File, { error: "Image is required." })
+    .optional()
+    .refine((val) => val instanceof File, { message: "Image is required." }),
   
   email: z
     .email({ error: "Invalid email address" }),

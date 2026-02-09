@@ -6,12 +6,6 @@
     "ussd": "*901#"
   },
   {
-    "name": "Access Bank (Diamond)",
-    "slug": "access-bank-diamond",
-    "code": "063",
-    "ussd": "*426#"
-  },
-  {
     "name": "ALAT by WEMA",
     "slug": "alat-by-wema",
     "code": "035A",
@@ -154,12 +148,6 @@
     "slug": "parallex-bank",
     "code": "526",
     "ussd": "*322*318*0#"
-  },
-  {
-    "name": "PayCom",
-    "slug": "paycom",
-    "code": "100004",
-    "ussd": "*955#"
   },
   {
     "name": "Polaris Bank",

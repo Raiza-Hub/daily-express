@@ -85,6 +85,13 @@ const OnboardingForm = () => {
                 value={currentStep}
                 onValueChange={async (next) => {
                     if (next === currentStep) return
+                    
+                    // Allow backward navigation without validation
+                    if (next < currentStep) {
+                        setCurrentStep(next)
+                        return
+                    }
+
                     const currentData = STEPS[currentStep - 1]
                     if (!currentData) return
 

@@ -3,7 +3,7 @@
 import { useFileUpload } from "@repo/ui/hooks/use-file-upload";
 import { cn } from "@repo/ui/lib/utils";
 import { TonboardingSchema } from "@repo/types/index";
-import { useEffect, useMemo } from "react";
+import { useEffect, useMemo, useRef } from "react";
 import { Controller, useFormContext, useWatch } from "react-hook-form";
 import { Button } from "@repo/ui/components/button";
 import { Select, SelectContent, SelectItem, SelectSeparator, SelectTrigger, SelectValue } from "@repo/ui/components/select";
@@ -31,6 +31,9 @@ const BasicInfoForm = () => {
 
     const currentFile = files[0] || null;
 
+    const addFilesRef = useRef(addFiles);
+    addFilesRef.current = addFiles;
+
     useEffect(() => {
         // Only set if currentFile.file is actually a File
         if (currentFile?.file instanceof File && formFile !== currentFile.file) {
@@ -39,9 +42,9 @@ const BasicInfoForm = () => {
 
         // If RHF has a File but hook is empty
         if (!currentFile && formFile instanceof File) {
-            addFiles([formFile]); // wrap in your hook
+            addFilesRef.current([formFile]);
         }
-    }, [currentFile, formFile, setValue, addFiles]);
+    }, [currentFile, formFile, setValue]);
 
     return (
         <div>
