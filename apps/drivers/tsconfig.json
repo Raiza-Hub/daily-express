@@ -7,9 +7,10 @@
       }
     ],
     "paths": {
-    "@/*": ["./src/*"],
-    "@repo/ui/*": ["../../packages/ui/src/*"]
-  }
+      "@/*": ["./src/*"],
+      "@repo/ui/*": ["../../packages/ui/src/*"],
+      "@repo/types/*": ["../../packages/types/*"]
+    }
   },
   "include": [
     "**/*.ts",
