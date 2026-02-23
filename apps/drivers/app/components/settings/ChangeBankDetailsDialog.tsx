@@ -46,6 +46,9 @@ import { useState } from "react";
 import { Controller, useForm } from "react-hook-form";
 import { cn } from "@repo/ui/lib/utils";
 import { useIsMobile } from "@repo/ui/hooks/use-is-mobile";
+import { zodResolver } from "@hookform/resolvers/zod";
+import { onboardingSchema } from "@repo/types/index";
+import { z } from "zod";
 
 interface Bank {
     name: string;
@@ -54,11 +57,13 @@ interface Bank {
     ussd: string;
 }
 
-interface BankDetailsFormValues {
-    accountName: string;
-    accountNumber: string;
-    bankName: string;
-}
+const ChangeBankDetailsSchema = onboardingSchema.pick({
+    accountName: true,
+    accountNumber: true,
+    bankName: true,
+});
+
+type TBankDetailsFormValues = z.infer<typeof ChangeBankDetailsSchema>;
 
 export default function ChangeBankDetailsDialog() {
     const [open, setOpen] = useState(false);
@@ -72,7 +77,8 @@ export default function ChangeBankDetailsDialog() {
         watch,
         reset,
         formState: { isSubmitting, errors },
-    } = useForm<BankDetailsFormValues>({
+    } = useForm<TBankDetailsFormValues>({
+        resolver: zodResolver(ChangeBankDetailsSchema),
         defaultValues: {
             accountName: "ADEBOLA OLUWASEMILORE WISDOM",
             accountNumber: "0524404864",
@@ -85,7 +91,7 @@ export default function ChangeBankDetailsDialog() {
         (b) => b.name === selectedBankName
     );
 
-    const onSubmit = async (data: BankDetailsFormValues) => {
+    const onSubmit = async (data: TBankDetailsFormValues) => {
         console.log("Bank details submitted:", data);
         await new Promise((resolve) => setTimeout(resolve, 1000));
         setOpen(false);
@@ -99,7 +105,6 @@ export default function ChangeBankDetailsDialog() {
                     <Controller
                         name="accountName"
                         control={control}
-                        rules={{ required: "Account name is required" }}
                         render={({ field, fieldState }) => (
                             <Field data-invalid={fieldState.invalid}>
                                 <FieldLabel htmlFor="accountName">
@@ -130,7 +135,6 @@ export default function ChangeBankDetailsDialog() {
                     <Controller
                         name="accountNumber"
                         control={control}
-                        rules={{ required: "Account number is required" }}
                         render={({ field, fieldState }) => (
                             <Field data-invalid={fieldState.invalid}>
                                 <FieldLabel htmlFor="accountNumber">
@@ -158,7 +162,6 @@ export default function ChangeBankDetailsDialog() {
                     <Controller
                         name="bankName"
                         control={control}
-                        rules={{ required: "Bank name is required" }}
                         render={({ field, fieldState }) => (
                             <Field data-invalid={fieldState.invalid}>
                                 <FieldLabel htmlFor="bankName">
