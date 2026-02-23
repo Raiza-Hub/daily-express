@@ -6,6 +6,7 @@ import { SignUpSchema, TSignUpSchema, } from "@repo/types/authSchema";
 import { Button } from "@repo/ui/components/button";
 import { Field, FieldError, FieldLabel } from "@repo/ui/components/field";
 import { Input } from "@repo/ui/components/input";
+import dayjs from "dayjs";
 import { useRouter } from "next/navigation";
 import { useId, useMemo, useState } from "react";
 import { Controller, useForm } from "react-hook-form";
@@ -164,8 +165,16 @@ const SignUpForm = () => {
                                         {...field}
                                         id="dateOfBirth"
                                         type="date"
-                                        value={field.value ? new Date(field.value).toISOString().split('T')[0] : ''}
-                                        onChange={(e) => field.onChange(e.target.valueAsDate)}
+                                        aria-invalid={fieldState.invalid}
+                                        value={field.value ? dayjs(field.value).format("YYYY-MM-DD") : ""}
+                                        onChange={(e) =>
+                                            field.onChange(
+                                                e.target.value
+                                                    ? dayjs(e.target.value, "YYYY-MM-DD").toDate()
+                                                    : undefined
+                                            )
+                                        }
+                                        className="bg-transparent [&::-webkit-calendar-picker-indicator]:hidden"
                                     />
                                     {fieldState.invalid && (
                                         <FieldError errors={[fieldState.error]} />

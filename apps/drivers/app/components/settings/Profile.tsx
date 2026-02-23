@@ -12,12 +12,13 @@ import { Controller, useForm } from "react-hook-form";
 import ChangePasswordDialog from "./ChangePasswordDialog";
 import DeleteAccount from "./DeleteAccount";
 import { z } from "zod";
+import dayjs from "dayjs";
 
 const ProfileSchema = SignUpSchema.omit({ password: true });
 type TProfileSchema = z.infer<typeof ProfileSchema>;
 
 
-const profile = () => {
+const Profile = () => {
     const [open, setOpen] = useState(false)
     const [date, setDate] = useState<Date | undefined>(undefined)
 
@@ -137,8 +138,15 @@ const profile = () => {
                                             {...field}
                                             id="dateOfBirth"
                                             type="date"
-                                            value={field.value ? new Date(field.value).toISOString().split('T')[0] : ''}
-                                            onChange={(e) => field.onChange(e.target.valueAsDate)}
+                                            aria-invalid={fieldState.invalid}
+                                            value={field.value ? dayjs(field.value).format("YYYY-MM-DD") : ""}
+                                            onChange={(e) =>
+                                                field.onChange(
+                                                    e.target.value
+                                                        ? dayjs(e.target.value, "YYYY-MM-DD").toDate()
+                                                        : undefined
+                                                )
+                                            }
                                             className="bg-transparent [&::-webkit-calendar-picker-indicator]:hidden"
                                         />
                                         {fieldState.invalid && (
@@ -179,4 +187,4 @@ const profile = () => {
         </div>
     )
 }
-export default profile
+export default Profile

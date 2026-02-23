@@ -51,10 +51,6 @@ import CountryList from "../../../country-list.json";
 import { cn } from "@repo/ui/lib/utils";
 import DisableAccount from "./DisableAccount";
 
-const GENDER = [
-    { label: "Male", value: "male" },
-    { label: "Female", value: "female" },
-] as const;
 
 export default function DriverInfo() {
     const [openCountry, setOpenCountry] = useState(false);

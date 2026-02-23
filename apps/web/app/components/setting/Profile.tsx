@@ -11,9 +11,14 @@ import { useState } from "react";
 import { Controller, useForm } from "react-hook-form";
 import ChangePasswordDialog from "./ChangePasswordDialog";
 import DeleteAccount from "./DeleteAccount";
+import { z } from "zod";
+import dayjs from "dayjs";
+
+const ProfileSchema = SignUpSchema.omit({ password: true });
+type TProfileSchema = z.infer<typeof ProfileSchema>;
 
 
-const profile = () => {
+const Profile = () => {
     const [open, setOpen] = useState(false)
     const [date, setDate] = useState<Date | undefined>(undefined)
 
@@ -23,23 +28,22 @@ const profile = () => {
         watch,
         setValue,
         formState: { errors, isSubmitting },
-    } = useForm<TSignUpSchema>({
-        resolver: zodResolver(SignUpSchema),
+    } = useForm<TProfileSchema>({
+        resolver: zodResolver(ProfileSchema),
         defaultValues: {
             firstName: "",
             lastName: "",
             email: "",
-            password: "",
             dateOfBirth: new Date(),
         },
     });
 
-    const onSubmit = (data: TSignUpSchema) => {
+    const onSubmit = (data: TProfileSchema) => {
         console.log("Account form submitted:", data);
     };
 
     return (
-        <div className="w-full max-w-3xl mx-auto space-y-20">
+        <div className="space-y-20">
             <div>
                 <div className="mb-6 py-4 border-b border-gray-100">
                     <h1 className="text-xl font-semibold mb-1">Profile</h1>
@@ -52,7 +56,7 @@ const profile = () => {
 
                         {/* Full Name */}
                         <div className="grid grid-cols-1 sm:grid-cols-[200px_1fr] items-start gap-x-6 gap-y-2">
-                            <FieldLabel className="pt-2.5">
+                            <FieldLabel htmlFor="firstName" className="pt-2.5">
                                 Full Name
                             </FieldLabel>
 
@@ -63,6 +67,7 @@ const profile = () => {
                                     render={({ field, fieldState }) => (
                                         <Field data-invalid={fieldState.invalid}>
                                             <Input
+                                                id="firstName"
                                                 {...field}
                                                 aria-invalid={fieldState.invalid}
                                                 placeholder="First name on ID"
@@ -80,6 +85,7 @@ const profile = () => {
                                     render={({ field, fieldState }) => (
                                         <Field data-invalid={fieldState.invalid}>
                                             <Input
+                                                id="lastName"
                                                 {...field}
                                                 aria-invalid={fieldState.invalid}
                                                 placeholder="Last name on ID"
@@ -94,7 +100,7 @@ const profile = () => {
                         </div>
 
                         <div className="grid grid-cols-1 sm:grid-cols-[200px_1fr] items-start gap-x-6 gap-y-2">
-                            <FieldLabel className="pt-2.5">
+                            <FieldLabel htmlFor="email" className="pt-2.5">
                                 Email
                             </FieldLabel>
 
@@ -104,6 +110,7 @@ const profile = () => {
                                 render={({ field, fieldState }) => (
                                     <Field data-invalid={fieldState.invalid}>
                                         <Input
+                                            {...field}
                                             id="email"
                                             aria-invalid={fieldState.invalid}
                                             placeholder="Email"
@@ -118,7 +125,7 @@ const profile = () => {
 
                         {/* Date of Birth */}
                         <div className="grid grid-cols-1 sm:grid-cols-[200px_1fr] items-start gap-x-6 gap-y-2">
-                            <FieldLabel className="pt-2.5">
+                            <FieldLabel htmlFor="dateOfBirth" className="pt-2.5">
                                 Date of birth
                             </FieldLabel>
 
@@ -131,8 +138,15 @@ const profile = () => {
                                             {...field}
                                             id="dateOfBirth"
                                             type="date"
-                                            value={field.value ? new Date(field.value).toISOString().split('T')[0] : ''}
-                                            onChange={(e) => field.onChange(e.target.valueAsDate)}
+                                            aria-invalid={fieldState.invalid}
+                                            value={field.value ? dayjs(field.value).format("YYYY-MM-DD") : ""}
+                                            onChange={(e) =>
+                                                field.onChange(
+                                                    e.target.value
+                                                        ? dayjs(e.target.value, "YYYY-MM-DD").toDate()
+                                                        : undefined
+                                                )
+                                            }
                                             className="bg-transparent [&::-webkit-calendar-picker-indicator]:hidden"
                                         />
                                         {fieldState.invalid && (
@@ -146,7 +160,7 @@ const profile = () => {
                     </FieldGroup>
 
                     <div className="mt-8 flex justify-end">
-                        <Button variant="secondary" type="submit" disabled={isSubmitting}>
+                        <Button variant="secondary" type="submit" className="cursor-pointer" disabled={isSubmitting}>
                             {isSubmitting ? "Saving…" : "Save Changes"}
                         </Button>
                     </div>
@@ -154,9 +168,14 @@ const profile = () => {
             </div>
 
             <div>
-                <h2 className="text-lg font-semibold mb-4 border-b pb-2">Authentication</h2>
+                <div className="mb-6 py-4 border-b border-gray-100">
+                    <h2 className="text-xl font-semibold mb-1">Authentication</h2>
+                    <p className="text-sm text-muted-foreground">
+                        Manage your password and authentication settings.
+                    </p>
+                </div>
 
-                <div className="grid grid-cols-1 sm:grid-cols-[200px_1fr] items-start gap-x-6 gap-y-2">
+                <div className="grid grid-cols-[200px_1fr] items-start gap-x-6 gap-y-2">
                     <FieldLabel className="pt-2.5">
                         Password
                     </FieldLabel>
@@ -168,4 +187,4 @@ const profile = () => {
         </div>
     )
 }
-export default profile
+export default Profile

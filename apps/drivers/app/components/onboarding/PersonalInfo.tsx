@@ -109,7 +109,6 @@ const PersonalInfoForm = () => {
                                         id="firstName"
                                         aria-invalid={fieldState.invalid}
                                         placeholder="First name on ID"
-                                        autoComplete="off"
                                     />
                                     {fieldState.invalid && (
                                         <FieldError errors={[fieldState.error]} />
@@ -133,7 +132,6 @@ const PersonalInfoForm = () => {
                                         id="lastName"
                                         aria-invalid={fieldState.invalid}
                                         placeholder="Last name on ID"
-                                        autoComplete="off"
                                     />
                                     {fieldState.invalid && (
                                         <FieldError errors={[fieldState.error]} />
