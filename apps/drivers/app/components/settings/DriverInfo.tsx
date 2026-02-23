@@ -7,7 +7,8 @@ import {
     TrashIcon,
     UserCircleIcon
 } from "@phosphor-icons/react";
-import { onboardingSchema, TonboardingSchema } from "@repo/types/index";
+import { onboardingSchema } from "@repo/types/index";
+import { z } from "zod";
 import { Button } from "@repo/ui/components/button";
 import {
     Command,
@@ -51,6 +52,14 @@ import CountryList from "../../../country-list.json";
 import { cn } from "@repo/ui/lib/utils";
 import DisableAccount from "./DisableAccount";
 
+const DriverInfoSchema = onboardingSchema.omit({
+    bankName: true,
+    accountNumber: true,
+    accountName: true,
+});
+
+type TDriverInfoSchema = z.infer<typeof DriverInfoSchema>;
+
 
 export default function DriverInfo() {
     const [openCountry, setOpenCountry] = useState(false);
@@ -70,8 +79,8 @@ export default function DriverInfo() {
         watch,
         setValue,
         formState: { errors, isSubmitting },
-    } = useForm<TonboardingSchema>({
-        resolver: zodResolver(onboardingSchema),
+    } = useForm<TDriverInfoSchema>({
+        resolver: zodResolver(DriverInfoSchema),
         defaultValues: {
             firstName: "",
             lastName: "",
@@ -82,9 +91,6 @@ export default function DriverInfo() {
             city: "",
             state: "",
             phoneNumber: "",
-            bankName: "",
-            accountNumber: "",
-            accountName: "",
         },
     });
 
@@ -97,7 +103,7 @@ export default function DriverInfo() {
 
     const currentFile = files[0] || null;
 
-    const onSubmit = (data: TonboardingSchema) => {
+    const onSubmit = (data: TDriverInfoSchema) => {
         console.log("Account form submitted:", data);
     };
 

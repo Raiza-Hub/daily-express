@@ -205,8 +205,9 @@ const SignUpForm = () => {
                                         />
                                         <button
                                             type="button"
+                                            aria-label={isVisible ? "Hide password" : "Show password"}
                                             onClick={toggleVisibility}
-                                            className="absolute inset-y-0 right-0 flex w-9 items-center justify-center rounded-e-md text-muted-foreground hover:text-foreground focus:outline-none"
+                                            className="absolute inset-y-0 right-0 flex w-9 items-center justify-center rounded-e-md text-muted-foreground hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
                                         >
                                             {isVisible ? (
                                                 <EyeIcon size={16} aria-hidden="true" />
