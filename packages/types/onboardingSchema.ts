@@ -12,18 +12,16 @@ export const onboardingSchema = z.object({
     .max(256, { error: "Last name must be at most 256 characters long." }),
 
   file: z
-    .instanceof(File, { error: "Image is required." })
+    .instanceof(File, { error: "Profile photo is required." })
     .optional()
-    .refine((val) => val instanceof File, { message: "Image is required." }),
+    .refine((val) => val instanceof File, { message: "Profile photo is required." }),
   
   email: z
-    .email({ error: "Invalid email address" }),
-  
-  gender: z.enum(["male", "female"], { error: "Gender is required" }),
+    .email({ error: "Enter a valid email address" }),
 
   country: z
     .string()
-    .min(1, { error: "Country is required" }),
+    .min(1, { error: "Please select your country" }),
   
   address: z
     .string()

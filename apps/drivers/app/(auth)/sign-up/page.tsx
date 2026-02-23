@@ -1,4 +1,4 @@
-import OnboardingForm from "../../components/onboarding-form/onboardingForm"
+import OnboardingForm from "../../components/onboarding/onboardingForm"
 
 
 const Page = async () => {

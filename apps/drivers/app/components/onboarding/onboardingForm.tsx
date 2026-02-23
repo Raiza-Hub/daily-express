@@ -16,14 +16,16 @@ import { useState } from "react"
 import { FormProvider, useForm } from "react-hook-form"
 import { Button } from "@repo/ui/components/button";
 import { CircleNotchIcon } from "@phosphor-icons/react";
-import BasicInfoForm from "./BasicInfo";
+import PersonalInfoForm from "./PersonalInfo";
 import AddressInfoForm from "./AddressInfo";
 import PaymentInfo from "./PaymentInfo";
+import Link from "next/link";
+import { Icons } from "../Icons";
 
 const STEPS = [
-    { id: 1, title: "Basic Info", description: "Enter your basic details", Component: BasicInfoForm, fields: ["file", "firstName", "lastName", "email", "gender"] },
-    { id: 2, title: "Address Info", description: "Provide your address details", Component: AddressInfoForm, fields: ["city", "state", "country", "address", "phoneNumber"] },
-    { id: 3, title: "Payment Info", description: "Please provide payment details.", Component: PaymentInfo, fields: ["bankName", "accountNumber", "accountName"] }
+    { id: 1, title: "Personal Information", description: "Enter your details as they appear on your government ID.", Component: PersonalInfoForm, fields: ["file", "firstName", "lastName", "email"] },
+    { id: 2, title: "Location & Contact Details", description: "Provide your current residential and contact details.", Component: AddressInfoForm, fields: ["city", "state", "country", "address", "phoneNumber"] },
+    { id: 3, title: "Payment Information", description: "Your earnings will be paid into this account.", Component: PaymentInfo, fields: ["bankName", "accountNumber", "accountName"] }
 ]
 
 const OnboardingForm = () => {
@@ -39,7 +41,6 @@ const OnboardingForm = () => {
             lastName: "",
             file: undefined,
             email: "",
-            gender: undefined,
             country: "",
             address: "",
             city: "",
@@ -81,6 +82,12 @@ const OnboardingForm = () => {
 
     return (
         <div className="max-w-4xl mx-auto space-y-8 text-center">
+            {/* <div className='ml-4 flex justify-center items-center lg:ml-0'>
+                <Link href='/'>
+                    <Icons.logo className='h-10 w-10' />
+                </Link>
+            </div> */}
+
             <Stepper
                 value={currentStep}
                 onValueChange={async (next) => {
