@@ -1,3 +1,5 @@
+import { KeyboardEvent, ClipboardEvent } from "react";
+
 // components/otp/types.ts
 
 export interface OTPInputProps {
@@ -16,8 +18,8 @@ export interface OTPInputFieldProps {
   disabled: boolean;
   error: boolean;
   onChange: (index: number, value: string) => void;
-  onKeyDown: (index: number, e: React.KeyboardEvent<HTMLInputElement>) => void;
-  onPaste: (e: React.ClipboardEvent<HTMLInputElement>) => void;
+ onKeyDown: (index: number, e: KeyboardEvent<HTMLInputElement>) => void;
+ onPaste: (e: ClipboardEvent<HTMLInputElement>) => void;
   onFocus: (index: number) => void;
   inputRef: (el: HTMLInputElement | null) => void;
 }

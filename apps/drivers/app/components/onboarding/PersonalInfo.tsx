@@ -11,11 +11,6 @@ import { Input } from "@repo/ui/components/input";
 import { TrashIcon, UserCircleIcon } from "@phosphor-icons/react";
 import { Field, FieldError, FieldGroup, FieldLabel } from "@repo/ui/components/field";
 
-const GENDER = [
-    { label: "Male", value: "male" },
-    { label: "Female", value: "female" },
-] as const
-
 const PersonalInfoForm = () => {
     const { control, setValue, formState: { errors } } = useFormContext<TonboardingSchema>();
 

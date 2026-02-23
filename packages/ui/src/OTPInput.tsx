@@ -41,7 +41,7 @@ export const OTPInput: React.FC<OTPInputProps> = ({
                     onKeyDown={handleKeyDown}
                     onPaste={handlePaste}
                     onFocus={handleFocus}
-                    inputRef={(el) => (inputRefs.current[index] = el)}
+                    inputRef={(el) => { inputRefs.current[index] = el; }}
                 />
             ))}
         </div>

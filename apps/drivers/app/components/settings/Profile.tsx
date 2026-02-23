@@ -11,6 +11,11 @@ import { useState } from "react";
 import { Controller, useForm } from "react-hook-form";
 import ChangePasswordDialog from "./ChangePasswordDialog";
 import DeleteAccount from "./DeleteAccount";
+import { z } from "zod";
+
+const ProfileSchema = SignUpSchema.omit({ password: true });
+type TProfileSchema = z.infer<typeof ProfileSchema>;
+
 
 const profile = () => {
     const [open, setOpen] = useState(false)
@@ -22,18 +27,17 @@ const profile = () => {
         watch,
         setValue,
         formState: { errors, isSubmitting },
-    } = useForm<TSignUpSchema>({
-        resolver: zodResolver(SignUpSchema),
+    } = useForm<TProfileSchema>({
+        resolver: zodResolver(ProfileSchema),
         defaultValues: {
             firstName: "",
             lastName: "",
             email: "",
-            password: "",
             dateOfBirth: new Date(),
         },
     });
 
-    const onSubmit = (data: TSignUpSchema) => {
+    const onSubmit = (data: TProfileSchema) => {
         console.log("Account form submitted:", data);
     };
 
@@ -51,7 +55,7 @@ const profile = () => {
 
                         {/* Full Name */}
                         <div className="grid grid-cols-1 sm:grid-cols-[200px_1fr] items-start gap-x-6 gap-y-2">
-                            <FieldLabel className="pt-2.5">
+                            <FieldLabel htmlFor="firstName" className="pt-2.5">
                                 Full Name
                             </FieldLabel>
 
@@ -62,6 +66,7 @@ const profile = () => {
                                     render={({ field, fieldState }) => (
                                         <Field data-invalid={fieldState.invalid}>
                                             <Input
+                                                id="firstName"
                                                 {...field}
                                                 aria-invalid={fieldState.invalid}
                                                 placeholder="First name on ID"
@@ -79,6 +84,7 @@ const profile = () => {
                                     render={({ field, fieldState }) => (
                                         <Field data-invalid={fieldState.invalid}>
                                             <Input
+                                                id="lastName"
                                                 {...field}
                                                 aria-invalid={fieldState.invalid}
                                                 placeholder="Last name on ID"
@@ -93,7 +99,7 @@ const profile = () => {
                         </div>
 
                         <div className="grid grid-cols-1 sm:grid-cols-[200px_1fr] items-start gap-x-6 gap-y-2">
-                            <FieldLabel className="pt-2.5">
+                            <FieldLabel htmlFor="email" className="pt-2.5">
                                 Email
                             </FieldLabel>
 
@@ -103,6 +109,7 @@ const profile = () => {
                                 render={({ field, fieldState }) => (
                                     <Field data-invalid={fieldState.invalid}>
                                         <Input
+                                            {...field}
                                             id="email"
                                             aria-invalid={fieldState.invalid}
                                             placeholder="Email"
@@ -117,7 +124,7 @@ const profile = () => {
 
                         {/* Date of Birth */}
                         <div className="grid grid-cols-1 sm:grid-cols-[200px_1fr] items-start gap-x-6 gap-y-2">
-                            <FieldLabel className="pt-2.5">
+                            <FieldLabel htmlFor="dateOfBirth" className="pt-2.5">
                                 Date of birth
                             </FieldLabel>
 
