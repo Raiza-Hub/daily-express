@@ -139,8 +139,8 @@ function RouteCardItem({ route }: { route: RouteData }) {
 
                     <EditRouteSheet
                         defaultValues={{
-                            departureCity: "Lagos",
-                            arrivalCity: "Abuja",
+                            departureCity: { title: "Lagos", locality: "LOS", label: "Ojota Motor Park" },
+                            arrivalCity: { title: "Abuja", locality: "ABV", label: "Nnamdi Azikiwe International Airport" },
                             vehicleType: "car",
                             seatNumber: 8,
                             price: 900000,

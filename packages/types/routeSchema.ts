@@ -1,12 +1,14 @@
 import { z } from "zod";
 
+const locationSchema = z.object({
+  title: z.string().min(1, { error: "Location title is required" }),
+  locality: z.string().min(1, { error: "Location locality is required" }),
+  label: z.string().min(1, { error: "Location label is required" }),
+});
+
 export const routeSchema = z.object({
-  departureCity: z
-    .string()
-    .min(3, { error: "Departure city is required" }),
-  arrivalCity: z
-    .string()
-    .min(3, { error: "Arrival city is required" }),
+  departureCity: locationSchema,
+  arrivalCity: locationSchema,
   vehicleType: z
     .string()
     .min(1, { error: "Vehicle type is required" }),

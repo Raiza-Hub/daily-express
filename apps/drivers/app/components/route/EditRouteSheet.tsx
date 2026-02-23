@@ -58,11 +58,11 @@ export default function EditRouteSheet({
     });
 
     // Local state for location dropdown visibility & query text
-    const [departureCityQuery, setDepartureCityQuery] = useState(defaultValues?.departureCity ?? "");
+    const [departureCityQuery, setDepartureCityQuery] = useState(defaultValues?.departureCity?.title ?? "");
     const [showDepartureDropdown, setShowDepartureDropdown] = useState(false);
     const departureCityRef = useRef<HTMLDivElement>(null);
 
-    const [arrivalCityQuery, setArrivalCityQuery] = useState(defaultValues?.arrivalCity ?? "");
+    const [arrivalCityQuery, setArrivalCityQuery] = useState(defaultValues?.arrivalCity?.title ?? "");
     const [showArrivalDropdown, setShowArrivalDropdown] = useState(false);
     const arrivalCityRef = useRef<HTMLDivElement>(null);
 
@@ -134,7 +134,7 @@ export default function EditRouteSheet({
                                                         autoComplete="off"
                                                         onChange={(e) => {
                                                             setDepartureCityQuery(e.target.value);
-                                                            field.onChange(e.target.value);
+                                                            field.onChange({ title: e.target.value, locality: "Unknown", label: e.target.value });
                                                             setShowDepartureDropdown(true);
                                                         }}
                                                         onFocus={() => setShowDepartureDropdown(true)}
@@ -144,7 +144,7 @@ export default function EditRouteSheet({
                                                         visible={showDepartureDropdown}
                                                         onSelect={(loc) => {
                                                             setDepartureCityQuery(loc.city);
-                                                            field.onChange(loc.city);
+                                                            field.onChange({ title: loc.city, locality: loc.code, label: loc.airport });
                                                             setShowDepartureDropdown(false);
                                                         }}
                                                     />
@@ -176,7 +176,7 @@ export default function EditRouteSheet({
                                                         autoComplete="off"
                                                         onChange={(e) => {
                                                             setArrivalCityQuery(e.target.value);
-                                                            field.onChange(e.target.value);
+                                                            field.onChange({ title: e.target.value, locality: "Unknown", label: e.target.value });
                                                             setShowArrivalDropdown(true);
                                                         }}
                                                         onFocus={() => setShowArrivalDropdown(true)}
@@ -186,7 +186,7 @@ export default function EditRouteSheet({
                                                         visible={showArrivalDropdown}
                                                         onSelect={(loc) => {
                                                             setArrivalCityQuery(loc.city);
-                                                            field.onChange(loc.city);
+                                                            field.onChange({ title: loc.city, locality: loc.code, label: loc.airport });
                                                             setShowArrivalDropdown(false);
                                                         }}
                                                     />

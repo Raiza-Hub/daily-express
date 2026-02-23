@@ -1,12 +1,11 @@
+import { cn } from "@repo/ui/lib/utils";
 
-
-
-const Footer = async () => {
+const Footer = async ({ className }: { className?: string } = {}) => {
     return (
-        <div className="mt-12 border-t">
-            <div className="max-w-7xl mx-auto px-4 py-4 flex flex-col items-center justify-between gap-4 text-center md:flex-row">
+        <div className="mt-12 border-t w-full">
+            <div className={cn("px-4 py-4 flex flex-col items-center justify-between gap-4 text-center md:flex-row", className)}>
                 <p className="text-sm text-muted-foreground">
-                    © 2024 Daily Express. All rights reserved.
+                    © {new Date().getFullYear()} Daily Express. All rights reserved.
                 </p>
                 <nav className="flex gap-4 text-sm">
                     <a href="#" className="transition-colors hover:text-primary">

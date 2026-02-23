@@ -51,7 +51,7 @@ export default function TripDetailsSheet({
                         Trip details
                     </SheetTitle>
                     <SheetDescription className="sr-only">
-                        Trip from {trip.departureCity} to {trip.arrivalCity}
+                        Trip from {trip.departureCity.title} to {trip.arrivalCity.title}
                     </SheetDescription>
                 </SheetHeader>
 
@@ -60,7 +60,7 @@ export default function TripDetailsSheet({
                     {/* Route title */}
                     <div className="px-6 pt-6 pb-5 space-y-1">
                         <h2 className="text-xl font-bold text-neutral-900">
-                            {trip.departureCity} to {trip.arrivalCity}
+                            {trip.departureCity.title} to {trip.arrivalCity.title}
                         </h2>
                         <p className="text-sm text-neutral-500">{departureDate}</p>
                     </div>
@@ -123,10 +123,10 @@ export default function TripDetailsSheet({
                                 {/* Departure city — h-3.5, aligns with top dot */}
                                 <div>
                                     <p className="font-bold text-neutral-900 h-3.5 flex items-center">
-                                        {trip.departureCity}
+                                        {trip.departureCity.title}
                                     </p>
                                     <p className="text-muted-foreground text-sm leading-5 mt-1">
-                                        Ojota Motor Park
+                                        {trip.departureCity.label}
                                     </p>
                                 </div>
 
@@ -148,10 +148,10 @@ export default function TripDetailsSheet({
                                 {/* Arrival city — h-3.5, aligns with bottom dot */}
                                 <div>
                                     <p className="font-bold text-neutral-900 h-3.5 flex items-center">
-                                        {trip.arrivalCity}
+                                        {trip.arrivalCity.title}
                                     </p>
                                     <p className="text-muted-foreground text-sm leading-5 mt-1">
-                                        Lehigh Valley International Airport
+                                        {trip.arrivalCity.label}
                                     </p>
                                 </div>
 

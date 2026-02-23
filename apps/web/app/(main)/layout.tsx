@@ -1,5 +1,5 @@
+import Footer from "@repo/ui/Footer";
 import { ReactNode } from "react";
-import Footer from "~/components/Footer";
 import Navbar from "~/components/Navbar";
 import SettingNavTabs from "~/components/SettingTabs";
 
@@ -18,7 +18,7 @@ const Layout = ({ children }: { children: ReactNode }) => {
                 {children}
             </main>
 
-            <Footer />
+            <Footer className="max-w-7xl mx-auto" />
         </div>
     )
 }

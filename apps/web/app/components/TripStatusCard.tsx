@@ -111,7 +111,7 @@ function TripStatusCardItem({ item }: { item: TripStatusItem }) {
 
                     {/* Flight Times & Route */}
                     <div className="flex flex-col gap-0.5">
-                        <div className="flex items-baseline gap-2">
+                        <div className="flex items-center gap-2">
                             <span className="text-xl font-medium text-neutral-900 tracking-tight">{departureTime}</span>
                             <PlaneDots />
                             <span className="text-xl font-medium text-neutral-900 tracking-tight relative">
@@ -119,7 +119,7 @@ function TripStatusCardItem({ item }: { item: TripStatusItem }) {
                                 {/* <sup className="text-xs text-rose-500 font-semibold ml-0.5">+1</sup> */}
                             </span>
                         </div>
-                        <p className="text-sm text-muted-foreground">{item.trip.departureCity} (LOS) – {item.trip.arrivalCity} (ABE)</p>
+                        <p className="text-sm text-muted-foreground">{item.trip.departureCity.title} ({item.trip.departureCity.locality}) – {item.trip.arrivalCity.title} ({item.trip.arrivalCity.locality})</p>
                         <p className="text-sm text-muted-foreground">United operated by United and Gojet Airlines DBA United Express</p>
                     </div>
 
@@ -222,8 +222,8 @@ const mockItems: TripStatusItem[] = [
         passengerLastName: "Smith",
         driver: mockDriver,
         trip: {
-            departureCity: "Lagos",
-            arrivalCity: "Abuja",
+            departureCity: { title: "Lagos", locality: "LOS", label: "Ojota Motor Park" },
+            arrivalCity: { title: "Abuja", locality: "ABV", label: "Nnamdi Azikiwe International Airport" },
             vehicleType: "bus",
             seatNumber: 5,
             price: 6000,
@@ -238,8 +238,8 @@ const mockItems: TripStatusItem[] = [
         passengerLastName: "Jones",
         driver: mockDriver,
         trip: {
-            departureCity: "Lagos",
-            arrivalCity: "Ibadan",
+            departureCity: { title: "Lagos", locality: "LOS", label: "Ojota Motor Park" },
+            arrivalCity: { title: "Ibadan", locality: "IBA", label: "Ibadan Airport" },
             vehicleType: "car",
             seatNumber: 2,
             price: 3500,
@@ -254,8 +254,8 @@ const mockItems: TripStatusItem[] = [
         passengerLastName: "Brown",
         driver: mockDriver,
         trip: {
-            departureCity: "Abuja",
-            arrivalCity: "Lagos",
+            departureCity: { title: "Abuja", locality: "ABV", label: "Nnamdi Azikiwe International Airport" },
+            arrivalCity: { title: "Lagos", locality: "LOS", label: "Ojota Motor Park" },
             vehicleType: "luxury car",
             seatNumber: 1,
             price: 12000,
@@ -270,8 +270,8 @@ const mockItems: TripStatusItem[] = [
         passengerLastName: "Taylor",
         driver: mockDriver,
         trip: {
-            departureCity: "Lagos",
-            arrivalCity: "Port Harcourt",
+            departureCity: { title: "Lagos", locality: "LOS", label: "Ojota Motor Park" },
+            arrivalCity: { title: "Port Harcourt", locality: "PHC", label: "Port Harcourt International Airport" },
             vehicleType: "bus",
             seatNumber: 9,
             price: 8500,

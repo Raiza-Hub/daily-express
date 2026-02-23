@@ -3,7 +3,8 @@ import SettingNavTabs from "~/components/SettingTabs";
 import { TripSearchBar } from "~/components/TripSearchBar";
 import TripCard from "./components/TripCard";
 import TripFilter from "./components/TripFilter";
-import Footer from "~/components/Footer";
+import Footer from "@repo/ui/Footer";
+
 
 export default function Home() {
   return (
@@ -26,7 +27,7 @@ export default function Home() {
         </div>
       </main>
 
-      <Footer />
+      <Footer className="max-w-7xl mx-auto" />
     </div>
   );
 }

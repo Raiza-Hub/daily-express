@@ -3,6 +3,8 @@ import Navbar from "./components/Navbar";
 import StatsCard from "./components/StatsCard";
 import RouteCard from "./components/route/RouteCard";
 import { ProfitCalendar } from "./components/ProfitCalendar";
+import Footer from "@repo/ui/Footer";
+
 
 export default function Home() {
   return (
@@ -24,6 +26,7 @@ export default function Home() {
           </div>
         </div>
       </main>
+      <Footer className="px-2.5 md:p-6" />
     </>
   );
 }

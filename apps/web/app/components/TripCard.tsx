@@ -76,8 +76,16 @@ const DriverInfo = ({ driver }: { driver: Driver }) => {
 
 
 const mockTrip: TRoute = {
-    departureCity: "Lagos",
-    arrivalCity: "Allentown",
+    departureCity: {
+        title: "Lagos",
+        locality: "LOS",
+        label: "Ojota Motor Park"
+    },
+    arrivalCity: {
+        title: "Allentown",
+        locality: "ABE",
+        label: "Lehigh Valley International Airport"
+    },
     vehicleType: "bus",
     seatNumber: 14,
     price: 6000,
@@ -106,7 +114,7 @@ export default function TripCard() {
 
                     {/* Flight Times & Route */}
                     <div className="flex flex-col gap-0.5">
-                        <div className="flex items-baseline gap-2">
+                        <div className="flex items-center gap-2">
                             <span className="text-xl font-medium text-neutral-900 tracking-tight">11:50am</span>
                             <PlaneDots />
                             <span className="text-xl font-medium text-neutral-900 tracking-tight relative">
@@ -114,8 +122,7 @@ export default function TripCard() {
                                 {/* <sup className="text-xs text-rose-500 font-semibold ml-0.5">+1</sup> */}
                             </span>
                         </div>
-                        <p className="text-sm text-muted-foreground">Lagos (LOS) – Allentown (ABE)</p>
-                        <p className="text-sm text-muted-foreground">United operated by United and Gojet Airlines DBA United Express</p>
+                        <p className="text-sm text-muted-foreground">{mockTrip.departureCity.title} ({mockTrip.departureCity.locality}) – {mockTrip.arrivalCity.title} ({mockTrip.arrivalCity.locality})</p>
                     </div>
 
                     {/* Spacer */}

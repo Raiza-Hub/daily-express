@@ -144,7 +144,7 @@ export function TripSearchBar({ className }: { className?: string }) {
                 {/* SEARCH BUTTON */}
                 <button
                     type="button"
-                    className="bg-blue-600 hover:bg-blue-500 text-white px-6 rounded-2xl gap-2 font-medium cursor-pointer"
+                    className="bg-blue-600 hover:bg-blue-700 text-white px-6 rounded-2xl gap-2 font-medium cursor-pointer"
                 >
                     Search
                 </button>

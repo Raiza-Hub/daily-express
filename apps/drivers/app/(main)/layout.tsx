@@ -1,6 +1,8 @@
 
 import { ReactNode } from "react";
 import Navbar from "../components/Navbar";
+import Footer from "@repo/ui/Footer";
+
 
 const Layout = async ({ children }: { children: ReactNode }) => {
     return (
@@ -12,6 +14,7 @@ const Layout = async ({ children }: { children: ReactNode }) => {
             <div className="w-full flex flex-col">
                 {children}
             </div>
+            <Footer className="px-2.5 md:p-6" />
         </div>
     );
 }

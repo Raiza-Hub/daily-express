@@ -100,7 +100,7 @@ export function CreateRouteForm({
                                                 autoComplete="off"
                                                 onChange={(e) => {
                                                     setDepartureCityQuery(e.target.value);
-                                                    field.onChange(e.target.value);
+                                                    field.onChange({ title: e.target.value, locality: "Unknown", label: e.target.value });
                                                     setShowDepartureDropdown(true);
                                                 }}
                                                 onFocus={() => setShowDepartureDropdown(true)}
@@ -110,7 +110,7 @@ export function CreateRouteForm({
                                                 visible={showDepartureDropdown}
                                                 onSelect={(loc) => {
                                                     setDepartureCityQuery(loc.city);
-                                                    field.onChange(loc.city);
+                                                    field.onChange({ title: loc.city, locality: loc.code, label: loc.airport });
                                                     setShowDepartureDropdown(false);
                                                 }}
                                             />
@@ -142,7 +142,7 @@ export function CreateRouteForm({
                                                 autoComplete="off"
                                                 onChange={(e) => {
                                                     setArrivalCityQuery(e.target.value);
-                                                    field.onChange(e.target.value);
+                                                    field.onChange({ title: e.target.value, locality: "Unknown", label: e.target.value });
                                                     setShowArrivalDropdown(true);
                                                 }}
                                                 onFocus={() => setShowArrivalDropdown(true)}
@@ -152,7 +152,7 @@ export function CreateRouteForm({
                                                 visible={showArrivalDropdown}
                                                 onSelect={(loc) => {
                                                     setArrivalCityQuery(loc.city);
-                                                    field.onChange(loc.city);
+                                                    field.onChange({ title: loc.city, locality: loc.code, label: loc.airport });
                                                     setShowArrivalDropdown(false);
                                                 }}
                                             />

@@ -40,7 +40,7 @@ export default function TripStatusFilter() {
                     <button
                         type="button"
                         onClick={handleRetrieve}
-                        className="bg-blue-600 hover:bg-blue-500 text-white px-6 rounded-2xl font-medium cursor-pointer whitespace-nowrap transition-colors"
+                        className="bg-blue-600 hover:bg-blue-700 text-white px-6 rounded-2xl font-medium cursor-pointer whitespace-nowrap transition-colors"
                     >
                         Retrieve booking
                     </button>
