@@ -170,11 +170,10 @@ const SignUpForm = () => {
                                         onChange={(e) =>
                                             field.onChange(
                                                 e.target.value
-                                                    ? dayjs(e.target.value, "YYYY-MM-DD").toDate()
+                                                    ? dayjs(e.target.value).toDate()
                                                     : undefined
                                             )
                                         }
-                                        className="bg-transparent [&::-webkit-calendar-picker-indicator]:hidden"
                                     />
                                     {fieldState.invalid && (
                                         <FieldError errors={[fieldState.error]} />
@@ -231,6 +230,7 @@ const SignUpForm = () => {
 
                     <div className="flex flex-col gap-4 py-4">
                         <Button
+                            type="button"
                             variant="outline"
                             className="w-full cursor-pointer"
                             disabled={isPending}

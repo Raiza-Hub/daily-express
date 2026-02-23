@@ -143,11 +143,10 @@ const Profile = () => {
                                             onChange={(e) =>
                                                 field.onChange(
                                                     e.target.value
-                                                        ? dayjs(e.target.value, "YYYY-MM-DD").toDate()
+                                                        ? dayjs(e.target.value).toDate()
                                                         : undefined
                                                 )
                                             }
-                                            className="bg-transparent [&::-webkit-calendar-picker-indicator]:hidden"
                                         />
                                         {fieldState.invalid && (
                                             <FieldError errors={[fieldState.error]} />

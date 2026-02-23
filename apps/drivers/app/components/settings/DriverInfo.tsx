@@ -52,7 +52,9 @@ import CountryList from "../../../country-list.json";
 import { cn } from "@repo/ui/lib/utils";
 import DisableAccount from "./DisableAccount";
 
-const DriverInfoSchema = onboardingSchema.omit({
+const DriverInfoSchema = onboardingSchema.extend({
+    file: z.instanceof(File).optional(),
+}).omit({
     bankName: true,
     accountNumber: true,
     accountName: true,
@@ -264,6 +266,7 @@ export default function DriverInfo() {
                                     <Popover open={openCountry} onOpenChange={setOpenCountry}>
                                         <PopoverTrigger asChild>
                                             <Button
+                                                id="country"
                                                 type="button"
                                                 variant="outline"
                                                 // className="w-full justify-between"
@@ -322,6 +325,7 @@ export default function DriverInfo() {
                                     <Popover open={openState} onOpenChange={setOpenState}>
                                         <PopoverTrigger asChild>
                                             <Button
+                                                id="state"
                                                 type="button"
                                                 variant="outline"
                                                 aria-expanded={openState}

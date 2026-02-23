@@ -20,7 +20,6 @@ import PersonalInfoForm from "./PersonalInfo";
 import AddressInfoForm from "./AddressInfo";
 import PaymentInfo from "./PaymentInfo";
 import Link from "next/link";
-import { Icons } from "../Icons";
 
 const STEPS = [
     { id: 1, title: "Personal Information", description: "Enter your details as they appear on your government ID.", Component: PersonalInfoForm, fields: ["file", "firstName", "lastName", "email"] },
@@ -39,7 +38,7 @@ const OnboardingForm = () => {
         defaultValues: {
             firstName: "",
             lastName: "",
-            file: undefined,
+            file: undefined as unknown as File,
             email: "",
             country: "",
             address: "",
@@ -92,7 +91,7 @@ const OnboardingForm = () => {
                 value={currentStep}
                 onValueChange={async (next) => {
                     if (next === currentStep) return
-                    
+
                     // Allow backward navigation without validation
                     if (next < currentStep) {
                         setCurrentStep(next)

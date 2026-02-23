@@ -63,6 +63,7 @@ const AddressInfoForm = () => {
                                     <Popover open={openCountry} onOpenChange={setOpenCountry}>
                                         <PopoverTrigger asChild>
                                             <Button
+                                                id="country"
                                                 type="button"
                                                 variant="outline"
                                                 role="combobox"
@@ -126,6 +127,7 @@ const AddressInfoForm = () => {
                                     <Popover open={openState} onOpenChange={setOpenState}>
                                         <PopoverTrigger asChild>
                                             <Button
+                                                id="state"
                                                 type="button"
                                                 variant="outline"
                                                 role="combobox"

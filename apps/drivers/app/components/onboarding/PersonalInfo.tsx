@@ -76,7 +76,7 @@ const PersonalInfoForm = () => {
                                             type="button"
                                             onClick={() => {
                                                 removeFile(currentFile.id);
-                                                setValue("file", undefined, { shouldValidate: true, shouldDirty: true });
+                                                setValue("file", undefined as unknown as File, { shouldValidate: true, shouldDirty: true });
                                             }}
                                             size="icon"
                                             className="absolute -top-1 -right-1 size-6 rounded-full border-2 border-background"
