@@ -11,12 +11,7 @@ import { Input } from "@repo/ui/components/input";
 import { TrashIcon, UserCircleIcon } from "@phosphor-icons/react";
 import { Field, FieldError, FieldGroup, FieldLabel } from "@repo/ui/components/field";
 
-const GENDER = [
-    { label: "Male", value: "male" },
-    { label: "Female", value: "female" },
-] as const
-
-const BasicInfoForm = () => {
+const PersonalInfoForm = () => {
     const { control, setValue, formState: { errors } } = useFormContext<TonboardingSchema>();
 
     const formFile = useWatch({ control, name: "file" });
@@ -81,7 +76,7 @@ const BasicInfoForm = () => {
                                             type="button"
                                             onClick={() => {
                                                 removeFile(currentFile.id);
-                                                setValue("file", undefined, { shouldValidate: true, shouldDirty: true });
+                                                setValue("file", undefined as unknown as File, { shouldValidate: true, shouldDirty: true });
                                             }}
                                             size="icon"
                                             className="absolute -top-1 -right-1 size-6 rounded-full border-2 border-background"
@@ -99,7 +94,7 @@ const BasicInfoForm = () => {
                     />
                 </div>
 
-                <div className="grid gap-6 mt-6">
+                <div className="grid gap-6">
                     <div className="grid gap-2">
                         <Controller
                             name="firstName"
@@ -113,8 +108,7 @@ const BasicInfoForm = () => {
                                         {...field}
                                         id="firstName"
                                         aria-invalid={fieldState.invalid}
-                                        placeholder="First name"
-                                        autoComplete="off"
+                                        placeholder="First name on ID"
                                     />
                                     {fieldState.invalid && (
                                         <FieldError errors={[fieldState.error]} />
@@ -137,8 +131,7 @@ const BasicInfoForm = () => {
                                         {...field}
                                         id="lastName"
                                         aria-invalid={fieldState.invalid}
-                                        placeholder="Last name"
-                                        autoComplete="off"
+                                        placeholder="Last name on ID"
                                     />
                                     {fieldState.invalid && (
                                         <FieldError errors={[fieldState.error]} />
@@ -170,52 +163,10 @@ const BasicInfoForm = () => {
                             )}
                         />
                     </div>
-
-                    <div className="grid gap-2">
-                        <Controller
-                            name="gender"
-                            control={control}
-                            render={({ field, fieldState }) => (
-                                <Field
-                                    // orientation="responsive"
-                                    data-invalid={fieldState.invalid}
-                                >
-                                    <FieldLabel htmlFor="gender">
-                                        Gender
-                                    </FieldLabel>
-                                    <Select
-                                        name={field.name}
-                                        value={field.value}
-                                        onValueChange={field.onChange}
-                                    >
-                                        <SelectTrigger
-                                            id="gender"
-                                            aria-invalid={fieldState.invalid}
-                                            className="min-w-[120px]"
-                                        >
-                                            <SelectValue placeholder="Select" />
-                                        </SelectTrigger>
-                                        <SelectContent position="item-aligned">
-                                            {/* <SelectItem value="auto">Auto</SelectItem>
-                                            <SelectSeparator /> */}
-                                            {GENDER.map((g) => (
-                                                <SelectItem key={g.value} value={g.value}>
-                                                    {g.label}
-                                                </SelectItem>
-                                            ))}
-                                        </SelectContent>
-                                    </Select>
-                                    {fieldState.invalid && (
-                                        <FieldError errors={[fieldState.error]} />
-                                    )}
-                                </Field>
-                            )}
-                        />
-                    </div>
                 </div>
             </FieldGroup>
         </div>
     );
 };
 
-export default BasicInfoForm;
+export default PersonalInfoForm;
