@@ -20,7 +20,7 @@ import {
     PopoverTrigger,
 } from "@repo/ui/components/popover"
 import { Input } from "@repo/ui/components/input"
-import { Field, FieldError, FieldGroup, FieldLabel } from "@repo/ui/components/field"
+import { Field, FieldDescription, FieldError, FieldGroup, FieldLabel } from "@repo/ui/components/field"
 import { CaretDownIcon, CheckIcon } from "@phosphor-icons/react"
 import PhoneNumberInput from "react-phone-number-input"
 import "react-phone-number-input/style.css"
@@ -51,18 +51,19 @@ const AddressInfoForm = () => {
             <FieldGroup>
                 <div className="grid gap-6">
                     {/* COUNTRY SELECT */}
-                    <div className="grid gap-2 py-2">
+                    <div className="grid gap-2">
                         <Controller
                             name="country"
                             control={control}
                             render={({ field, fieldState }) => (
                                 <Field data-invalid={fieldState.invalid}>
                                     <FieldLabel htmlFor="country">
-                                        Select Country
+                                        Country
                                     </FieldLabel>
                                     <Popover open={openCountry} onOpenChange={setOpenCountry}>
                                         <PopoverTrigger asChild>
                                             <Button
+                                                id="country"
                                                 type="button"
                                                 variant="outline"
                                                 role="combobox"
@@ -72,7 +73,7 @@ const AddressInfoForm = () => {
                                                     errors.country && "border-red-500"
                                                 )}
                                             >
-                                                {selectedCountry || "Select country"}
+                                                {selectedCountry || "Select your country"}
                                                 <CaretDownIcon className="ml-2 h-4 w-4" />
                                             </Button>
                                         </PopoverTrigger>
@@ -114,18 +115,19 @@ const AddressInfoForm = () => {
                     </div>
 
                     {/* STATE SELECT */}
-                    <div className="grid gap-2 py-2">
+                    <div className="grid gap-2">
                         <Controller
                             name="state"
                             control={control}
                             render={({ field, fieldState }) => (
                                 <Field data-invalid={fieldState.invalid}>
                                     <FieldLabel htmlFor="state">
-                                        Select State
+                                        State / Province
                                     </FieldLabel>
                                     <Popover open={openState} onOpenChange={setOpenState}>
                                         <PopoverTrigger asChild>
                                             <Button
+                                                id="state"
                                                 type="button"
                                                 variant="outline"
                                                 role="combobox"
@@ -136,7 +138,7 @@ const AddressInfoForm = () => {
                                                     errors.state && "border-red-500"
                                                 )}
                                             >
-                                                {selectedState || "Select state"}
+                                                {selectedState || "Select your state"}
                                                 <CaretDownIcon className="ml-2 h-4 w-4" />
                                             </Button>
                                         </PopoverTrigger>
@@ -175,20 +177,20 @@ const AddressInfoForm = () => {
                     </div>
 
 
-                    <div className="grid gap-2 py-2">
+                    <div className="grid gap-2">
                         <Controller
                             name="city"
                             control={control}
                             render={({ field, fieldState }) => (
                                 <Field data-invalid={fieldState.invalid}>
                                     <FieldLabel htmlFor="city">
-                                        City
+                                        Local Government Area (LGA)
                                     </FieldLabel>
                                     <Input
                                         {...field}
                                         id="city"
                                         aria-invalid={fieldState.invalid}
-                                        placeholder="City"
+                                        placeholder="LGA"
                                     />
                                     {fieldState.invalid && (
                                         <FieldError errors={[fieldState.error]} />
@@ -198,20 +200,20 @@ const AddressInfoForm = () => {
                         />
                     </div>
 
-                    <div className="grid gap-2 py-2">
+                    <div className="grid gap-2">
                         <Controller
                             name="address"
                             control={control}
                             render={({ field, fieldState }) => (
                                 <Field data-invalid={fieldState.invalid}>
                                     <FieldLabel htmlFor="address">
-                                        Address
+                                        Residential Address
                                     </FieldLabel>
                                     <Input
                                         {...field}
                                         id="address"
                                         aria-invalid={fieldState.invalid}
-                                        placeholder="Address"
+                                        placeholder="e.g. 12 Allen Avenue, Ikeja"
                                     />
                                     {fieldState.invalid && (
                                         <FieldError errors={[fieldState.error]} />
@@ -221,7 +223,7 @@ const AddressInfoForm = () => {
                         />
                     </div>
 
-                    <div className="grid gap-2 py-2">
+                    <div className="grid gap-2">
                         <Controller
                             name="phoneNumber"
                             control={control}
@@ -231,6 +233,8 @@ const AddressInfoForm = () => {
                                         Phone Number
                                     </FieldLabel>
                                     <PhoneNumberInput
+                                        id="phoneNumber"
+                                        aria-invalid={fieldState.invalid}
                                         international
                                         flagComponent={FlagComponent}
                                         countrySelectComponent={CountrySelect}
@@ -239,10 +243,13 @@ const AddressInfoForm = () => {
                                         value={field.value}
                                         onChange={(val) => field.onChange(val || "")}
                                         className={cn(
-                                            "flex rounded-md shadow-xs",
-                                            errors.phoneNumber && "border-red-500 focus-visible:ring-red-500"
+                                            "flex rounded-md shadow-xs transition-colors",
+                                            errors.phoneNumber && "border-destructive ring-destructive/20 focus-within:ring-[3px] focus-within:ring-destructive/20"
                                         )}
                                     />
+                                    <FieldDescription>
+                                        Passengers may call this number if they need help locating you or clarifying trip details.
+                                    </FieldDescription>
                                     {fieldState.invalid && (
                                         <FieldError errors={[fieldState.error]} />
                                     )}
@@ -250,7 +257,7 @@ const AddressInfoForm = () => {
                             )}
                         />
                     </div>
-                     
+
                 </div>
             </FieldGroup>
         </div>

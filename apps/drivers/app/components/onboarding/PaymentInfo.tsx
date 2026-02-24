@@ -2,7 +2,7 @@
 
 import BankList from "../../../bank-names.json";
 import { TonboardingSchema } from "@repo/types/index";
-import { Field, FieldError, FieldGroup, FieldLabel } from "@repo/ui/components/field"
+import { Field, FieldDescription, FieldError, FieldGroup, FieldLabel } from "@repo/ui/components/field"
 import { Input } from "@repo/ui/components/input";
 import { Controller, useFormContext } from "react-hook-form";
 import { useState } from "react";
@@ -32,7 +32,7 @@ const PaymentInfo = () => {
     return (
         <div>
             <FieldGroup>
-                <div className="grid gap-6 mt-6">
+                <div className="grid gap-6">
                     <div className="grid gap-2">
                         <Controller
                             name="accountName"
@@ -49,6 +49,9 @@ const PaymentInfo = () => {
                                         placeholder="Account name"
                                         autoComplete="off"
                                     />
+                                    <FieldDescription>
+                                        Must match your bank account name.
+                                    </FieldDescription>
                                     {fieldState.invalid && (
                                         <FieldError errors={[fieldState.error]} />
                                     )}
@@ -81,7 +84,7 @@ const PaymentInfo = () => {
                         />
                     </div>
 
-                    <div className="grid gap-2 py-2">
+                    <div className="grid gap-2">
                         <Controller
                             name="bankName"
                             control={control}
@@ -112,7 +115,7 @@ const PaymentInfo = () => {
                                                             className="rounded-sm object-contain"
                                                         />
                                                     )}
-                                                    {selectedBankName || "Select bank"}
+                                                    {selectedBankName || "Select your bank"}
                                                 </div>
                                                 <CaretDownIcon className="ml-2 h-4 w-4 shrink-0" />
                                             </Button>
@@ -131,7 +134,7 @@ const PaymentInfo = () => {
                                                                     setValue("bankName", value, { shouldValidate: true })
                                                                     setOpenBank(false)
                                                                 }}
-                                                                className="flex items-center gap-2"
+                                                                className="flex items-center gap-2 cursor-pointer"
                                                             >
                                                                 <Image
                                                                     src={`/logos/${bank.slug}.png`}
