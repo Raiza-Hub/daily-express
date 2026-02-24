@@ -101,6 +101,8 @@ export default function ChangePasswordDialog() {
         </form>
     );
 
+    if (isMobile === undefined) return null;
+
     if (isMobile) {
         return (
             <Drawer

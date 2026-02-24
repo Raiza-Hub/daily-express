@@ -274,6 +274,8 @@ export default function ChangeBankDetailsDialog() {
         </form>
     );
 
+    if (isMobile === undefined) return null;
+
     if (isMobile) {
         return (
             <Drawer
@@ -294,7 +296,6 @@ export default function ChangeBankDetailsDialog() {
                     <DrawerFooter>
                         <Button
                             type="submit"
-                            form="bank-details-form"
                             onClick={handleSubmit(onSubmit)}
                             className="bg-blue-600 hover:bg-blue-700 text-white cursor-pointer"
                             disabled={isSubmitting}

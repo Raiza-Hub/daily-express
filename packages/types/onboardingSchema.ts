@@ -12,7 +12,7 @@ export const onboardingSchema = z.object({
     .max(256, { error: "Last name must be at most 256 characters long." }),
 
   file: z
-    .instanceof(File, { message: "Profile photo is required." }),
+    .file({ error: "Profile photo is required." }),
   
   email: z
     .email({ error: "Enter a valid email address" }),

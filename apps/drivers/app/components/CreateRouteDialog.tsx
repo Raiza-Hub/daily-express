@@ -95,6 +95,8 @@ export default function CreateRouteDialog() {
         setPriceDisplay,
     };
 
+    if (isMobile === undefined) return null;
+
     if (isMobile) {
         return (
             <Drawer open={open} onOpenChange={setOpen}>
