@@ -84,7 +84,7 @@ const NotificationInbox = () => {
     return (
         <Popover>
             <PopoverTrigger asChild>
-                <button className="relative inline-flex items-center justify-center rounded-full p-2 hover:bg-muted" aria-label="Open notifications">
+                <button className="relative inline-flex items-center justify-center rounded-full p-2 hover:bg-muted cursor-pointer" aria-label="Open notifications">
                     <BellIcon className="h-6 w-6" aria-hidden="true" />
                     {unreadCount > 0 && (
                         <Badge
