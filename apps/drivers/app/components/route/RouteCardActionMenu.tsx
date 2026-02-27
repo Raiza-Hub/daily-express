@@ -10,38 +10,32 @@ import {
     DropdownMenuTrigger,
 } from "@repo/ui/components/dropdown-menu";
 
+interface RouteCardActionMenuProps {
+    onEdit: () => void;
+    onPassengers: () => void;
+    onDelete: () => void;
+}
 
-export default function RouteCardActionMenu() {
+export default function RouteCardActionMenu({ onEdit, onPassengers, onDelete }: RouteCardActionMenuProps) {
     return (
         <DropdownMenu modal={false}>
             <DropdownMenuTrigger asChild>
-                <Button size="icon-lg" variant="ghost">
+                <Button size="icon-lg" variant="ghost" className="cursor-pointer">
                     <DotsThreeVerticalIcon weight="bold" />
                 </Button>
             </DropdownMenuTrigger>
             <DropdownMenuContent align="end">
                 <DropdownMenuGroup>
-                    <DropdownMenuItem>
-                        {/* <EditRouteSheet
-                            defaultValues={{
-                                departureCity: "Lagos",
-                                arrivalCity: "Abuja",
-                                vehicleType: "car",
-                                seatNumber: 8,
-                                priceWithoutLuggage: 844328,
-                                priceWithLuggage: 900000,
-                                departureTime: new Date('2026-02-10T15:30:00'),
-                                estimatedArrivalTime: new Date('2026-02-11T09:43:00'),
-                            }}
-                        /> */}
+                    <DropdownMenuItem className="cursor-pointer" onSelect={onEdit}>
                         <NotePencilIcon size={18} />
                         Edit
                     </DropdownMenuItem>
-                    <DropdownMenuItem>
+                    <DropdownMenuItem className="cursor-pointer" onSelect={onPassengers}>
                         <UsersThreeIcon size={18} />
                         Passengers
                     </DropdownMenuItem>
-                    <DropdownMenuItem variant="destructive">
+                    <DropdownMenuSeparator />
+                    <DropdownMenuItem variant="destructive" className="cursor-pointer" onSelect={onDelete}>
                         <TrashIcon aria-hidden="true" size={16} />
                         Delete
                     </DropdownMenuItem>

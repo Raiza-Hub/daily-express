@@ -11,17 +11,8 @@ import {
     DialogTitle,
     DialogTrigger,
 } from "@repo/ui/components/dialog";
-import {
-    Drawer,
-    DrawerContent,
-    DrawerDescription,
-    DrawerFooter,
-    DrawerHeader,
-    DrawerTitle,
-    DrawerTrigger,
-} from "@repo/ui/components/drawer";
 import { Button } from "@repo/ui/components/button";
-import { MapPinPlusIcon } from "@phosphor-icons/react";
+import { MapPinPlusIcon, XIcon } from "@phosphor-icons/react";
 import { useEffect, useRef, useState } from "react";
 import { useIsMobile } from "@repo/ui/hooks/use-is-mobile";
 import { CreateRouteForm } from "./route/CreateRouteForm";
@@ -61,6 +52,16 @@ export default function CreateRouteDialog() {
         return () => document.removeEventListener("mousedown", handleClickOutside);
     }, []);
 
+    // Lock body scroll when mobile panel is open
+    useEffect(() => {
+        if (isMobile && open) {
+            document.body.style.overflow = "hidden";
+        } else {
+            document.body.style.overflow = "";
+        }
+        return () => { document.body.style.overflow = ""; };
+    }, [isMobile, open]);
+
     const handleClose = () => {
         setOpen(false);
         reset();
@@ -73,7 +74,6 @@ export default function CreateRouteDialog() {
         console.log("New route created:", data);
         handleClose();
     };
-
 
     const formProps = {
         control,
@@ -99,32 +99,59 @@ export default function CreateRouteDialog() {
 
     if (isMobile) {
         return (
-            <Drawer open={open} onOpenChange={setOpen}>
-                <DrawerTrigger asChild>
-                    <Button className="w-full sm:w-auto" variant="secondary">
-                        <MapPinPlusIcon className="h-6 w-6" weight="bold" />
-                        Create Route
-                    </Button>
-                </DrawerTrigger>
-                <DrawerContent className="max-h-[90vh]">
-                    <DrawerHeader className="pb-4 border-b text-left">
-                        <DrawerTitle className="text-xl font-semibold">Create Route</DrawerTitle>
-                        <DrawerDescription className="text-sm text-muted-foreground mt-1">
-                            Fill in the route details and schedule information below.
-                        </DrawerDescription>
-                    </DrawerHeader>
-                    <div className="overflow-y-auto">
-                        <CreateRouteForm
-                            {...formProps}
-                            FooterWrapper={({ children }) => (
-                                <DrawerFooter className="pt-4 pb-0 border-t flex-row justify-end px-0">
-                                    {children}
-                                </DrawerFooter>
-                            )}
+            <>
+                <Button
+                    className="w-full sm:w-auto cursor-pointer"
+                    variant="secondary"
+                    onClick={() => setOpen(true)}
+                >
+                    <MapPinPlusIcon className="h-6 w-6" weight="bold" />
+                    Create Route
+                </Button>
+
+                {open && (
+                    <>
+                        {/* Overlay */}
+                        <div
+                            className="fixed inset-0 z-50 bg-black/50"
+                            onClick={handleClose}
                         />
-                    </div>
-                </DrawerContent>
-            </Drawer>
+
+                        {/* Panel */}
+                        <div className="fixed inset-0 z-50 flex flex-col bg-background overflow-hidden">
+                            {/* Header */}
+                            <div className="flex items-start justify-between p-4 border-b shrink-0">
+                                <div>
+                                    <h2 className="text-xl font-semibold">Create Route</h2>
+                                    <p className="text-sm text-muted-foreground mt-1">
+                                        Fill in the route details and schedule information below.
+                                    </p>
+                                </div>
+                                <Button
+                                    onClick={handleClose}
+                                    className="p-1 rounded-md text-muted-foreground hover:text-foreground hover:bg-muted transition-colors cursor-pointer"
+                                    aria-label="Close"
+                                    variant="ghost"
+                                >
+                                    <XIcon className="h-5 w-5" />
+                                </Button>
+                            </div>
+
+                            {/* Scrollable content */}
+                            <div className="flex-1 overflow-y-auto px-4">
+                                <CreateRouteForm
+                                    {...formProps}
+                                    FooterWrapper={({ children }) => (
+                                        <div className="pt-4 pb-4 border-t flex justify-end gap-2">
+                                            {children}
+                                        </div>
+                                    )}
+                                />
+                            </div>
+                        </div>
+                    </>
+                )}
+            </>
         );
     }
 
