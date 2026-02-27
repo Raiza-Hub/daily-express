@@ -63,16 +63,6 @@ export function UserAccountNav() {
                 </DropdownMenuLabel>
                 <DropdownMenuSeparator />
                 <DropdownMenuGroup>
-                    {/* <DropdownMenuItem className="cursor-pointer" onClick={() => router.push("/account")}>
-                        <UserIcon weight="bold" className="w-5 h-5" />
-                        Account
-                    </DropdownMenuItem> */}
-                    <DropdownMenuItem
-                        className="cursor-pointer"
-                        onClick={() => router.push("/billing")}>
-                        <CreditCardIcon weight="bold" className="w-5 h-5" />
-                        Billing
-                    </DropdownMenuItem>
                     <DropdownMenuItem asChild>
                         <a
                             href="mailto:support@yourdomain.com"
@@ -82,11 +72,7 @@ export function UserAccountNav() {
                             Support
                         </a>
                     </DropdownMenuItem>
-                    <DropdownMenuItem asChild>
-                        {/* <FeedbackDialog /> */}
-                    </DropdownMenuItem>
                 </DropdownMenuGroup>
-                <DropdownMenuSeparator />
                 <DropdownMenuItem
                     onClick={signOut}
                     className="cursor-pointer"
