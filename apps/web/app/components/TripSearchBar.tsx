@@ -38,7 +38,7 @@ export function TripSearchBar({ className }: { className?: string }) {
 
     return (
         <div className={cn("w-full", className)}>
-            <div className="flex items-stretch gap-2">
+            <div className="flex flex-col lg:flex-row items-stretch gap-2">
 
                 {/* FROM */}
                 <div
@@ -77,7 +77,7 @@ export function TripSearchBar({ className }: { className?: string }) {
                     }}
                     className="self-center p-2 rounded-full border border-neutral-200 hover:bg-neutral-50 cursor-pointer transition-transform duration-400"
                 >
-                    <ArrowsLeftRightIcon size={18} />
+                    <ArrowsLeftRightIcon size={18} className="rotate-90 lg:rotate-0" />
                 </button>
 
                 {/* TO */}
@@ -144,7 +144,7 @@ export function TripSearchBar({ className }: { className?: string }) {
                 {/* SEARCH BUTTON */}
                 <button
                     type="button"
-                    className="bg-blue-600 hover:bg-blue-700 text-white px-6 rounded-2xl gap-2 font-medium cursor-pointer"
+                    className="bg-blue-600 hover:bg-blue-700 text-white px-6 py-3 lg:py-0 rounded-2xl gap-2 font-medium cursor-pointer"
                 >
                     Search
                 </button>

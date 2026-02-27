@@ -13,7 +13,7 @@ export default function TripStatusFilter() {
     return (
         <>
             <div className="">
-                <div className="flex items-stretch gap-2">
+                <div className="flex flex-col lg:flex-row items-stretch gap-2">
                     {/* Booking Reference */}
                     <div className="relative flex-auto bg-white border border-neutral-200 rounded-2xl px-4 py-2 flex flex-col justify-center focus-within:ring-2 focus-within:ring-blue-500 transition">
                         <label className="text-xs text-neutral-400">Booking reference</label>
@@ -40,7 +40,7 @@ export default function TripStatusFilter() {
                     <button
                         type="button"
                         onClick={handleRetrieve}
-                        className="bg-blue-600 hover:bg-blue-700 text-white px-6 rounded-2xl font-medium cursor-pointer whitespace-nowrap transition-colors"
+                        className="bg-blue-600 hover:bg-blue-700 text-white px-6 py-3 rounded-2xl font-medium cursor-pointer whitespace-nowrap transition-colors w-full lg:w-auto"
                     >
                         Retrieve booking
                     </button>

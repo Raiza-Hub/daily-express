@@ -106,15 +106,14 @@ function TripStatusCardItem({ item }: { item: TripStatusItem }) {
                 onClick={() => setSheetOpen(true)}
             >
                 {/* Main Card Row */}
-                <div className="flex items-center px-6 py-5 gap-5">
-                    {/* Logo */}
+                <div className="flex flex-col md:flex-row md:items-center px-6 py-5 gap-4 md:gap-5">
 
                     {/* Flight Times & Route */}
                     <div className="flex flex-col gap-0.5">
                         <div className="flex items-center gap-2">
-                            <span className="text-xl font-medium text-neutral-900 tracking-tight">{departureTime}</span>
+                            <span className="text-lg lg:text-xl font-medium text-neutral-900 tracking-tight">{departureTime}</span>
                             <PlaneDots />
-                            <span className="text-xl font-medium text-neutral-900 tracking-tight relative">
+                            <span className="text-lg lg:text-xl font-medium text-neutral-900 tracking-tight relative">
                                 {arrivalTime}
                                 {/* <sup className="text-xs text-rose-500 font-semibold ml-0.5">+1</sup> */}
                             </span>
@@ -123,26 +122,40 @@ function TripStatusCardItem({ item }: { item: TripStatusItem }) {
                         <p className="text-sm text-muted-foreground">United operated by United and Gojet Airlines DBA United Express</p>
                     </div>
 
-                    {/* Spacer */}
-                    <div className="flex-1" />
+                    {/* Spacer (md+) */}
+                    <div className="hidden md:flex flex-1" />
 
-                    {/* Duration & Stops */}
-                    <div className="flex flex-col items-center gap-1">
-                        {item.trip.vehicleType === "bus" ? (
-                            <VanIcon weight="duotone" size={24} />
-                        ) : (
-                            <CarProfileIcon weight="duotone" size={24} />
-                        )}
-                        <p className="text-sm text-muted-foreground capitalize">{item.trip.vehicleType}</p>
-                    </div>
+                    {/* Transport mode & Price row (sm: below route, md+: inline) */}
+                    <div className="flex items-center md:contents gap-5">
 
-                    {/* Spacer */}
-                    <div className="flex-1" />
+                        {/* Transport mode — sm only: text only */}
+                        <div className="flex md:hidden flex-col items-center gap-1">
+                            <p className="text-sm font-medium text-neutral-900">Transport:{" "}<span className="capitalize">{item.trip.vehicleType}</span></p>
+                        </div>
 
-                    {/* Price */}
-                    <div className="flex flex-col  items-end">
-                        <p className="text-2xl font-medium text-neutral-900">₦{item.trip.price.toLocaleString()}</p>
-                        <p className="text-sm text-muted-foreground">Price</p>
+                        {/* Transport mode — md+ only: icon + label */}
+                        <div className="hidden md:flex flex-col items-center gap-1">
+                            {item.trip.vehicleType === "bus" ? (
+                                <VanIcon weight="duotone" size={24} />
+                            ) : (
+                                <CarProfileIcon weight="duotone" size={24} />
+                            )}
+                            <p className="text-sm text-muted-foreground">Transport</p>
+                        </div>
+
+                        {/* Spacer (md+) */}
+                        <div className="hidden md:flex flex-1" />
+
+                        {/* Price — sm only: no label, smaller */}
+                        <div className="flex md:hidden flex-col items-end ml-auto">
+                            <p className="text-xl font-medium text-neutral-900">₦{item.trip.price.toLocaleString()}</p>
+                        </div>
+
+                        {/* Price — md+ only: with label */}
+                        <div className="hidden md:flex flex-col items-end">
+                            <p className="text-2xl font-medium text-neutral-900">₦{item.trip.price.toLocaleString()}</p>
+                            <p className="text-sm text-muted-foreground">Price</p>
+                        </div>
                     </div>
                 </div>
 
@@ -150,7 +163,7 @@ function TripStatusCardItem({ item }: { item: TripStatusItem }) {
                 <div className="border-t border-gray-200" />
 
                 {/* Footer */}
-                <div className={`flex justify-end px-6 py-3 ${isPast ? "bg-red-700 text-white" : ""}`}>
+                <div className={`flex justify-end px-6 py-1.5 ${isPast ? "bg-red-700 text-white" : ""}`}>
                     {isPast ? (
                         <span className="text-sm font-medium text-white">Expired</span>
                     ) : (

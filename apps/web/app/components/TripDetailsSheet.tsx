@@ -14,7 +14,7 @@ import { CarProfileIcon, InfoIcon, MapPinAreaIcon } from "@phosphor-icons/react"
 import { formatPrice } from "@repo/ui/lib/utils";
 import dayjs from "dayjs";
 
-const TRANSACTION_FEE_RATE = 0.10;
+const TRANSACTION_FEE_RATE = 0.05;
 
 interface TripDetailsSheetProps {
     trip: TRoute;
@@ -44,7 +44,7 @@ export default function TripDetailsSheet({
 
     return (
         <Sheet open={open} onOpenChange={onOpenChange}>
-            <SheetContent className="sm:max-w-[480px] p-0 flex flex-col overflow-hidden">
+            <SheetContent className="w-full md:max-w-[480px] p-0 flex flex-col overflow-hidden">
                 {/* Header */}
                 <SheetHeader className="px-6 pt-6 pb-5 border-b border-gray-100">
                     <SheetTitle className="text-center text-base font-normal tracking-wide text-neutral-800">
