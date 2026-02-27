@@ -1,11 +1,12 @@
 "use client";
 
 import { useState } from "react";
-import { CarIcon, EyeIcon, IdentificationCardIcon, Info, NotePencilIcon, TrashIcon, UserFocusIcon, UserListIcon } from "@phosphor-icons/react";
+import { TrashIcon } from "@phosphor-icons/react";
 import EditRouteSheet from "./EditRouteSheet";
 import PassengersSheet from "./PassengersSheet";
 import PassengerStatusBar from "./PassengerStatusBar";
 import { Button } from "@repo/ui/components/button";
+import RouteCardActionMenu from "./RouteCardActionMenu";
 const PlaneDots = () => (
     <div className="flex items-center gap-1 flex-1 mx-3">
         <div className="w-2 h-2 rounded-full bg-neutral-500 border-2 border-neutral-500" />
@@ -77,7 +78,8 @@ const routes: RouteData[] = [
 // }
 
 function RouteCardItem({ route }: { route: RouteData }) {
-    const [routeActive, setRouteActive] = useState(true);
+    const [editOpen, setEditOpen] = useState(false);
+    const [passengersOpen, setPassengersOpen] = useState(false);
 
     return (
         <div
@@ -107,11 +109,11 @@ function RouteCardItem({ route }: { route: RouteData }) {
                 {/* Flight Times & Route */}
                 <div className="flex flex-col gap-0.5">
                     <div className="flex items-center gap-2">
-                        <span className="text-xl font-medium text-neutral-900 tracking-tight">
+                        <span className="text-lg lg:text-xl font-medium text-neutral-900 tracking-tight">
                             {route.departureTime}
                         </span>
                         <PlaneDots />
-                        <span className="text-xl font-medium text-neutral-900 tracking-tight">
+                        <span className="text-lg lg:text-xl font-medium text-neutral-900 tracking-tight">
                             {route.arrivalTime}
                         </span>
                     </div>
@@ -124,19 +126,26 @@ function RouteCardItem({ route }: { route: RouteData }) {
 
             {/* Right Section — Prices */}
             <div className="w-full lg:w-auto flex-1 flex items-center justify-between lg:justify-end gap-6">
-                {/* Passenger Status */}
-                <div className="w-full sm:w-auto sm:min-w-[260px]">
-                    <PassengerStatusBar />
+                {/* Passenger Status + sm action menu */}
+                <div className="flex items-center gap-4 w-full sm:w-auto">
+                    <div className="flex-1 sm:min-w-[220px] sm:max-w-[260px]">
+                        <PassengerStatusBar />
+                    </div>
+                    {/* Action menu — sm only */}
+                    <div className="sm:hidden shrink-0">
+                        <RouteCardActionMenu
+                            onEdit={() => setEditOpen(true)}
+                            onPassengers={() => setPassengersOpen(true)}
+                            onDelete={() => console.log("delete")}
+                        />
+                    </div>
                 </div>
 
                 {/* Divider */}
                 <div className="hidden lg:block h-12 w-px bg-slate-200" />
 
-                {/* Action Buttons */}
+                {/* Action Buttons (desktop) + shared controlled sheets (mobile) */}
                 <div className="hidden sm:flex items-center gap-2 opacity-80 group-hover:opacity-100 transition-opacity">
-                    {/* Edit - Primary */}
-
-
                     <EditRouteSheet
                         defaultValues={{
                             departureCity: { title: "Lagos", locality: "LOS", label: "Ojota Motor Park" },
@@ -157,10 +166,27 @@ function RouteCardItem({ route }: { route: RouteData }) {
                         variant="outline"
                         size="icon-lg"
                         className="rounded-lg border-red-200 text-red-500 hover:bg-red-50 hover:border-red-300"
+                        onClick={() => console.log("delete")}
                     >
                         <TrashIcon size={18} />
                     </Button>
                 </div>
+
+                {/* Controlled sheets for mobile menu (rendered outside sm:hidden so they're always in the tree) */}
+                <EditRouteSheet
+                    open={editOpen}
+                    onOpenChange={setEditOpen}
+                    defaultValues={{
+                        departureCity: { title: "Lagos", locality: "LOS", label: "Ojota Motor Park" },
+                        arrivalCity: { title: "Abuja", locality: "ABV", label: "Nnamdi Azikiwe International Airport" },
+                        vehicleType: "car",
+                        seatNumber: 8,
+                        price: 900000,
+                        departureTime: new Date('2026-02-10T15:30:00'),
+                        estimatedArrivalTime: new Date('2026-02-11T09:43:00'),
+                    }}
+                />
+                <PassengersSheet open={passengersOpen} onOpenChange={setPassengersOpen} />
             </div>
         </div>
     );

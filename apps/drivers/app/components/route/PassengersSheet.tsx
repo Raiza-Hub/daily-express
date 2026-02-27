@@ -26,18 +26,26 @@ const passengers: Passenger[] = [
     { firstName: "Babatunde", lastName: "Adeola" },
 ];
 
-export default function PassengersSheet() {
+interface PassengersSheetProps {
+    open?: boolean;
+    onOpenChange?: (open: boolean) => void;
+}
+
+export default function PassengersSheet({ open, onOpenChange }: PassengersSheetProps) {
+    const isControlled = open !== undefined;
     return (
-        <Sheet>
-            <SheetTrigger asChild>
-                <Button
-                    variant="outline"
-                    size="icon-lg"
-                    className="rounded-lg border-slate-200 hover:bg-slate-100"
-                >
-                    <UsersThreeIcon size={18} />
-                </Button>
-            </SheetTrigger>
+        <Sheet open={isControlled ? open : undefined} onOpenChange={isControlled ? onOpenChange : undefined}>
+            {!isControlled && (
+                <SheetTrigger asChild>
+                    <Button
+                        variant="outline"
+                        size="icon-lg"
+                        className="rounded-lg border-slate-200 hover:bg-slate-100"
+                    >
+                        <UsersThreeIcon size={18} />
+                    </Button>
+                </SheetTrigger>
+            )}
 
             <SheetContent className="w-full sm:max-w-[420px] overflow-y-aut">
                 <SheetHeader className="pb-4 border-b px-6">

@@ -9,7 +9,7 @@ const PassengerStatusBar = () => {
 
     return (
         <div className="*:not-first:mt-4">
-            <Label>Passengers - {max}</Label>
+            <Label className="text-sm">Passengers - {max}</Label>
             <div>
                 <Slider aria-label="Slider with ticks" defaultValue={[5]} max={max} />
                 <span

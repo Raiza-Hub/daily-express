@@ -37,6 +37,8 @@ import { useEffect, useRef, useState } from "react";
 
 interface EditRouteSheetProps {
     defaultValues: Partial<TRoute>;
+    open?: boolean;
+    onOpenChange?: (open: boolean) => void;
 }
 
 const VEHICLE_TYPE = [
@@ -47,7 +49,10 @@ const VEHICLE_TYPE = [
 
 export default function EditRouteSheet({
     defaultValues,
+    open,
+    onOpenChange,
 }: EditRouteSheetProps) {
+    const isControlled = open !== undefined;
     const {
         handleSubmit,
         control,
@@ -88,15 +93,17 @@ export default function EditRouteSheet({
     };
 
     return (
-        <Sheet>
-            <SheetTrigger className='group flex items-center p-2 cursor-pointer' asChild>
-                <Button
-                    size="icon-lg"
-                    className="rounded-lg bg-slate-900 text-white hover:bg-slate-800 shadow-sm"
-                >
-                    <NotePencilIcon size={18} />
-                </Button>
-            </SheetTrigger>
+        <Sheet open={isControlled ? open : undefined} onOpenChange={isControlled ? onOpenChange : undefined}>
+            {!isControlled && (
+                <SheetTrigger className='group flex items-center p-2 cursor-pointer' asChild>
+                    <Button
+                        size="icon-lg"
+                        className="rounded-lg bg-slate-900 text-white hover:bg-slate-800 shadow-sm"
+                    >
+                        <NotePencilIcon size={18} />
+                    </Button>
+                </SheetTrigger>
+            )}
             <SheetContent className="w-full sm:max-w-[540px] overflow-y-auto">
                 <SheetHeader className="pb-4 border-b px-6">
                     <SheetTitle className="text-xl font-semibold">Edit Route</SheetTitle>
