@@ -7,6 +7,6 @@
       "@repo/ui/*": ["./src/*"]
     }
   },
-  "include": ["src"],
+  "include": ["src", "../../apps/web/app/components/DriverInfo.tsx", "../../apps/web/app/components/NavItem.tsx"],
   "exclude": ["node_modules", "dist"]
 }
