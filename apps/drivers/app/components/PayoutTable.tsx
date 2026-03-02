@@ -35,7 +35,7 @@ const PayoutTable = () => {
     return (
         <div className="w-full bg-white min-h-screen">
             {/* Header */}
-            <div className="flex items-center justify-between px-8 py-4 border-b border-neutral-200 sticky top-16 z-50 bg-white">
+            {/* <div className="flex items-center justify-between px-8 py-4 border-b border-neutral-200 sticky top-16 z-50 bg-white">
                 <div className="flex items-center gap-2 text-gray-500 font-medium cursor-pointer hover:text-gray-700">
                     <FunnelIcon size={18} weight="fill" className="text-gray-400" />
                     <span className="text-sm font-semibold text-gray-400">Filters</span>
@@ -45,10 +45,10 @@ const PayoutTable = () => {
                         Export CSV
                     </Button>
                 </div>
-            </div>
+            </div> */}
 
             {/* Table */}
-            <div className="max-w-7xl mx-auto px-8 py-6">
+            <div className="max-w-7xl mx-auto px-2.5 md:px-8">
                 <div className="overflow-x-auto">
                     <table className="w-full min-w-[1000px] text-left border-collapse">
                         <thead>
