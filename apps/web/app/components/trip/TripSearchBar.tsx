@@ -1,26 +1,26 @@
 "use client"
 
-import * as React from "react"
 import dayjs from "dayjs"
 import { cn } from "@repo/ui/lib/utils"
 import { ArrowsLeftRightIcon } from "@phosphor-icons/react"
-import { CalendarTwin } from "./CalendarTwin"
+import { CalendarTwin } from "../CalendarTwin"
 import { LocationDropdown } from "@repo/ui/components/location-dropdown"
+import { useState, useRef, useEffect } from "react"
 
 export function TripSearchBar({ className }: { className?: string }) {
-    const [from, setFrom] = React.useState("")
-    const [to, setTo] = React.useState("")
-    const [departureDate, setDepartureDate] = React.useState(new Date())
+    const [from, setFrom] = useState("")
+    const [to, setTo] = useState("")
+    const [departureDate, setDepartureDate] = useState(new Date())
 
-    const [showFromDropdown, setShowFromDropdown] = React.useState(false)
-    const [showToDropdown, setShowToDropdown] = React.useState(false)
-    const [showCalendar, setShowCalendar] = React.useState(false)
+    const [showFromDropdown, setShowFromDropdown] = useState(false)
+    const [showToDropdown, setShowToDropdown] = useState(false)
+    const [showCalendar, setShowCalendar] = useState(false)
 
-    const fromRef = React.useRef<HTMLDivElement>(null)
-    const toRef = React.useRef<HTMLDivElement>(null)
-    const calendarRef = React.useRef<HTMLDivElement>(null)
+    const fromRef = useRef<HTMLDivElement>(null)
+    const toRef = useRef<HTMLDivElement>(null)
+    const calendarRef = useRef<HTMLDivElement>(null)
 
-    React.useEffect(() => {
+    useEffect(() => {
         const handleClickOutside = (e: MouseEvent) => {
             if (fromRef.current && !fromRef.current.contains(e.target as Node))
                 setShowFromDropdown(false)
@@ -37,7 +37,7 @@ export function TripSearchBar({ className }: { className?: string }) {
     }, [])
 
     return (
-        <div className={cn("w-full", className)}>
+        <div className={cn("w-full relative", className)}>
             <div className="flex flex-col lg:flex-row items-stretch gap-2">
 
                 {/* FROM */}
@@ -117,7 +117,7 @@ export function TripSearchBar({ className }: { className?: string }) {
                     <button
                         type="button"
                         onClick={() => setShowCalendar((prev) => !prev)}
-                        className="w-full text-left outline-none"
+                        className="w-full text-left outline-none cursor-pointer"
                     >
                         <span className="text-xs text-neutral-400 block">
                             Departure
@@ -128,7 +128,7 @@ export function TripSearchBar({ className }: { className?: string }) {
                     </button>
 
                     {showCalendar && (
-                        <div className="absolute top-full right-0 mt-2 z-50">
+                        <div className="absolute top-full right-0 mt-2 z-50 min-w-[600px]">
                             <CalendarTwin
                                 value={departureDate}
                                 onChange={(date) => {
@@ -150,6 +150,40 @@ export function TripSearchBar({ className }: { className?: string }) {
                 </button>
 
             </div>
+            
+            {/* MOBILE OVERLAY — bottom sheet, small screens only */}
+            {showCalendar && (
+                <div className="md:hidden fixed inset-0 z-50 flex flex-col">
+                    {/* Backdrop */}
+                    <div
+                        className="absolute inset-0 bg-black/40"
+                        onClick={() => setShowCalendar(false)}
+                    />
+
+                    {/* Sheet */}
+                    <div className="relative mt-auto bg-white rounded-t-2xl p-4 flex flex-col gap-4 max-h-[90vh] overflow-y-auto">
+                        {/* Header */}
+                        <div className="flex items-center justify-between">
+                            <span className="text-base font-semibold text-neutral-900">Select departure date</span>
+                            <button
+                                type="button"
+                                onClick={() => setShowCalendar(false)}
+                                className="text-sm text-neutral-500 hover:text-neutral-800 transition cursor-pointer"
+                            >
+                                Close
+                            </button>
+                        </div>
+
+                        <CalendarTwin
+                            value={departureDate}
+                            onChange={(date) => {
+                                setDepartureDate(date)
+                                setShowCalendar(false)
+                            }}
+                        />
+                    </div>
+                </div>
+            )}
         </div>
     )
 }

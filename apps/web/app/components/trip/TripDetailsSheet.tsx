@@ -11,7 +11,7 @@ import {
 import { Button } from "@repo/ui/components/button";
 import { Separator } from "@repo/ui/components/separator";
 import { CarProfileIcon, InfoIcon, MapPinAreaIcon } from "@phosphor-icons/react";
-import { formatPrice } from "@repo/ui/lib/utils";
+import { formatPrice, getDuration } from "@repo/ui/lib/utils";
 import dayjs from "dayjs";
 
 const TRANSACTION_FEE_RATE = 0.05;
@@ -22,14 +22,6 @@ interface TripDetailsSheetProps {
     onOpenChange: (open: boolean) => void;
 }
 
-function getDuration(departure: Date, arrival: Date) {
-    const diffMs = arrival.getTime() - departure.getTime();
-    const hours = Math.floor(diffMs / (1000 * 60 * 60));
-    const minutes = Math.floor((diffMs % (1000 * 60 * 60)) / (1000 * 60));
-    if (hours === 0) return `${minutes}m`;
-    if (minutes === 0) return `${hours}h`;
-    return `${hours}h ${minutes}m`;
-}
 
 export default function TripDetailsSheet({
     trip,

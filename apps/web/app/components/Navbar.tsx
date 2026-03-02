@@ -43,20 +43,22 @@ const Navbar = async () => {
                             </div> */}
 
                         <div className='ml-auto flex items-center'>
-                            <div className='hidden lg:flex lg:flex-1 lg:items-center lg:justify-end lg:space-x-6'>
+                            <div className='lg:flex lg:flex-1 lg:items-center lg:justify-end lg:space-x-6'>
                                 {user ? null : (
-                                    <Link
-                                        href='/sign-in'
-                                        className={buttonVariants({
-                                            variant: 'ghost',
-                                        })}>
-                                        Become a driver
-                                    </Link>
+                                    <div className='hidden lg:block'>
+                                        <Link
+                                            href='/sign-in'
+                                            className={buttonVariants({
+                                                variant: 'ghost',
+                                            })}>
+                                            Become a driver
+                                        </Link>
+                                   </div>
                                 )}
 
                                 {user ? null : (
                                     <span
-                                        className='h-6 w-px bg-gray-200'
+                                        className='hidden lg:block h-6 w-px bg-gray-200'
                                         aria-hidden='true'
                                     />
                                 )}
@@ -65,9 +67,9 @@ const Navbar = async () => {
                                     <UserAccountNav />
                                 ) : (
                                     <Link
-                                        href='/sign-up'
+                                        href='/sign-in'
                                         className={buttonVariants({
-                                            variant: 'ghost',
+                                            variant: 'softBlue',
                                         })}>
                                         Sign in
                                     </Link>
