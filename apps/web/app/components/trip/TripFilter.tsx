@@ -81,6 +81,9 @@ export default function TripFilter() {
                     variant="outline"
                     className="w-full flex items-center justify-center gap-2 rounded-2xl py-3 h-auto -mt-4 cursor-pointer shadow-none"
                     onClick={() => setDrawerOpen(true)}
+                    aria-haspopup="dialog"
+                    aria-expanded={drawerOpen}
+                    aria-controls="trip-filter-drawer"
                 >
                     <FadersIcon size={18} />
                     Sort & Filter {activeCount > 0 && `(${activeCount})`}
@@ -95,7 +98,12 @@ export default function TripFilter() {
                         />
 
                         {/* Full-screen panel */}
-                        <div className="fixed inset-0 z-50 flex flex-col bg-background overflow-hidden">
+                        <div
+                            id="trip-filter-drawer"
+                            className="fixed inset-0 z-50 flex flex-col bg-background overflow-hidden"
+                            role="dialog"
+                            aria-modal="true"
+                        >
                             {/* Header */}
                             <div className="flex items-start justify-between p-4 border-b shrink-0">
                                 <div>

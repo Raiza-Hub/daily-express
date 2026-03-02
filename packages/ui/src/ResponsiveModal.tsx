@@ -1,7 +1,6 @@
 "use client";
 
-import * as React from "react";
-import { useEffect } from "react";
+import { useCallback, useEffect, useRef } from "react";
 import { useIsMobile } from "@repo/ui/hooks/use-is-mobile";
 import type { ResponsiveModalProps } from "@repo/types";
 import {
@@ -46,15 +45,21 @@ export function ResponsiveModal({
     const isMobile = useIsMobile();
 
     // Lock body scroll when the mobile panel is open
+    const panelRef = useRef<HTMLDivElement>(null);
+    const triggerRef = useRef<HTMLElement>(null);
+
+    // Handle Escape key
+    const handleKeyDown = useCallback((e: React.KeyboardEvent) => {
+        if (e.key === "Escape") {
+            onOpenChange?.(false);
+        }
+    }, [onOpenChange]);
+
+    // Focus panel on open, return focus on close
     useEffect(() => {
         if (isMobile && open) {
-            document.body.style.overflow = "hidden";
-        } else {
-            document.body.style.overflow = "";
+            panelRef.current?.focus();
         }
-        return () => {
-            document.body.style.overflow = "";
-        };
     }, [isMobile, open]);
 
     // Avoid a layout flash while the hook resolves
@@ -79,6 +84,12 @@ export function ResponsiveModal({
 
                         {/* Full-screen panel */}
                         <div
+                            ref={panelRef}
+                            role="dialog"
+                            aria-modal="true"
+                            aria-labelledby={title ? "modal-title" : undefined}
+                            tabIndex={-1}
+                            onKeyDown={handleKeyDown}
                             className={cn(
                                 "fixed inset-0 z-50 flex flex-col bg-background overflow-hidden",
                                 panelClassName
@@ -88,7 +99,7 @@ export function ResponsiveModal({
                             {(title || description) && (
                                 <div className="p-4 border-b shrink-0">
                                     {title && (
-                                        <h2 className="text-xl font-semibold">
+                                        <h2 id="modal-title" className="text-xl font-semibold">
                                             {title}
                                         </h2>
                                     )}

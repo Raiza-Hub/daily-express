@@ -73,6 +73,8 @@ const MobileNav = () => {
                     <div>
                         <button
                             onClick={() => setSettingsOpen((prev) => !prev)}
+                            aria-expanded={settingsOpen}
+                            aria-controls="mobile-settings-submenu"
                             className={cn(
                                 "w-full flex items-center justify-between px-2 py-2 text-base font-medium rounded-md transition-colors",
                                 isSettingsActive
@@ -91,7 +93,7 @@ const MobileNav = () => {
                         </button>
 
                         {settingsOpen && (
-                            <div className="mt-1 ml-3 flex flex-col gap-0.5 border-l border-neutral-200 pl-3">
+                            <div id="mobile-settings-submenu" className="mt-1 ml-3 flex flex-col gap-0.5 border-l border-neutral-200 pl-3">
                                 {SETTINGS_TABS.map((tab) => {
                                     const isActive = pathname === tab.href;
                                     return (
