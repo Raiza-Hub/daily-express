@@ -21,6 +21,12 @@ const MobileNav = () => {
     const pathname = usePathname();
     const isSettingsActive = pathname.startsWith("/settings");
 
+    const closeMenu = () => {
+        setOpen(false);
+        setSettingsOpen(false);
+    };
+
+
     return (
         <>
             {/* Hamburger button */}
@@ -36,23 +42,25 @@ const MobileNav = () => {
             {open && (
                 <div
                     className="fixed inset-0 z-40 bg-black/20 backdrop-blur-sm lg:hidden"
-                    onClick={() => setOpen(false)}
+                    onClick={closeMenu}
                 />
             )}
 
             {/* Top-sliding panel — starts from top-0 */}
             <div
-                className={`fixed top-0 left-0 right-0 z-50 bg-background border-b border-neutral-200 shadow-lg lg:hidden
-                    transition-all duration-300 ease-in-out overflow-hidden
-                    ${open ? "max-h-screen opacity-100" : "max-h-0 opacity-0 pointer-events-none"}`}
+                className={cn(
+                    "fixed top-0 left-0 right-0 z-50 bg-background border-b border-neutral-200 shadow-lg lg:hidden",
+                    "transition-all duration-300 ease-in-out overflow-hidden",
+                    open ? "max-h-screen opacity-100" : "max-h-0 opacity-0 pointer-events-none"
+                )}
             >
                 {/* Header: logo + close button */}
                 <div className="flex items-center justify-between px-4 h-16 border-b border-neutral-100">
-                    <Link href="/" onClick={() => setOpen(false)}>
+                    <Link href="/" onClick={closeMenu}>
                         <Icons.logo className="h-10 w-10" />
                     </Link>
                     <button
-                        onClick={() => setOpen(false)}
+                        onClick={closeMenu}
                         className="flex items-center justify-center rounded-md p-1.5 text-muted-foreground hover:text-foreground hover:bg-muted transition-colors cursor-pointer"
                         aria-label="Close navigation menu"
                     >
@@ -66,7 +74,7 @@ const MobileNav = () => {
                         label="Payouts"
                         href="/payouts"
                         className="text-base py-2"
-                        onClick={() => setOpen(false)}
+                        onClick={closeMenu}
                     />
 
                     {/* Settings — expandable */}
@@ -76,7 +84,7 @@ const MobileNav = () => {
                             aria-expanded={settingsOpen}
                             aria-controls="mobile-settings-submenu"
                             className={cn(
-                                "w-full flex items-center justify-between px-2 py-2 text-base font-medium rounded-md transition-colors",
+                                "w-full flex items-center justify-between px-2 py-2 text-base font-medium rounded-md transition-colors cursor-pointer",
                                 isSettingsActive
                                     ? "text-foreground bg-muted"
                                     : "text-muted-foreground hover:text-foreground hover:bg-muted"
@@ -86,7 +94,7 @@ const MobileNav = () => {
                             <CaretDownIcon
                                 size={16}
                                 className={cn(
-                                    "transition-transform duration-200 cursor-pointer",
+                                    "transition-transform duration-200",
                                     settingsOpen ? "rotate-180" : "rotate-0"
                                 )}
                             />
@@ -100,7 +108,7 @@ const MobileNav = () => {
                                         <Link
                                             key={tab.href}
                                             href={tab.href}
-                                            onClick={() => setOpen(false)}
+                                            onClick={closeMenu}
                                             className={cn(
                                                 "relative px-3 py-2 text-sm rounded-md transition-colors",
                                                 isActive

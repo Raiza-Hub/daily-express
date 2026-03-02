@@ -45,21 +45,16 @@ export function ResponsiveModal({
     const isMobile = useIsMobile();
 
     // Lock body scroll when the mobile panel is open
-    const panelRef = useRef<HTMLDivElement>(null);
-    const triggerRef = useRef<HTMLElement>(null);
-
-    // Handle Escape key
-    const handleKeyDown = useCallback((e: React.KeyboardEvent) => {
-        if (e.key === "Escape") {
-            onOpenChange?.(false);
-        }
-    }, [onOpenChange]);
-
-    // Focus panel on open, return focus on close
     useEffect(() => {
-        if (isMobile && open) {
-            panelRef.current?.focus();
+        if (!isMobile) return;
+        if (open) {
+            document.body.style.overflow = "hidden";
+        } else {
+            document.body.style.overflow = "";
         }
+        return () => {
+            document.body.style.overflow = "";
+        };
     }, [isMobile, open]);
 
     // Avoid a layout flash while the hook resolves
@@ -84,12 +79,10 @@ export function ResponsiveModal({
 
                         {/* Full-screen panel */}
                         <div
-                            ref={panelRef}
                             role="dialog"
                             aria-modal="true"
                             aria-labelledby={title ? "modal-title" : undefined}
                             tabIndex={-1}
-                            onKeyDown={handleKeyDown}
                             className={cn(
                                 "fixed inset-0 z-50 flex flex-col bg-background overflow-hidden",
                                 panelClassName
