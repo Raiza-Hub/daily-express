@@ -58,7 +58,7 @@ const Navbar = async () => {
 
                                 {user ? null : (
                                     <span
-                                        className='h-6 w-px bg-gray-200'
+                                        className='hidden lg:block h-6 w-px bg-gray-200'
                                         aria-hidden='true'
                                     />
                                 )}

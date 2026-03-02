@@ -8,13 +8,11 @@ export function cn(...inputs: ClassValue[]) {
 
 export function dateToTime(date?: Date | string | null) {
   if (!date) return null
-
   const d = date instanceof Date ? date : new Date(date)
-
   if (isNaN(d.getTime())) return null
-
   return new Time(d.getHours(), d.getMinutes())
 }
+
 export function timeToDate(time: Time, baseDate?: Date | null) {
   const date = baseDate ? new Date(baseDate) : new Date()
   date.setHours(time.hour, time.minute, 0, 0)
@@ -22,12 +20,13 @@ export function timeToDate(time: Time, baseDate?: Date | null) {
 }
 
 export function getDuration(departure: Date, arrival: Date) {
-  const diffMs = arrival.getTime() - departure.getTime();
-  const hours = Math.floor(diffMs / (1000 * 60 * 60));
-  const minutes = Math.floor((diffMs % (1000 * 60 * 60)) / (1000 * 60));
-  if (hours === 0) return `${minutes}m`;
-  if (minutes === 0) return `${hours}h`;
-  return `${hours}h ${minutes}m`;
+  const diffMs = arrival.getTime() - departure.getTime()
+  if (!Number.isFinite(diffMs) || diffMs < 0) return "0m"
+  const hours = Math.floor(diffMs / (1000 * 60 * 60))
+  const minutes = Math.floor((diffMs % (1000 * 60 * 60)) / (1000 * 60))
+  if (hours === 0) return `${minutes}m`
+  if (minutes === 0) return `${hours}h`
+  return `${hours}h ${minutes}m`
 }
 
 export function formatPrice(

@@ -78,6 +78,12 @@ export default function ChangeBankDetailsDialog() {
         setOpen(false);
     };
 
+    const closeModal = () => {
+        setOpen(false);
+        setOpenBank(false);
+        reset();
+    };
+
     const formContent = (
         <form onSubmit={handleSubmit(onSubmit)} className="space-y-6 py-4 px-4">
             <div className="grid gap-6">
@@ -259,7 +265,7 @@ export default function ChangeBankDetailsDialog() {
         <ResponsiveModal
             open={open}
             onOpenChange={(val) => {
-                if (!val) { setOpen(false); reset(); }
+                if (!val) { closeModal(); }
                 else setOpen(true);
             }}
             trigger={
@@ -273,7 +279,7 @@ export default function ChangeBankDetailsDialog() {
                     type="button"
                     variant="secondary"
                     className="cursor-pointer"
-                    onClick={() => { setOpen(false); reset(); }}
+                    onClick={closeModal}
                 >
                     Cancel
                 </Button>
