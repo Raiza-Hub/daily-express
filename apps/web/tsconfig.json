@@ -19,7 +19,7 @@
     "next-env.d.ts",
     "next.config.js",
     ".next/types/**/*.ts"
-  ],
+, "app/components/NavItem.tsx"  ],
   "exclude": [
     "node_modules"
   ]

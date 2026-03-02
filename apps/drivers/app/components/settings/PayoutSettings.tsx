@@ -8,7 +8,7 @@ export default function PayoutSettings() {
             <div className="mb-6 py-4 border-b border-gray-100">
                 <h1 className="text-xl font-semibold mb-1">Bank Details</h1>
                 <p className="text-sm text-muted-foreground">
-                    Manage your payout accounts and banking details.
+                    Manage your payout accounts and banking details. Payouts are processed every 2 hours during active trips, subject to bank processing times.
                 </p>
             </div>
 

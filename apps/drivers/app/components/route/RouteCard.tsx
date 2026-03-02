@@ -7,13 +7,7 @@ import PassengersSheet from "./PassengersSheet";
 import PassengerStatusBar from "./PassengerStatusBar";
 import { Button } from "@repo/ui/components/button";
 import RouteCardActionMenu from "./RouteCardActionMenu";
-const PlaneDots = () => (
-    <div className="flex items-center gap-1 flex-1 mx-3">
-        <div className="w-2 h-2 rounded-full bg-neutral-500 border-2 border-neutral-500" />
-        <div className="flex-1 border-t-2 border-dotted border-neutral-400" />
-        <div className="w-2 h-2 rounded-full bg-neutral-500 border-2 border-neutral-500" />
-    </div>
-);
+import { PlaneDots } from "@repo/ui/PlaneDots";
 
 interface RouteData {
     departureTime: string;

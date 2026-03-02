@@ -21,6 +21,15 @@ export function timeToDate(time: Time, baseDate?: Date | null) {
   return date
 }
 
+export function getDuration(departure: Date, arrival: Date) {
+  const diffMs = arrival.getTime() - departure.getTime();
+  const hours = Math.floor(diffMs / (1000 * 60 * 60));
+  const minutes = Math.floor((diffMs % (1000 * 60 * 60)) / (1000 * 60));
+  if (hours === 0) return `${minutes}m`;
+  if (minutes === 0) return `${hours}h`;
+  return `${hours}h ${minutes}m`;
+}
+
 export function formatPrice(
   price: number | string,
   options: {

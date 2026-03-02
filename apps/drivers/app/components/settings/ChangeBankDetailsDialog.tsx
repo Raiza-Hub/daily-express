@@ -2,24 +2,7 @@
 
 import BankList from "../../../bank-names.json";
 import { Button } from "@repo/ui/components/button";
-import {
-    Dialog,
-    DialogClose,
-    DialogContent,
-    DialogFooter,
-    DialogHeader,
-    DialogTitle,
-    DialogTrigger,
-} from "@repo/ui/components/dialog";
-import {
-    Drawer,
-    DrawerClose,
-    DrawerContent,
-    DrawerFooter,
-    DrawerHeader,
-    DrawerTitle,
-    DrawerTrigger,
-} from "@repo/ui/components/drawer";
+import { ResponsiveModal } from "@repo/ui/ResponsiveModal";
 import {
     Field,
     FieldDescription,
@@ -45,7 +28,6 @@ import Image from "next/image";
 import { useState } from "react";
 import { Controller, useForm } from "react-hook-form";
 import { cn } from "@repo/ui/lib/utils";
-import { useIsMobile } from "@repo/ui/hooks/use-is-mobile";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { onboardingSchema } from "@repo/types/index";
 import { z } from "zod";
@@ -68,7 +50,6 @@ type TBankDetailsFormValues = z.infer<typeof ChangeBankDetailsSchema>;
 export default function ChangeBankDetailsDialog() {
     const [open, setOpen] = useState(false);
     const [openBank, setOpenBank] = useState(false);
-    const isMobile = useIsMobile();
 
     const {
         control,
@@ -274,79 +255,37 @@ export default function ChangeBankDetailsDialog() {
         </form>
     );
 
-    if (isMobile === undefined) return null;
-
-    if (isMobile) {
-        return (
-            <Drawer
-                open={open}
-                onOpenChange={(val) => {
-                    setOpen(val);
-                    if (!val) reset();
-                }}
-            >
-                <DrawerTrigger asChild>
-                    <Button variant="secondary" className="cursor-pointer">Change</Button>
-                </DrawerTrigger>
-                <DrawerContent>
-                    <DrawerHeader>
-                        <DrawerTitle>Change Bank Details</DrawerTitle>
-                    </DrawerHeader>
-                    {formContent}
-                    <DrawerFooter>
-                        <Button
-                            type="submit"
-                            onClick={handleSubmit(onSubmit)}
-                            className="bg-blue-600 hover:bg-blue-700 text-white cursor-pointer"
-                            disabled={isSubmitting}
-                        >
-                            {isSubmitting ? "Saving..." : "Save Changes"}
-                        </Button>
-                        <DrawerClose asChild>
-                            <Button type="button" variant="secondary" className="cursor-pointer">
-                                Cancel
-                            </Button>
-                        </DrawerClose>
-                    </DrawerFooter>
-                </DrawerContent>
-            </Drawer>
-        );
-    }
-
     return (
-        <Dialog
+        <ResponsiveModal
             open={open}
             onOpenChange={(val) => {
-                setOpen(val);
-                if (!val) reset();
+                if (!val) { setOpen(false); reset(); }
+                else setOpen(true);
             }}
-        >
-            <DialogTrigger asChild>
+            trigger={
                 <Button variant="secondary" className="cursor-pointer">Change</Button>
-            </DialogTrigger>
-            <DialogContent className="sm:max-w-[500px]" onOpenAutoFocus={(e) => e.preventDefault()}>
-                <DialogHeader>
-                    <DialogTitle>Change Bank Details</DialogTitle>
-                </DialogHeader>
-
-                {formContent}
-
-                <DialogFooter className="px-4 pb-4">
-                    <DialogClose asChild>
-                        <Button type="button" variant="secondary" className="cursor-pointer">
-                            Cancel
-                        </Button>
-                    </DialogClose>
-                    <Button
-                        type="submit"
-                        onClick={handleSubmit(onSubmit)}
-                        className="bg-blue-600 hover:bg-blue-700 text-white cursor-pointer"
-                        disabled={isSubmitting}
-                    >
-                        {isSubmitting ? "Saving..." : "Save Changes"}
-                    </Button>
-                </DialogFooter>
-            </DialogContent>
-        </Dialog>
+            }
+            title="Change Bank Details"
+        >
+            {formContent}
+            <div className="px-4 pb-4 pt-2 flex justify-end gap-2">
+                <Button
+                    type="button"
+                    variant="secondary"
+                    className="cursor-pointer"
+                    onClick={() => { setOpen(false); reset(); }}
+                >
+                    Cancel
+                </Button>
+                <Button
+                    type="submit"
+                    onClick={handleSubmit(onSubmit)}
+                    className="bg-blue-600 hover:bg-blue-700 text-white cursor-pointer"
+                    disabled={isSubmitting}
+                >
+                    {isSubmitting ? "Saving..." : "Save Changes"}
+                </Button>
+            </div>
+        </ResponsiveModal>
     );
 }

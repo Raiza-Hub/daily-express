@@ -154,6 +154,9 @@ const PaymentInfo = () => {
                                             </Command>
                                         </PopoverContent>
                                     </Popover>
+                                    <FieldDescription>
+                                        Select <strong>Opay</strong> to receive your payouts faster and with fewer delays.
+                                    </FieldDescription>
                                     {fieldState.invalid && (
                                         <FieldError errors={[fieldState.error]} />
                                     )}

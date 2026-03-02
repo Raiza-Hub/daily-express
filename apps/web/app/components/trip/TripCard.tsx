@@ -1,77 +1,24 @@
 "use client";
 
-import { CarIcon, CarProfileIcon, MapPinAreaIcon, PhoneCallIcon, PhoneIcon } from "@phosphor-icons/react";
-import { Avatar, AvatarImage } from "@repo/ui/components/avatar";
+import { CarProfileIcon } from "@phosphor-icons/react";
 import { useState } from "react";
-import TripDetailsSheet from "./TripDetailsSheet";
+
 import type { TRoute } from "@repo/types/routeSchema";
-
-const PlaneDots = () => (
-    <div className="flex items-center gap-1 flex-1 mx-3 min-w-60">
-        <div className="w-2 h-2 rounded-full bg-neutral-500 border-2 border-neutral-500" />
-        <div className="flex-1 border-t-2 border-dotted border-neutral-400" />
-        <div className="w-2 h-2 rounded-full bg-neutral-500 border-2 border-neutral-500" />
-    </div>
-);
+import TripDetailsSheet from "./TripDetailsSheet";
+import { PlaneDots } from "@repo/ui/PlaneDots";
+import { DriverInfo } from "~/components/DriverInfo";
+import type { DriverInfoProps } from "~/components/DriverInfo";
 
 
 
-const mockDriver = {
+
+const mockDriver: DriverInfoProps = {
     firstName: "Adebayo",
     lastName: "Okonkwo",
     phoneNumber: "08012345678",
     country: "Nigeria",
     state: "Lagos",
     profilePictureUrl: "https://images.unsplash.com/photo-1617244147030-8bd6f9e21d1e?q=80&w=987&auto=format&fit=crop&ixlib=rb-4.1.0&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D",
-};
-
-interface Driver {
-    firstName: string;
-    lastName: string;
-    phoneNumber: string;
-    country: string;
-    state: string;
-    profilePictureUrl: string;
-}
-
-const DriverInfo = ({ driver }: { driver: Driver }) => {
-    const fullName = `${driver.firstName} ${driver.lastName}`;
-    const initials = `${driver.firstName[0]}${driver.lastName[0]}`;
-
-    return (
-        <div className="border-t border-gray-100 px-6 py-5 bg-gray-50">
-            <p className="text-base font-semibold mb-4">Driver Details</p>
-            <div className="flex items-center gap-5">
-                {/* Avatar */}
-                <div className="relative shrink-0">
-                    <Avatar className="h-16 w-16">
-                        <AvatarImage className="object-cover" src={driver.profilePictureUrl || ""} alt={`${driver.firstName} ${driver.lastName}`} />
-                    </Avatar>
-                </div>
-
-                {/* Info */}
-                <div className="flex flex-col gap-2 flex-1">
-                    <p className="text-base font-medium leading-none">{fullName}</p>
-
-                    <div className="flex flex-wrap gap-x-5 gap-y-1.5">
-                        {/* Phone */}
-                        <div className="flex items-center gap-1.5">
-                            <PhoneCallIcon />
-                            <span className="text-sm text-neutral-600">{driver.phoneNumber}</span>
-                        </div>
-
-                        {/* Location */}
-                        <div className="flex items-center gap-1.5">
-                            <MapPinAreaIcon />
-                            <span className="text-sm text-neutral-600">
-                                {driver.state}, {driver.country}
-                            </span>
-                        </div>
-                    </div>
-                </div>
-            </div>
-        </div>
-    );
 };
 
 
@@ -172,7 +119,7 @@ export default function TripCard() {
                 </div>
 
                 {/* Expanded Details */}
-                {expanded && <DriverInfo driver={mockDriver} />}
+                {expanded && <DriverInfo {...mockDriver} />}
             </div>
 
             <p className="text-xs md:text-sm text-muted-foreground">
