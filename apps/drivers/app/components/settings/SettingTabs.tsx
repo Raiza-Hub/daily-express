@@ -17,7 +17,7 @@ const SettingNavTabs = () => {
     const pathname = usePathname();
 
     return (
-        <div className="w-full border-b border-neutral-200 px-6">
+        <div className="hidden lg:block w-full border-b border-neutral-200 px-6">
             <nav className="-mb-px flex space-x-8 overflow-x-auto" aria-label="Tabs">
                 {tabs.map((tab) => {
                     // Exact match for /settings (Profile), prefix match for others if needed, 

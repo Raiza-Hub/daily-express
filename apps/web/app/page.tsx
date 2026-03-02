@@ -1,8 +1,8 @@
 import Navbar from "~/components/Navbar";
 import SettingNavTabs from "~/components/SettingTabs";
-import { TripSearchBar } from "~/components/TripSearchBar";
-import TripCard from "./components/TripCard";
-import TripFilter from "./components/TripFilter";
+import { TripSearchBar } from "~/components/trip/TripSearchBar";
+import TripCard from "./components/trip/TripCard";
+import TripFilter from "./components/trip/TripFilter";
 import Footer from "@repo/ui/Footer";
 
 
