@@ -6,6 +6,7 @@ import { ArrowsLeftRightIcon } from "@phosphor-icons/react"
 import { CalendarTwin } from "../CalendarTwin"
 import { LocationDropdown } from "@repo/ui/components/location-dropdown"
 import { useState, useRef, useEffect } from "react"
+import { AnimatePresence, motion } from "framer-motion"
 
 export function TripSearchBar({ className }: { className?: string }) {
     const [from, setFrom] = useState("")
@@ -19,6 +20,7 @@ export function TripSearchBar({ className }: { className?: string }) {
     const fromRef = useRef<HTMLDivElement>(null)
     const toRef = useRef<HTMLDivElement>(null)
     const calendarRef = useRef<HTMLDivElement>(null)
+    const mobileCalendarRef = useRef<HTMLDivElement>(null)
 
     useEffect(() => {
         const handleClickOutside = (e: MouseEvent) => {
@@ -28,13 +30,26 @@ export function TripSearchBar({ className }: { className?: string }) {
             if (toRef.current && !toRef.current.contains(e.target as Node))
                 setShowToDropdown(false)
 
-            if (calendarRef.current && !calendarRef.current.contains(e.target as Node))
+            if (
+                calendarRef.current && !calendarRef.current.contains(e.target as Node) &&
+                (!mobileCalendarRef.current || !mobileCalendarRef.current.contains(e.target as Node))
+            )
                 setShowCalendar(false)
         }
 
         document.addEventListener("mousedown", handleClickOutside)
         return () => document.removeEventListener("mousedown", handleClickOutside)
     }, [])
+
+    // Lock body scroll when mobile calendar is open
+    useEffect(() => {
+        if (!showCalendar) return
+        const previousOverflow = document.body.style.overflow
+        document.body.style.overflow = "hidden"
+        return () => {
+            document.body.style.overflow = previousOverflow
+        }
+    }, [showCalendar])
 
     return (
         <div className={cn("w-full relative", className)}>
@@ -150,40 +165,54 @@ export function TripSearchBar({ className }: { className?: string }) {
                 </button>
 
             </div>
-            
+
             {/* MOBILE OVERLAY — bottom sheet, small screens only */}
-            {showCalendar && (
-                <div className="md:hidden fixed inset-0 z-50 flex flex-col">
-                    {/* Backdrop */}
-                    <div
-                        className="absolute inset-0 bg-black/40"
-                        onClick={() => setShowCalendar(false)}
-                    />
-
-                    {/* Sheet */}
-                    <div className="relative mt-auto bg-white rounded-t-2xl p-4 flex flex-col gap-4 max-h-[90vh] overflow-y-auto">
-                        {/* Header */}
-                        <div className="flex items-center justify-between">
-                            <span className="text-base font-semibold text-neutral-900">Select departure date</span>
-                            <button
-                                type="button"
-                                onClick={() => setShowCalendar(false)}
-                                className="text-sm text-neutral-500 hover:text-neutral-800 transition cursor-pointer"
-                            >
-                                Close
-                            </button>
-                        </div>
-
-                        <CalendarTwin
-                            value={departureDate}
-                            onChange={(date) => {
-                                setDepartureDate(date)
-                                setShowCalendar(false)
-                            }}
+            <AnimatePresence>
+                {showCalendar && (
+                    <div ref={mobileCalendarRef} className="md:hidden fixed inset-0 z-50 flex flex-col">
+                        {/* Backdrop */}
+                        <motion.div
+                            key="calendar-backdrop"
+                            initial={{ opacity: 0 }}
+                            animate={{ opacity: 1 }}
+                            exit={{ opacity: 0 }}
+                            transition={{ duration: 0.5, ease: "easeInOut" }}
+                            className="absolute inset-0 bg-black/40"
+                            onClick={() => setShowCalendar(false)}
                         />
+
+                        {/* Sheet */}
+                        <motion.div
+                            key="calendar-sheet"
+                            initial={{ y: "100%" }}
+                            animate={{ y: 0 }}
+                            exit={{ y: "100%" }}
+                            transition={{ duration: 0.5, ease: [0.16, 1, 0.3, 1] }}
+                            className="relative mt-auto bg-white rounded-t-2xl p-4 flex flex-col gap-4 max-h-[90vh] overflow-y-auto"
+                        >
+                            {/* Header */}
+                            <div className="flex items-center justify-between">
+                                <span className="text-base font-semibold text-neutral-900">Select departure date</span>
+                                <button
+                                    type="button"
+                                    onClick={() => setShowCalendar(false)}
+                                    className="text-sm text-neutral-500 hover:text-neutral-800 transition cursor-pointer"
+                                >
+                                    Close
+                                </button>
+                            </div>
+
+                            <CalendarTwin
+                                value={departureDate}
+                                onChange={(date) => {
+                                    setDepartureDate(date)
+                                    setShowCalendar(false)
+                                }}
+                            />
+                        </motion.div>
                     </div>
-                </div>
-            )}
+                )}
+            </AnimatePresence>
         </div>
     )
 }

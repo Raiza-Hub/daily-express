@@ -71,7 +71,7 @@ export function CreateRouteForm({
     FooterWrapper,
 }: CreateRouteFormProps) {
     return (
-        <form onSubmit={handleSubmit(onSubmit)} className="space-y-8 py-6 px-1 overflow-y-auto">
+        <form onSubmit={handleSubmit(onSubmit)} className="space-y-8 py-6 px-4 sm:px-1 overflow-y-auto">
 
             {/* Route Information */}
             <div className="space-y-4">

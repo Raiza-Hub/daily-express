@@ -2,6 +2,7 @@
 
 import { CarProfileIcon } from "@phosphor-icons/react";
 import { useState } from "react";
+import { AnimatePresence, motion } from "framer-motion";
 
 import type { TRoute } from "@repo/types/routeSchema";
 import TripDetailsSheet from "./TripDetailsSheet";
@@ -48,8 +49,8 @@ export default function TripCard() {
     return (
         <div className="flex flex-col gap-4 pt-6">
             <div className="flex flex-col gap-1">
-                <h3 className="text-lg text-neutral-900 font-semibold">11 results</h3>
-                <p className="text-sm text-muted-foreground">Fares displayed are for all passengers.</p>
+                <h3 className="text-xl text-neutral-900 font-semibold">11 results</h3>
+                <p className="text-base text-muted-foreground">Fares displayed are for all passengers.</p>
             </div>
 
             <div
@@ -119,10 +120,23 @@ export default function TripCard() {
                 </div>
 
                 {/* Expanded Details */}
-                {expanded && <DriverInfo {...mockDriver} />}
+                <AnimatePresence initial={false}>
+                    {expanded && (
+                        <motion.div
+                            key="driver-details"
+                            initial={{ height: 0, opacity: 0 }}
+                            animate={{ height: "auto", opacity: 1 }}
+                            exit={{ height: 0, opacity: 0 }}
+                            transition={{ duration: 0.35, ease: [0.16, 1, 0.3, 1] }}
+                            style={{ overflow: "hidden" }}
+                        >
+                            <DriverInfo {...mockDriver} />
+                        </motion.div>
+                    )}
+                </AnimatePresence>
             </div>
 
-            <p className="text-xs md:text-sm text-muted-foreground">
+            <p className="text-sm text-muted-foreground">
                 Fares may change depending on the selected trips and dates, and are not final until payment is completed and the booking is confirmed. Prices are per person and do not include luggage fees. Bookings are non-refundable once trips are confirmed.
             </p>
 

@@ -1,6 +1,7 @@
 "use client";
 
-import { useCallback, useEffect, useRef } from "react";
+import { useEffect } from "react";
+import { AnimatePresence, motion } from "framer-motion";
 import { useIsMobile } from "@repo/ui/hooks/use-is-mobile";
 import type { ResponsiveModalProps } from "@repo/types";
 import {
@@ -60,7 +61,6 @@ export function ResponsiveModal({
     // Avoid a layout flash while the hook resolves
     if (isMobile === undefined) return null;
 
-    // ── Mobile — custom overlay + full-screen panel ──────────────────────────
     if (isMobile) {
         return (
             <>
@@ -69,48 +69,60 @@ export function ResponsiveModal({
                     <span onClick={() => onOpenChange?.(true)}>{trigger}</span>
                 )}
 
-                {open && (
-                    <>
-                        {/* Overlay */}
-                        <div
-                            className="fixed inset-0 z-50 bg-black/50"
-                            onClick={() => onOpenChange?.(false)}
-                        />
+                <AnimatePresence>
+                    {open && (
+                        <>
+                            {/* Overlay */}
+                            <motion.div
+                                key="rm-overlay"
+                                initial={{ opacity: 0 }}
+                                animate={{ opacity: 1 }}
+                                exit={{ opacity: 0 }}
+                                transition={{ duration: 0.5, ease: "easeInOut" }}
+                                className="fixed inset-0 z-50 bg-black/50"
+                                onClick={() => onOpenChange?.(false)}
+                            />
 
-                        {/* Full-screen panel */}
-                        <div
-                            role="dialog"
-                            aria-modal="true"
-                            aria-labelledby={title ? "modal-title" : undefined}
-                            tabIndex={-1}
-                            className={cn(
-                                "fixed inset-0 z-50 flex flex-col bg-background overflow-hidden",
-                                panelClassName
-                            )}
-                        >
-                            {/* Header */}
-                            {(title || description) && (
-                                <div className="p-4 border-b shrink-0">
-                                    {title && (
-                                        <h2 id="modal-title" className="text-xl font-semibold">
-                                            {title}
-                                        </h2>
-                                    )}
-                                    {description && (
-                                        <p className="text-sm text-muted-foreground mt-1">
-                                            {description}
-                                        </p>
-                                    )}
+                            {/* Full-screen panel */}
+                            <motion.div
+                                key="rm-panel"
+                                role="dialog"
+                                aria-modal="true"
+                                aria-labelledby={title ? "modal-title" : undefined}
+                                tabIndex={-1}
+                                initial={{ y: "100%" }}
+                                animate={{ y: 0 }}
+                                exit={{ y: "100%" }}
+                                transition={{ duration: 0.5, ease: [0.16, 1, 0.3, 1] }}
+                                className={cn(
+                                    "fixed inset-0 z-50 flex flex-col bg-background overflow-hidden",
+                                    panelClassName
+                                )}
+                            >
+                                {/* Header */}
+                                {(title || description) && (
+                                    <div className="p-4 border-b shrink-0">
+                                        {title && (
+                                            <h2 id="modal-title" className="text-xl font-semibold">
+                                                {title}
+                                            </h2>
+                                        )}
+                                        {description && (
+                                            <p className="text-sm text-muted-foreground mt-1">
+                                                {description}
+                                            </p>
+                                        )}
+                                    </div>
+                                )}
+
+                                {/* Scrollable body */}
+                                <div className="flex-1 overflow-y-auto">
+                                    {children}
                                 </div>
-                            )}
-
-                            {/* Scrollable body */}
-                            <div className="flex-1 overflow-y-auto">
-                                {children}
-                            </div>
-                        </div>
-                    </>
-                )}
+                            </motion.div>
+                        </>
+                    )}
+                </AnimatePresence>
             </>
         );
     }
