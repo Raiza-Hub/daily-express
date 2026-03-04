@@ -43,7 +43,6 @@ export interface UserAccountNavMenuItem {
     /** onClick handler */
     onClick?: () => void
     /** If true, renders with destructive/danger styling */
-    destructive?: boolean
 }
 
 export interface UserAccountNavProps {
@@ -249,5 +248,3 @@ export function UserAccountNav({
         </DropdownMenu>
     )
 }
-
-UserAccountNav.displayName = "UserAccountNav"

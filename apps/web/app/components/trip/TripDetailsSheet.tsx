@@ -30,8 +30,8 @@ export default function TripDetailsSheet({
 }: TripDetailsSheetProps) {
     const duration = getDuration(trip.departureTime, trip.estimatedArrivalTime);
     const transactionFee = trip.price * TRANSACTION_FEE_RATE;
-    const departureTime = dayjs(trip.departureTime).format("HH:mm");
-    const arrivalTime = dayjs(trip.estimatedArrivalTime).format("HH:mm");
+    const departureTime = dayjs(trip.departureTime).format("h:mma");
+    const arrivalTime = dayjs(trip.estimatedArrivalTime).format("h:mma");
     const departureDate = dayjs(trip.departureTime).format("ddd, D MMM YYYY");
 
     return (
@@ -65,7 +65,7 @@ export default function TripDetailsSheet({
                         <div className="flex gap-4">
                             {/* time */}
                             <div className="shrink-0 w-14 flex justify-end items-start pt-px">
-                                <span className="text-sm font-medium text-neutral-700 select-none">{departureTime}am</span>
+                                <span className="text-sm font-medium text-neutral-700 select-none">{departureTime}</span>
                             </div>
                             {/* line + dot */}
                             <div className="relative shrink-0 w-5 flex flex-col items-center">
@@ -129,7 +129,7 @@ export default function TripDetailsSheet({
                         <div className="flex gap-4">
                             {/* time — items-end to align with dot */}
                             <div className="shrink-0 w-14 flex justify-end items-end pb-px">
-                                <span className="text-sm font-medium text-neutral-700 select-none">{arrivalTime}pm</span>
+                                <span className="text-sm font-medium text-neutral-700 select-none">{arrivalTime}</span>
                             </div>
                             {/* line then dot */}
                             <div className="relative shrink-0 w-5 flex flex-col items-center min-h-[60px]">
