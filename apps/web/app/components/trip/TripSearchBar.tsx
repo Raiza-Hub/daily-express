@@ -43,12 +43,12 @@ export function TripSearchBar({ className }: { className?: string }) {
 
     // Lock body scroll when mobile calendar is open
     useEffect(() => {
-        if (showCalendar) {
-            document.body.style.overflow = "hidden"
-        } else {
-            document.body.style.overflow = ""
+        if (!showCalendar) return
+        const previousOverflow = document.body.style.overflow
+        document.body.style.overflow = "hidden"
+        return () => {
+            document.body.style.overflow = previousOverflow
         }
-        return () => { document.body.style.overflow = "" }
     }, [showCalendar])
 
     return (
