@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { Badge } from "@repo/ui/components/badge";
 import { Button } from "@repo/ui/components/button";
 import { Popover, PopoverTrigger, PopoverContent } from "@repo/ui/components/popover";
@@ -72,6 +72,14 @@ const NotificationInbox = () => {
     const [notifications, setNotifications] = useState(initialNotifications);
     const unreadCount = notifications.filter((n) => n.unread).length;
     const [tab, setTab] = useState("all");
+    const [open, setOpen] = useState(false);
+
+    useEffect(() => {
+        document.body.style.overflow = open ? "hidden" : "";
+        return () => {
+            document.body.style.overflow = "";
+        };
+    }, [open]);
 
     const filtered = tab === "unread" ? notifications.filter((n) => n.unread) : notifications;
 
@@ -82,7 +90,7 @@ const NotificationInbox = () => {
     };
 
     return (
-        <Popover>
+        <Popover open={open} onOpenChange={setOpen}>
             <PopoverTrigger asChild>
                 <button className="relative inline-flex items-center justify-center rounded-full p-2 hover:bg-muted cursor-pointer" aria-label="Open notifications">
                     <BellIcon className="h-6 w-6" aria-hidden="true" />
@@ -109,7 +117,7 @@ const NotificationInbox = () => {
                 </button> */}
 
             </PopoverTrigger>
-            <PopoverContent className="w-[380px] p-0" align="end">
+            <PopoverContent className="w-screen sm:w-[380px] p-0" align="end">
                 {/* Header with Tabs + Mark All */}
                 <div className="flex items-center justify-between border-b px-3 py-2">
                     <div className="bg-transparent">
