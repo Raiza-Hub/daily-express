@@ -31,7 +31,7 @@ const Navbar = async () => {
             <div className='flex h-16 items-center gap-3'>
                 <MobileNav />
 
-                <div className='flex lg:ml-0'>
+                <div className='flex'>
                     <Link href='/'>
                         <Icons.logo className='h-10 w-10' />
                     </Link>
@@ -60,12 +60,12 @@ const Navbar = async () => {
                         <CreateRouteDialog />
                     </div>
                     <NotificationInbox />
-                    <button className="flex items-center gap-1 text-slate-400 hover:text-slate-600 transition-colors">
+                    <div className="flex items-center gap-1 text-slate-400 hover:text-slate-600 transition-colors">
                         {user && (
                             // <UserAccountNav user={user} />
                             <UserAccountNav />
                         )}
-                    </button>
+                    </div>
                 </div>
             </div>
         </div>

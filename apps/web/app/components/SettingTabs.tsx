@@ -19,7 +19,7 @@ const SettingNavTabs = () => {
     const pathname = usePathname();
 
     return (
-        <div className="mx-auto w-full max-w-7xl lg:px-2.5 px-6">
+        <div className="mx-auto w-full max-w-7xl px-2.5">
             <nav className="-mb-px flex space-x-8 overflow-x-auto" aria-label="Tabs">
                 {tabs.map((tab) => {
                     const isActive = pathname === tab.href;

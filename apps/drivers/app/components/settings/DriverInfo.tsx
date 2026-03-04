@@ -110,7 +110,7 @@ export default function DriverInfo() {
     };
 
     return (
-        <div className="space-y-6">
+        <div>
             {/* Page Header */}
             <div className="mb-6 py-4 border-b border-gray-100">
                 <h1 className="text-xl font-semibold mb-1">Driver Profile</h1>
@@ -120,7 +120,7 @@ export default function DriverInfo() {
             </div>
 
             <form onSubmit={handleSubmit(onSubmit)}>
-                <FieldGroup className="space-y-6">
+                <FieldGroup className="sm:space-y-6">
 
                     {/* Profile Image */}
                     <div className="grid grid-cols-1 sm:grid-cols-[200px_1fr] items-start gap-x-6 gap-y-2">

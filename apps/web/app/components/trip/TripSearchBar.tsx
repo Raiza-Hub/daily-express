@@ -19,6 +19,7 @@ export function TripSearchBar({ className }: { className?: string }) {
     const fromRef = useRef<HTMLDivElement>(null)
     const toRef = useRef<HTMLDivElement>(null)
     const calendarRef = useRef<HTMLDivElement>(null)
+    const mobileCalendarRef = useRef<HTMLDivElement>(null)
 
     useEffect(() => {
         const handleClickOutside = (e: MouseEvent) => {
@@ -28,7 +29,10 @@ export function TripSearchBar({ className }: { className?: string }) {
             if (toRef.current && !toRef.current.contains(e.target as Node))
                 setShowToDropdown(false)
 
-            if (calendarRef.current && !calendarRef.current.contains(e.target as Node))
+            if (
+                calendarRef.current && !calendarRef.current.contains(e.target as Node) &&
+                (!mobileCalendarRef.current || !mobileCalendarRef.current.contains(e.target as Node))
+            )
                 setShowCalendar(false)
         }
 
@@ -150,10 +154,10 @@ export function TripSearchBar({ className }: { className?: string }) {
                 </button>
 
             </div>
-            
+
             {/* MOBILE OVERLAY — bottom sheet, small screens only */}
             {showCalendar && (
-                <div className="md:hidden fixed inset-0 z-50 flex flex-col">
+                <div ref={mobileCalendarRef} className="md:hidden fixed inset-0 z-50 flex flex-col">
                     {/* Backdrop */}
                     <div
                         className="absolute inset-0 bg-black/40"
