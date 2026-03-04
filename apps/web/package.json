@@ -16,6 +16,7 @@
     "@repo/types": "*",
     "@repo/ui": "*",
     "dayjs": "^1.11.19",
+    "framer-motion": "^12.35.0",
     "input-otp": "^1.4.2",
     "next": "16.1.5",
     "react": "^19.2.0",

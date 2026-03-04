@@ -2,6 +2,7 @@
 
 import { CarProfileIcon } from "@phosphor-icons/react";
 import { useState } from "react";
+import { AnimatePresence, motion } from "framer-motion";
 
 import type { TRoute } from "@repo/types/routeSchema";
 import TripDetailsSheet from "./TripDetailsSheet";
@@ -119,7 +120,20 @@ export default function TripCard() {
                 </div>
 
                 {/* Expanded Details */}
-                {expanded && <DriverInfo {...mockDriver} />}
+                <AnimatePresence initial={false}>
+                    {expanded && (
+                        <motion.div
+                            key="driver-details"
+                            initial={{ height: 0, opacity: 0 }}
+                            animate={{ height: "auto", opacity: 1 }}
+                            exit={{ height: 0, opacity: 0 }}
+                            transition={{ duration: 0.35, ease: [0.16, 1, 0.3, 1] }}
+                            style={{ overflow: "hidden" }}
+                        >
+                            <DriverInfo {...mockDriver} />
+                        </motion.div>
+                    )}
+                </AnimatePresence>
             </div>
 
             <p className="text-sm text-muted-foreground">
