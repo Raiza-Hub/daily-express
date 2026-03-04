@@ -8,6 +8,7 @@ import {
 } from "@phosphor-icons/react";
 import { Avatar, AvatarImage } from "@repo/ui/components/avatar";
 import { useState } from "react";
+import { AnimatePresence, motion } from "framer-motion";
 import TripDetailsSheet from "./TripDetailsSheet";
 import type { TRoute } from "@repo/types/routeSchema";
 import dayjs from "dayjs";
@@ -168,7 +169,20 @@ function TripStatusCardItem({ item }: { item: TripStatusItem }) {
                 </div>
 
                 {/* Expanded Details */}
-                {expanded && item.driver && <DriverInfo driver={item.driver} />}
+                <AnimatePresence initial={false}>
+                    {expanded && item.driver && (
+                        <motion.div
+                            key="driver-details"
+                            initial={{ height: 0, opacity: 0 }}
+                            animate={{ height: "auto", opacity: 1 }}
+                            exit={{ height: 0, opacity: 0 }}
+                            transition={{ duration: 0.35, ease: [0.16, 1, 0.3, 1] }}
+                            style={{ overflow: "hidden" }}
+                        >
+                            <DriverInfo driver={item.driver} />
+                        </motion.div>
+                    )}
+                </AnimatePresence>
             </div>
 
             <TripDetailsSheet

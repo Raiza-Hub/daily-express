@@ -96,7 +96,7 @@ export default function ChangeBankDetailsDialog() {
             }
             title="Change Bank Details"
         >
-            <form onSubmit={handleSubmit(onSubmit)} className="space-y-6 py-4 px-4">
+            <form onSubmit={handleSubmit(onSubmit)} className="space-y-6 py-4 px-4 sm:p-0">
                 <div className="grid gap-6">
                     {/* Account Name */}
                     <div className="grid gap-2">

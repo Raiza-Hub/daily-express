@@ -30,8 +30,8 @@ export default function TripDetailsSheet({
 }: TripDetailsSheetProps) {
     const duration = getDuration(trip.departureTime, trip.estimatedArrivalTime);
     const transactionFee = trip.price * TRANSACTION_FEE_RATE;
-    const departureTime = dayjs(trip.departureTime).format("HH:mm");
-    const arrivalTime = dayjs(trip.estimatedArrivalTime).format("HH:mm");
+    const departureTime = dayjs(trip.departureTime).format("h:mma");
+    const arrivalTime = dayjs(trip.estimatedArrivalTime).format("h:mma");
     const departureDate = dayjs(trip.departureTime).format("ddd, D MMM YYYY");
 
     return (
@@ -50,105 +50,99 @@ export default function TripDetailsSheet({
                 {/* Scrollable body */}
                 <div className="flex-1 overflow-y-auto">
                     {/* Route title */}
-                    <div className="px-6 pt-6 pb-5 space-y-1">
+                    <div className="px-6  pb-5 space-y-1">
                         <h2 className="text-xl font-bold text-neutral-900">
                             {trip.departureCity.title} to {trip.arrivalCity.title}
                         </h2>
                         <p className="text-sm text-neutral-500">{departureDate}</p>
                     </div>
 
-                    {/* Timeline */}
+                    {/* Timeline — row-based: each section is self-contained so the
+                         line grows with its row when text wraps on small screens */}
                     <div className="px-6 pb-2">
+
+                        {/* Row: Departure */}
                         <div className="flex gap-4">
-                            {/* Left: times + duration aligned with Car icon */}
-                            <div className="flex flex-col items-end text-sm select-none shrink-0 w-14">
-                                {/* Departure time — aligns with top dot */}
-                                <span className="font-medium text-neutral-700 h-3.5 flex items-center mb-6">
-                                    {departureTime}am
-                                </span>
-                                {/* Segment 1 spacer — now starts at same y as right-col seg1 */}
-                                <div className="flex-1 min-h-[120px]" />
-                                {/* Duration — aligns with Car icon in segment 2 */}
-                                <div className="w-full flex-1 relative min-h-[120px]">
-                                    <span className="absolute inset-0 flex items-center text-xs text-neutral-700">
-                                        {duration}
-                                    </span>
-                                </div>
-                                {/* Arrival time — aligns with bottom dot */}
-                                <span className="font-medium text-neutral-700 h-3.5 flex items-center mt-6">
-                                    {arrivalTime}pm
-                                </span>
+                            {/* time */}
+                            <div className="shrink-0 w-14 flex justify-end items-start pt-px">
+                                <span className="text-sm font-medium text-neutral-700 select-none">{departureTime}</span>
                             </div>
-
-                            {/* Center: continuous absolute line + 4 landmarks */}
-                            <div className="relative flex flex-col items-center shrink-0 w-5">
-                                {/* Full-height line */}
-                                <div className="absolute left-1/2 top-[7px] bottom-[7px] w-px bg-neutral-300 -translate-x-1/2" />
-                                {/* Top dot — departure; mb-6 offsets to match departure subtitle height in right col */}
-                                <div className="relative z-10 w-3.5 h-3.5 rounded-full border-2 border-neutral-400 bg-white shrink-0 mb-6" />
-                                {/* Segment 1: MapPin centered — now aligned with meeting point text */}
-                                <div className="relative z-10 flex-1 flex items-center justify-center min-h-[120px]">
-                                    <div className="bg-white py-1">
-                                        <MapPinAreaIcon
-                                            weight="duotone"
-                                            size={20}
-                                            className="text-neutral-500"
-                                        />
-                                    </div>
-                                </div>
-                                {/* Segment 2: Car icon centered — now aligned with vehicle info text */}
-                                <div className="relative z-10 flex-1 flex items-center justify-center min-h-[120px]">
-                                    <div className="bg-white py-1">
-                                        <CarProfileIcon
-                                            weight="duotone"
-                                            size={20}
-                                            className="text-neutral-500"
-                                        />
-                                    </div>
-                                </div>
-                                {/* Bottom dot — arrival; mt-6 offsets to match arrival subtitle height in right col */}
-                                <div className="relative z-10 w-3.5 h-3.5 rounded-full border-2 border-neutral-400 bg-white shrink-0 mt-6" />
+                            {/* line + dot */}
+                            <div className="relative shrink-0 w-5 flex flex-col items-center">
+                                <div className="relative z-10 w-3.5 h-3.5 rounded-full border-2 border-neutral-400 bg-white shrink-0 mt-px" />
+                                {/* line going down to next row */}
+                                <div className="flex-1 w-px bg-neutral-300 mt-1" />
                             </div>
-
-                            {/* Right: city info matching center segments */}
-                            <div className="flex flex-col flex-1 text-sm">
-                                {/* Departure city — h-3.5, aligns with top dot */}
-                                <div>
-                                    <p className="font-bold text-neutral-900 h-3.5 flex items-center">
-                                        {trip.departureCity.title}
-                                    </p>
-                                    <p className="text-muted-foreground text-sm leading-5 mt-1">
-                                        {trip.departureCity.label}
-                                    </p>
-                                </div>
-
-                                {/* Segment 1: meeting point centered */}
-                                <div className="flex-1 relative min-h-[120px]">
-                                    <p className="absolute inset-0 flex items-center text-sm text-neutral-900">
-                                        {trip.meetingPoint} to board vehicle
-                                    </p>
-                                </div>
-                                {/* Segment 2: vehicle info centered */}
-                                <div className="flex-1 relative min-h-[120px]">
-                                    <p className="absolute inset-0 flex items-center gap-2 text-sm text-neutral-900 capitalize font-medium">
-                                        {trip.vehicleType}
-                                        <span className="font-normal text-muted-foreground">
-                                            {" "}· {trip.seatNumber} seats
-                                        </span>
-                                    </p>
-                                </div>
-                                {/* Arrival city — h-3.5, aligns with bottom dot */}
-                                <div>
-                                    <p className="font-bold text-neutral-900 h-3.5 flex items-center">
-                                        {trip.arrivalCity.title}
-                                    </p>
-                                    <p className="text-muted-foreground text-sm leading-5 mt-1">
-                                        {trip.arrivalCity.label}
-                                    </p>
-                                </div>
-
+                            {/* content */}
+                            <div className="flex-1 flex flex-col pb-5">
+                                <p className="font-bold text-sm text-neutral-900 leading-none">{trip.departureCity.title}</p>
+                                <p className="text-muted-foreground text-sm leading-5 mt-1">{trip.departureCity.label}</p>
                             </div>
                         </div>
+
+                        {/* Row: Meeting Point */}
+                        <div className="flex gap-4">
+                            {/* time (empty) */}
+                            <div className="shrink-0 w-14" />
+                            {/* line + icon */}
+                            <div className="relative shrink-0 w-5 flex flex-col items-center min-h-[90px]">
+                                {/* line from top */}
+                                <div className="w-px bg-neutral-300 flex-1" />
+                                <div className="relative z-10 bg-white py-1 shrink-0">
+                                    <MapPinAreaIcon weight="duotone" size={20} className="text-neutral-500" />
+                                </div>
+                                {/* line to bottom */}
+                                <div className="w-px bg-neutral-300 flex-1" />
+                            </div>
+                            {/* content */}
+                            <div className="flex-1 flex items-center py-4">
+                                <p className="text-sm text-neutral-900">{trip.meetingPoint} to board vehicle</p>
+                            </div>
+                        </div>
+
+                        {/* Row: Vehicle Type */}
+                        <div className="flex gap-4">
+                            {/* duration */}
+                            <div className="shrink-0 w-14 flex justify-start items-center">
+                                <span className="text-sm text-neutral-700 select-none">{duration}</span>
+                            </div>
+                            {/* line + icon */}
+                            <div className="relative shrink-0 w-5 flex flex-col items-center min-h-[90px]">
+                                {/* line from top */}
+                                <div className="w-px bg-neutral-300 flex-1" />
+                                <div className="relative z-10 bg-white py-1 shrink-0">
+                                    <CarProfileIcon weight="duotone" size={20} className="text-neutral-500" />
+                                </div>
+                                {/* line to bottom */}
+                                <div className="w-px bg-neutral-300 flex-1" />
+                            </div>
+                            {/* content */}
+                            <div className="flex-1 flex items-center py-4">
+                                <p className="flex items-center gap-2 text-sm text-neutral-900 capitalize font-medium">
+                                    {trip.vehicleType}
+                                    <span className="font-normal text-muted-foreground">{" "}· {trip.seatNumber} seats</span>
+                                </p>
+                            </div>
+                        </div>
+
+                        {/* Row: Arrival */}
+                        <div className="flex gap-4">
+                            {/* time — items-end to align with dot */}
+                            <div className="shrink-0 w-14 flex justify-end items-end pb-px">
+                                <span className="text-sm font-medium text-neutral-700 select-none">{arrivalTime}</span>
+                            </div>
+                            {/* line then dot */}
+                            <div className="relative shrink-0 w-5 flex flex-col items-center min-h-[60px]">
+                                <div className="w-px bg-neutral-300 flex-1" />
+                                <div className="relative z-10 w-3.5 h-3.5 rounded-full border-2 border-neutral-400 bg-white shrink-0" />
+                            </div>
+                            {/* content — justify-end so city text sits at bottom next to dot */}
+                            <div className="flex-1 flex flex-col justify-end">
+                                <p className="font-bold text-sm text-neutral-900 leading-none">{trip.arrivalCity.title}</p>
+                                <p className="text-muted-foreground text-sm leading-5 mt-1">{trip.arrivalCity.label}</p>
+                            </div>
+                        </div>
+
                     </div>
 
 

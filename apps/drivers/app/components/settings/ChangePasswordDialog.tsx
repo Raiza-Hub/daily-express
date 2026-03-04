@@ -36,52 +36,6 @@ export default function ChangePasswordDialog() {
         reset();
     };
 
-    const formContent = (
-        <form onSubmit={handleSubmit(onSubmit)} className="space-y-6 py-4 px-4">
-            <div className="grid gap-6">
-                <div className="grid gap-2">
-                    <Controller
-                        name="oldPassword"
-                        control={control}
-                        render={({ field, fieldState }) => (
-                            <Field data-invalid={fieldState.invalid}>
-                                <FieldLabel>Old Password</FieldLabel>
-                                <Input
-                                    {...field}
-                                    type="password"
-                                    placeholder="Your Old Password"
-                                />
-                                {fieldState.invalid && (
-                                    <FieldError errors={[fieldState.error]} />
-                                )}
-                            </Field>
-                        )}
-                    />
-                </div>
-
-                <div className="grid gap-2">
-                    <Controller
-                        name="newPassword"
-                        control={control}
-                        render={({ field, fieldState }) => (
-                            <Field data-invalid={fieldState.invalid}>
-                                <FieldLabel>New Password</FieldLabel>
-                                <Input
-                                    {...field}
-                                    type="password"
-                                    placeholder="Your New Password"
-                                />
-                                {fieldState.invalid && (
-                                    <FieldError errors={[fieldState.error]} />
-                                )}
-                            </Field>
-                        )}
-                    />
-                </div>
-            </div>
-        </form>
-    );
-
     return (
         <ResponsiveModal
             open={open}
@@ -94,7 +48,7 @@ export default function ChangePasswordDialog() {
             }
             title="Change Password"
         >
-            <form onSubmit={handleSubmit(onSubmit)} className="space-y-6 py-4 px-4">
+            <form onSubmit={handleSubmit(onSubmit)} className="space-y-6 py-4 px-4 sm:p-0">
                 <div className="grid gap-6">
                     <div className="grid gap-2">
                         <Controller
