@@ -14,7 +14,7 @@ const Layout = async ({ children }: { children: ReactNode }) => {
             <div className="w-full flex flex-col flex-1">
                 {children}
             </div>
-            <Footer className="px-2.5 md:p-6 mt-auto" />
+            <Footer className="px-4 md:px-6 mt-auto" />
         </div>
     );
 }

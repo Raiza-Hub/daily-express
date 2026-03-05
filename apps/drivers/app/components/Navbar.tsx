@@ -27,7 +27,7 @@ const Navbar = async () => {
     const user = "wisdom"
 
     return (
-        <div className="w-full flex items-center justify-between h-16 px-2.5 md:p-6 border-b border-neutral-200 ">
+        <div className="w-full flex items-center justify-between h-16 px-4 md:p-6 sticky top-0 bg-white z-50 border-b border-neutral-200 ">
             <div className='flex h-16 items-center gap-3'>
                 <MobileNav />
 
