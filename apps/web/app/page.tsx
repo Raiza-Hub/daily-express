@@ -16,7 +16,7 @@ export default function Home() {
         </div>
       </div>
 
-      <main className="w-full max-w-7xl mx-auto flex flex-col px-2.5 py-6 gap-6 flex-1">
+      <main className="w-full max-w-7xl mx-auto flex flex-col px-4 py-6 gap-6 flex-1">
         <TripSearchBar />
 
         <div className="flex flex-col lg:flex-row gap-8 items-start">
