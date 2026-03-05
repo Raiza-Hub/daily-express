@@ -15,6 +15,8 @@ import {
 import { cn } from "@repo/ui/lib/utils";
 
 
+import { createPortal } from "react-dom";
+
 /**
  * Renders a custom full-screen mobile panel (overlay + fixed div) on small
  * screens and a centred Dialog on desktop.
@@ -69,60 +71,63 @@ export function ResponsiveModal({
                     <span onClick={() => onOpenChange?.(true)}>{trigger}</span>
                 )}
 
-                <AnimatePresence>
-                    {open && (
-                        <>
-                            {/* Overlay */}
-                            <motion.div
-                                key="rm-overlay"
-                                initial={{ opacity: 0 }}
-                                animate={{ opacity: 1 }}
-                                exit={{ opacity: 0 }}
-                                transition={{ duration: 0.5, ease: "easeInOut" }}
-                                className="fixed inset-0 z-50 bg-black/50"
-                                onClick={() => onOpenChange?.(false)}
-                            />
+                {typeof document !== "undefined" && createPortal(
+                    <AnimatePresence>
+                        {open && (
+                            <div className="relative z-50">
+                                {/* Overlay */}
+                                <motion.div
+                                    key="rm-overlay"
+                                    initial={{ opacity: 0 }}
+                                    animate={{ opacity: 1 }}
+                                    exit={{ opacity: 0 }}
+                                    transition={{ duration: 0.5, ease: "easeInOut" }}
+                                    className="fixed inset-0 bg-black/50"
+                                    onClick={() => onOpenChange?.(false)}
+                                />
 
-                            {/* Full-screen panel */}
-                            <motion.div
-                                key="rm-panel"
-                                role="dialog"
-                                aria-modal="true"
-                                aria-labelledby={title ? "modal-title" : undefined}
-                                tabIndex={-1}
-                                initial={{ y: "100%" }}
-                                animate={{ y: 0 }}
-                                exit={{ y: "100%" }}
-                                transition={{ duration: 0.5, ease: [0.16, 1, 0.3, 1] }}
-                                className={cn(
-                                    "fixed inset-0 z-50 flex flex-col bg-background overflow-hidden",
-                                    panelClassName
-                                )}
-                            >
-                                {/* Header */}
-                                {(title || description) && (
-                                    <div className="p-4 border-b shrink-0">
-                                        {title && (
-                                            <h2 id="modal-title" className="text-xl font-semibold">
-                                                {title}
-                                            </h2>
-                                        )}
-                                        {description && (
-                                            <p className="text-sm text-muted-foreground mt-1">
-                                                {description}
-                                            </p>
-                                        )}
+                                {/* Full-screen panel */}
+                                <motion.div
+                                    key="rm-panel"
+                                    role="dialog"
+                                    aria-modal="true"
+                                    aria-labelledby={title ? "modal-title" : undefined}
+                                    tabIndex={-1}
+                                    initial={{ y: "100%" }}
+                                    animate={{ y: 0 }}
+                                    exit={{ y: "100%" }}
+                                    transition={{ duration: 0.5, ease: [0.16, 1, 0.3, 1] }}
+                                    className={cn(
+                                        "fixed inset-0 flex flex-col bg-background overflow-hidden",
+                                        panelClassName
+                                    )}
+                                >
+                                    {/* Header */}
+                                    {(title || description) && (
+                                        <div className="p-4 border-b shrink-0">
+                                            {title && (
+                                                <h2 id="modal-title" className="text-xl font-semibold">
+                                                    {title}
+                                                </h2>
+                                            )}
+                                            {description && (
+                                                <p className="text-sm text-muted-foreground mt-1">
+                                                    {description}
+                                                </p>
+                                            )}
+                                        </div>
+                                    )}
+
+                                    {/* Scrollable body */}
+                                    <div className="flex-1 overflow-y-auto">
+                                        {children}
                                     </div>
-                                )}
-
-                                {/* Scrollable body */}
-                                <div className="flex-1 overflow-y-auto">
-                                    {children}
-                                </div>
-                            </motion.div>
-                        </>
-                    )}
-                </AnimatePresence>
+                                </motion.div>
+                            </div>
+                        )}
+                    </AnimatePresence>,
+                    document.body
+                )}
             </>
         );
     }
