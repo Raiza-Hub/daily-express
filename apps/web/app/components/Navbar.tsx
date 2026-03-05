@@ -8,6 +8,7 @@ import { BellIcon, CaretDownIcon, MapPinPlusIcon, PlusIcon } from '@phosphor-ico
 import { Icons } from './Icons';
 import NavItem from './NavItem';
 import { UserAccountNav } from './UserAccountNav';
+import Image from 'next/image';
 
 // import MobileNav from './MobileNav'
 
@@ -33,7 +34,13 @@ const Navbar = async () => {
 
                         <div className='flex'>
                             <Link href='/'>
-                                <Icons.logo className='h-10 w-10' />
+                                <Image
+                                    src="/logo2.png"
+                                    alt="Logo"
+                                    width={40}
+                                    height={40}
+                                    className='object-contain object-center'
+                                />
                             </Link>
                         </div>
 

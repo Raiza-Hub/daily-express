@@ -5,7 +5,7 @@ import LoginForm from "~/components/auth-form/Login";
 
 const Page = () => {
     return (
-        <main className="flex pt-20 flex-col items-center justify-center lg:px-0">
+        <main className="flex pt-20 p-4 flex-col items-center justify-center lg:px-0">
             <div className="mx-auto flex w-full flex-col justify-center space-y-6 sm:max-w-sm">
                 <div className="flex flex-col justify-center space-y-2">
                     <h1 className="text-3xl font-semibold tracking-tight">
@@ -26,7 +26,7 @@ const Page = () => {
                     Don&apos;t have an account? Sign up
                 </Link>
 
-                {/* <div className="pt-2">
+                <div className="pt-2">
                     <p className="text-center text-xs text-muted-foreground">
                         By continuing, you acknowledge that you understand and agree to the{" "}
                         <a href="#" className="text-secondary-foreground hover:underline">
@@ -37,7 +37,7 @@ const Page = () => {
                             Privacy Policy.
                         </a>
                     </p>
-                </div> */}
+                </div>
             </div>
         </main>
     );

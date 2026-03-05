@@ -33,7 +33,7 @@ const PayoutTable = () => {
     ];
 
     return (
-        <div className="w-full bg-white min-h-screen">
+        <div className="w-full bg-white">
             {/* Header */}
             {/* <div className="flex items-center justify-between px-8 py-4 border-b border-neutral-200 sticky top-16 z-50 bg-white">
                 <div className="flex items-center gap-2 text-gray-500 font-medium cursor-pointer hover:text-gray-700">

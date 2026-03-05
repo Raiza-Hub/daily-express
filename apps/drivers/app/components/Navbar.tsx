@@ -9,7 +9,7 @@ import NotificationInbox from './NotificationInbox'
 import { UserAccountNav } from './UserAccountNav'
 import CreateRouteDialog from './CreateRouteDialog'
 import { Icons } from '@repo/ui/Icons'
-
+import Image from 'next/image'
 import MobileNav from './MobileNav'
 
 const user = {
@@ -33,7 +33,13 @@ const Navbar = async () => {
 
                 <div className='flex'>
                     <Link href='/'>
-                        <Icons.logo className='h-10 w-10' />
+                        <Image
+                            src="/logo2.png"
+                            alt="Logo"
+                            width={40}
+                            height={40}
+                            className='object-contain object-center'
+                        />
                     </Link>
                 </div>
 

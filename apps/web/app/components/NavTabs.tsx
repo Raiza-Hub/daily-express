@@ -15,7 +15,7 @@ const tabs: { name: string; href: string; icon: Icon }[] = [
     // { name: "API Keys & Webhooks", href: "/settings/api-keys" },
 ];
 
-const SettingNavTabs = () => {
+const NavTabs = () => {
     const pathname = usePathname();
 
     return (
@@ -47,4 +47,4 @@ const SettingNavTabs = () => {
     );
 };
 
-export default SettingNavTabs;
+export default NavTabs;

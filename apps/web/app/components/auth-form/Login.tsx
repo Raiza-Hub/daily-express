@@ -87,7 +87,7 @@ const LoginForm = () => {
                         />
                     </div>
 
-                    <div className="grid gap-1 py-2">
+                    <div className="grid gap-2 py-2">
                         <Controller
                             name="password"
                             control={control}
@@ -127,7 +127,7 @@ const LoginForm = () => {
 
                     <div className="flex flex-col gap-4 py-4">
                         <Button
-                            variant="outline"
+                            variant="secondary"
                             className="w-full cursor-pointer"
                             disabled={isPending}
                             onClick={handleSignInWithGoogle}
@@ -143,7 +143,7 @@ const LoginForm = () => {
                         </p>
                     )}
 
-                    <Button className="cursor-pointer" disabled={isPending}>
+                    <Button className="cursor-pointer" variant="submit" disabled={isPending} type="submit">
                         {isPending ? (
                             <CircleNotchIcon className="size-4 animate-spin" />
                         ) : (

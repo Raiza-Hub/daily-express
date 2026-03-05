@@ -281,7 +281,7 @@ export default function ChangeBankDetailsDialog() {
                     <Button
                         type="submit"
                         onClick={handleSubmit(onSubmit)}
-                        className="bg-blue-600 hover:bg-blue-700 text-white cursor-pointer"
+                        variant="submit"
                         disabled={isSubmitting}
                     >
                         {isSubmitting ? "Saving..." : "Save Changes"}
