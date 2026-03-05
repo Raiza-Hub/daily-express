@@ -75,52 +75,55 @@ const ForgetPasswordForm = () => {
                             Please enter it below to continue.
                         </p> */}
                     </div>
-                    <div className="flex justify-center gap-3 md:gap-4">
-                        <form className="w-full">
-                            <div className="grid gap-2 py-2">
-                                <Controller
-                                    name="email"
-                                    control={control}
-                                    render={({ field, fieldState }) => (
-                                        <Field data-invalid={fieldState.invalid}>
-                                            <FieldLabel htmlFor="email">
-                                                Email
-                                            </FieldLabel>
-                                            <Input
-                                                {...field}
-                                                id="email"
-                                                aria-invalid={fieldState.invalid}
-                                                placeholder="you@example.com"
-                                                autoComplete="off"
-                                            />
-                                            {fieldState.invalid && (
-                                                <FieldError errors={[fieldState.error]} />
-                                            )}
-                                        </Field>
-                                    )}
-                                />
+                    <div>
+                        <form className="w-full" onSubmit={handleSubmit(onSubmit)}>
+                            <div className="grid gap-2">
+                                <div className="grid gap-2 py-2">
+                                    <Controller
+                                        name="email"
+                                        control={control}
+                                        render={({ field, fieldState }) => (
+                                            <Field data-invalid={fieldState.invalid}>
+                                                <FieldLabel htmlFor="email">
+                                                    Email
+                                                </FieldLabel>
+                                                <Input
+                                                    {...field}
+                                                    id="email"
+                                                    aria-invalid={fieldState.invalid}
+                                                    placeholder="you@example.com"
+                                                    autoComplete="off"
+                                                />
+                                                {fieldState.invalid && (
+                                                    <FieldError errors={[fieldState.error]} />
+                                                )}
+                                            </Field>
+                                        )}
+                                    />
+                                </div>
+                                {errors && (
+                                    <p className="px-1 inline-flex font-medium justify-center text-sm text-red-500">
+                                        {/* {error.message} */}
+                                    </p>
+                                )}
+
+                                <Button
+                                    disabled={isPending}
+                                    variant="submit"
+                                    type="submit"
+                                    className="w-full cursor-pointer"
+                                >
+                                    {isPending ? (
+                                        <div className="inline-flex items-center gap-2">
+                                            <CircleNotchIcon className="size-4 animate-spin" />
+                                            sending...
+                                        </div>
+                                    ) : "Continue"}
+                                </Button>
                             </div>
                         </form>
                     </div>
 
-                    {errors && (
-                        <p className="px-1 inline-flex font-medium justify-center text-sm text-red-500">
-                            {/* {error.message} */}
-                        </p>
-                    )}
-
-                    <Button
-                        disabled={isPending}
-                        className="w-full cursor-pointer"
-                        onClick={handleSubmit(onSubmit)}
-                    >
-                        {isPending ? (
-                            <div className="inline-flex items-center gap-2">
-                                <CircleNotchIcon className="size-4 animate-spin" />
-                                sending...
-                            </div>
-                        ) : "Continue"}
-                    </Button>
                 </div>
             </div>
         </div>

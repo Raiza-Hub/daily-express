@@ -1,5 +1,5 @@
 import Navbar from "~/components/Navbar";
-import SettingNavTabs from "~/components/SettingTabs";
+import SettingNavTabs from "~/components/NavTabs";
 import { TripSearchBar } from "~/components/trip/TripSearchBar";
 import TripCard from "./components/trip/TripCard";
 import TripFilter from "./components/trip/TripFilter";
@@ -27,7 +27,7 @@ export default function Home() {
         </div>
       </main>
 
-      <Footer className="max-w-7xl mx-auto" />
+      <Footer className="max-w-7xl mx-auto w-full mt-auto" />
     </div>
   );
 }

@@ -8,9 +8,9 @@ import Footer from "@repo/ui/Footer";
 
 export default function Home() {
   return (
-    <>
+    <div className="flex flex-col min-h-screen">
       <Navbar />
-      <main className="min-h-screen pb-20">
+      <main className="flex-1 pb-20">
         <div className="mx-auto max-w-7xl px-2.5 py-8 space-y-8">
           <div>
             <h1 className="text-3xl font-bold tracking-tight text-gray-900">Dashboard</h1>
@@ -26,7 +26,7 @@ export default function Home() {
           </div>
         </div>
       </main>
-      <Footer className="px-2.5 md:p-6" />
-    </>
+      <Footer className="px-2.5 md:p-6 mt-auto" />
+    </div>
   );
 }

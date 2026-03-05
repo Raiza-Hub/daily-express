@@ -231,7 +231,7 @@ const SignUpForm = () => {
                     <div className="flex flex-col gap-4 py-4">
                         <Button
                             type="button"
-                            variant="outline"
+                            variant="secondary"
                             className="w-full cursor-pointer"
                             disabled={isPending}
                             onClick={handleSignInWithGoogle}
@@ -258,7 +258,7 @@ const SignUpForm = () => {
                             {errors.root.message}
                         </p>
                     )}
-                    <Button className="cursor-pointer" disabled={isPending}>
+                    <Button className="cursor-pointer" variant="submit" disabled={isPending} type="submit">
                         {isPending ? <CircleNotchIcon className="size-4 animate-spin" /> : "Sign up"}
                     </Button>
                 </div>

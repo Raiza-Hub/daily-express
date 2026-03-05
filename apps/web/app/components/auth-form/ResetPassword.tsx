@@ -60,7 +60,7 @@ const ResetPasswordForm = () => {
 
 
     return (
-        <div className=" flex items-center justify-center p-4 pt-20">
+        <div className="flex items-center justify-center p-4 pt-20">
             <div className="w-full max-w-sm bg-white">
                 <div className="text-center space-y-6">
                     <div className="flex flex-col items-center justify-center gap-3">
@@ -75,9 +75,10 @@ const ResetPasswordForm = () => {
                             Please enter it below to continue.
                         </p> */}
                     </div>
-                    <div className="grid gap-6">
-                        <form className="w-full space-y-1.5">
-                            {/* <div className="grid gap-2 py-2">
+                    <div>
+                        <form className="w-full" onSubmit={handleSubmit(onSubmit)}>
+                            <div className="grid gap-2">
+                                {/* <div className="grid gap-2 py-2">
                                 <Controller
                                     name="email"
                                     control={control}
@@ -101,74 +102,76 @@ const ResetPasswordForm = () => {
                                 />
                             </div> */}
 
-                            <div className="grid gap-1 py-2">
-                                <Controller
-                                    name="newPassword"
-                                    control={control}
-                                    render={({ field, fieldState }) => (
-                                        <Field data-invalid={fieldState.invalid}>
-                                            <FieldLabel htmlFor="password">
-                                                Password
-                                            </FieldLabel>
-                                            <Input
-                                                {...field}
-                                                id="password"
-                                                type="password"
-                                                aria-invalid={fieldState.invalid}
-                                                placeholder="Password"
-                                            />
-                                            {fieldState.invalid && (
-                                                <FieldError errors={[fieldState.error]} />
-                                            )}
-                                        </Field>
-                                    )}
-                                />
+                                <div className="grid gap-2 py-2">
+                                    <Controller
+                                        name="newPassword"
+                                        control={control}
+                                        render={({ field, fieldState }) => (
+                                            <Field data-invalid={fieldState.invalid}>
+                                                <FieldLabel htmlFor="password">
+                                                    Password
+                                                </FieldLabel>
+                                                <Input
+                                                    {...field}
+                                                    id="password"
+                                                    type="password"
+                                                    aria-invalid={fieldState.invalid}
+                                                    placeholder="Password"
+                                                />
+                                                {fieldState.invalid && (
+                                                    <FieldError errors={[fieldState.error]} />
+                                                )}
+                                            </Field>
+                                        )}
+                                    />
 
-                            </div>
+                                </div>
 
-                            <div className="grid gap-1 py-2">
-                                <Controller
-                                    name="confirmPassword"
-                                    control={control}
-                                    render={({ field, fieldState }) => (
-                                        <Field data-invalid={fieldState.invalid}>
-                                            <FieldLabel htmlFor="password">
-                                                Confirm Password
-                                            </FieldLabel>
-                                            <Input
-                                                {...field}
-                                                id="password"
-                                                type="password"
-                                                aria-invalid={fieldState.invalid}
-                                                placeholder="Password"
-                                            />
-                                            {fieldState.invalid && (
-                                                <FieldError errors={[fieldState.error]} />
-                                            )}
-                                        </Field>
-                                    )}
-                                />
+                                <div className="grid gap-2 py-2">
+                                    <Controller
+                                        name="confirmPassword"
+                                        control={control}
+                                        render={({ field, fieldState }) => (
+                                            <Field data-invalid={fieldState.invalid}>
+                                                <FieldLabel htmlFor="password">
+                                                    Confirm Password
+                                                </FieldLabel>
+                                                <Input
+                                                    {...field}
+                                                    id="password"
+                                                    type="password"
+                                                    aria-invalid={fieldState.invalid}
+                                                    placeholder="Password"
+                                                />
+                                                {fieldState.invalid && (
+                                                    <FieldError errors={[fieldState.error]} />
+                                                )}
+                                            </Field>
+                                        )}
+                                    />
+                                </div>
+                                {errors && (
+                                    <p className="px-1 inline-flex font-medium justify-center text-sm text-red-500">
+                                        {/* {error.message} */}
+                                    </p>
+                                )}
+                                <Button
+                                    type="submit"
+                                    variant="submit"
+                                    disabled={isPending}
+                                    className="w-full cursor-pointer"
+                                >
+                                    {isPending ? (
+                                        <div className="inline-flex items-center gap-2">
+                                            <CircleNotchIcon className="size-4 animate-spin" />
+                                            sending...
+                                        </div>
+                                    ) : "Reset Password"}
+                                </Button>
                             </div>
                         </form>
                     </div>
 
-                    {errors && (
-                        <p className="px-1 inline-flex font-medium justify-center text-sm text-red-500">
-                            {/* {error.message} */}
-                        </p>
-                    )}
-                    <Button
-                        disabled={isPending}
-                        className="w-full cursor-pointer"
-                        onClick={handleSubmit(onSubmit)}
-                    >
-                        {isPending ? (
-                            <div className="inline-flex items-center gap-2">
-                                <CircleNotchIcon className="size-4 animate-spin" />
-                                sending...
-                            </div>
-                        ) : "Reset Password"}
-                    </Button>
                 </div>
             </div>
         </div>

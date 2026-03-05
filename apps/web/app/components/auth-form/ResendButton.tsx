@@ -11,6 +11,7 @@ const ResendButton = () => {
         <Button
             variant="link"
             size="sm"
+            type="button"
             // onClick={() => resend()}
             // disabled={isPending || isResending}
             className="text-zinc-900 underline hover:text-zinc-700 transition-colors -ml-2 cursor-pointer"

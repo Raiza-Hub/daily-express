@@ -16,7 +16,7 @@ export default function DisableAccount() {
                     <p className="text-sm font-medium">Disable my driver account</p>
                     <p className="text-xs text-muted-foreground mt-0.5">This action is irreversible. Please be certain before proceeding.</p>
                 </div>
-                <Button variant="destructive" type="button">
+                <Button variant="destructive" type="button" className="cursor-pointer">
                     Disable Account
                 </Button>
             </div>

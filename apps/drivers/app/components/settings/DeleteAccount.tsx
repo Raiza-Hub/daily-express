@@ -47,6 +47,7 @@ const DeleteAccount = () => {
                 <Button
                     type="button"
                     variant="destructive"
+                    className="cursor-pointer"
                 // disabled={isPending}
                 // onClick={() => deleteAccount()}
                 >

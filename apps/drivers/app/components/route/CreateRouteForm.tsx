@@ -401,8 +401,9 @@ export function CreateRouteForm({
                 </Button>
                 <Button
                     type="submit"
+                    variant="submit"
                     disabled={isSubmitting}
-                    className="bg-blue-600 hover:bg-blue-700 cursor-pointer"
+
                 >
                     {isSubmitting ? "Creating..." : "Create Route"}
                 </Button>
