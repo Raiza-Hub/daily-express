@@ -9,6 +9,7 @@
     "check-types": "turbo run check-types"
   },
   "devDependencies": {
+    "@types/lodash.debounce": "^4.0.9",
     "prettier": "^3.7.4",
     "turbo": "^2.8.3",
     "typescript": "5.9.2"
@@ -20,5 +21,10 @@
   "workspaces": [
     "apps/*",
     "packages/*"
-  ]
+  ],
+  "dependencies": {
+    "@aws-sdk/client-geo-places": "^3.1003.0",
+    "@upstash/redis": "^1.36.3",
+    "lodash.debounce": "^4.0.8"
+  }
 }

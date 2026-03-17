@@ -142,8 +142,8 @@ function RouteCardItem({ route }: { route: RouteData }) {
                 <div className="hidden sm:flex items-center gap-2 opacity-80 group-hover:opacity-100 transition-opacity">
                     <EditRouteSheet
                         defaultValues={{
-                            departureCity: { title: "Lagos", locality: "LOS", label: "Ojota Motor Park" },
-                            arrivalCity: { title: "Abuja", locality: "ABV", label: "Nnamdi Azikiwe International Airport" },
+                            departureCity: { title: "", locality: "", label: "" },
+                            arrivalCity: { title: "", locality: "", label: "" },
                             vehicleType: "car",
                             seatNumber: 8,
                             price: 900000,
@@ -171,8 +171,8 @@ function RouteCardItem({ route }: { route: RouteData }) {
                     open={editOpen}
                     onOpenChange={setEditOpen}
                     defaultValues={{
-                        departureCity: { title: "Lagos", locality: "LOS", label: "Ojota Motor Park" },
-                        arrivalCity: { title: "Abuja", locality: "ABV", label: "Nnamdi Azikiwe International Airport" },
+                        departureCity: { title: "", locality: "", label: "" },
+                        arrivalCity: { title: "", locality: "", label: "" },
                         vehicleType: "car",
                         seatNumber: 8,
                         price: 900000,
