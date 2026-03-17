@@ -56,6 +56,8 @@ export interface CreateRouteFormProps {
     FooterWrapper: React.FC<{ children: React.ReactNode }>;
     fetchDepartureSuggestions: { (query: string): void; cancel(): void };
     fetchArrivalSuggestions: { (query: string): void; cancel(): void };
+    setIsDepartureLoading: (v: boolean) => void;
+    setIsArrivalLoading: (v: boolean) => void;
     setDepartureSuggestions: (v: LocationSuggestion[]) => void;
     setArrivalSuggestions: (v: LocationSuggestion[]) => void;
 }
@@ -85,6 +87,8 @@ export function CreateRouteForm({
     FooterWrapper,
     fetchDepartureSuggestions,
     fetchArrivalSuggestions,
+    setIsDepartureLoading,
+    setIsArrivalLoading,
     setDepartureSuggestions,
     setArrivalSuggestions,
 }: CreateRouteFormProps) {
@@ -125,10 +129,12 @@ export function CreateRouteForm({
 
                                                     if (value.length > 1) {
                                                         setShowDepartureDropdown(true);
+                                                        setIsDepartureLoading(true);
                                                         fetchDepartureSuggestions(value);
                                                     } else {
                                                         fetchDepartureSuggestions.cancel();
                                                         setDepartureSuggestions([]);
+                                                        setIsDepartureLoading(false);
                                                         setShowDepartureDropdown(false);
                                                     }
                                                 }}
@@ -140,7 +146,7 @@ export function CreateRouteForm({
                                                 }}
                                             />
                                             <LocationDropdown
-                                                // query={departureCityQuery}
+                                                query={departureCityQuery}
                                                 visible={showDepartureDropdown}
                                                 suggestions={departureSuggestions}
                                                 isLoading={isDepartureLoading}
@@ -193,10 +199,12 @@ export function CreateRouteForm({
 
                                                     if (value.length > 1) {
                                                         setShowArrivalDropdown(true);
+                                                        setIsArrivalLoading(true);
                                                         fetchArrivalSuggestions(value);
                                                     } else {
                                                         fetchArrivalSuggestions.cancel();
                                                         setArrivalSuggestions([]);
+                                                        setIsArrivalLoading(false);
                                                         setShowArrivalDropdown(false);
                                                     }
                                                 }}
@@ -208,7 +216,7 @@ export function CreateRouteForm({
                                                 }}
                                             />
                                             <LocationDropdown
-                                                // query={arrivalCityQuery}
+                                                query={arrivalCityQuery}
                                                 visible={showArrivalDropdown}
                                                 suggestions={arrivalSuggestions}
                                                 isLoading={isArrivalLoading}

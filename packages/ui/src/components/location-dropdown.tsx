@@ -15,6 +15,7 @@ export interface LocationDropdownProps {
     highlightedIndex?: number
     suggestions?: LocationSuggestion[]
     isLoading?: boolean
+    query?: string
     className?: string
 }
 
@@ -24,6 +25,7 @@ export function LocationDropdown({
     highlightedIndex = -1,
     suggestions = [],
     isLoading = false,
+    query = "",
     className,
 }: LocationDropdownProps) {
 
@@ -44,7 +46,7 @@ export function LocationDropdown({
                 </div>
             )}
 
-            {!isLoading && suggestions.length === 0 && (
+            {!isLoading && suggestions.length === 0 && query.length > 0 && (
                 <div className="py-4 text-sm text-neutral-500 text-center">
                     No locations found
                 </div>

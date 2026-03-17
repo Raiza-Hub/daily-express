@@ -43,14 +43,12 @@ export default function CreateRouteDialog() {
     const [priceDisplay, setPriceDisplay] = useState("");
 
     const fetchDepartureSuggestions = useDebouncedCallback(async (query: string) => {
-        setIsDepartureLoading(true);
         const res = await suggestLocations(query);
         setDepartureSuggestions(res);
         setIsDepartureLoading(false);
     }, 400);
 
     const fetchArrivalSuggestions = useDebouncedCallback(async (query: string) => {
-        setIsArrivalLoading(true);
         const res = await suggestLocations(query);
         setArrivalSuggestions(res);
         setIsArrivalLoading(false);
@@ -98,6 +96,8 @@ export default function CreateRouteDialog() {
         setPriceDisplay,
         fetchDepartureSuggestions,
         fetchArrivalSuggestions,
+        setIsDepartureLoading,
+        setIsArrivalLoading,
         setDepartureSuggestions,
         setArrivalSuggestions
     };

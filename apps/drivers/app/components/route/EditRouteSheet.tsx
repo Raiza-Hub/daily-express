@@ -99,14 +99,12 @@ export default function EditRouteSheet({
     /* -------------------------------------------------- */
 
     const fetchDepartureSuggestions = useDebouncedCallback(async (query: string) => {
-        setIsDepartureLoading(true);
         const res = await suggestLocations(query);
         setDepartureSuggestions(res);
         setIsDepartureLoading(false);
     }, 400);
 
     const fetchArrivalSuggestions = useDebouncedCallback(async (query: string) => {
-        setIsArrivalLoading(true);
         const res = await suggestLocations(query);
         setArrivalSuggestions(res);
         setIsArrivalLoading(false);
@@ -198,17 +196,19 @@ export default function EditRouteSheet({
 
                                                         if (value.length > 1) {
                                                             setShowDepartureDropdown(true);
+                                                            setIsDepartureLoading(true);
                                                             fetchDepartureSuggestions(value);
                                                         } else {
                                                             fetchDepartureSuggestions.cancel();
                                                             setDepartureSuggestions([]);
+                                                            setIsDepartureLoading(false);
                                                             setShowDepartureDropdown(false);
                                                         }
                                                     }}
                                                 />
 
                                                 <LocationDropdown
-                                                    // query={departureCityQuery}
+                                                    query={departureCityQuery}
                                                     visible={showDepartureDropdown}
                                                     suggestions={departureSuggestions}
                                                     isLoading={isDepartureLoading}
@@ -295,17 +295,19 @@ export default function EditRouteSheet({
 
                                                         if (value.length > 1) {
                                                             setShowArrivalDropdown(true);
+                                                            setIsArrivalLoading(true);
                                                             fetchArrivalSuggestions(value);
                                                         } else {
                                                             fetchArrivalSuggestions.cancel();
                                                             setArrivalSuggestions([]);
+                                                            setIsArrivalLoading(false);
                                                             setShowArrivalDropdown(false);
                                                         }
                                                     }}
                                                 />
 
                                                 <LocationDropdown
-                                                    // query={arrivalCityQuery}
+                                                    query={arrivalCityQuery}
                                                     visible={showArrivalDropdown}
                                                     suggestions={arrivalSuggestions}
                                                     isLoading={isArrivalLoading}
