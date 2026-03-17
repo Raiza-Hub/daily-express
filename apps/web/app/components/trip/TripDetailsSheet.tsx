@@ -14,7 +14,7 @@ import { CarProfileIcon, InfoIcon, MapPinAreaIcon } from "@phosphor-icons/react"
 import { formatPrice, getDuration } from "@repo/ui/lib/utils";
 import dayjs from "dayjs";
 
-const TRANSACTION_FEE_RATE = 0.05;
+const TRANSACTION_FEE_RATE = 0.10;
 
 interface TripDetailsSheetProps {
     trip: TRoute;
