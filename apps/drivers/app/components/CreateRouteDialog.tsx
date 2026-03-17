@@ -8,6 +8,11 @@ import { MapPinPlusIcon } from "@phosphor-icons/react";
 import { useRef, useState } from "react";
 import { CreateRouteForm } from "./route/CreateRouteForm";
 import { ResponsiveModal } from "@repo/ui/ResponsiveModal";
+import type { LocationSuggestion } from "@repo/ui/components/location-dropdown";
+import { useEffect } from "react";
+import { useClickOutside } from "@repo/ui/hooks/use-click-outside";
+import { useDebouncedCallback } from "@repo/ui/hooks/use-debounced-callback";
+import { suggestLocations } from "@repo/ui/lib/location";
 
 export default function CreateRouteDialog() {
     const [open, setOpen] = useState(false);
@@ -26,11 +31,35 @@ export default function CreateRouteDialog() {
     const [showDepartureDropdown, setShowDepartureDropdown] = useState(false);
     const departureCityRef = useRef<HTMLDivElement>(null);
 
+    const [departureSuggestions, setDepartureSuggestions] = useState<LocationSuggestion[]>([]);
+    const [isDepartureLoading, setIsDepartureLoading] = useState(false);
+
     const [arrivalCityQuery, setArrivalCityQuery] = useState("");
     const [showArrivalDropdown, setShowArrivalDropdown] = useState(false);
     const arrivalCityRef = useRef<HTMLDivElement>(null);
+    const [arrivalSuggestions, setArrivalSuggestions] = useState<LocationSuggestion[]>([]);
+    const [isArrivalLoading, setIsArrivalLoading] = useState(false);
 
     const [priceDisplay, setPriceDisplay] = useState("");
+
+    const fetchDepartureSuggestions = useDebouncedCallback(async (query: string) => {
+        setIsDepartureLoading(true);
+        const res = await suggestLocations(query);
+        setDepartureSuggestions(res);
+        setIsDepartureLoading(false);
+    }, 400);
+
+    const fetchArrivalSuggestions = useDebouncedCallback(async (query: string) => {
+        setIsArrivalLoading(true);
+        const res = await suggestLocations(query);
+        setArrivalSuggestions(res);
+        setIsArrivalLoading(false);
+    }, 400);
+
+    useClickOutside([departureCityRef, arrivalCityRef], () => {
+        setShowDepartureDropdown(false)
+        setShowArrivalDropdown(false)
+    })
 
     const handleClose = () => {
         setOpen(false);
@@ -56,13 +85,21 @@ export default function CreateRouteDialog() {
         showDepartureDropdown,
         setShowDepartureDropdown,
         departureCityRef: departureCityRef as React.RefObject<HTMLDivElement>,
+        departureSuggestions,
+        isDepartureLoading,
         arrivalCityQuery,
         setArrivalCityQuery,
         showArrivalDropdown,
         setShowArrivalDropdown,
         arrivalCityRef: arrivalCityRef as React.RefObject<HTMLDivElement>,
+        arrivalSuggestions,
+        isArrivalLoading,
         priceDisplay,
         setPriceDisplay,
+        fetchDepartureSuggestions,
+        fetchArrivalSuggestions,
+        setDepartureSuggestions,
+        setArrivalSuggestions
     };
 
     return (

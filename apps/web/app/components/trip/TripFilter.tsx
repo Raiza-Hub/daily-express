@@ -5,6 +5,7 @@ import { FadersIcon, XIcon } from "@phosphor-icons/react";
 import { CheckboxItem } from "./CheckboxItem";
 import { FilterSection } from "./FilterSection";
 import { Button } from "@repo/ui/components/button";
+import { useBodyScrollLock } from "@repo/ui/hooks/use-body-scroll-lock";
 
 const filterData = {
     vehicleType: [
@@ -32,6 +33,8 @@ export default function TripFilter() {
         mql.addEventListener("change", handleMediaChange);
         return () => mql.removeEventListener("change", handleMediaChange);
     }, []);
+
+    useBodyScrollLock(drawerOpen);
 
     const toggle = (key: string) =>
         setChecked((prev) => ({ ...prev, [key]: !prev[key] }));

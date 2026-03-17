@@ -13,6 +13,7 @@ import TripDetailsSheet from "./TripDetailsSheet";
 import type { TRoute } from "@repo/types/routeSchema";
 import dayjs from "dayjs";
 import { PlaneDots } from "@repo/ui/PlaneDots";
+import { formatPrice } from "@repo/ui/lib/utils";
 
 // ----- Types -----
 
@@ -140,12 +141,12 @@ function TripStatusCardItem({ item }: { item: TripStatusItem }) {
 
                         {/* Price — sm only: no label, smaller */}
                         <div className="flex md:hidden flex-col items-end ml-auto">
-                            <p className="text-xl font-medium text-neutral-900">₦{item.trip.price.toLocaleString()}</p>
+                            <p className="text-xl font-medium text-neutral-900">{formatPrice(item.trip.price)}</p>
                         </div>
 
                         {/* Price — md+ only: with label */}
                         <div className="hidden md:flex flex-col items-end">
-                            <p className="text-2xl font-medium text-neutral-900">₦{item.trip.price.toLocaleString()}</p>
+                            <p className="text-2xl font-medium text-neutral-900">{formatPrice(item.trip.price)}</p>
                             <p className="text-sm text-muted-foreground">Price</p>
                         </div>
                     </div>

@@ -2,7 +2,7 @@
 
 import { Controller, useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
-import { routeSchema, TRoute } from "@repo/types/index";
+import { routeSchema, TRoute, AWSPlaceDetails } from "@repo/types/index";
 import {
     Sheet,
     SheetContent,
@@ -33,6 +33,10 @@ import { ClockIcon, NotePencilIcon } from "@phosphor-icons/react";
 import { DateInput, TimeField } from "@repo/ui/components/datefield-rac";
 import { dateToTime, timeToDate, formatPrice } from "@repo/ui/lib/utils";
 import { useEffect, useRef, useState } from "react";
+import type { LocationSuggestion } from "@repo/ui/components/location-dropdown";
+import { useClickOutside } from "@repo/ui/hooks/use-click-outside";
+import { useDebouncedCallback } from "@repo/ui/hooks/use-debounced-callback";
+import { getPlaceDetails, suggestLocations } from "@repo/ui/lib/location";
 
 
 interface EditRouteSheetProps {
@@ -63,13 +67,22 @@ export default function EditRouteSheet({
     });
 
     // Local state for location dropdown visibility & query text
-    const [departureCityQuery, setDepartureCityQuery] = useState(defaultValues?.departureCity?.title ?? "");
-    const [showDepartureDropdown, setShowDepartureDropdown] = useState(false);
-    const departureCityRef = useRef<HTMLDivElement>(null);
+    const [departureCityQuery, setDepartureCityQuery] = useState(
+        defaultValues?.departureCity?.title ?? ""
+    );
 
-    const [arrivalCityQuery, setArrivalCityQuery] = useState(defaultValues?.arrivalCity?.title ?? "");
+    const [arrivalCityQuery, setArrivalCityQuery] = useState(
+        defaultValues?.arrivalCity?.title ?? ""
+    );
+
+    const [departureSuggestions, setDepartureSuggestions] = useState<LocationSuggestion[]>([]);
+    const [arrivalSuggestions, setArrivalSuggestions] = useState<LocationSuggestion[]>([]);
+
+    const [isDepartureLoading, setIsDepartureLoading] = useState(false);
+    const [isArrivalLoading, setIsArrivalLoading] = useState(false);
+
+    const [showDepartureDropdown, setShowDepartureDropdown] = useState(false);
     const [showArrivalDropdown, setShowArrivalDropdown] = useState(false);
-    const arrivalCityRef = useRef<HTMLDivElement>(null);
 
     // Price display state: formatted when blurred, raw when focused
     const [priceDisplay, setPriceDisplay] = useState(
@@ -77,16 +90,38 @@ export default function EditRouteSheet({
     );
     const [isPriceFocused, setIsPriceFocused] = useState(false);
 
-    useEffect(() => {
-        const handleClickOutside = (e: MouseEvent) => {
-            if (departureCityRef.current && !departureCityRef.current.contains(e.target as Node))
-                setShowDepartureDropdown(false);
-            if (arrivalCityRef.current && !arrivalCityRef.current.contains(e.target as Node))
-                setShowArrivalDropdown(false);
-        };
-        document.addEventListener("mousedown", handleClickOutside);
-        return () => document.removeEventListener("mousedown", handleClickOutside);
-    }, []);
+    const departureCityRef = useRef<HTMLDivElement>(null);
+    const arrivalCityRef = useRef<HTMLDivElement>(null);
+
+
+    /* -------------------------------------------------- */
+    /* DEBOUNCED SEARCH FUNCTIONS */
+    /* -------------------------------------------------- */
+
+    const fetchDepartureSuggestions = useDebouncedCallback(async (query: string) => {
+        setIsDepartureLoading(true);
+        const res = await suggestLocations(query);
+        setDepartureSuggestions(res);
+        setIsDepartureLoading(false);
+    }, 400);
+
+    const fetchArrivalSuggestions = useDebouncedCallback(async (query: string) => {
+        setIsArrivalLoading(true);
+        const res = await suggestLocations(query);
+        setArrivalSuggestions(res);
+        setIsArrivalLoading(false);
+    }, 400);
+
+    /* -------------------------------------------------- */
+    /* CLOSE DROPDOWN ON OUTSIDE CLICK */
+    /* -------------------------------------------------- */
+
+    useClickOutside([departureCityRef, arrivalCityRef], () => {
+        setShowDepartureDropdown(false)
+        setShowArrivalDropdown(false)
+    })
+
+
 
     const onSubmit = (data: TRoute) => {
         console.log("Form submitted:", data);
@@ -104,7 +139,7 @@ export default function EditRouteSheet({
                     </Button>
                 </SheetTrigger>
             )}
-            <SheetContent className="w-full sm:max-w-[540px] overflow-y-auto">
+            <SheetContent onOpenAutoFocus={(e) => e.preventDefault()} className="w-full sm:max-w-[540px] overflow-y-auto">
                 <SheetHeader className="pb-4 border-b px-6">
                     <SheetTitle className="text-xl font-semibold">Edit Route</SheetTitle>
                     <SheetDescription className="text-sm text-muted-foreground mt-1">
@@ -123,88 +158,197 @@ export default function EditRouteSheet({
                             <div className="grid gap-6">
 
                                 {/* Departure City */}
-                                <div className="grid gap-2">
-                                    <Controller
-                                        name="departureCity"
-                                        control={control}
-                                        render={({ field, fieldState }) => (
-                                            <Field data-invalid={fieldState.invalid}>
-                                                <FieldLabel htmlFor="departureCity">
-                                                    Departure Location
-                                                </FieldLabel>
-                                                <div ref={departureCityRef} className="relative">
-                                                    <Input
-                                                        id="departureCity"
-                                                        value={departureCityQuery}
-                                                        aria-invalid={fieldState.invalid}
-                                                        placeholder="e.g. Paris"
-                                                        autoComplete="off"
-                                                        onChange={(e) => {
-                                                            setDepartureCityQuery(e.target.value);
-                                                            field.onChange({ title: e.target.value, locality: "Unknown", label: e.target.value });
+                                <Controller
+                                    name="departureCity"
+                                    control={control}
+                                    render={({ field, fieldState }) => (
+
+                                        <Field data-invalid={fieldState.invalid}>
+
+                                            <FieldLabel>Departure Location</FieldLabel>
+
+                                            <div ref={departureCityRef} className="relative">
+
+                                                <Input
+                                                    value={departureCityQuery}
+                                                    placeholder="e.g. Paris"
+                                                    autoComplete="off"
+
+                                                    onFocus={() => {
+                                                        if (departureCityQuery.length > 1) {
                                                             setShowDepartureDropdown(true);
-                                                        }}
-                                                        onFocus={() => setShowDepartureDropdown(true)}
-                                                    />
-                                                    <LocationDropdown
-                                                        query={departureCityQuery}
-                                                        visible={showDepartureDropdown}
-                                                        onSelect={(loc) => {
-                                                            setDepartureCityQuery(loc.city);
-                                                            field.onChange({ title: loc.city, locality: loc.code, label: loc.airport });
+                                                        }
+                                                        setShowArrivalDropdown(false);
+                                                    }}
+
+                                                    onChange={(e) => {
+
+                                                        const value = e.target.value;
+
+                                                        setDepartureCityQuery(value);
+
+                                                        field.onChange({
+                                                            title: value,
+                                                            locality: "Unknown",
+                                                            label: value,
+                                                        });
+
+                                                        setShowDepartureDropdown(true);
+                                                        setShowArrivalDropdown(false);
+
+                                                        if (value.length > 1) {
+                                                            setShowDepartureDropdown(true);
+                                                            fetchDepartureSuggestions(value);
+                                                        } else {
+                                                            fetchDepartureSuggestions.cancel();
+                                                            setDepartureSuggestions([]);
                                                             setShowDepartureDropdown(false);
-                                                        }}
-                                                    />
-                                                </div>
-                                                {fieldState.invalid && (
-                                                    <FieldError errors={[fieldState.error]} />
-                                                )}
-                                            </Field>
-                                        )}
-                                    />
-                                </div>
+                                                        }
+                                                    }}
+                                                />
+
+                                                <LocationDropdown
+                                                    // query={departureCityQuery}
+                                                    visible={showDepartureDropdown}
+                                                    suggestions={departureSuggestions}
+                                                    isLoading={isDepartureLoading}
+
+                                                    onSelect={async (loc) => {
+
+                                                        setDepartureCityQuery(loc.title);
+
+                                                        field.onChange({
+                                                            title: loc.title,
+                                                            locality: "Loading...",
+                                                            label: loc.label || "",
+                                                        });
+
+                                                        setShowDepartureDropdown(false);
+
+                                                        const details = await getPlaceDetails(loc.placeId) as AWSPlaceDetails | null;
+                                                        console.log(details);
+
+                                                        if (details?.Address) {
+                                                            field.onChange({
+                                                                title: loc.title,
+                                                                locality:
+                                                                    details.Address.Locality ||
+                                                                    details.Address.City ||
+                                                                    loc.title,
+                                                                label:
+                                                                    details.Address.Label ||
+                                                                    loc.label ||
+                                                                    "",
+                                                            });
+                                                        }
+                                                    }}
+                                                />
+
+                                            </div>
+
+                                            {fieldState.invalid && (
+                                                <FieldError errors={[fieldState.error]} />
+                                            )}
+
+                                        </Field>
+                                    )}
+                                />
 
                                 {/* Arrival City */}
-                                <div className="grid gap-2">
-                                    <Controller
-                                        name="arrivalCity"
-                                        control={control}
-                                        render={({ field, fieldState }) => (
-                                            <Field data-invalid={fieldState.invalid}>
-                                                <FieldLabel htmlFor="arrivalCity">
-                                                    Arrival Location
-                                                </FieldLabel>
-                                                <div ref={arrivalCityRef} className="relative">
-                                                    <Input
-                                                        id="arrivalCity"
-                                                        value={arrivalCityQuery}
-                                                        aria-invalid={fieldState.invalid}
-                                                        placeholder="e.g. Lyon"
-                                                        autoComplete="off"
-                                                        onChange={(e) => {
-                                                            setArrivalCityQuery(e.target.value);
-                                                            field.onChange({ title: e.target.value, locality: "Unknown", label: e.target.value });
+                                <Controller
+                                    name="arrivalCity"
+                                    control={control}
+                                    render={({ field, fieldState }) => (
+
+                                        <Field data-invalid={fieldState.invalid}>
+
+                                            <FieldLabel>Arrival Location</FieldLabel>
+
+                                            <div ref={arrivalCityRef} className="relative">
+
+                                                <Input
+                                                    value={arrivalCityQuery}
+                                                    placeholder="e.g. Lyon"
+                                                    autoComplete="off"
+
+                                                    onFocus={() => {
+                                                        if (arrivalCityQuery.length > 1) {
                                                             setShowArrivalDropdown(true);
-                                                        }}
-                                                        onFocus={() => setShowArrivalDropdown(true)}
-                                                    />
-                                                    <LocationDropdown
-                                                        query={arrivalCityQuery}
-                                                        visible={showArrivalDropdown}
-                                                        onSelect={(loc) => {
-                                                            setArrivalCityQuery(loc.city);
-                                                            field.onChange({ title: loc.city, locality: loc.code, label: loc.airport });
+                                                        }
+                                                        setShowDepartureDropdown(false);
+                                                    }}
+
+                                                    onChange={(e) => {
+
+                                                        const value = e.target.value;
+
+                                                        setArrivalCityQuery(value);
+
+                                                        field.onChange({
+                                                            title: value,
+                                                            locality: "Unknown",
+                                                            label: value,
+                                                        });
+
+                                                        setShowArrivalDropdown(true);
+                                                        setShowDepartureDropdown(false);
+
+                                                        if (value.length > 1) {
+                                                            setShowArrivalDropdown(true);
+                                                            fetchArrivalSuggestions(value);
+                                                        } else {
+                                                            fetchArrivalSuggestions.cancel();
+                                                            setArrivalSuggestions([]);
                                                             setShowArrivalDropdown(false);
-                                                        }}
-                                                    />
-                                                </div>
-                                                {fieldState.invalid && (
-                                                    <FieldError errors={[fieldState.error]} />
-                                                )}
-                                            </Field>
-                                        )}
-                                    />
-                                </div>
+                                                        }
+                                                    }}
+                                                />
+
+                                                <LocationDropdown
+                                                    // query={arrivalCityQuery}
+                                                    visible={showArrivalDropdown}
+                                                    suggestions={arrivalSuggestions}
+                                                    isLoading={isArrivalLoading}
+
+                                                    onSelect={async (loc) => {
+
+                                                        setArrivalCityQuery(loc.title);
+
+                                                        field.onChange({
+                                                            title: loc.title,
+                                                            locality: "Loading...",
+                                                            label: loc.label || "",
+                                                        });
+
+                                                        setShowArrivalDropdown(false);
+
+                                                        const details = await getPlaceDetails(loc.placeId) as AWSPlaceDetails | null;
+
+                                                        if (details?.Address) {
+                                                            field.onChange({
+                                                                title: loc.title,
+                                                                locality:
+                                                                    details.Address.Locality ||
+                                                                    details.Address.City ||
+                                                                    loc.title,
+                                                                label:
+                                                                    details.Address.Label ||
+                                                                    loc.label ||
+                                                                    "",
+                                                            });
+                                                        }
+                                                    }}
+                                                />
+
+                                            </div>
+
+                                            {fieldState.invalid && (
+                                                <FieldError errors={[fieldState.error]} />
+                                            )}
+
+                                        </Field>
+                                    )}
+                                />
 
                                 {/* Meeting Point */}
                                 <div className="grid gap-2">

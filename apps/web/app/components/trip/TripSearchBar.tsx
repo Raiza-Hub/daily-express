@@ -5,51 +5,71 @@ import { cn } from "@repo/ui/lib/utils"
 import { ArrowsLeftRightIcon } from "@phosphor-icons/react"
 import { CalendarTwin } from "../CalendarTwin"
 import { LocationDropdown } from "@repo/ui/components/location-dropdown"
-import { useState, useRef, useEffect } from "react"
+import type { LocationSuggestion } from "@repo/ui/components/location-dropdown"
+import { suggestLocations, getPlaceDetails } from "@repo/ui/lib/location"
+import { useState, useRef } from "react"
 import { AnimatePresence, motion } from "framer-motion"
+import { useDebouncedCallback } from "@repo/ui/hooks/use-debounced-callback"
+import { useClickOutside } from "@repo/ui/hooks/use-click-outside"
+import { useBodyScrollLock } from "@repo/ui/hooks/use-body-scroll-lock"
+import { Input } from "@repo/ui/components/input"
+import { AWSPlaceDetails } from "@repo/types/awsLocationSchema"
 
 export function TripSearchBar({ className }: { className?: string }) {
-    const [from, setFrom] = useState("")
-    const [to, setTo] = useState("")
     const [departureDate, setDepartureDate] = useState(new Date())
-
-    const [showFromDropdown, setShowFromDropdown] = useState(false)
-    const [showToDropdown, setShowToDropdown] = useState(false)
     const [showCalendar, setShowCalendar] = useState(false)
+
+    /* -------------------------------------------------- */
+    /* FROM (departure) state                              */
+    /* -------------------------------------------------- */
+    const [fromQuery, setFromQuery] = useState("")
+    const [fromSuggestions, setFromSuggestions] = useState<LocationSuggestion[]>([])
+    const [isFromLoading, setIsFromLoading] = useState(false)
+    const [showFromDropdown, setShowFromDropdown] = useState(false)
+
+    /* -------------------------------------------------- */
+    /* TO (arrival) state                                  */
+    /* -------------------------------------------------- */
+    const [toQuery, setToQuery] = useState("")
+    const [toSuggestions, setToSuggestions] = useState<LocationSuggestion[]>([])
+    const [isToLoading, setIsToLoading] = useState(false)
+    const [showToDropdown, setShowToDropdown] = useState(false)
 
     const fromRef = useRef<HTMLDivElement>(null)
     const toRef = useRef<HTMLDivElement>(null)
     const calendarRef = useRef<HTMLDivElement>(null)
     const mobileCalendarRef = useRef<HTMLDivElement>(null)
 
-    useEffect(() => {
-        const handleClickOutside = (e: MouseEvent) => {
-            if (fromRef.current && !fromRef.current.contains(e.target as Node))
-                setShowFromDropdown(false)
+    /* -------------------------------------------------- */
+    /* DEBOUNCED SEARCH                                    */
+    /* -------------------------------------------------- */
+    const fetchFromSuggestions = useDebouncedCallback(async (query: string) => {
+        setIsFromLoading(true)
+        const res = await suggestLocations(query)
+        setFromSuggestions(res)
+        setIsFromLoading(false)
+    }, 400)
 
-            if (toRef.current && !toRef.current.contains(e.target as Node))
-                setShowToDropdown(false)
+    const fetchToSuggestions = useDebouncedCallback(async (query: string) => {
+        setIsToLoading(true)
+        const res = await suggestLocations(query)
+        setToSuggestions(res)
+        setIsToLoading(false)
+    }, 400)
 
-            if (
-                calendarRef.current && !calendarRef.current.contains(e.target as Node) &&
-                (!mobileCalendarRef.current || !mobileCalendarRef.current.contains(e.target as Node))
-            )
-                setShowCalendar(false)
-        }
+    /* -------------------------------------------------- */
+    /* CLOSE DROPDOWNS ON OUTSIDE CLICK                   */
+    /* -------------------------------------------------- */
+    useClickOutside([fromRef, toRef], () => {
+        setShowFromDropdown(false)
+        setShowToDropdown(false)
+    })
 
-        document.addEventListener("mousedown", handleClickOutside)
-        return () => document.removeEventListener("mousedown", handleClickOutside)
-    }, [])
+    useClickOutside([calendarRef, mobileCalendarRef], () => {
+        setShowCalendar(false)
+    })
 
-    // Lock body scroll when mobile calendar is open
-    useEffect(() => {
-        if (!showCalendar) return
-        const previousOverflow = document.body.style.overflow
-        document.body.style.overflow = "hidden"
-        return () => {
-            document.body.style.overflow = previousOverflow
-        }
-    }, [showCalendar])
+    useBodyScrollLock(showCalendar)
 
     return (
         <div className={cn("w-full relative", className)}>
@@ -58,26 +78,42 @@ export function TripSearchBar({ className }: { className?: string }) {
                 {/* FROM */}
                 <div
                     ref={fromRef}
-                    className="relative flex-auto bg-white border border-neutral-200 rounded-2xl px-4 py-2 flex flex-col justify-center
-                     focus-within:ring-2 focus-within:ring-blue-500 transition"
+                    className="relative flex-auto bg-white border border-neutral-200 rounded-2xl px-4 py-2 flex flex-col justify-center focus-within:ring-2 focus-within:ring-blue-500 transition"
                 >
-                    <label className="text-xs text-neutral-400">From</label>
-                    <input
-                        value={from}
-                        onChange={(e) => {
-                            setFrom(e.target.value)
-                            setShowFromDropdown(true)
-                        }}
+                    <label htmlFor="search-from" className="text-xs text-neutral-400">From</label>
+
+                    <Input
+                        id="search-from"
+                        value={fromQuery}
                         placeholder="City or airport"
-                        className="w-full text-sm font-medium bg-transparent outline-none"
+                        autoComplete="off"
+                        className="border-0 p-0 h-auto text-sm font-medium bg-transparent shadow-none focus-visible:ring-0"
+                        onFocus={() => {
+                            if (fromQuery.length > 1) setShowFromDropdown(true)
+                            setShowToDropdown(false)
+                        }}
+                        onChange={(e) => {
+                            const value = e.target.value
+                            setFromQuery(value)
+                            setShowToDropdown(false)
+                            setShowFromDropdown(true)
+
+                            if (value.length > 1) {
+                                fetchFromSuggestions(value)
+                            } else {
+                                fetchFromSuggestions.cancel()
+                                setFromSuggestions([])
+                                setShowFromDropdown(false)
+                            }
+                        }}
                     />
 
                     <LocationDropdown
-                        query={from}
                         visible={showFromDropdown}
-                        highlightedIndex={-1}
-                        onSelect={(loc) => {
-                            setFrom(`${loc.city} ${loc.code}`)
+                        suggestions={fromSuggestions}
+                        isLoading={isFromLoading}
+                        onSelect={async (loc) => {
+                            setFromQuery(loc.title)
                             setShowFromDropdown(false)
                         }}
                     />
@@ -87,8 +123,9 @@ export function TripSearchBar({ className }: { className?: string }) {
                 <button
                     type="button"
                     onClick={() => {
-                        setFrom(to)
-                        setTo(from)
+                        const tmp = fromQuery
+                        setFromQuery(toQuery)
+                        setToQuery(tmp)
                     }}
                     className="self-center p-2 rounded-full border border-neutral-200 hover:bg-neutral-50 cursor-pointer transition-transform duration-400"
                 >
@@ -98,45 +135,58 @@ export function TripSearchBar({ className }: { className?: string }) {
                 {/* TO */}
                 <div
                     ref={toRef}
-                    className="relative flex-auto bg-white border border-neutral-200 rounded-2xl px-4 py-2 flex flex-col justify-center
-                     focus-within:ring-2 focus-within:ring-blue-500 transition"
+                    className="relative flex-auto bg-white border border-neutral-200 rounded-2xl px-4 py-2 flex flex-col justify-center focus-within:ring-2 focus-within:ring-blue-500 transition"
                 >
-                    <label className="text-xs text-neutral-400">To</label>
-                    <input
-                        value={to}
-                        onChange={(e) => {
-                            setTo(e.target.value)
-                            setShowToDropdown(true)
-                        }}
+                    <label htmlFor="search-to" className="text-xs text-neutral-400">To</label>
+
+                    <Input
+                        id="search-to"
+                        value={toQuery}
                         placeholder="City or airport"
-                        className="w-full text-sm font-medium bg-transparent outline-none"
+                        autoComplete="off"
+                        className="border-0 p-0 h-auto text-sm font-medium bg-transparent shadow-none focus-visible:ring-0"
+                        onFocus={() => {
+                            if (toQuery.length > 1) setShowToDropdown(true)
+                            setShowFromDropdown(false)
+                        }}
+                        onChange={(e) => {
+                            const value = e.target.value
+                            setToQuery(value)
+                            setShowFromDropdown(false)
+                            setShowToDropdown(true)
+
+                            if (value.length > 1) {
+                                fetchToSuggestions(value)
+                            } else {
+                                fetchToSuggestions.cancel()
+                                setToSuggestions([])
+                                setShowToDropdown(false)
+                            }
+                        }}
                     />
 
                     <LocationDropdown
-                        query={to}
                         visible={showToDropdown}
-                        highlightedIndex={-1}
-                        onSelect={(loc) => {
-                            setTo(`${loc.city} ${loc.code}`)
+                        suggestions={toSuggestions}
+                        isLoading={isToLoading}
+                        onSelect={async (loc) => {
+                            setToQuery(loc.title)
                             setShowToDropdown(false)
                         }}
                     />
                 </div>
 
-                {/* DEPARTURE */}
+                {/* DEPARTURE DATE */}
                 <div
                     ref={calendarRef}
-                    className="relative flex-[1.5] bg-white border border-neutral-200 rounded-2xl px-4 py-2 flex flex-col justify-center
-                     focus-within:ring-2 focus-within:ring-blue-500 transition"
+                    className="relative flex-[1.5] bg-white border border-neutral-200 rounded-2xl px-4 py-2 flex flex-col justify-center focus-within:ring-2 focus-within:ring-blue-500 transition"
                 >
                     <button
                         type="button"
                         onClick={() => setShowCalendar((prev) => !prev)}
                         className="w-full text-left outline-none cursor-pointer"
                     >
-                        <span className="text-xs text-neutral-400 block">
-                            Departure
-                        </span>
+                        <span className="text-xs text-neutral-400 block">Departure</span>
                         <span className="text-sm font-medium text-neutral-900">
                             {dayjs(departureDate).format("DD MMM YYYY")}
                         </span>
@@ -166,7 +216,7 @@ export function TripSearchBar({ className }: { className?: string }) {
 
             </div>
 
-            {/* MOBILE OVERLAY — bottom sheet, small screens only */}
+            {/* MOBILE CALENDAR — bottom sheet */}
             <AnimatePresence>
                 {showCalendar && (
                     <div ref={mobileCalendarRef} className="md:hidden fixed inset-0 z-50 flex flex-col">
@@ -190,7 +240,6 @@ export function TripSearchBar({ className }: { className?: string }) {
                             transition={{ duration: 0.5, ease: [0.16, 1, 0.3, 1] }}
                             className="relative mt-auto bg-white rounded-t-2xl p-4 flex flex-col gap-4 max-h-[90vh] overflow-y-auto"
                         >
-                            {/* Header */}
                             <div className="flex items-center justify-between">
                                 <span className="text-base font-semibold text-neutral-900">Select departure date</span>
                                 <button
