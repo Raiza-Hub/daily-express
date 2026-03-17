@@ -15,11 +15,12 @@ export function useClickOutside<T extends HTMLElement = HTMLElement>(
     const listener = (event: MouseEvent | TouchEvent) => {
       const refs = Array.isArray(ref) ? ref : [ref];
 
-      const clickedOutside = refs.every((r) => {
-        const el = r.current;
-        if (!el) return false;
-        return !el.contains(event.target as Node);
-      });
+      const mountedRefs = refs.filter((r) => r.current != null);
+      if (mountedRefs.length === 0) return;
+
+      const clickedOutside = mountedRefs.every(
+        (r) => !r.current!.contains(event.target as Node)
+      );
 
       if (clickedOutside) {
         handlerRef.current(event);

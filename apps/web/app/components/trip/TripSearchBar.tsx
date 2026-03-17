@@ -44,14 +44,12 @@ export function TripSearchBar({ className }: { className?: string }) {
     /* DEBOUNCED SEARCH                                    */
     /* -------------------------------------------------- */
     const fetchFromSuggestions = useDebouncedCallback(async (query: string) => {
-        setIsFromLoading(true)
         const res = await suggestLocations(query)
         setFromSuggestions(res)
         setIsFromLoading(false)
     }, 400)
 
     const fetchToSuggestions = useDebouncedCallback(async (query: string) => {
-        setIsToLoading(true)
         const res = await suggestLocations(query)
         setToSuggestions(res)
         setIsToLoading(false)
@@ -99,10 +97,12 @@ export function TripSearchBar({ className }: { className?: string }) {
                             setShowFromDropdown(true)
 
                             if (value.length > 1) {
+                                setIsFromLoading(true)
                                 fetchFromSuggestions(value)
                             } else {
                                 fetchFromSuggestions.cancel()
                                 setFromSuggestions([])
+                                setIsFromLoading(false)
                                 setShowFromDropdown(false)
                             }
                         }}
@@ -112,6 +112,7 @@ export function TripSearchBar({ className }: { className?: string }) {
                         visible={showFromDropdown}
                         suggestions={fromSuggestions}
                         isLoading={isFromLoading}
+                        query={fromQuery}
                         onSelect={async (loc) => {
                             setFromQuery(loc.title)
                             setShowFromDropdown(false)
@@ -156,10 +157,12 @@ export function TripSearchBar({ className }: { className?: string }) {
                             setShowToDropdown(true)
 
                             if (value.length > 1) {
+                                setIsToLoading(true)
                                 fetchToSuggestions(value)
                             } else {
                                 fetchToSuggestions.cancel()
                                 setToSuggestions([])
+                                setIsToLoading(false)
                                 setShowToDropdown(false)
                             }
                         }}
@@ -169,6 +172,7 @@ export function TripSearchBar({ className }: { className?: string }) {
                         visible={showToDropdown}
                         suggestions={toSuggestions}
                         isLoading={isToLoading}
+                        query={toQuery}
                         onSelect={async (loc) => {
                             setToQuery(loc.title)
                             setShowToDropdown(false)
