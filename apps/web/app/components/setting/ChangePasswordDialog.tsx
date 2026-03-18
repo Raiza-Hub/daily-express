@@ -101,8 +101,8 @@ export default function ChangePasswordDialog() {
                     </Button>
                     <Button
                         type="submit"
+                        variant="submit"
                         onClick={handleSubmit(onSubmit)}
-                        className="bg-blue-600 hover:bg-blue-700 text-white cursor-pointer"
                         disabled={isSubmitting}
                     >
                         {isSubmitting ? "Changing..." : "Change Password"}

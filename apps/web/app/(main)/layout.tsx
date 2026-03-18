@@ -14,7 +14,7 @@ const Layout = ({ children }: { children: ReactNode }) => {
                 </div>
             </div>
 
-            <main className="w-full flex flex-col px-2.5 py-6 gap-6 flex-1">
+            <main className="w-full flex flex-col px-4 md:px-6 py-6 gap-6 flex-1">
                 {children}
             </main>
 
