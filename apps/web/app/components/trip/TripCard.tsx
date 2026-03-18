@@ -25,13 +25,13 @@ const mockDriver: DriverInfoProps = {
 
 const mockTrip: TRoute = {
     departureCity: {
-        title: "Lagos",
-        locality: "LOS",
+        title: "Kuto Park",
+        locality: "Abeokuta South",
         label: "Ojota Motor Park"
     },
     arrivalCity: {
-        title: "Allentown",
-        locality: "ABE",
+        title: "Olabisi Onabanjo University-Oou Main Campus",
+        locality: "Ijebu North",
         label: "Lehigh Valley International Airport"
     },
     vehicleType: "bus",
@@ -61,11 +61,11 @@ export default function TripCard() {
                 <div className="flex flex-col md:flex-row md:items-center px-6 py-5 gap-4 md:gap-5">
 
                     {/* Flight Times & Route */}
-                    <div className="flex flex-col gap-0.5">
+                    <div className="flex flex-col gap-0.5 md:w-min">
                         <div className="flex items-center gap-2">
-                            <span className="text-lg lg:text-xl font-medium text-neutral-900 tracking-tight">11:50am</span>
+                            <span className="text-lg lg:text-xl font-medium text-neutral-900 tracking-tight whitespace-nowrap">11:50am</span>
                             <PlaneDots />
-                            <span className="text-lg lg:text-xl font-medium text-neutral-900 tracking-tight relative">
+                            <span className="text-lg lg:text-xl font-medium text-neutral-900 tracking-tight relative whitespace-nowrap">
                                 4:51pm
                                 {/* <sup className="text-xs text-rose-500 font-semibold ml-0.5">+1</sup> */}
                             </span>
