@@ -32,7 +32,7 @@ export default function PayoutSettings() {
 
                         {/* Status Badge */}
                         <div className="md:order-3">
-                            <Badge className="gap-1.5" variant="outline">
+                            <Badge className="gap-1.5" variant="secondary">
                                 <span
                                     aria-hidden="true"
                                     className="size-1.5 rounded-full bg-emerald-500"

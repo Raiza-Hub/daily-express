@@ -48,7 +48,7 @@ const PayoutTable = () => {
             </div> */}
 
             {/* Table */}
-            <div className="max-w-7xl mx-auto px-2.5 md:px-8">
+            <div className="max-w-7xl mx-auto px-4 md:px-6">
                 <div className="overflow-x-auto">
                     <table className="w-full min-w-[1000px] text-left border-collapse">
                         <thead>
@@ -68,7 +68,7 @@ const PayoutTable = () => {
                                     <td className="py-6 px-4 text-gray-600 font-normal text-sm">{payout.amount}</td>
                                     <td className="py-6 px-4 text-gray-600 font-bold text-sm">{payout.settled}</td>
                                     <td className="py-6 pl-4 text-right">
-                                        <Badge variant="outline" className="text-muted-foreground px-1.5">
+                                        <Badge variant="secondary" className="text-muted-foreground px-1.5">
                                             {payout.status === "Done" ? (
                                                 <CheckCircleIcon weight="fill" className="fill-green-500 dark:fill-green-400" />
                                             ) : payout.status === "Pending" ? (
