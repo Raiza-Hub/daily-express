@@ -1,6 +1,7 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState } from "react";
+import { useBodyScrollLock } from "@repo/ui/hooks/use-body-scroll-lock";
 import { Badge } from "@repo/ui/components/badge";
 import { Button } from "@repo/ui/components/button";
 import { Popover, PopoverTrigger, PopoverContent } from "@repo/ui/components/popover";
@@ -74,12 +75,7 @@ const NotificationInbox = () => {
     const [tab, setTab] = useState("all");
     const [open, setOpen] = useState(false);
 
-    useEffect(() => {
-        document.body.style.overflow = open ? "hidden" : "";
-        return () => {
-            document.body.style.overflow = "";
-        };
-    }, [open]);
+    useBodyScrollLock(open);
 
     const filtered = tab === "unread" ? notifications.filter((n) => n.unread) : notifications;
 
