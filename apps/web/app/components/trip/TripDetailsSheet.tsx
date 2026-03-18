@@ -51,7 +51,7 @@ export default function TripDetailsSheet({
                 <div className="flex-1 overflow-y-auto">
                     {/* Route title */}
                     <div className="px-6  pb-5 space-y-1">
-                        <h2 className="text-xl font-bold text-neutral-900">
+                        <h2 className="text-lg font-bold text-neutral-900">
                             {trip.departureCity.title} to {trip.arrivalCity.title}
                         </h2>
                         <p className="text-sm text-neutral-500">{departureDate}</p>
@@ -64,21 +64,22 @@ export default function TripDetailsSheet({
                         {/* Row: Departure */}
                         <div className="flex gap-4">
                             {/* time */}
-                            <div className="shrink-0 w-14 flex justify-end items-start pt-px">
-                                <span className="text-sm font-medium text-neutral-700 select-none">{departureTime}</span>
+                            <div className="shrink-0 w-14 flex justify-end items-start">
+                                <span className="text-sm font-medium text-neutral-700 select-none leading-none">{departureTime}</span>
                             </div>
                             {/* line + dot */}
                             <div className="relative shrink-0 w-5 flex flex-col items-center">
-                                <div className="relative z-10 w-3.5 h-3.5 rounded-full border-2 border-neutral-400 bg-white shrink-0 mt-px" />
+                                <div className="relative z-10 w-3.5 h-3.5 rounded-full border-2 border-neutral-400 bg-white shrink-0" />
                                 {/* line going down to next row */}
-                                <div className="flex-1 w-px bg-neutral-300 mt-1" />
+                                <div className="flex-1 w-px bg-neutral-300" />
                             </div>
                             {/* content */}
                             <div className="flex-1 flex flex-col pb-5">
-                                <p className="font-bold text-sm text-neutral-900 leading-none">{trip.departureCity.title}</p>
-                                <p className="text-muted-foreground text-sm leading-5 mt-1">{trip.departureCity.label}</p>
+                                <p className="font-semibold text-sm text-neutral-900 leading-none">{trip.departureCity.title}</p>
+                                {/* <p className="text-muted-foreground text-sm leading-5 mt-1">{trip.departureCity.label}</p> */}
                             </div>
                         </div>
+
 
                         {/* Row: Meeting Point */}
                         <div className="flex gap-4">
@@ -127,19 +128,19 @@ export default function TripDetailsSheet({
 
                         {/* Row: Arrival */}
                         <div className="flex gap-4">
-                            {/* time — items-end to align with dot */}
-                            <div className="shrink-0 w-14 flex justify-end items-end pb-px">
-                                <span className="text-sm font-medium text-neutral-700 select-none">{arrivalTime}</span>
+                            {/* time */}
+                            <div className="shrink-0 w-14 flex justify-end items-end">
+                                <span className="text-sm font-medium text-neutral-700 select-none leading-none">{arrivalTime}</span>
                             </div>
                             {/* line then dot */}
-                            <div className="relative shrink-0 w-5 flex flex-col items-center min-h-[60px]">
+                            <div className="relative shrink-0 w-5 flex flex-col items-center">
                                 <div className="w-px bg-neutral-300 flex-1" />
                                 <div className="relative z-10 w-3.5 h-3.5 rounded-full border-2 border-neutral-400 bg-white shrink-0" />
                             </div>
                             {/* content — justify-end so city text sits at bottom next to dot */}
-                            <div className="flex-1 flex flex-col justify-end">
-                                <p className="font-bold text-sm text-neutral-900 leading-none">{trip.arrivalCity.title}</p>
-                                <p className="text-muted-foreground text-sm leading-5 mt-1">{trip.arrivalCity.label}</p>
+                            <div className="flex-1 flex flex-col justify-end pt-5">
+                                <p className="font-semibold text-sm text-neutral-900 leading-none">{trip.arrivalCity.title}</p>
+                                {/* <p className="text-muted-foreground text-sm leading-5 mt-1">{trip.arrivalCity.label}</p> */}
                             </div>
                         </div>
 
