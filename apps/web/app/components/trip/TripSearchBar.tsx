@@ -85,7 +85,7 @@ export function TripSearchBar({ className }: { className?: string }) {
                         value={fromQuery}
                         placeholder="City or airport"
                         autoComplete="off"
-                        className="border-0 p-0 h-auto text-sm font-medium bg-transparent shadow-none focus-visible:ring-0"
+                        className="border-0 p-0 h-auto text-sm font-medium bg-transparent shadow-none focus-visible:ring-0 rounded-none selection:bg-blue-100 selection:text-neutral-900"
                         onFocus={() => {
                             if (fromQuery.length > 1) setShowFromDropdown(true)
                             setShowToDropdown(false)
@@ -145,7 +145,7 @@ export function TripSearchBar({ className }: { className?: string }) {
                         value={toQuery}
                         placeholder="City or airport"
                         autoComplete="off"
-                        className="border-0 p-0 h-auto text-sm font-medium bg-transparent shadow-none focus-visible:ring-0"
+                        className="border-0 p-0 h-auto text-sm font-medium bg-transparent shadow-none focus-visible:ring-0 rounded-none selection:bg-blue-100 selection:text-neutral-900"
                         onFocus={() => {
                             if (toQuery.length > 1) setShowToDropdown(true)
                             setShowFromDropdown(false)

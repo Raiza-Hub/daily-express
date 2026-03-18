@@ -22,7 +22,7 @@ export default function TripStatusFilter() {
                             value={bookingRef}
                             onChange={(e) => setBookingRef(e.target.value)}
                             placeholder="Enter booking reference"
-                            className="w-full text-sm font-medium bg-transparent outline-none"
+                            className="w-full text-sm font-medium bg-transparent outline-none selection:bg-blue-100 selection:text-neutral-900"
                         />
                     </div>
 
@@ -34,7 +34,7 @@ export default function TripStatusFilter() {
                             value={lastName}
                             onChange={(e) => setLastName(e.target.value)}
                             placeholder="Enter last name"
-                            className="w-full text-sm font-medium bg-transparent outline-none"
+                            className="w-full text-sm font-medium bg-transparent outline-none selection:bg-blue-100 selection:text-neutral-900"
                         />
                     </div>
 
