@@ -1,7 +1,7 @@
 "use client";
 
 import { Controller, useForm } from "react-hook-form";
-import { TRoute } from "@repo/types/index";
+import { TRoute, AWSPlaceDetails } from "@repo/types/index";
 import { Button } from "@repo/ui/components/button";
 import { Input } from "@repo/ui/components/input";
 import { Textarea } from "@repo/ui/components/textarea";
@@ -22,6 +22,8 @@ import { LocationDropdown } from "@repo/ui/components/location-dropdown";
 import { ClockIcon } from "@phosphor-icons/react";
 import { DateInput, TimeField } from "@repo/ui/components/datefield-rac";
 import { dateToTime, timeToDate, formatPrice } from "@repo/ui/lib/utils";
+import type { LocationSuggestion } from "@repo/ui/components/location-dropdown";
+import { getPlaceDetails } from "@repo/ui/lib/location";
 
 const VEHICLE_TYPE = [
     { label: "Car", value: "car" },
@@ -40,14 +42,24 @@ export interface CreateRouteFormProps {
     showDepartureDropdown: boolean;
     setShowDepartureDropdown: (v: boolean) => void;
     departureCityRef: React.RefObject<HTMLDivElement>;
+    departureSuggestions?: LocationSuggestion[];
+    isDepartureLoading?: boolean;
     arrivalCityQuery: string;
     setArrivalCityQuery: (v: string) => void;
     showArrivalDropdown: boolean;
     setShowArrivalDropdown: (v: boolean) => void;
     arrivalCityRef: React.RefObject<HTMLDivElement>;
+    arrivalSuggestions?: LocationSuggestion[];
+    isArrivalLoading?: boolean;
     priceDisplay: string;
     setPriceDisplay: (v: string) => void;
     FooterWrapper: React.FC<{ children: React.ReactNode }>;
+    fetchDepartureSuggestions: { (query: string): void; cancel(): void };
+    fetchArrivalSuggestions: { (query: string): void; cancel(): void };
+    setIsDepartureLoading: (v: boolean) => void;
+    setIsArrivalLoading: (v: boolean) => void;
+    setDepartureSuggestions: (v: LocationSuggestion[]) => void;
+    setArrivalSuggestions: (v: LocationSuggestion[]) => void;
 }
 
 export function CreateRouteForm({
@@ -61,17 +73,27 @@ export function CreateRouteForm({
     showDepartureDropdown,
     setShowDepartureDropdown,
     departureCityRef,
+    departureSuggestions,
+    isDepartureLoading,
     arrivalCityQuery,
     setArrivalCityQuery,
     showArrivalDropdown,
     setShowArrivalDropdown,
     arrivalCityRef,
+    arrivalSuggestions,
+    isArrivalLoading,
     priceDisplay,
     setPriceDisplay,
     FooterWrapper,
+    fetchDepartureSuggestions,
+    fetchArrivalSuggestions,
+    setIsDepartureLoading,
+    setIsArrivalLoading,
+    setDepartureSuggestions,
+    setArrivalSuggestions,
 }: CreateRouteFormProps) {
     return (
-        <form onSubmit={handleSubmit(onSubmit)} className="space-y-8 py-6 px-1 overflow-y-auto">
+        <form onSubmit={handleSubmit(onSubmit)} className="space-y-8 py-6 px-4 sm:px-1 overflow-y-auto">
 
             {/* Route Information */}
             <div className="space-y-4">
@@ -99,19 +121,47 @@ export function CreateRouteForm({
                                                 placeholder="e.g. Paris"
                                                 autoComplete="off"
                                                 onChange={(e) => {
-                                                    setDepartureCityQuery(e.target.value);
-                                                    field.onChange({ title: e.target.value, locality: "Unknown", label: e.target.value });
+                                                    const value = e.target.value;
+                                                    setDepartureCityQuery(value);
+                                                    field.onChange({ title: value, locality: "Unknown", label: value });
                                                     setShowDepartureDropdown(true);
+                                                    setShowArrivalDropdown(false);
+
+                                                    if (value.length > 1) {
+                                                        setShowDepartureDropdown(true);
+                                                        setIsDepartureLoading(true);
+                                                        fetchDepartureSuggestions(value);
+                                                    } else {
+                                                        fetchDepartureSuggestions.cancel();
+                                                        setDepartureSuggestions([]);
+                                                        setIsDepartureLoading(false);
+                                                        setShowDepartureDropdown(false);
+                                                    }
                                                 }}
-                                                onFocus={() => setShowDepartureDropdown(true)}
+                                                onFocus={() => {
+                                                    if (departureCityQuery.length > 1) {
+                                                        setShowDepartureDropdown(true);
+                                                    }
+                                                    setShowArrivalDropdown(false);
+                                                }}
                                             />
                                             <LocationDropdown
                                                 query={departureCityQuery}
                                                 visible={showDepartureDropdown}
-                                                onSelect={(loc) => {
-                                                    setDepartureCityQuery(loc.city);
-                                                    field.onChange({ title: loc.city, locality: loc.code, label: loc.airport });
+                                                suggestions={departureSuggestions}
+                                                isLoading={isDepartureLoading}
+                                                onSelect={async (loc) => {
+                                                    setDepartureCityQuery(loc.title);
+                                                    field.onChange({ title: loc.title, locality: "Loading...", label: loc.label || "" });
                                                     setShowDepartureDropdown(false);
+                                                    const details = await getPlaceDetails(loc.placeId) as AWSPlaceDetails | null;
+                                                    if (details && details.Address) {
+                                                        field.onChange({
+                                                            title: loc.title,
+                                                            locality: details.Address.Locality || details.Address.City || loc.title,
+                                                            label: details.Address.Label || loc.label || ""
+                                                        });
+                                                    }
                                                 }}
                                             />
                                         </div>
@@ -141,19 +191,47 @@ export function CreateRouteForm({
                                                 placeholder="e.g. Lyon"
                                                 autoComplete="off"
                                                 onChange={(e) => {
-                                                    setArrivalCityQuery(e.target.value);
-                                                    field.onChange({ title: e.target.value, locality: "Unknown", label: e.target.value });
+                                                    const value = e.target.value;
+                                                    setArrivalCityQuery(value);
+                                                    field.onChange({ title: value, locality: "Unknown", label: value });
                                                     setShowArrivalDropdown(true);
+                                                    setShowDepartureDropdown(false);
+
+                                                    if (value.length > 1) {
+                                                        setShowArrivalDropdown(true);
+                                                        setIsArrivalLoading(true);
+                                                        fetchArrivalSuggestions(value);
+                                                    } else {
+                                                        fetchArrivalSuggestions.cancel();
+                                                        setArrivalSuggestions([]);
+                                                        setIsArrivalLoading(false);
+                                                        setShowArrivalDropdown(false);
+                                                    }
                                                 }}
-                                                onFocus={() => setShowArrivalDropdown(true)}
+                                                onFocus={() => {
+                                                    if (arrivalCityQuery.length > 1) {
+                                                        setShowArrivalDropdown(true);
+                                                    }
+                                                    setShowDepartureDropdown(false);
+                                                }}
                                             />
                                             <LocationDropdown
                                                 query={arrivalCityQuery}
                                                 visible={showArrivalDropdown}
-                                                onSelect={(loc) => {
-                                                    setArrivalCityQuery(loc.city);
-                                                    field.onChange({ title: loc.city, locality: loc.code, label: loc.airport });
+                                                suggestions={arrivalSuggestions}
+                                                isLoading={isArrivalLoading}
+                                                onSelect={async (loc) => {
+                                                    setArrivalCityQuery(loc.title);
+                                                    field.onChange({ title: loc.title, locality: "Loading...", label: loc.label || "" });
                                                     setShowArrivalDropdown(false);
+                                                    const details = await getPlaceDetails(loc.placeId) as AWSPlaceDetails | null;
+                                                    if (details && details.Address) {
+                                                        field.onChange({
+                                                            title: loc.title,
+                                                            locality: details.Address.Locality || details.Address.City || loc.title,
+                                                            label: details.Address.Label || loc.label || ""
+                                                        });
+                                                    }
                                                 }}
                                             />
                                         </div>
@@ -401,8 +479,9 @@ export function CreateRouteForm({
                 </Button>
                 <Button
                     type="submit"
+                    variant="submit"
                     disabled={isSubmitting}
-                    className="bg-blue-600 hover:bg-blue-700 cursor-pointer"
+
                 >
                     {isSubmitting ? "Creating..." : "Create Route"}
                 </Button>

@@ -9,6 +9,8 @@ import {
     DropdownMenuSeparator,
     DropdownMenuTrigger,
 } from "@repo/ui/components/dropdown-menu";
+import { useBodyScrollLock } from "@repo/ui/hooks/use-body-scroll-lock";
+import { useState } from "react";
 
 interface RouteCardActionMenuProps {
     onEdit: () => void;
@@ -17,8 +19,11 @@ interface RouteCardActionMenuProps {
 }
 
 export default function RouteCardActionMenu({ onEdit, onPassengers, onDelete }: RouteCardActionMenuProps) {
+    const [open, setOpen] = useState(false);
+    useBodyScrollLock(open);
+
     return (
-        <DropdownMenu modal={false}>
+        <DropdownMenu open={open} onOpenChange={setOpen} modal={false}>
             <DropdownMenuTrigger asChild>
                 <Button size="icon-lg" variant="ghost" className="cursor-pointer">
                     <DotsThreeVerticalIcon weight="bold" />

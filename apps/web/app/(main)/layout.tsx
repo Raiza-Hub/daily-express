@@ -1,7 +1,7 @@
 import Footer from "@repo/ui/Footer";
 import { ReactNode } from "react";
 import Navbar from "~/components/Navbar";
-import SettingNavTabs from "~/components/SettingTabs";
+import NavTabs from "~/components/NavTabs";
 
 
 const Layout = ({ children }: { children: ReactNode }) => {
@@ -10,15 +10,15 @@ const Layout = ({ children }: { children: ReactNode }) => {
             <div className="bg-white sticky top-0 z-50">
                 <Navbar />
                 <div className="bg-gray-50 border-b border-neutral-200 flex flex-col">
-                    <SettingNavTabs />
+                    <NavTabs />
                 </div>
             </div>
 
-            <main className="w-full flex flex-col px-2.5 py-6 gap-6 flex-1">
+            <main className="w-full flex flex-col px-4 md:px-6 py-6 gap-6 flex-1">
                 {children}
             </main>
 
-            <Footer className="max-w-7xl mx-auto" />
+            <Footer className="max-w-7xl mx-auto mt-auto" />
         </div>
     )
 }

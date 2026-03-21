@@ -1,22 +1,19 @@
 "use client";
 
-import { CarIcon, CarProfileIcon, MapPinAreaIcon, PhoneCallIcon, PhoneIcon } from "@phosphor-icons/react";
-import { Avatar, AvatarImage } from "@repo/ui/components/avatar";
+import { CarProfileIcon } from "@phosphor-icons/react";
 import { useState } from "react";
-import TripDetailsSheet from "./TripDetailsSheet";
+import { AnimatePresence, motion } from "framer-motion";
+
 import type { TRoute } from "@repo/types/routeSchema";
-
-const PlaneDots = () => (
-    <div className="flex items-center gap-1 flex-1 mx-3 min-w-60">
-        <div className="w-2 h-2 rounded-full bg-neutral-500 border-2 border-neutral-500" />
-        <div className="flex-1 border-t-2 border-dotted border-neutral-400" />
-        <div className="w-2 h-2 rounded-full bg-neutral-500 border-2 border-neutral-500" />
-    </div>
-);
+import TripDetailsSheet from "./TripDetailsSheet";
+import { PlaneDots } from "@repo/ui/PlaneDots";
+import { DriverInfo } from "~/components/DriverInfo";
+import type { DriverInfoProps } from "~/components/DriverInfo";
 
 
 
-const mockDriver = {
+
+const mockDriver: DriverInfoProps = {
     firstName: "Adebayo",
     lastName: "Okonkwo",
     phoneNumber: "08012345678",
@@ -25,65 +22,16 @@ const mockDriver = {
     profilePictureUrl: "https://images.unsplash.com/photo-1617244147030-8bd6f9e21d1e?q=80&w=987&auto=format&fit=crop&ixlib=rb-4.1.0&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D",
 };
 
-interface Driver {
-    firstName: string;
-    lastName: string;
-    phoneNumber: string;
-    country: string;
-    state: string;
-    profilePictureUrl: string;
-}
-
-const DriverInfo = ({ driver }: { driver: Driver }) => {
-    const fullName = `${driver.firstName} ${driver.lastName}`;
-    const initials = `${driver.firstName[0]}${driver.lastName[0]}`;
-
-    return (
-        <div className="border-t border-gray-100 px-6 py-5 bg-gray-50">
-            <p className="text-base font-semibold mb-4">Driver Details</p>
-            <div className="flex items-center gap-5">
-                {/* Avatar */}
-                <div className="relative shrink-0">
-                    <Avatar className="h-16 w-16">
-                        <AvatarImage className="object-cover" src={driver.profilePictureUrl || ""} alt={`${driver.firstName} ${driver.lastName}`} />
-                    </Avatar>
-                </div>
-
-                {/* Info */}
-                <div className="flex flex-col gap-2 flex-1">
-                    <p className="text-base font-medium leading-none">{fullName}</p>
-
-                    <div className="flex flex-wrap gap-x-5 gap-y-1.5">
-                        {/* Phone */}
-                        <div className="flex items-center gap-1.5">
-                            <PhoneCallIcon />
-                            <span className="text-sm text-neutral-600">{driver.phoneNumber}</span>
-                        </div>
-
-                        {/* Location */}
-                        <div className="flex items-center gap-1.5">
-                            <MapPinAreaIcon />
-                            <span className="text-sm text-neutral-600">
-                                {driver.state}, {driver.country}
-                            </span>
-                        </div>
-                    </div>
-                </div>
-            </div>
-        </div>
-    );
-};
-
 
 const mockTrip: TRoute = {
     departureCity: {
-        title: "Lagos",
-        locality: "LOS",
+        title: "Kuto Park",
+        locality: "Abeokuta South",
         label: "Ojota Motor Park"
     },
     arrivalCity: {
-        title: "Allentown",
-        locality: "ABE",
+        title: "Olabisi Onabanjo University-Oou Main Campus",
+        locality: "Ijebu North",
         label: "Lehigh Valley International Airport"
     },
     vehicleType: "bus",
@@ -101,8 +49,8 @@ export default function TripCard() {
     return (
         <div className="flex flex-col gap-4 pt-6">
             <div className="flex flex-col gap-1">
-                <h3 className="text-lg text-neutral-900 font-semibold">11 results</h3>
-                <p className="text-sm text-muted-foreground">Fares displayed are for all passengers.</p>
+                <h3 className="text-xl text-neutral-900 font-semibold">11 results</h3>
+                <p className="text-base text-muted-foreground">Fares displayed are for all passengers.</p>
             </div>
 
             <div
@@ -113,11 +61,11 @@ export default function TripCard() {
                 <div className="flex flex-col md:flex-row md:items-center px-6 py-5 gap-4 md:gap-5">
 
                     {/* Flight Times & Route */}
-                    <div className="flex flex-col gap-0.5">
+                    <div className="flex flex-col gap-0.5 md:w-min">
                         <div className="flex items-center gap-2">
-                            <span className="text-lg lg:text-xl font-medium text-neutral-900 tracking-tight">11:50am</span>
+                            <span className="text-lg lg:text-xl font-medium text-neutral-900 tracking-tight whitespace-nowrap">11:50am</span>
                             <PlaneDots />
-                            <span className="text-lg lg:text-xl font-medium text-neutral-900 tracking-tight relative">
+                            <span className="text-lg lg:text-xl font-medium text-neutral-900 tracking-tight relative whitespace-nowrap">
                                 4:51pm
                                 {/* <sup className="text-xs text-rose-500 font-semibold ml-0.5">+1</sup> */}
                             </span>
@@ -172,10 +120,23 @@ export default function TripCard() {
                 </div>
 
                 {/* Expanded Details */}
-                {expanded && <DriverInfo driver={mockDriver} />}
+                <AnimatePresence initial={false}>
+                    {expanded && (
+                        <motion.div
+                            key="driver-details"
+                            initial={{ height: 0, opacity: 0 }}
+                            animate={{ height: "auto", opacity: 1 }}
+                            exit={{ height: 0, opacity: 0 }}
+                            transition={{ duration: 0.35, ease: [0.16, 1, 0.3, 1] }}
+                            style={{ overflow: "hidden" }}
+                        >
+                            <DriverInfo {...mockDriver} />
+                        </motion.div>
+                    )}
+                </AnimatePresence>
             </div>
 
-            <p className="text-xs md:text-sm text-muted-foreground">
+            <p className="text-sm text-muted-foreground">
                 Fares may change depending on the selected trips and dates, and are not final until payment is completed and the booking is confirmed. Prices are per person and do not include luggage fees. Bookings are non-refundable once trips are confirmed.
             </p>
 

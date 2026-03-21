@@ -87,7 +87,7 @@ const LoginForm = () => {
                         />
                     </div>
 
-                    <div className="grid gap-1 py-2">
+                    <div className="grid gap-2 py-2">
                         <Controller
                             name="password"
                             control={control}
@@ -119,7 +119,7 @@ const LoginForm = () => {
 
                     </div>
 
-                    <div className="after:border-border relative text-center text-sm after:absolute after:inset-0 after:top-1/2 after:z-0 after:flex after:items-center after:border-t">
+                    {/* <div className="after:border-border relative text-center text-sm after:absolute after:inset-0 after:top-1/2 after:z-0 after:flex after:items-center after:border-t">
                         <span className="bg-card text-muted-foreground relative z-10 px-2">
                             Or continue with
                         </span>
@@ -127,7 +127,7 @@ const LoginForm = () => {
 
                     <div className="flex flex-col gap-4 py-4">
                         <Button
-                            variant="outline"
+                            variant="secondary"
                             className="w-full cursor-pointer"
                             disabled={isPending}
                             onClick={handleSignInWithGoogle}
@@ -135,7 +135,7 @@ const LoginForm = () => {
                             <Icons.google className="h-5 w-5" />
                             Continue with Google
                         </Button>
-                    </div>
+                    </div> */}
 
                     {errors && (
                         <p className="px-1 inline-flex justify-center text-sm text-red-500">
@@ -143,7 +143,7 @@ const LoginForm = () => {
                         </p>
                     )}
 
-                    <Button className="cursor-pointer" disabled={isPending}>
+                    <Button className="cursor-pointer" variant="submit" disabled={isPending} type="submit">
                         {isPending ? (
                             <CircleNotchIcon className="size-4 animate-spin" />
                         ) : (

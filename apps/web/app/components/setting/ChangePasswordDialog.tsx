@@ -3,15 +3,7 @@
 import { zodResolver } from "@hookform/resolvers/zod";
 import { changePasswordSchema, TChangePasswordSchema } from "@repo/types/authSchema";
 import { Button } from "@repo/ui/components/button";
-import {
-    Dialog,
-    DialogClose,
-    DialogContent,
-    DialogFooter,
-    DialogHeader,
-    DialogTitle,
-    DialogTrigger,
-} from "@repo/ui/components/dialog";
+import { ResponsiveModal } from "@repo/ui/ResponsiveModal";
 import {
     Field,
     FieldError,
@@ -39,24 +31,26 @@ export default function ChangePasswordDialog() {
 
     const onSubmit = async (data: TChangePasswordSchema) => {
         console.log("Change password submitted:", data);
-        // Simulate API call
         await new Promise((resolve) => setTimeout(resolve, 1000));
         setOpen(false);
         reset();
     };
 
     return (
-        <Dialog open={open} onOpenChange={setOpen}>
-            <DialogTrigger className="w-fit" asChild>
-                <Button variant="secondary">Change Password</Button>
-            </DialogTrigger>
-            <DialogContent className="sm:max-w-[500px]">
-                <DialogHeader>
-                    <DialogTitle>Change Password</DialogTitle>
-                </DialogHeader>
-
-                <form onSubmit={handleSubmit(onSubmit)} className="space-y-4 py-4">
-                    <div className="grid gap-4">
+        <ResponsiveModal
+            open={open}
+            onOpenChange={(val) => {
+                if (!val) { setOpen(false); reset(); }
+                else setOpen(true);
+            }}
+            trigger={
+                <Button variant="secondary" className="cursor-pointer md:w-fit">Change Password</Button>
+            }
+            title="Change Password"
+        >
+            <form onSubmit={handleSubmit(onSubmit)} className="space-y-6 py-4 px-4 sm:p-0">
+                <div className="grid gap-6">
+                    <div className="grid gap-2">
                         <Controller
                             name="oldPassword"
                             control={control}
@@ -74,7 +68,9 @@ export default function ChangePasswordDialog() {
                                 </Field>
                             )}
                         />
+                    </div>
 
+                    <div className="grid gap-2">
                         <Controller
                             name="newPassword"
                             control={control}
@@ -93,21 +89,26 @@ export default function ChangePasswordDialog() {
                             )}
                         />
                     </div>
-
-                    <DialogFooter>
-                        <DialogClose asChild>
-                            <Button type="button" variant="outline">Cancel</Button>
-                        </DialogClose>
-                        <Button
-                            type="submit"
-                            className="bg-green-500 hover:bg-green-600 text-white"
-                            disabled={isSubmitting}
-                        >
-                            {isSubmitting ? "Changing..." : "Change Password"}
-                        </Button>
-                    </DialogFooter>
-                </form>
-            </DialogContent>
-        </Dialog>
+                </div>
+                <div className="px-4 pb-4 pt-2 flex justify-end gap-2">
+                    <Button
+                        type="button"
+                        variant="secondary"
+                        className="cursor-pointer"
+                        onClick={() => { setOpen(false); reset(); }}
+                    >
+                        Cancel
+                    </Button>
+                    <Button
+                        type="submit"
+                        variant="submit"
+                        onClick={handleSubmit(onSubmit)}
+                        disabled={isSubmitting}
+                    >
+                        {isSubmitting ? "Changing..." : "Change Password"}
+                    </Button>
+                </div>
+            </form>
+        </ResponsiveModal>
     );
 }

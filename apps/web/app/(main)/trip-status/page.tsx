@@ -1,5 +1,6 @@
-import TripStatusFilter from "~/components/TripStatusFilter";
-import TripStatusCard from "~/components/TripStatusCard";
+import TripStatusCard from "~/components/trip/TripStatusCard";
+import TripStatusFilter from "~/components/trip/TripStatusFilter";
+
 
 const Page = () => {
     return (

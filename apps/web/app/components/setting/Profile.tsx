@@ -43,7 +43,7 @@ const Profile = () => {
     };
 
     return (
-        <div className="space-y-20">
+        <div className="w-full max-w-3xl mx-auto">
             <div>
                 <div className="mb-6 py-4 border-b border-gray-100">
                     <h1 className="text-xl font-semibold mb-1">Profile</h1>
@@ -52,7 +52,7 @@ const Profile = () => {
                     </p>
                 </div>
                 <form onSubmit={handleSubmit(onSubmit)}>
-                    <FieldGroup className="space-y-6">
+                    <FieldGroup className="sm:space-y-6">
 
                         {/* Full Name */}
                         <div className="grid grid-cols-1 sm:grid-cols-[200px_1fr] items-start gap-x-6 gap-y-2">
@@ -174,7 +174,7 @@ const Profile = () => {
                     </p>
                 </div>
 
-                <div className="grid grid-cols-[200px_1fr] items-start gap-x-6 gap-y-2">
+                <div className="flex justify-between items-start gap-x-6 gap-y-2">
                     <FieldLabel className="pt-2.5">
                         Password
                     </FieldLabel>

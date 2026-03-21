@@ -5,7 +5,7 @@ import Navbar from "../../components/Navbar";
 
 const Layout = async ({ children }: { children: ReactNode }) => {
     return (
-        <div className="w-full min-h-screen">
+        <div className="w-full">
             <div className="bg-white sticky top-16 z-50">
                 {/* <Navbar /> */}
                 <div className="flex flex-col">
