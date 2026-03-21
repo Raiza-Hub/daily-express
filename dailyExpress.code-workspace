@@ -1,0 +1,20 @@
+{
+  "folders": [
+    {
+      "name": "Auth Service",
+      "path": "./services/auth-service",
+    },
+    {
+      "name": "Driver Service",
+      "path": "./service/driver-service",
+    },
+    {
+      "name": "Shared",
+      "path": "./shared"
+    }
+  ],
+  "settings": {
+    "jest.jestCommandLine": "bun test",
+    "jest.runMode": "on-demand",
+  },
+}

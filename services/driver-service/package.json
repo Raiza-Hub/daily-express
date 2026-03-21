@@ -1,0 +1,39 @@
+{
+  "name": "user-service",
+  "private": true,
+  "scripts": {
+    "dev": "bun --watch src/index.ts",
+    "test": "jest",
+    "db:push": "bun x drizzle-kit push",
+    "db:pull": "bun x drizzle-kit pull",
+    "db:studio": "bun x drizzle-kit studio"
+  },
+  "devDependencies": {
+    "@types/bun": "latest",
+    "@types/cors": "^2.8.19",
+    "@types/express": "^5.0.6",
+    "@types/helmet": "^4.0.0",
+    "@types/jest": "^30.0.0",
+    "drizzle-kit": "^0.31.9",
+    "jest": "^30.2.0",
+    "ts-jest": "^29.4.6"
+  },
+  "peerDependencies": {
+    "typescript": "^5"
+  },
+  "dependencies": {
+    "@types/cookie-parser": "^1.4.10",
+    "axios": "^1.13.6",
+    "bcryptjs": "^3.0.3",
+    "cookie-parser": "^1.4.7",
+    "cors": "^2.8.6",
+    "dotenv": "^17.3.1",
+    "drizzle-orm": "^0.45.1",
+    "express": "^5.2.1",
+    "helmet": "^8.1.0",
+    "joi": "^18.0.2",
+    "pg": "^8.20.0",
+    "postgres": "^3.4.8",
+    "uuid": "^13.0.0"
+  }
+}

@@ -1,0 +1,42 @@
+{
+  "name": "auth-service",
+  "module": "index.ts",
+  "type": "commonjs",
+  "private": true,
+  "scripts": {
+    "dev": "bun --watch src/index.ts",
+    "test": "jest",
+    "db:push": "bun x drizzle-kit push",
+    "db:pull": "bun x drizzle-kit pull",
+    "db:studio": "bun x drizzle-kit studio"
+  },
+  "devDependencies": {
+    "@types/bun": "latest",
+    "@types/cors": "^2.8.19",
+    "@types/helmet": "^4.0.0",
+    "@types/jest": "^30.0.0",
+    "drizzle-kit": "^0.31.9",
+    "jest": "^30.2.0",
+    "ts-jest": "^29.4.6",
+    "tsconfig-paths": "^4.2.0"
+  },
+  "peerDependencies": {
+    "typescript": "^5.9.3"
+  },
+  "dependencies": {
+    "@types/cookie-parser": "^1.4.10",
+    "bcrypt": "^6.0.0",
+    "bcryptjs": "^3.0.3",
+    "cookie-parser": "^1.4.7",
+    "cors": "^2.8.6",
+    "dotenv": "^17.3.1",
+    "drizzle": "^1.4.0",
+    "drizzle-orm": "^0.45.1",
+    "helmet": "^8.1.0",
+    "joi": "^18.0.2",
+    "jsonwebtoken": "^9.0.3",
+    "nodemon": "^3.1.14",
+    "postgres": "^3.4.8",
+    "uuid": "^13.0.0"
+  }
+}
