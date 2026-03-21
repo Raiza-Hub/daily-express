@@ -1,92 +1,29 @@
 "use client";
 
-import {
-    CarProfileIcon,
-    MapPinAreaIcon,
-    PhoneCallIcon,
-    VanIcon,
-} from "@phosphor-icons/react";
-import { Avatar, AvatarImage } from "@repo/ui/components/avatar";
+import { CarProfileIcon, VanIcon } from "@phosphor-icons/react";
 import { useState } from "react";
+import { AnimatePresence, motion } from "framer-motion";
 import TripDetailsSheet from "./TripDetailsSheet";
 import type { TRoute } from "@repo/types/routeSchema";
 import dayjs from "dayjs";
-
-// ----- Helpers -----
-
-const PlaneDots = () => (
-    <div className="flex items-center gap-1 flex-1 mx-3 min-w-60">
-        <div className="w-2 h-2 rounded-full bg-neutral-500 border-2 border-neutral-500" />
-        <div className="flex-1 border-t-2 border-dotted border-neutral-400" />
-        <div className="w-2 h-2 rounded-full bg-neutral-500 border-2 border-neutral-500" />
-    </div>
-);
+import { PlaneDots } from "@repo/ui/PlaneDots";
+import { formatPrice } from "@repo/ui/lib/utils";
+import { DriverInfo } from "~/components/DriverInfo";
+import type { DriverInfoProps } from "~/components/DriverInfo";
 
 // ----- Types -----
-
-interface Driver {
-    firstName: string;
-    lastName: string;
-    phoneNumber: string;
-    country: string;
-    state: string;
-    profilePictureUrl: string;
-}
 
 export interface TripStatusItem {
     id: string;
     trip: TRoute;
-    driver?: Driver;
+    driver?: DriverInfoProps;
     bookingRef: string;
     passengerLastName: string;
 }
 
 // ----- Sub-components -----
 
-const DriverInfo = ({ driver }: { driver: Driver }) => {
-    const fullName = `${driver.firstName} ${driver.lastName}`;
 
-    return (
-        <div className="border-t border-gray-100 px-6 py-5 bg-gray-50">
-            <p className="text-base font-semibold mb-4">Driver Details</p>
-            <div className="flex items-center gap-5">
-                <div className="relative shrink-0">
-                    <Avatar className="h-16 w-16">
-                        <AvatarImage
-                            className="object-cover"
-                            src={driver.profilePictureUrl || ""}
-                            alt={fullName}
-                        />
-                    </Avatar>
-                </div>
-
-                <div className="flex flex-col gap-2 flex-1">
-                    <p className="text-base font-medium leading-none">{fullName}</p>
-                    <div className="flex flex-wrap gap-x-5 gap-y-1.5">
-                        <div className="flex items-center gap-1.5">
-                            <PhoneCallIcon />
-                            <span className="text-sm text-neutral-600">{driver.phoneNumber}</span>
-                        </div>
-                        <div className="flex items-center gap-1.5">
-                            <MapPinAreaIcon />
-                            <span className="text-sm text-neutral-600">
-                                {driver.state}, {driver.country}
-                            </span>
-                        </div>
-                    </div>
-                </div>
-            </div>
-        </div>
-    );
-};
-
-const ExpiredDriverSection = () => (
-    <div className="border-t border-gray-100 px-6 py-4 bg-gray-50">
-        <p className="text-sm text-neutral-400 italic">
-            Driver details are no longer available — this trip has passed.
-        </p>
-    </div>
-);
 
 // ----- Single card -----
 
@@ -109,17 +46,16 @@ function TripStatusCardItem({ item }: { item: TripStatusItem }) {
                 <div className="flex flex-col md:flex-row md:items-center px-6 py-5 gap-4 md:gap-5">
 
                     {/* Flight Times & Route */}
-                    <div className="flex flex-col gap-0.5">
+                    <div className="flex flex-col gap-0.5 md:w-min">
                         <div className="flex items-center gap-2">
-                            <span className="text-lg lg:text-xl font-medium text-neutral-900 tracking-tight">{departureTime}</span>
+                            <span className="text-lg lg:text-xl font-medium text-neutral-900 tracking-tight whitespace-nowrap">{departureTime}</span>
                             <PlaneDots />
-                            <span className="text-lg lg:text-xl font-medium text-neutral-900 tracking-tight relative">
+                            <span className="text-lg lg:text-xl font-medium text-neutral-900 tracking-tight relative whitespace-nowrap">
                                 {arrivalTime}
                                 {/* <sup className="text-xs text-rose-500 font-semibold ml-0.5">+1</sup> */}
                             </span>
                         </div>
                         <p className="text-sm text-muted-foreground">{item.trip.departureCity.title} ({item.trip.departureCity.locality}) – {item.trip.arrivalCity.title} ({item.trip.arrivalCity.locality})</p>
-                        <p className="text-sm text-muted-foreground">United operated by United and Gojet Airlines DBA United Express</p>
                     </div>
 
                     {/* Spacer (md+) */}
@@ -148,12 +84,12 @@ function TripStatusCardItem({ item }: { item: TripStatusItem }) {
 
                         {/* Price — sm only: no label, smaller */}
                         <div className="flex md:hidden flex-col items-end ml-auto">
-                            <p className="text-xl font-medium text-neutral-900">₦{item.trip.price.toLocaleString()}</p>
+                            <p className="text-xl font-medium text-neutral-900">{formatPrice(item.trip.price)}</p>
                         </div>
 
                         {/* Price — md+ only: with label */}
                         <div className="hidden md:flex flex-col items-end">
-                            <p className="text-2xl font-medium text-neutral-900">₦{item.trip.price.toLocaleString()}</p>
+                            <p className="text-2xl font-medium text-neutral-900">{formatPrice(item.trip.price)}</p>
                             <p className="text-sm text-muted-foreground">Price</p>
                         </div>
                     </div>
@@ -177,7 +113,20 @@ function TripStatusCardItem({ item }: { item: TripStatusItem }) {
                 </div>
 
                 {/* Expanded Details */}
-                {expanded && item.driver && <DriverInfo driver={item.driver} />}
+                <AnimatePresence initial={false}>
+                    {expanded && item.driver && (
+                        <motion.div
+                            key="driver-details"
+                            initial={{ height: 0, opacity: 0 }}
+                            animate={{ height: "auto", opacity: 1 }}
+                            exit={{ height: 0, opacity: 0 }}
+                            transition={{ duration: 0.35, ease: [0.16, 1, 0.3, 1] }}
+                            style={{ overflow: "hidden" }}
+                        >
+                            <DriverInfo {...item.driver} />
+                        </motion.div>
+                    )}
+                </AnimatePresence>
             </div>
 
             <TripDetailsSheet
@@ -218,30 +167,37 @@ function groupByDate(items: TripStatusItem[]): Map<string, TripStatusItem[]> {
 
 // ----- Mock data -----
 
-const mockDriver: Driver = {
+const mockDriver: DriverInfoProps = {
     firstName: "Adebayo",
     lastName: "Okonkwo",
     phoneNumber: "08012345678",
     country: "Nigeria",
     state: "Lagos",
-    profilePictureUrl:
-        "https://images.unsplash.com/photo-1617244147030-8bd6f9e21d1e?q=80&w=987&auto=format&fit=crop&ixlib=rb-4.1.0&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D",
+    profilePictureUrl: "https://images.unsplash.com/photo-1617244147030-8bd6f9e21d1e?q=80&w=987&auto=format&fit=crop&ixlib=rb-4.1.0&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D",
 };
 
 const mockItems: TripStatusItem[] = [
     {
         id: "1",
-        bookingRef: "DE-Lagos (LOS) – Allentown (ABE)",
+        bookingRef: "DE-001",
         passengerLastName: "Smith",
         driver: mockDriver,
         trip: {
-            departureCity: { title: "Lagos", locality: "LOS", label: "Ojota Motor Park" },
-            arrivalCity: { title: "Abuja", locality: "ABV", label: "Nnamdi Azikiwe International Airport" },
+            departureCity: {
+                title: "Kuto Park",
+                locality: "Abeokuta South",
+                label: "Ojota Motor Park",
+            },
+            arrivalCity: {
+                title: "Olabisi Onabanjo University-Oou Main Campus",
+                locality: "Ijebu North",
+                label: "Ijebu-Ode Motor Park",
+            },
             vehicleType: "bus",
-            seatNumber: 5,
+            seatNumber: 14,
             price: 6000,
-            departureTime: new Date("2026-02-19T09:00:00"),
-            estimatedArrivalTime: new Date("2026-02-19T13:00:00"),
+            departureTime: new Date("2026-02-20T11:50:00"),
+            estimatedArrivalTime: new Date("2026-02-20T16:51:00"),
             meetingPoint: "Meet at Fajol hostel",
         },
     },
@@ -251,14 +207,22 @@ const mockItems: TripStatusItem[] = [
         passengerLastName: "Jones",
         driver: mockDriver,
         trip: {
-            departureCity: { title: "Lagos", locality: "LOS", label: "Ojota Motor Park" },
-            arrivalCity: { title: "Ibadan", locality: "IBA", label: "Ibadan Airport" },
-            vehicleType: "car",
-            seatNumber: 2,
-            price: 3500,
-            departureTime: new Date("2026-02-14T08:00:00"),
-            estimatedArrivalTime: new Date("2026-02-14T10:30:00"),
-            meetingPoint: "Meet at Fajol hostel",
+            departureCity: {
+                title: "Ojota Motor Park",
+                locality: "Lagos Mainland",
+                label: "Ojota Motor Park",
+            },
+            arrivalCity: {
+                title: "Nnamdi Azikiwe International Airport",
+                locality: "Abuja Municipal",
+                label: "Abuja Arrival Terminal",
+            },
+            vehicleType: "bus",
+            seatNumber: 8,
+            price: 15000,
+            departureTime: new Date("2026-03-18T07:00:00"),
+            estimatedArrivalTime: new Date("2026-03-18T13:30:00"),
+            meetingPoint: "Meet at Ojota Under Bridge",
         },
     },
     {
@@ -267,30 +231,70 @@ const mockItems: TripStatusItem[] = [
         passengerLastName: "Brown",
         driver: mockDriver,
         trip: {
-            departureCity: { title: "Abuja", locality: "ABV", label: "Nnamdi Azikiwe International Airport" },
-            arrivalCity: { title: "Lagos", locality: "LOS", label: "Ojota Motor Park" },
-            vehicleType: "luxury car",
-            seatNumber: 1,
-            price: 12000,
-            departureTime: new Date("2026-03-05T11:00:00"),
-            estimatedArrivalTime: new Date("2026-03-05T16:00:00"),
-            meetingPoint: "Meet at Fajol hostel",
+            departureCity: {
+                title: "Challenge Interchange",
+                locality: "Ibadan North",
+                label: "Challenge Bus Terminal",
+            },
+            arrivalCity: {
+                title: "New Artisan Market Junction",
+                locality: "Osun Central",
+                label: "Osogbo Motor Park",
+            },
+            vehicleType: "car",
+            seatNumber: 3,
+            price: 4500,
+            departureTime: new Date("2026-03-18T09:30:00"),
+            estimatedArrivalTime: new Date("2026-03-18T11:45:00"),
+            meetingPoint: "Meet at Challenge bus stop, opposite GTBank",
         },
     },
     {
         id: "4",
         bookingRef: "DE-004",
-        passengerLastName: "Taylor",
+        passengerLastName: "Eze",
         driver: mockDriver,
         trip: {
-            departureCity: { title: "Lagos", locality: "LOS", label: "Ojota Motor Park" },
-            arrivalCity: { title: "Port Harcourt", locality: "PHC", label: "Port Harcourt International Airport" },
+            departureCity: {
+                title: "Mile 1 Motor Park",
+                locality: "Port Harcourt City",
+                label: "Mile 1 Motor Park",
+            },
+            arrivalCity: {
+                title: "Onitsha Head Bridge",
+                locality: "Onitsha North",
+                label: "Onitsha Main Market Park",
+            },
             vehicleType: "bus",
-            seatNumber: 9,
+            seatNumber: 18,
             price: 8500,
-            departureTime: new Date("2026-03-05T14:30:00"),
-            estimatedArrivalTime: new Date("2026-03-05T20:00:00"),
-            meetingPoint: "Meet at Fajol hostel",
+            departureTime: new Date("2026-03-19T06:00:00"),
+            estimatedArrivalTime: new Date("2026-03-19T10:00:00"),
+            meetingPoint: "Meet at Mile 1 Park gate",
+        },
+    },
+    {
+        id: "5",
+        bookingRef: "DE-005",
+        passengerLastName: "Musa",
+        driver: mockDriver,
+        trip: {
+            departureCity: {
+                title: "Wuse Zone 4 Junction",
+                locality: "Abuja Municipal",
+                label: "Abuja Central Park",
+            },
+            arrivalCity: {
+                title: "Kaduna Central Market",
+                locality: "Kaduna North",
+                label: "Kaduna Motor Park",
+            },
+            vehicleType: "car",
+            seatNumber: 2,
+            price: 11000,
+            departureTime: new Date("2026-03-20T08:15:00"),
+            estimatedArrivalTime: new Date("2026-03-20T11:00:00"),
+            meetingPoint: "Meet at Wuse Zone 4 roundabout",
         },
     },
 ];

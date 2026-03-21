@@ -33,9 +33,9 @@ const PayoutTable = () => {
     ];
 
     return (
-        <div className="w-full bg-white min-h-screen">
+        <div className="w-full bg-white">
             {/* Header */}
-            <div className="flex items-center justify-between px-8 py-4 border-b border-neutral-200 sticky top-16 z-50 bg-white">
+            {/* <div className="flex items-center justify-between px-8 py-4 border-b border-neutral-200 sticky top-16 z-50 bg-white">
                 <div className="flex items-center gap-2 text-gray-500 font-medium cursor-pointer hover:text-gray-700">
                     <FunnelIcon size={18} weight="fill" className="text-gray-400" />
                     <span className="text-sm font-semibold text-gray-400">Filters</span>
@@ -45,10 +45,10 @@ const PayoutTable = () => {
                         Export CSV
                     </Button>
                 </div>
-            </div>
+            </div> */}
 
             {/* Table */}
-            <div className="max-w-7xl mx-auto px-8 py-6">
+            <div className="max-w-7xl mx-auto px-4 md:px-6">
                 <div className="overflow-x-auto">
                     <table className="w-full min-w-[1000px] text-left border-collapse">
                         <thead>
@@ -68,7 +68,7 @@ const PayoutTable = () => {
                                     <td className="py-6 px-4 text-gray-600 font-normal text-sm">{payout.amount}</td>
                                     <td className="py-6 px-4 text-gray-600 font-bold text-sm">{payout.settled}</td>
                                     <td className="py-6 pl-4 text-right">
-                                        <Badge variant="outline" className="text-muted-foreground px-1.5">
+                                        <Badge variant="secondary" className="text-muted-foreground px-1.5">
                                             {payout.status === "Done" ? (
                                                 <CheckCircleIcon weight="fill" className="fill-green-500 dark:fill-green-400" />
                                             ) : payout.status === "Pending" ? (

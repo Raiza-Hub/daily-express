@@ -141,14 +141,14 @@ const VerifyEmailForm = () => {
     // });
 
     return (
-        <div className=" flex items-center justify-center p-4 pt-20">
+        <div className="flex items-center justify-center p-4 pt-20">
             <div className="w-full max-w-sm bg-white">
                 <div className="text-center space-y-6">
                     <div className="flex flex-col items-center justify-center gap-3">
                         <MailboxIcon className="w-8 h-8" />
                         <h1 className="text-xl font-bold text-gray-900">Check your inbox</h1>
                     </div>
-                    <div className="max-w-prose text-base space-y-1">
+                    <div className="max-w-prose text-sm space-y-1">
                         <p className="text-zinc-500">
                             We&apos;ve sent a 6-digit verification code to your email
                         </p>
@@ -156,7 +156,7 @@ const VerifyEmailForm = () => {
                             Please enter it below to continue.
                         </p> */}
                     </div>
-                    <div className="flex justify-center gap-3 md:gap-4">
+                    <div>
                         <OTPInput
                             length={6}
                             // onComplete={handleOTPComplete}
@@ -179,6 +179,8 @@ const VerifyEmailForm = () => {
                     <Button
                         disabled={isPending}
                         className="w-full cursor-pointer"
+                        variant="submit"
+                        type="submit"
                         onClick={() => {
                             if (zoderr.length > 1) {
                                 setZoderr("")

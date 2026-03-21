@@ -8,10 +8,10 @@ import Footer from "@repo/ui/Footer";
 
 export default function Home() {
   return (
-    <>
+    <div className="flex flex-col min-h-screen">
       <Navbar />
-      <main className="min-h-screen pb-20">
-        <div className="mx-auto max-w-7xl px-2.5 py-8 space-y-8">
+      <main className="flex-1 pb-20">
+        <div className="mx-auto max-w-7xl px-4 py-8 space-y-8">
           <div>
             <h1 className="text-3xl font-bold tracking-tight text-gray-900">Dashboard</h1>
             <p className="text-muted-foreground mt-1">Overview of your performance and active routes.</p>
@@ -26,7 +26,7 @@ export default function Home() {
           </div>
         </div>
       </main>
-      <Footer className="px-2.5 md:p-6" />
-    </>
+      <Footer className="px-4 md:px-6 mt-auto" />
+    </div>
   );
 }

@@ -8,6 +8,7 @@ import { BellIcon, CaretDownIcon, MapPinPlusIcon, PlusIcon } from '@phosphor-ico
 import { Icons } from './Icons';
 import NavItem from './NavItem';
 import { UserAccountNav } from './UserAccountNav';
+import Image from 'next/image';
 
 // import MobileNav from './MobileNav'
 
@@ -23,40 +24,43 @@ const user = {
 const Navbar = async () => {
     // const nextCookies = cookies()
     // const { user } = await getServerSideUser(nextCookies)
-    const user = "wisd"
+    const user = null
 
     return (
-        <div className='bg-white sticky z-50 top-0 inset-x-0 h-16'>
+        <div className='bg-white sticky z-60 top-0 inset-x-0 h-16'>
             <header className='relative bg-gray-50'>
-                <div className='mx-auto w-full max-w-7xl px-2.5 '>
+                <div className='mx-auto w-full max-w-7xl px-4 md:px-6 '>
                     <div className='flex h-16 items-center'>
-                        {/* <MobileNav /> */}
 
-                        <div className='ml-4 flex lg:ml-0'>
+                        <div className='flex'>
                             <Link href='/'>
-                                <Icons.logo className='h-10 w-10' />
+                                <Image
+                                    src="/logo2.png"
+                                    alt="Logo"
+                                    width={40}
+                                    height={40}
+                                    className='object-contain object-center'
+                                />
                             </Link>
                         </div>
 
-                        {/* <div className='hidden z-50 lg:ml-8 lg:block lg:self-stretch'>
-                                <NavItems  />
-                            </div> */}
-
                         <div className='ml-auto flex items-center'>
-                            <div className='hidden lg:flex lg:flex-1 lg:items-center lg:justify-end lg:space-x-6'>
+                            <div className='lg:flex lg:flex-1 lg:items-center lg:justify-end lg:space-x-6'>
                                 {user ? null : (
-                                    <Link
-                                        href='/sign-in'
-                                        className={buttonVariants({
-                                            variant: 'ghost',
-                                        })}>
-                                        Become a driver
-                                    </Link>
+                                    <div className='hidden lg:block'>
+                                        <Link
+                                            href='/sign-in'
+                                            className={buttonVariants({
+                                                variant: 'ghost',
+                                            })}>
+                                            Become a driver
+                                        </Link>
+                                    </div>
                                 )}
 
                                 {user ? null : (
                                     <span
-                                        className='h-6 w-px bg-gray-200'
+                                        className='hidden lg:block h-6 w-px bg-gray-200'
                                         aria-hidden='true'
                                     />
                                 )}
@@ -65,9 +69,9 @@ const Navbar = async () => {
                                     <UserAccountNav />
                                 ) : (
                                     <Link
-                                        href='/sign-up'
+                                        href='/sign-in'
                                         className={buttonVariants({
-                                            variant: 'ghost',
+                                            variant: 'submit',
                                         })}>
                                         Sign in
                                     </Link>

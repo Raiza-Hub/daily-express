@@ -7,13 +7,7 @@ import PassengersSheet from "./PassengersSheet";
 import PassengerStatusBar from "./PassengerStatusBar";
 import { Button } from "@repo/ui/components/button";
 import RouteCardActionMenu from "./RouteCardActionMenu";
-const PlaneDots = () => (
-    <div className="flex items-center gap-1 flex-1 mx-3">
-        <div className="w-2 h-2 rounded-full bg-neutral-500 border-2 border-neutral-500" />
-        <div className="flex-1 border-t-2 border-dotted border-neutral-400" />
-        <div className="w-2 h-2 rounded-full bg-neutral-500 border-2 border-neutral-500" />
-    </div>
-);
+import { PlaneDots } from "@repo/ui/PlaneDots";
 
 interface RouteData {
     departureTime: string;
@@ -148,8 +142,8 @@ function RouteCardItem({ route }: { route: RouteData }) {
                 <div className="hidden sm:flex items-center gap-2 opacity-80 group-hover:opacity-100 transition-opacity">
                     <EditRouteSheet
                         defaultValues={{
-                            departureCity: { title: "Lagos", locality: "LOS", label: "Ojota Motor Park" },
-                            arrivalCity: { title: "Abuja", locality: "ABV", label: "Nnamdi Azikiwe International Airport" },
+                            departureCity: { title: "", locality: "", label: "" },
+                            arrivalCity: { title: "", locality: "", label: "" },
                             vehicleType: "car",
                             seatNumber: 8,
                             price: 900000,
@@ -177,8 +171,8 @@ function RouteCardItem({ route }: { route: RouteData }) {
                     open={editOpen}
                     onOpenChange={setEditOpen}
                     defaultValues={{
-                        departureCity: { title: "Lagos", locality: "LOS", label: "Ojota Motor Park" },
-                        arrivalCity: { title: "Abuja", locality: "ABV", label: "Nnamdi Azikiwe International Airport" },
+                        departureCity: { title: "", locality: "", label: "" },
+                        arrivalCity: { title: "", locality: "", label: "" },
                         vehicleType: "car",
                         seatNumber: 8,
                         price: 900000,

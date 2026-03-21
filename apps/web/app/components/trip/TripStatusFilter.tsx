@@ -16,23 +16,25 @@ export default function TripStatusFilter() {
                 <div className="flex flex-col lg:flex-row items-stretch gap-2">
                     {/* Booking Reference */}
                     <div className="relative flex-auto bg-white border border-neutral-200 rounded-2xl px-4 py-2 flex flex-col justify-center focus-within:ring-2 focus-within:ring-blue-500 transition">
-                        <label className="text-xs text-neutral-400">Booking reference</label>
+                        <label htmlFor="bookingRef" className="text-xs text-neutral-400">Booking reference</label>
                         <input
+                            id="bookingRef"
                             value={bookingRef}
                             onChange={(e) => setBookingRef(e.target.value)}
                             placeholder="Enter booking reference"
-                            className="w-full text-sm font-medium bg-transparent outline-none"
+                            className="w-full text-sm font-medium bg-transparent outline-none selection:bg-blue-100 selection:text-neutral-900"
                         />
                     </div>
 
                     {/* Last Name */}
                     <div className="relative flex-auto bg-white border border-neutral-200 rounded-2xl px-4 py-2 flex flex-col justify-center focus-within:ring-2 focus-within:ring-blue-500 transition">
-                        <label className="text-xs text-neutral-400">Last name</label>
+                        <label htmlFor="lastName" className="text-xs text-neutral-400">Last name</label>
                         <input
+                            id="lastName"
                             value={lastName}
                             onChange={(e) => setLastName(e.target.value)}
                             placeholder="Enter last name"
-                            className="w-full text-sm font-medium bg-transparent outline-none"
+                            className="w-full text-sm font-medium bg-transparent outline-none selection:bg-blue-100 selection:text-neutral-900"
                         />
                     </div>
 

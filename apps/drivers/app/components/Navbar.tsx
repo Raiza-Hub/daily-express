@@ -9,7 +9,7 @@ import NotificationInbox from './NotificationInbox'
 import { UserAccountNav } from './UserAccountNav'
 import CreateRouteDialog from './CreateRouteDialog'
 import { Icons } from '@repo/ui/Icons'
-
+import Image from 'next/image'
 import MobileNav from './MobileNav'
 
 const user = {
@@ -27,13 +27,19 @@ const Navbar = async () => {
     const user = "wisdom"
 
     return (
-        <div className="w-full flex items-center justify-between h-16 px-2.5 md:p-6 border-b border-neutral-200 ">
+        <div className="w-full flex items-center justify-between h-16 px-4 md:p-6 sticky top-0 bg-white z-50 border-b border-neutral-200 ">
             <div className='flex h-16 items-center gap-3'>
                 <MobileNav />
 
-                <div className='flex lg:ml-0'>
+                <div className='flex'>
                     <Link href='/'>
-                        <Icons.logo className='h-10 w-10' />
+                        <Image
+                            src="/logo2.png"
+                            alt="Logo"
+                            width={40}
+                            height={40}
+                            className='object-contain object-center'
+                        />
                     </Link>
                 </div>
 
@@ -60,12 +66,12 @@ const Navbar = async () => {
                         <CreateRouteDialog />
                     </div>
                     <NotificationInbox />
-                    <button className="flex items-center gap-1 text-slate-400 hover:text-slate-600 transition-colors">
+                    <div className="flex items-center gap-1 text-slate-400 hover:text-slate-600 transition-colors">
                         {user && (
                             // <UserAccountNav user={user} />
                             <UserAccountNav />
                         )}
-                    </button>
+                    </div>
                 </div>
             </div>
         </div>
