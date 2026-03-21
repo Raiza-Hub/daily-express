@@ -1,0 +1,72 @@
+import { Request, Response } from "express";
+import { asyncHandler } from "@shared/middleware";
+import { DriverService } from "./driverServices";
+import { createErrorResponse, createSuccessResponse } from "@shared/utils";
+
+const driverService = new DriverService();
+
+export const getDriver = asyncHandler(async (req: Request, res: Response) => {
+  const userId = req.user.userId;
+  if (!userId) {
+    return res.status(401).json(createErrorResponse("User not authenticated"));
+  }
+
+  const driver = await driverService.getProfile(userId);
+
+  return res
+    .status(200)
+    .json(
+      createSuccessResponse(driver, "Driver profile retrieved successfully"),
+    );
+});
+
+export const createDriver = asyncHandler(
+  async (req: Request, res: Response) => {
+    const driverData = req.body;
+    const userId = req.user.userId;
+    if (!userId) {
+      return res
+        .status(401)
+        .json(createErrorResponse("User not authenticated"));
+    }
+    const driver = await driverService.createDriver(userId, driverData);
+    return res
+      .status(201)
+      .json(
+        createSuccessResponse(driver, "Driver profile created successfully"),
+      );
+  },
+);
+
+export const updateDriver = asyncHandler(
+  async (req: Request, res: Response) => {
+    const driverData = req.body;
+    const userId = req.user.userId;
+    if (!userId) {
+      return res
+        .status(401)
+        .json(createErrorResponse("User not authenticated"));
+    }
+    const driver = await driverService.updateDriver(userId, driverData);
+    return res
+      .status(200)
+      .json(
+        createSuccessResponse(driver, "Driver profile updated successfully"),
+      );
+  },
+);
+
+export const deleteDriver = asyncHandler(
+  async (req: Request, res: Response) => {
+    const userId = req.user.userId;
+    if (!userId) {
+      return res
+        .status(401)
+        .json(createErrorResponse("User not authenticated"));
+    }
+    await driverService.deleteDriver(userId);
+    return res
+      .status(200)
+      .json(createSuccessResponse(null, "Driver profile deleted successfully"));
+  },
+);
