@@ -1,0 +1,1 @@
+ALTER TABLE "route" ADD COLUMN "available_seats" integer NOT NULL;

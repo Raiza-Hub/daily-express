@@ -1,0 +1,44 @@
+# version: "3.8"
+
+# services:
+#   postgres:
+#     image: postgres:latest
+#     container_name: daily_express
+#     # restart: always
+#     environment:
+#       - POSTGRES_USER=olaoluwa
+#       - POSTGRES_PASSWORD=ateazy
+#       - POSTGRES_DB=dailyExpress
+#     ports:
+#       - "5432:5432"
+#     volumes:
+#       - ./init-database.sql:/docker-entrypoint-initdb.d/init-database.sql
+#       - postgres_data:/var/lib/postgresql/data
+#     networks:
+#       - dailyExpress-network
+
+# # Global Volumes (Defined only once, at the root level)
+# volumes:
+#   postgres_data:
+
+# # Global Networks (Defined only once, at the root level)
+# networks:
+#   dailyExpress-network:
+#     driver: bridge
+
+version: "3.8"
+services:
+  db:
+    image: postgres:latest
+    container_name: daily_express
+    environment:
+      - POSTGRES_USER=postgres
+      - POSTGRES_PASSWORD=ateazy
+    volumes:
+      - ./init-database.sql:/docker-entrypoint-initdb.d/init-database.sql
+      - pgdata:/var/lib/postgresql
+    ports:
+      - "5432:5432"
+
+volumes:
+  pgdata:
