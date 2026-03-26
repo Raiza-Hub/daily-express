@@ -116,35 +116,6 @@ export const getProfile: RequestHandler = asyncHandler(
   },
 );
 
-export const getMe: RequestHandler = asyncHandler(
-  async (req: Request, res: Response) => {
-    const userId = req.user?.userId;
-    if (!userId) {
-      return res.status(401).json(createErrorResponse("Unauthorized"));
-    }
-
-    const user = await authService.getUserById(userId);
-    if (!user) {
-      return res.status(404).json(createErrorResponse("User not found"));
-    }
-
-    // Get token from cookie
-    const token = req.cookies?.token;
-    const refreshToken = req.cookies?.refreshToken;
-
-    return res.status(200).json(
-      createSuccessResponse(
-        {
-          user,
-          accessToken: token,
-          refreshToken,
-        },
-        "User retrieved successfully",
-      ),
-    );
-  },
-);
-
 export const refreshTokens: RequestHandler = asyncHandler(
   async (req: Request, res: Response) => {
     const refreshToken = req.cookies?.refreshToken;

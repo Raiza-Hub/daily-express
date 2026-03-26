@@ -26,6 +26,12 @@ interface UpdateProfilePayload {
   dateOfBirth?: Date;
 }
 
+interface ResetPasswordPayload {
+  token: string;
+  password: string;
+}
+
+
 
 const handleApiError = (err: unknown, fallbackMessage: string): never => {
   if (err instanceof AxiosError) {
@@ -122,10 +128,6 @@ export const forgotPasswordFn = async (email: string): Promise<void> => {
   }
 };
 
-export interface ResetPasswordPayload {
-  token: string;
-  password: string;
-}
 
 export const resetPasswordFn = async ({
   token,
@@ -154,28 +156,6 @@ export const logoutFn = async (): Promise<void> => {
     return handleApiError(err, "Logout failed") as never;
   }
 };
-
-export const getMeWithTokensFn = async (): Promise<GetMeResponse> => {
-  try {
-    const response =
-      await api.get<ApiResponse<GetMeResponse>>("/auth/me");
-    if (!response.data.success || !response.data.data) {
-      throw new Error(response.data.error || "Failed to get user");
-    }
-    return response.data.data;
-  } catch (err) {
-    return handleApiError(err, "Failed to get user") as never;
-  }
-};
-
-export const useGetMeWithTokens = (options?: { enabled?: boolean }) =>
-  useQuery({
-    queryKey: ["getMeWithTokens"],
-    queryFn: getMeWithTokensFn,
-    retry: false,
-    staleTime: Infinity,
-    enabled: options?.enabled ?? true,
-  });
 
 export const getMeFn = async (): Promise<User> => {
   try {
