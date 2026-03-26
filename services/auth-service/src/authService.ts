@@ -40,7 +40,7 @@ export class AuthService {
     password: string,
     firstName: string,
     lastName: string,
-    phone: string,
+    // phone: string,
     dateOfBirth: Date,
   ): Promise<{ user: User; accessToken: string; refreshToken: string }> {
     //check if user exists
@@ -60,8 +60,9 @@ export class AuthService {
       password: hashedPassword,
       firstName,
       lastName,
-      phone,
+      // phone,
       dateOfBirth,
+      referal: "",
     };
     const [createdUser] = await db.insert(users).values(data).returning();
 
@@ -73,12 +74,16 @@ export class AuthService {
 
     const storedOtp = this.generateOtp();
 
-    //send mail
-    await this.sendEmail(
-      createdUser.email,
-      "Verify your email",
-      `Verify OTP,  This is your Otp ${storedOtp}`,
-    );
+    //send mail (don't block registration if email fails)
+    try {
+      await this.sendEmail(
+        createdUser.email,
+        "Verify your email",
+        `Verify OTP,  This is your Otp ${storedOtp}`,
+      );
+    } catch (emailError) {
+      console.error("Failed to send verification email:", emailError);
+    }
 
     //store otp in the database
     await db.insert(otp).values({
@@ -121,33 +126,31 @@ export class AuthService {
     await db.delete(otp).where(eq(otp.email, email));
 
     return {
-      updatedUser,
-      tokens: this.generateTokens(user.id, user.email, user.emailVerified),
+      user: updatedUser[0],
+      tokens: this.generateTokens(updatedUser[0].id, updatedUser[0].email, true),
     };
   }
 
   async refreshToken(refreshToken: string): Promise<any> {
     try {
-      //verify refresh Token
       const decoded = jwt.verify(
         refreshToken,
         this.jwtRefreshSecret,
       ) as JWTPayload;
 
-      //check if the refresh token exists
       if (!decoded) {
         throw createServiceError(
-          "Invalid or expored refresh token, please login",
-          401,
+          "Invalid or expired refresh token, please login",
+          403,
         );
       }
 
-      //generate new token
       const tokens = await this.generateTokens(
         decoded.userId,
         decoded.email,
         decoded.emailVerified,
       );
+
       return tokens;
     } catch (error) {
       if (error instanceof ServiceError) {
@@ -186,13 +189,13 @@ export class AuthService {
       throw createServiceError("User not found", 404);
     }
 
-    //using jwt aling with an http link that redirect directly to the forgot password route
+    const frontendUrl = process.env.FRONTEND_URL || "http://localhost:3000";
+    const resetLink = `${frontendUrl}/reset-password?token=${this.generateTokens(user.id, user.email, user.emailVerified).accessToken}`;
     const message = `
     <p>Click on the link below to reset your password</p>
-    <a href="http://localhost:3001/v1/auth/reset-password/${this.generateTokens(user.id, user.email, user.emailVerified).accessToken}">Reset Password</a>
+    <a href="${resetLink}">Reset Password</a>
     `;
 
-    //send mail
     await this.sendEmail(user.email, "Reset Password", message);
   }
 
@@ -259,6 +262,14 @@ export class AuthService {
     return { accessToken, refreshToken };
   }
 
+  public createTokens(
+    userId: string,
+    email: string,
+    emailVerified: boolean,
+  ): { accessToken: string; refreshToken: string } {
+    return this.generateTokens(userId, email, emailVerified);
+  }
+
   private generateOtp() {
     //generate 6 digit otp
     const otp = Math.floor(100000 + Math.random() * 900000).toString();
@@ -273,11 +284,26 @@ export class AuthService {
       throw createServiceError("Invalid Email or Password", 401);
     }
 
-    //verify the password
+    // Check if user signed up with Google (no password)
+    if (!userExists.password) {
+      throw createServiceError(
+        "This account was created with Google. Please sign in with Google.",
+        401,
+      );
+    }
 
+    //verify the password
     const isPasswordValid = await bcrypt.compare(password, userExists.password);
     if (!isPasswordValid) {
       throw createServiceError("Invalid Email or Password", 401);
+    }
+
+    //check if email is verified
+    if (!userExists.emailVerified) {
+      throw createServiceError(
+        "Please verify your email before logging in. Check your inbox for the verification code or request a new one.",
+        403,
+      );
     }
 
     //return token
@@ -296,7 +322,7 @@ export class AuthService {
         email: true,
         firstName: true,
         lastName: true,
-        phone: true,
+        // phone: true,
         dateOfBirth: true,
         emailVerified: true,
         createdAt: true,

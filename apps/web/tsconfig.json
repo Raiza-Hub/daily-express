@@ -10,7 +10,8 @@
       "@/*": ["./src/*"],
       "~/*": ["./app/*"],
       "@repo/ui/*": ["../../packages/ui/src/*"],
-      "@repo/types/*": ["../../packages/types/*"]
+      "@repo/types/*": ["../../packages/types/*"],
+      "@shared/*": ["../../shared/*"]
     }
   },
   "include": [
@@ -18,9 +19,8 @@
     "**/*.tsx",
     "next-env.d.ts",
     "next.config.js",
-    ".next/types/**/*.ts"
-, "app/components/NavItem.tsx"  ],
-  "exclude": [
-    "node_modules"
-  ]
+    ".next/types/**/*.ts",
+    "app/components/NavItem.tsx"
+  ],
+  "exclude": ["node_modules"]
 }

@@ -5,8 +5,8 @@ export const users = pgTable("users", {
   firstName: text("first_name").notNull(),
   lastName: text("last_name").notNull(),
   email: text("email").notNull().unique(),
-  password: text("password").notNull(),
-  phone: text("phone").notNull(),
+  password: text("password"),
+  // phone: text("phone").notNull(),
   dateOfBirth: timestamp("date_of_birth").notNull(),
   emailVerified: boolean("email_verified")
     .$defaultFn(() => false)
@@ -25,10 +25,23 @@ export const otp = pgTable("otp", {
   updatedAt: timestamp("updated_at").defaultNow().notNull(),
 });
 
+export const userProviders = pgTable("user_providers", {
+  id: uuid("id").defaultRandom().primaryKey(),
+  userId: uuid("user_id")
+    .references(() => users.id, { onDelete: "cascade" })
+    .notNull(),
+  provider: text("provider").notNull(),
+  providerId: text("provider_id").notNull(),
+  createdAt: timestamp("created_at").defaultNow().notNull(),
+  updatedAt: timestamp("updated_at").defaultNow().notNull(),
+});
+
 export type User = typeof users.$inferSelect;
 export type Otp = typeof otp.$inferSelect;
+export type UserProvider = typeof userProviders.$inferSelect;
 
 export const schema = {
   users,
   otp,
+  userProviders,
 };

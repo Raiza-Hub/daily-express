@@ -13,8 +13,9 @@
   "dependencies": {
     "@hookform/resolvers": "^5.2.2",
     "@phosphor-icons/react": "^2.1.10",
-    "@repo/types": "*",
-    "@repo/ui": "*",
+    "@repo/api": "workspace:*",
+    "@repo/types": "workspace:*",
+    "@repo/ui": "workspace:*",
     "dayjs": "^1.11.19",
     "framer-motion": "^12.35.0",
     "input-otp": "^1.4.2",
@@ -25,8 +26,8 @@
     "zod": "^4.3.6"
   },
   "devDependencies": {
-    "@repo/eslint-config": "*",
-    "@repo/typescript-config": "*",
+    "@repo/eslint-config": "workspace:*",
+    "@repo/typescript-config": "workspace:*",
     "@tailwindcss/postcss": "^4.1.18",
     "@types/node": "^22.15.3",
     "@types/react": "19.2.2",

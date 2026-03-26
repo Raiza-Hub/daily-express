@@ -7,17 +7,66 @@ import {
   type User,
 } from "../types";
 import { createErrorResponse, createServiceError } from "../utils";
-import jwt from "jsonwebtoken";
+import jwt, { type Secret, type SignOptions } from "jsonwebtoken";
 import axios from "axios";
 
-export function authenticateToken(
+declare global {
+  namespace Express {
+    interface Request {
+      user?: JWTPayload;
+    }
+  }
+}
+
+// export function authenticateToken(
+//   req: Request,
+//   res: Response,
+//   next: NextFunction,
+// ) {
+//   // Commenting out Bearer token logic
+//   // const authHeader = req.headers["authorization"];
+//   // const token = authHeader && authHeader.split(" ")[1];
+  
+//   // Read token from HTTP-only cookie
+//   const token = req.cookies?.token;
+
+//   if (!token) {
+//     return res.status(401).json(createErrorResponse("No token provided"));
+//   }
+//   const jwtSecret = process.env.JWT_SECRET;
+//   if (!jwtSecret) {
+//     return res
+//       .status(500)
+//       .json(createErrorResponse("JWT Seceret is not defined"));
+//   }
+
+//   try {
+//     const decoded = jwt.verify(token, jwtSecret) as JWTPayload;
+//     if (!decoded.emailVerified) {
+//       throw createServiceError(
+//         "Email not verified, Please Verify Your Account",
+//         401,
+//       );
+//     }
+//     req.user = decoded;
+//     next();
+//   } catch (error) {
+//     if (error instanceof jwt.TokenExpiredError) {
+//       return res.status(403).json(createErrorResponse("Token expired"));
+//     }
+//     if (error instanceof jwt.JsonWebTokenError) {
+//       return res.status(403).json(createErrorResponse("Invalid token"));
+//     }
+//     return res.status(500).json(createErrorResponse("Token validation failed"));
+//   }
+// }
+
+export function authenticateTokenFromCookie(
   req: Request,
   res: Response,
   next: NextFunction,
 ) {
-  const authHeader = req.headers["authorization"];
-  const token = authHeader && authHeader.split(" ")[1];
-  // const refreshToken =
+  const token = req.cookies?.token;
 
   if (!token) {
     return res.status(401).json(createErrorResponse("No token provided"));
@@ -29,15 +78,140 @@ export function authenticateToken(
       .json(createErrorResponse("JWT Seceret is not defined"));
   }
 
-  const decoded = jwt.verify(token, jwtSecret) as JWTPayload;
-  if (!decoded.emailVerified) {
-    throw createServiceError(
-      "Email not verified, Please Verify Your Account",
-      401,
-    );
+  try {
+    const decoded = jwt.verify(token, jwtSecret) as JWTPayload;
+    
+    if (!decoded.emailVerified) {
+      throw createServiceError(
+        "Email not verified, Please Verify Your Account",
+        401,
+      );
+    }
+    req.user = decoded;
+    next();
+  } catch (error) {
+    if (error instanceof jwt.TokenExpiredError) {
+      return res.status(403).json(createErrorResponse("Token expired"));
+    }
+    if (error instanceof jwt.JsonWebTokenError) {
+      return res.status(403).json(createErrorResponse("Invalid token"));
+    }
+    return res.status(500).json(createErrorResponse("Token validation failed"));
   }
-  req.user = decoded;
-  next();
+}
+
+export function authenticateTokenFromCookieUnverified(
+  req: Request,
+  res: Response,
+  next: NextFunction,
+) {
+  // Read token from HTTP-only cookie
+  const token = req.cookies?.token;
+
+  if (!token) {
+    return res.status(401).json(createErrorResponse("No token provided"));
+  }
+  const jwtSecret = process.env.JWT_SECRET;
+  if (!jwtSecret) {
+    return res
+      .status(500)
+      .json(createErrorResponse("JWT Seceret is not defined"));
+  }
+
+  try {
+    const decoded = jwt.verify(token, jwtSecret) as JWTPayload;
+    req.user = decoded;
+    next();
+  } catch (error) {
+    if (error instanceof jwt.TokenExpiredError) {
+      return res.status(403).json(createErrorResponse("Token expired"));
+    }
+    if (error instanceof jwt.JsonWebTokenError) {
+      return res.status(403).json(createErrorResponse("Invalid token"));
+    }
+    return res.status(500).json(createErrorResponse("Token validation failed"));
+  }
+}
+
+export function refreshAndValidateCookie(
+  req: Request,
+  res: Response,
+  next: NextFunction,
+) {
+  const accessToken = req.cookies?.token;
+  const refreshToken = req.cookies?.refreshToken;
+  const jwtSecret = process.env.JWT_SECRET;
+  const jwtRefreshSecret = process.env.JWT_REFRESH_SECRET;
+
+  if (!jwtSecret || !jwtRefreshSecret) {
+    return res
+      .status(500)
+      .json(createErrorResponse("JWT Secret is not defined"));
+  }
+
+  if (accessToken) {
+    try {
+      const decoded = jwt.verify(accessToken, jwtSecret) as JWTPayload;
+      if (decoded.emailVerified) {
+        req.user = decoded;
+        return next();
+      }
+    } catch (error) {
+      if (!(error instanceof jwt.TokenExpiredError)) {
+        return res.status(401).json(createErrorResponse("Invalid token"));
+      }
+    }
+  }
+
+  if (!refreshToken) {
+    return res.status(401).json(createErrorResponse("No refresh token provided"));
+  }
+
+  try {
+    const decoded = jwt.verify(refreshToken, jwtRefreshSecret) as JWTPayload;
+    
+    // Check if user is verified
+    if (!decoded.emailVerified) {
+      return res.status(401).json(createErrorResponse("Email not verified, Please Verify Your Account"));
+    }
+
+    const accessTokenOptions: SignOptions = {
+      expiresIn: "15m",
+    };
+    const refreshTokenOptions: SignOptions = {
+      expiresIn: "7d",
+    };
+
+    const newAccessToken = jwt.sign(
+      { userId: decoded.userId, email: decoded.email, emailVerified: decoded.emailVerified },
+      jwtSecret as Secret,
+      accessTokenOptions,
+    ) as string;
+
+    const newRefreshToken = jwt.sign(
+      { userId: decoded.userId, email: decoded.email, emailVerified: decoded.emailVerified },
+      jwtRefreshSecret as Secret,
+      refreshTokenOptions,
+    ) as string;
+
+    res.cookie("token", newAccessToken, {
+      httpOnly: true,
+      secure: process.env.NODE_ENV === "production",
+      sameSite: "lax",
+      maxAge: 15 * 60 * 1000,
+    });
+    res.cookie("refreshToken", newRefreshToken, {
+      httpOnly: true,
+      secure: false, // Set to true in production
+      sameSite: "lax",
+      maxAge: 7 * 24 * 60 * 60 * 1000,
+    });
+
+    req.user = decoded;
+    next();
+  } catch (error) {
+    return res.status(401).json(createErrorResponse("Invalid or expired refresh token"));
+  }
 }
 
 export function asyncHandler(
@@ -108,3 +282,5 @@ export function corsOptions() {
     credentials: process.env.CORS_CREDENTIALS === "true",
   };
 }
+
+
