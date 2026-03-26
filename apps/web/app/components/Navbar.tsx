@@ -22,9 +22,6 @@ import {
 
 const Navbar = () => {
   const { data: user, isLoading } = useGetMe();
-  
-  console.log(user);
-  
 
   return (
     <div className="bg-white sticky z-60 top-0 inset-x-0 h-16">

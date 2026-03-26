@@ -22,7 +22,13 @@ router.post(
   validateRequest(registerSchema),
   authcontroller.register,
 );
-router.post("/login", validateRequest(loginSchema), authcontroller.login);
+
+router.post(
+  "/login",
+  validateRequest(loginSchema),
+  authcontroller.login
+);
+
 router.get(
   "/resend-otp",
   authenticateTokenFromCookieUnverified,
@@ -48,28 +54,47 @@ router.get(
 );
 
 //token validation endpoint
-router.post("/validate", authcontroller.validateToken);
+router.post(
+  "/validate",
+  authcontroller.validateToken
+);
 
 //protected routes with auto-refresh
-router.get("/logout", refreshAndValidateCookie, authcontroller.logout);
+router.get(
+  "/logout",
+  refreshAndValidateCookie,
+  authcontroller.logout
+);
+
 router.post(
   "/forget-password",
   validateRequest(forgotPasswordSchema),
   authcontroller.forgotPassword,
 );
+
 router.post(
   "/verify-otp",
   authenticateTokenFromCookieUnverified,
   authcontroller.verifyOtp,
 );
+
 router.post(
   "/reset-password/:token",
   validateRequest(resetPasswordSchema),
   authcontroller.resetPassword,
 );
-router.get("/profile", refreshAndValidateCookie, authcontroller.getProfile);
-router.get("/me", refreshAndValidateCookie, authcontroller.getMe);
-router.delete("/profile", refreshAndValidateCookie, authcontroller.deleteAccount);
+router.get(
+  "/profile",
+  refreshAndValidateCookie,
+  authcontroller.getProfile
+);
+
+router.delete(
+  "/profile",
+  refreshAndValidateCookie,
+  authcontroller.deleteAccount
+);
+
 router.put(
   "/profile",
   refreshAndValidateCookie,
