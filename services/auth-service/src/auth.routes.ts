@@ -1,12 +1,17 @@
 import { Router } from "express";
+import passport from "passport";
 import * as authcontroller from "./auth.controller";
-import { authenticateToken, validateRequest } from "@shared/middleware";
-// import { validateRequest } from '../../../shared/middleware'
+import {
+  authenticateTokenFromCookieUnverified,
+  refreshAndValidateCookie,
+  validateRequest,
+} from "@shared/middleware";
 import {
   loginSchema,
-  refreshTokenSchema,
   registerSchema,
   updateProfileSchema,
+  forgotPasswordSchema,
+  resetPasswordSchema,
 } from "./validation";
 
 const router: Router = Router();
@@ -18,28 +23,56 @@ router.post(
   authcontroller.register,
 );
 router.post("/login", validateRequest(loginSchema), authcontroller.login);
-router.post("/resend-otp", authcontroller.resendOtp);
+router.get(
+  "/resend-otp",
+  authenticateTokenFromCookieUnverified,
+  authcontroller.resendOtp,
+);
 
-// remember to add refresh token
-router.post(
-  "/refresh",
-  validateRequest(refreshTokenSchema),
-  authcontroller.refreshTokens,
+// Google OAuth routes
+router.get(
+  "/google",
+  passport.authenticate("google", {
+    scope: [
+      "profile",
+      "email",
+      "https://www.googleapis.com/auth/user.birthday.read",
+    ],
+  }),
+);
+
+router.get(
+  "/google/callback",
+  passport.authenticate("google", { failureRedirect: "/login" }),
+  authcontroller.googleCallback,
 );
 
 //token validation endpoint
 router.post("/validate", authcontroller.validateToken);
 
-//protected routes
-router.get("/logout", authenticateToken, authcontroller.logout);
-router.post("/forget-password", authcontroller.forgotPassword);
-router.post("/verify-otp", authcontroller.verifyOtp);
-router.post("/reset-password/:token", authcontroller.resetPassword);
-router.get("/profile", authenticateToken, authcontroller.getProfile);
-router.delete("/profile", authenticateToken, authcontroller.deleteAccount);
+//protected routes with auto-refresh
+router.get("/logout", refreshAndValidateCookie, authcontroller.logout);
+router.post(
+  "/forget-password",
+  validateRequest(forgotPasswordSchema),
+  authcontroller.forgotPassword,
+);
+router.post(
+  "/verify-otp",
+  authenticateTokenFromCookieUnverified,
+  authcontroller.verifyOtp,
+);
+router.post(
+  "/reset-password/:token",
+  validateRequest(resetPasswordSchema),
+  authcontroller.resetPassword,
+);
+router.get("/profile", refreshAndValidateCookie, authcontroller.getProfile);
+router.get("/me", refreshAndValidateCookie, authcontroller.getMe);
+router.delete("/profile", refreshAndValidateCookie, authcontroller.deleteAccount);
 router.put(
   "/profile",
-  authenticateToken,
+  refreshAndValidateCookie,
   validateRequest(updateProfileSchema),
   authcontroller.updateProfile,
 );

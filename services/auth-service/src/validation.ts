@@ -11,9 +11,9 @@ export const registerSchema = Joi.object({
   lastName: Joi.string().required().messages({
     "any.required": "Last name is required",
   }),
-  phone: Joi.string().required().messages({
-    "any.required": "Phone number is required",
-  }),
+  // phone: Joi.string().required().messages({
+  //   "any.required": "Phone number is required",
+  // }),
   dateOfBirth: Joi.date().required().messages({
     "any.required": "Date of birth is required",
   }),
@@ -41,15 +41,25 @@ export const loginSchema = Joi.object({
   }),
 });
 
-export const refreshTokenSchema = Joi.object({
-  refreshToken: Joi.string().required().messages({
-    "any.required": "Refresh token is required",
-  }),
-});
 
 export const updateProfileSchema = Joi.object({
   firstName: Joi.string().optional(),
   lastName: Joi.string().optional(),
-  phone: Joi.string().optional(),
+  // phone: Joi.string().optional(),
   dateOfBirth: Joi.date().optional(),
+});
+
+
+export const forgotPasswordSchema = Joi.object({
+  email: Joi.string().email().required().messages({
+    "string.email": "Email must be a valid email address",
+    "any.required": "Email is required",
+  }),
+});
+
+export const resetPasswordSchema = Joi.object({
+  password: Joi.string().min(8).required().messages({
+    "string.min": "Password must be at least 8 characters",
+    "any.required": "Password is required",
+  }),
 });
