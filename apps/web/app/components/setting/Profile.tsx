@@ -235,11 +235,11 @@ const Profile = () => {
                     </p>
                 </div>
 
-                <div className="space-y-6">
-                    <div className="flex justify-between items-center py-2 min-h-[40px]">
+                <div>
+                    {/* <div className="flex justify-between items-center py-2 min-h-[40px]">
                         <FieldLabel className="mb-0">Password</FieldLabel>
                         <ChangePasswordDialog />
-                    </div>
+                    </div> */}
 
                     <div className="flex justify-between items-center py-2 min-h-[40px]">
                         <div className="flex items-center gap-3">
@@ -257,8 +257,6 @@ const Profile = () => {
                     </div>
                 </div>
             </div>
-
-
 
             <DeleteAccount />
         </div>
