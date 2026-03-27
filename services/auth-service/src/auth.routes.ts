@@ -102,4 +102,24 @@ router.put(
   authcontroller.updateProfile,
 );
 
+// Connected providers
+router.get(
+  "/providers",
+  refreshAndValidateCookie,
+  authcontroller.getProviders,
+);
+
+router.delete(
+  "/providers/:provider",
+  refreshAndValidateCookie,
+  authcontroller.disconnectProvider,
+);
+
+// Set password (authenticated user sets password without old password)
+router.post(
+  "/password",
+  refreshAndValidateCookie,
+  authcontroller.setPassword,
+);
+
 export default router;

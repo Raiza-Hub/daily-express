@@ -16,7 +16,7 @@ import {
     PopoverContent,
     PopoverTrigger,
 } from "@repo/ui/components/popover";
-import { useEffect } from "react";
+import { useEffect, useState } from "react";
 import { Controller, useForm } from "react-hook-form";
 import ChangePasswordDialog from "./ChangePasswordDialog";
 import DeleteAccount from "./DeleteAccount";
@@ -25,19 +25,24 @@ import dayjs from "dayjs";
 import {
     useGetMe,
     useUpdateProfile,
-    useDeleteAccount,
+    useGetProviders,
 } from "@repo/api";
 import { toast } from "@repo/ui/components/sonner";
+import { Icons } from "@repo/ui/Icons";
+import DisconnectGoogleDialog from "./DisconnectGoogleDialog";
 
 const ProfileSchema = SignUpSchema.omit({ password: true }).partial();
 type TProfileSchema = z.infer<typeof ProfileSchema>;
 
 const Profile = () => {
-    const { data: user, isLoading, refetch } = useGetMe();
+    const { data: user, isLoading, refetch: refetchUser } = useGetMe();
+    const { data: providers, refetch: refetchProviders } = useGetProviders();
+
+    const isGoogleConnected = providers?.includes("google");
 
     const { mutate: updateProfile, isPending: isUpdating } = useUpdateProfile({
         onSuccess: () => {
-            refetch();
+            refetchUser();
             toast.success("Profile updated successfully");
         },
         onError: (err) => {
@@ -89,6 +94,9 @@ const Profile = () => {
             </div>
         );
     }
+
+    // console.log(user);
+    
 
     return (
         <div className="w-full max-w-3xl mx-auto">
@@ -227,11 +235,30 @@ const Profile = () => {
                     </p>
                 </div>
 
-                <div className="flex justify-between items-start gap-x-6 gap-y-2">
-                    <FieldLabel className="pt-2.5">Password</FieldLabel>
-                    <ChangePasswordDialog />
+                <div className="space-y-6">
+                    <div className="flex justify-between items-center py-2 min-h-[40px]">
+                        <FieldLabel className="mb-0">Password</FieldLabel>
+                        <ChangePasswordDialog />
+                    </div>
+
+                    <div className="flex justify-between items-center py-2 min-h-[40px]">
+                        <div className="flex items-center gap-3">
+                            <Icons.google className="w-5 h-5" />
+                            <span className="text-sm font-medium">Google</span>
+                        </div>
+                        {isGoogleConnected ? (
+                            <DisconnectGoogleDialog 
+                                hasPassword={!!user?.hasPassword} 
+                                onSuccess={refetchProviders} 
+                            />
+                        ) : (
+                            <Button variant="secondary" disabled className="cursor-pointer">Not connected</Button>
+                        )}
+                    </div>
                 </div>
             </div>
+
+
 
             <DeleteAccount />
         </div>
