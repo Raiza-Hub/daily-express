@@ -1,9 +1,9 @@
 "use client";
 
 import { useState } from "react";
-import { Icons } from "../Icons";
 import { Button } from "@repo/ui/components/button";
 import { CircleNotchIcon } from "@phosphor-icons/react";
+import { Icons } from "@repo/ui/Icons";
 
 interface GoogleSignInButtonProps {
   disabled?: boolean;

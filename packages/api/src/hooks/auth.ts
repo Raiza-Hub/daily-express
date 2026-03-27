@@ -264,3 +264,58 @@ export const useDeleteAccount = () =>
   useMutation({
     mutationFn: deleteAccountFn,
   });
+
+export type Provider = "google";
+
+export const getProvidersFn = async (): Promise<Provider[]> => {
+  try {
+    const response = await api.get<ApiResponse<Provider[]>>("/auth/providers");
+    if (!response.data.success || !response.data.data) {
+      throw new Error(response.data.error || "Failed to get providers");
+    }
+    return response.data.data;
+  } catch (err) {
+    return handleApiError(err, "Failed to get providers") as never;
+  }
+};
+
+export const useGetProviders = () =>
+  useQuery({
+    queryKey: ["providers"],
+    queryFn: getProvidersFn,
+    retry: false,
+  });
+
+export const disconnectProviderFn = async (provider: Provider): Promise<void> => {
+  try {
+    const response = await api.delete<ApiResponse<null>>(`/auth/providers/${provider}`);
+    if (!response.data.success) {
+      throw new Error(response.data.error || "Failed to disconnect provider");
+    }
+  } catch (err) {
+    return handleApiError(err, "Failed to disconnect provider") as never;
+  }
+};
+
+export const useDisconnectProvider = (options?: { onSuccess?: () => void; onError?: (error: any) => void }) =>
+  useMutation({
+    mutationFn: disconnectProviderFn,
+    ...options,
+  });
+
+export const setPasswordFn = async (password: string): Promise<void> => {
+  try {
+    const response = await api.post<ApiResponse<null>>("/auth/password", { password });
+    if (!response.data.success) {
+      throw new Error(response.data.error || "Failed to set password");
+    }
+  } catch (err) {
+    return handleApiError(err, "Failed to set password") as never;
+  }
+};
+
+export const useSetPassword = (options?: { onSuccess?: () => void; onError?: (error: any) => void }) =>
+  useMutation({
+    mutationFn: setPasswordFn,
+    ...options,
+  });

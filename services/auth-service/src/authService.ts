@@ -1,6 +1,6 @@
 import { db } from "../db/db";
-import { User, users, Otp, otp } from "../db/schema";
-import { eq } from "drizzle-orm";
+import { User, users, Otp, otp, userProviders } from "../db/schema";
+import { eq, and } from "drizzle-orm";
 import bcrypt from "bcryptjs";
 // import { createServiceError } from "@shared/utils";
 import { createServiceError } from "../../../shared/utils";
@@ -327,13 +327,20 @@ export class AuthService {
         emailVerified: true,
         createdAt: true,
         updatedAt: true,
+        password: true,
       },
     });
 
     if (!user) {
-      throw createServiceError(" User not found", 404);
+      throw createServiceError("User not found", 404);
     }
-    return user;
+
+    const { password, ...userWithoutPassword } = user;
+
+    return {
+      ...userWithoutPassword,
+      hasPassword: !!password,
+    };
   }
 
   async updateProfile(userId: string, data: UpdateUserRequest) {
@@ -396,5 +403,56 @@ export class AuthService {
       where: eq(users.email, email),
     });
     return user;
+  }
+
+  async getProviders(userId: string) {
+    const providers = await db.query.userProviders.findMany({
+      where: eq(userProviders.userId, userId),
+      columns: {
+        provider: true,
+      },
+    });
+    return providers.map((p) => p.provider);
+  }
+
+  async disconnectProvider(userId: string, provider: string) {
+    const user = await db.query.users.findFirst({
+      where: eq(users.id, userId),
+      columns: {
+        password: true,
+      },
+    });
+
+    if (!user) {
+      throw createServiceError("User not found", 404);
+    }
+
+    const connectedProviders = await db.query.userProviders.findMany({
+      where: eq(userProviders.userId, userId),
+    });
+
+    if (!user.password && connectedProviders.length <= 1) {
+      throw createServiceError(
+        "Cannot disconnect your only login method. Please set a password first.",
+        400,
+      );
+    }
+
+    await db
+      .delete(userProviders)
+      .where(
+        and(
+          eq(userProviders.userId, userId),
+          eq(userProviders.provider, provider),
+        ),
+      );
+  }
+
+  async setPassword(userId: string, password: string) {
+    const hashedPassword = await bcrypt.hash(password, this.bcryptRounds);
+    await db
+      .update(users)
+      .set({ password: hashedPassword })
+      .where(eq(users.id, userId));
   }
 }

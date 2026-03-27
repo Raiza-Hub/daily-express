@@ -310,3 +310,59 @@ export const googleCallback: RequestHandler = asyncHandler(
     res.redirect(`${frontendUrl}`);
   },
 );
+
+export const getProviders: RequestHandler = asyncHandler(
+  async (req: Request, res: Response) => {
+    const userId = req.user?.userId;
+    if (!userId) {
+      return res.status(401).json(createErrorResponse("Unauthorized"));
+    }
+
+    const providers = await authService.getProviders(userId);
+
+    return res
+      .status(200)
+      .json(createSuccessResponse(providers, "Providers retrieved"));
+  },
+);
+
+export const disconnectProvider: RequestHandler = asyncHandler(
+  async (req: Request, res: Response) => {
+    const userId = req.user?.userId;
+    if (!userId) {
+      return res.status(401).json(createErrorResponse("Unauthorized"));
+    }
+
+    const providerParam = req.params.provider;
+    const provider = Array.isArray(providerParam) ? providerParam[0] : providerParam;
+    if (!provider || !["google"].includes(provider)) {
+      return res.status(400).json(createErrorResponse("Invalid provider"));
+    }
+
+    await authService.disconnectProvider(userId, provider);
+
+    return res
+      .status(200)
+      .json(createSuccessResponse(null, "Provider disconnected"));
+  },
+);
+
+export const setPassword: RequestHandler = asyncHandler(
+  async (req: Request, res: Response) => {
+    const userId = req.user?.userId;
+    if (!userId) {
+      return res.status(401).json(createErrorResponse("Unauthorized"));
+    }
+
+    const { password } = req.body;
+    if (!password) {
+      return res.status(400).json(createErrorResponse("Password is required"));
+    }
+
+    await authService.setPassword(userId, password);
+
+    return res
+      .status(200)
+      .json(createSuccessResponse(null, "Password set successfully"));
+  },
+);

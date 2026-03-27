@@ -11,6 +11,7 @@ export interface User {
   referal: string;
   createdAt: Date;
   updatedAt: Date;
+  hasPassword?: boolean;
 }
 
 export interface GetMeResponse {
