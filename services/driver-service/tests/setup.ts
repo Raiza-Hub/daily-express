@@ -100,6 +100,7 @@ export const testUpdateProfileRequest = {
 export const testJwtPayload: JWTPayload = {
   userId: "test-user-id",
   email: "testdriver123@domain.com",
+  emailVerified: true,
   iat: Math.floor(Date.now() / 1000),
   exp: Math.floor(Date.now() / 1000) + 60 * 15, //15 minutes from now
 };

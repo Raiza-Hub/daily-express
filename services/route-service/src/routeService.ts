@@ -31,7 +31,7 @@ export class RouteService {
         `${this.driverServiceUrl}/v1/driver/profile`, // Removed the ${userId}
         {
           headers: {
-            Authorization: `Bearer ${token}`,
+            Cookie: token,
           },
         },
       );

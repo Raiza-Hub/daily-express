@@ -1,24 +1,28 @@
-import { authenticateToken, validateRequest } from "@shared/middleware";
+import { refreshAndValidateCookie, validateRequest } from "@shared/middleware";
 import { Router } from "express";
 import * as driverController from "./driver.controller";
 import { createDriverSchema, updateDriverSchema } from "./validations";
 
-const router = Router();
+const router: Router = Router();
 
 //Protected routes
-router.get("/profile", authenticateToken, driverController.getDriver);
+router.get("/profile", refreshAndValidateCookie, driverController.getDriver);
 router.post(
   "/create",
-  authenticateToken,
+  refreshAndValidateCookie,
   validateRequest(createDriverSchema),
   driverController.createDriver,
 );
 router.put(
   "/update",
-  authenticateToken,
+  refreshAndValidateCookie,
   validateRequest(updateDriverSchema),
   driverController.updateDriver,
 );
-router.delete("/profile", authenticateToken, driverController.deleteDriver);
+router.delete(
+  "/profile",
+  refreshAndValidateCookie,
+  driverController.deleteDriver,
+);
 
 export default router;

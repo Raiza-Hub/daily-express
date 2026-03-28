@@ -1,67 +1,71 @@
 import { Router } from "express";
 import * as routeController from "./route.controller";
-import { authenticateToken, validateRequest } from "@shared/middleware";
+import { refreshAndValidateCookie, validateRequest } from "@shared/middleware";
 import {
   createRouteSchema,
   createTripSchema,
   updateRouteSchema,
 } from "./validation";
 
-const router = Router();
+const router: Router = Router();
 
 //driver routes
 router.get(
   "/driver/routes",
-  authenticateToken,
+  refreshAndValidateCookie,
   routeController.getAllDriverRoutes,
 );
 router.post(
   "/driver/routes",
-  authenticateToken,
+  refreshAndValidateCookie,
   validateRequest(createRouteSchema),
   routeController.createRoute,
 );
 router.put(
   "/driver/route/:id",
-  authenticateToken,
+  refreshAndValidateCookie,
   validateRequest(updateRouteSchema),
   routeController.updateRoute,
 );
 router.patch(
   "/driver/trip/:id",
-  authenticateToken,
+  refreshAndValidateCookie,
   routeController.updateTripStatus,
 );
 router.get(
   "/driver/trips/:date",
-  authenticateToken,
+  refreshAndValidateCookie,
   routeController.getAllTrips,
 );
 router.delete(
   "/driver/route/:id",
-  authenticateToken,
+  refreshAndValidateCookie,
   routeController.deleteRoute,
 );
-router.get("/route/:id", authenticateToken, routeController.getRoute);
+router.get("/route/:id", refreshAndValidateCookie, routeController.getRoute);
 
 //user routes
 router.post(
   "/user/trip",
-  authenticateToken,
+  refreshAndValidateCookie,
   validateRequest(createTripSchema),
   routeController.bookTrip,
 );
 //to be unused for cancelling trips
 router.patch(
   "/user/booking/:id",
-  authenticateToken,
+  refreshAndValidateCookie,
   routeController.updateBookingStatus,
 );
 router.get(
   "/user/bookings",
-  authenticateToken,
+  refreshAndValidateCookie,
   routeController.getUserBookings,
 );
-router.get("/user/routes", authenticateToken, routeController.getAllUserRoutes);
+router.get(
+  "/user/routes",
+  refreshAndValidateCookie,
+  routeController.getAllUserRoutes,
+);
 
 export default router;

@@ -26,7 +26,7 @@ declare global {
 //   // Commenting out Bearer token logic
 //   // const authHeader = req.headers["authorization"];
 //   // const token = authHeader && authHeader.split(" ")[1];
-  
+
 //   // Read token from HTTP-only cookie
 //   const token = req.cookies?.token;
 
@@ -80,7 +80,7 @@ export function authenticateTokenFromCookie(
 
   try {
     const decoded = jwt.verify(token, jwtSecret) as JWTPayload;
-    
+
     if (!decoded.emailVerified) {
       throw createServiceError(
         "Email not verified, Please Verify Your Account",
@@ -142,6 +142,7 @@ export function refreshAndValidateCookie(
   const refreshToken = req.cookies?.refreshToken;
   const jwtSecret = process.env.JWT_SECRET;
   const jwtRefreshSecret = process.env.JWT_REFRESH_SECRET;
+  console.log(refreshToken, accessToken);
 
   if (!jwtSecret || !jwtRefreshSecret) {
     return res
@@ -164,15 +165,21 @@ export function refreshAndValidateCookie(
   }
 
   if (!refreshToken) {
-    return res.status(401).json(createErrorResponse("No refresh token provided"));
+    return res
+      .status(401)
+      .json(createErrorResponse("Session Expired, Please Login"));
   }
 
   try {
     const decoded = jwt.verify(refreshToken, jwtRefreshSecret) as JWTPayload;
-    
+
     // Check if user is verified
     if (!decoded.emailVerified) {
-      return res.status(401).json(createErrorResponse("Email not verified, Please Verify Your Account"));
+      return res
+        .status(401)
+        .json(
+          createErrorResponse("Email not verified, Please Verify Your Account"),
+        );
     }
 
     const accessTokenOptions: SignOptions = {
@@ -183,13 +190,21 @@ export function refreshAndValidateCookie(
     };
 
     const newAccessToken = jwt.sign(
-      { userId: decoded.userId, email: decoded.email, emailVerified: decoded.emailVerified },
+      {
+        userId: decoded.userId,
+        email: decoded.email,
+        emailVerified: decoded.emailVerified,
+      },
       jwtSecret as Secret,
       accessTokenOptions,
     ) as string;
 
     const newRefreshToken = jwt.sign(
-      { userId: decoded.userId, email: decoded.email, emailVerified: decoded.emailVerified },
+      {
+        userId: decoded.userId,
+        email: decoded.email,
+        emailVerified: decoded.emailVerified,
+      },
       jwtRefreshSecret as Secret,
       refreshTokenOptions,
     ) as string;
@@ -210,7 +225,9 @@ export function refreshAndValidateCookie(
     req.user = decoded;
     next();
   } catch (error) {
-    return res.status(401).json(createErrorResponse("Invalid or expired refresh token"));
+    return res
+      .status(401)
+      .json(createErrorResponse("Invalid or expired refresh token"));
   }
 }
 
@@ -282,5 +299,3 @@ export function corsOptions() {
     credentials: process.env.CORS_CREDENTIALS === "true",
   };
 }
-
-
