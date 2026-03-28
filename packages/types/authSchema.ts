@@ -48,7 +48,7 @@ export const ResetPasswordSchema = z.object({
 
     newPassword: z
       .string()
-      .min(8, { error: "Password is required" }),
+      .min(8, { error: "Password must be at least 8 characters" }),
     
     confirmPassword: z.string(),
 

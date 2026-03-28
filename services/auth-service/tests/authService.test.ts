@@ -139,7 +139,7 @@ describe("AuthService", () => {
     const password = "testpassworD123";
     const firstName = "John";
     const lastName = "Doe";
-    const phone = "1234567890";
+    // const phone = "1234567890";
     const dateOfBirth = new Date("1990-01-01");
     const referal = "";
 
@@ -163,7 +163,7 @@ describe("AuthService", () => {
         password,
         firstName,
         lastName,
-        phone,
+        // phone,
         dateOfBirth,
       );
 
@@ -182,7 +182,7 @@ describe("AuthService", () => {
           password: "hashed-password",
           firstName,
           lastName,
-          phone,
+          // phone,
           dateOfBirth,
           referal,
         }),
@@ -205,7 +205,7 @@ describe("AuthService", () => {
           password,
           firstName,
           lastName,
-          phone,
+          // phone,
           dateOfBirth,
         ),
       ).rejects.toMatchObject({
@@ -235,7 +235,7 @@ describe("AuthService", () => {
           password,
           firstName,
           lastName,
-          phone,
+          // phone,
           dateOfBirth,
         ),
       ).rejects.toThrow("DB Error");
@@ -258,11 +258,14 @@ describe("AuthService", () => {
       });
 
       // 2. Setup: OTP exists and matches
-      const mockWhere = jest.fn().mockReturnThis();
+      const mockReturning = jest.fn().mockResolvedValue([testUser]);
+      const mockWhere = jest.fn().mockReturnValue({ returning: mockReturning });
       const mockSet = jest.fn().mockReturnValue({ where: mockWhere });
       global.mockDrizzle.update.mockReturnValue({ set: mockSet });
+
       // 3. Setup: Mock the Delete Chain properly
-      const mockDeleteWhere = jest.fn().mockReturnThis();
+      const mockDeleteReturning = jest.fn().mockResolvedValue([]);
+      const mockDeleteWhere = jest.fn().mockReturnValue({ returning: mockDeleteReturning });
       global.mockDrizzle.delete.mockReturnValue({ where: mockDeleteWhere });
 
       // 4. Act

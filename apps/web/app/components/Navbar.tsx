@@ -1,89 +1,92 @@
-import Link from 'next/link'
-import { cookies } from 'next/headers'
-// import UserAccountNav from './UserAccountNav'
+"use client";
 
-import { Button, buttonVariants } from '@repo/ui/components/button'
+import Link from "next/link";
 
-import { BellIcon, CaretDownIcon, MapPinPlusIcon, PlusIcon } from '@phosphor-icons/react/dist/ssr'
-import { Icons } from './Icons';
-import NavItem from './NavItem';
-import { UserAccountNav } from './UserAccountNav';
-import Image from 'next/image';
+import { Button, buttonVariants } from "@repo/ui/components/button";
 
-// import MobileNav from './MobileNav'
+import {
+  BellIcon,
+  CaretDownIcon,
+  MapPinPlusIcon,
+  PlusIcon,
+  CircleNotchIcon,
+} from "@phosphor-icons/react/dist/ssr";
+import { Avatar, AvatarFallback } from "@repo/ui/components/avatar";
+import { Icons } from "./Icons";
+import NavItem from "./NavItem";
+import { UserAccountNav } from "./UserAccountNav";
+import Image from "next/image";
+import {
+  useGetMe,
+} from "@repo/api";
 
-const user = {
-    id: "usr_9f8a7b6c",
-    firstName: "Daniel",
-    lastName: "Okafor",
-    email: "daniel.okafor24@example.com",
-    profilePictureUrl: "https://i.pravatar.cc/150?img=12",
-    createdAt: "2024-05-12T10:24:00Z",
+const Navbar = () => {
+  const { data: user, isLoading } = useGetMe();
+
+  return (
+    <div className="bg-white sticky z-60 top-0 inset-x-0 h-16">
+      <header className="relative bg-gray-50">
+        <div className="mx-auto w-full max-w-7xl px-4 md:px-6 ">
+          <div className="flex h-16 items-center">
+            <div className="flex">
+              <Link href="/">
+                <Image
+                  src="/logo2.png"
+                  alt="Logo"
+                  width={40}
+                  height={40}
+                  className="object-contain object-center"
+                />
+              </Link>
+            </div>
+
+            <div className="ml-auto flex items-center">
+              <div className="lg:flex lg:flex-1 lg:items-center lg:justify-end lg:space-x-6">
+                {user ? null : (
+                  <div className="hidden lg:block">
+                    <Link
+                      href="/sign-in"
+                      className={buttonVariants({
+                        variant: "ghost",
+                      })}
+                    >
+                      Become a driver
+                    </Link>
+                  </div>
+                )}
+
+                {user ? null : (
+                  <span
+                    className="hidden lg:block h-6 w-px bg-gray-200"
+                    aria-hidden="true"
+                  />
+                )}
+
+                {user ? (
+                  <UserAccountNav user={user} />
+                ) : isLoading ? (
+                  <Avatar className="h-10 w-10">
+                    <AvatarFallback>
+                      <CircleNotchIcon className="h-5 w-5 animate-spin text-muted-foreground" />
+                    </AvatarFallback>
+                  </Avatar>
+                ) : (
+                  <Link
+                    href="/sign-in"
+                    className={buttonVariants({
+                      variant: "submit",
+                    })}
+                  >
+                    Sign in
+                  </Link>
+                )}
+              </div>
+            </div>
+          </div>
+        </div>
+      </header>
+    </div>
+  );
 };
 
-const Navbar = async () => {
-    // const nextCookies = cookies()
-    // const { user } = await getServerSideUser(nextCookies)
-    const user = null
-
-    return (
-        <div className='bg-white sticky z-60 top-0 inset-x-0 h-16'>
-            <header className='relative bg-gray-50'>
-                <div className='mx-auto w-full max-w-7xl px-4 md:px-6 '>
-                    <div className='flex h-16 items-center'>
-
-                        <div className='flex'>
-                            <Link href='/'>
-                                <Image
-                                    src="/logo2.png"
-                                    alt="Logo"
-                                    width={40}
-                                    height={40}
-                                    className='object-contain object-center'
-                                />
-                            </Link>
-                        </div>
-
-                        <div className='ml-auto flex items-center'>
-                            <div className='lg:flex lg:flex-1 lg:items-center lg:justify-end lg:space-x-6'>
-                                {user ? null : (
-                                    <div className='hidden lg:block'>
-                                        <Link
-                                            href='/sign-in'
-                                            className={buttonVariants({
-                                                variant: 'ghost',
-                                            })}>
-                                            Become a driver
-                                        </Link>
-                                    </div>
-                                )}
-
-                                {user ? null : (
-                                    <span
-                                        className='hidden lg:block h-6 w-px bg-gray-200'
-                                        aria-hidden='true'
-                                    />
-                                )}
-
-                                {user ? (
-                                    <UserAccountNav />
-                                ) : (
-                                    <Link
-                                        href='/sign-in'
-                                        className={buttonVariants({
-                                            variant: 'submit',
-                                        })}>
-                                        Sign in
-                                    </Link>
-                                )}
-                            </div>
-                        </div>
-                    </div>
-                </div>
-            </header>
-        </div>
-
-    )
-}
-
-export default Navbar
+export default Navbar;

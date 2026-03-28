@@ -17,7 +17,7 @@ export class AuthClient {
         {},
         {
           headers: {
-            Authorization: `Bearer ${token}`,
+            Cookie: `token=${token}`,
           },
           timeout: 5000,
         },

@@ -1,56 +1,71 @@
-"use client"
+"use client";
 
-import { useRouter } from "next/navigation"
-import { IdentificationCardIcon, QuestionIcon, SignOutIcon, UserIcon } from "@phosphor-icons/react"
-import { UserAccountNav as SharedUserAccountNav } from "@repo/ui/UserAccountNav"
+import { useRouter } from "next/navigation";
+import {
+  IdentificationCardIcon,
+  QuestionIcon,
+  SignOutIcon,
+  UserIcon,
+} from "@phosphor-icons/react";
+import { UserAccountNav as SharedUserAccountNav } from "@repo/ui/UserAccountNav";
+import { useLogout } from "@repo/api";
+import type { User } from "@shared/types";
 
-// TODO: replace with real user from your auth provider (e.g. WorkOS, NextAuth)
-const mockUser = {
-    firstName: "Daniel",
-    lastName: "Okafor",
-    email: "daniel.okafor24@example.com",
-    profilePictureUrl:
-        "https://images.unsplash.com/photo-1617244147030-8bd6f9e21d1e?q=80&w=987&auto=format&fit=crop&ixlib=rb-4.1.0&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D",
+interface UserAccountNavProps {
+  user: User | undefined;
 }
 
-export function UserAccountNav() {
-    const router = useRouter()
+export function UserAccountNav({ user }: UserAccountNavProps) {
+  const router = useRouter();
 
-    const signOut = () => {
-        console.log("User signed out")
-    }
+  const { mutate: signOut } = useLogout();
 
-    return (
-        <SharedUserAccountNav
-            user={mockUser}
-            menuItems={[
-                {
-                    key: "profile",
-                    icon: <UserIcon weight="bold" />,
-                    label: "Profile",
-                    onClick: () => router.push("/settings/profile"),
-                },
-                {
-                    key: "Become a driver",
-                    icon: <IdentificationCardIcon weight="bold" />,
-                    label: "Become a driver",
-                    onClick: () => router.push("/settings/profile"),
-                },
-                {
-                    key: "support",
-                    icon: <QuestionIcon weight="bold" />,
-                    label: "Support",
-                    href: "mailto:support@yourdomain.com",
-                },
-            ]}
-            footerItems={[
-                {
-                    key: "signout",
-                    icon: <SignOutIcon weight="bold" />,
-                    label: "Log out",
-                    onClick: signOut,
-                },
-            ]}
-        />
-    )
+  const handleSignOut = () => {
+    signOut(undefined, {
+      onSuccess: () => {
+        router.push("/sign-in");
+      },
+    });
+  };
+
+  const userData = {
+    firstName: user?.firstName ?? "",
+    lastName: user?.lastName ?? "",
+    email: user?.email ?? "",
+    profilePictureUrl: undefined,
+  };
+
+  return (
+    <SharedUserAccountNav
+      user={userData}
+      menuItems={[
+        {
+          key: "profile",
+          icon: <UserIcon weight="bold" />,
+          label: "Profile",
+          onClick: () => router.push("/settings/profile"),
+        },
+        {
+          key: "Become a driver",
+          icon: <IdentificationCardIcon weight="bold" />,
+          label: "Become a driver",
+          onClick: () => router.push("/settings/profile"),
+        },
+        {
+          key: "support",
+          icon: <QuestionIcon weight="bold" />,
+          label: "Support",
+          href: "mailto:support@yourdomain.com",
+        },
+      ]}
+      footerItems={[
+        {
+          key: "signout",
+          icon: <SignOutIcon weight="bold" />,
+          label: "Log out",
+          onClick: handleSignOut,
+        },
+      ]}
+    />
+  );
 }

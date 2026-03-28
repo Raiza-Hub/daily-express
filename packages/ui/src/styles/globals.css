@@ -121,4 +121,7 @@
   body {
     @apply bg-background text-foreground;
   }
+  input, textarea, [contenteditable] {
+    @apply selection:bg-blue-100 selection:text-neutral-900;
+  }
 }

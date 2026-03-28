@@ -4,10 +4,16 @@ import { createServiceError } from "@shared/utils";
 const resend = new Resend(process.env.RESEND_API_KEY || "dummy_key");
 
 export class MailService {
+  private resend: Resend;
+
+  constructor() {
+    this.resend = new Resend(process.env.RESEND_API_KEY || "dummy_key");
+  }
+
   async sendMail(to: string, subject: string, html: string) {
     try {
-      const response = await resend.emails.send({
-        from: `Daily Express <${process.env.EMAIL_FROM}>`,
+      const response = await this.resend.emails.send({
+        from: `Daily Express <${process.env.EMAIL_FROM || "onboarding@resend.dev"}>`,
         to,
         subject,
         html,

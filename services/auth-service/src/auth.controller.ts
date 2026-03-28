@@ -11,16 +11,22 @@ import {
 
 const authService = new AuthService();
 
+/**
+ * I didn't envision collecting the user phone on the frontend
+ * It's on the driver phone number I need
+ * Have commented out the phone number field from the user
+ */
+
 export const register: RequestHandler = asyncHandler(
   async (req: Request, res: Response) => {
-    const { email, password, firstName, lastName, phone, dateOfBirth } =
+    const { email, password, firstName, lastName, /*phone,*/ dateOfBirth } =
       req.body;
     const tokens = await authService.register(
       email,
       password,
       firstName,
       lastName,
-      phone,
+      // phone,
       dateOfBirth,
     );
 
@@ -55,7 +61,7 @@ export const login: RequestHandler = asyncHandler(
     //send cookies
     res.cookie("token", tokens.accessToken, {
       httpOnly: true,
-      secure: false,
+      secure: process.env.NODE_ENV === "production",
       sameSite: "lax",
       maxAge: 15 * 60 * 1000, //15 minutess
     });
@@ -63,7 +69,7 @@ export const login: RequestHandler = asyncHandler(
     //send refresh cookie
     res.cookie("refreshToken", tokens.refreshToken, {
       httpOnly: true,
-      secure: false,
+      secure: process.env.NODE_ENV === "production",
       // path: "/api/v1/auth/refresh-token", // come back and work on refresh token later
       sameSite: "lax",
       maxAge: 7 * 24 * 60 * 60 * 1000, //7 days
@@ -77,8 +83,8 @@ export const login: RequestHandler = asyncHandler(
 
 export const validateToken: RequestHandler = asyncHandler(
   async (req: Request, res: Response) => {
-    const authHeader = req.headers["authorization"];
-    const token = authHeader && authHeader.split(" ")[1];
+    // Read token from cookie or body (for inter-service calls)
+    const token = req.cookies?.token || req.body.token;
 
     if (!token) {
       return res.status(401).json(createErrorResponse("No token provided"));
@@ -95,6 +101,9 @@ export const validateToken: RequestHandler = asyncHandler(
 export const getProfile: RequestHandler = asyncHandler(
   async (req: Request, res: Response) => {
     const userId = req.user?.userId;
+    if (!userId) {
+      return res.status(401).json(createErrorResponse("Unauthorized"));
+    }
 
     const user = await authService.getUserById(userId);
     if (!user) {
@@ -109,10 +118,29 @@ export const getProfile: RequestHandler = asyncHandler(
 
 export const refreshTokens: RequestHandler = asyncHandler(
   async (req: Request, res: Response) => {
-    const { refreshToken } = req.body;
+    const refreshToken = req.cookies?.refreshToken;
+
+    if (!refreshToken) {
+      return res.status(401).json(createErrorResponse("No refresh token provided"));
+    }
+
     const tokens = await authService.refreshToken(refreshToken);
 
-    res
+    res.cookie("token", tokens.accessToken, {
+      httpOnly: true,
+      secure: process.env.NODE_ENV === "production",
+      sameSite: "lax",
+      maxAge: 15 * 60 * 1000,
+    });
+
+    res.cookie("refreshToken", tokens.refreshToken, {
+      httpOnly: true,
+      secure: process.env.NODE_ENV === "production",
+      sameSite: "lax",
+      maxAge: 7 * 24 * 60 * 60 * 1000,
+    });
+
+    return res
       .status(200)
       .json(createSuccessResponse(tokens, "Tokens refreshed successfully"));
   },
@@ -164,31 +192,56 @@ export const resetPassword: RequestHandler = asyncHandler(
 
 export const verifyOtp: RequestHandler = asyncHandler(
   async (req: Request, res: Response) => {
-    const email = req.body.email;
+    const email = req.user?.email;
+    if (!email) {
+      return res.status(401).json(createErrorResponse("Unauthorized"));
+    }
     const { otp } = req.body;
-    const tokens = await authService.verifyOtp(email as string, otp);
+    const { tokens } = await authService.verifyOtp(email as string, otp);
 
-    res
+    res.cookie("token", tokens.accessToken, {
+      httpOnly: true,
+      secure: process.env.NODE_ENV === "production",
+      sameSite: "lax",
+      maxAge: 15 * 60 * 1000,
+    });
+
+    res.cookie("refreshToken", tokens.refreshToken, {
+      httpOnly: true,
+      secure: process.env.NODE_ENV === "production",
+      sameSite: "lax",
+      maxAge: 7 * 24 * 60 * 60 * 1000,
+    });
+
+    return res
       .status(200)
       .json(createSuccessResponse(tokens, "OTP verified successfully"));
   },
 );
 
-//resend otp function
+
 
 export const logout: RequestHandler = asyncHandler(
   async (req: Request, res: Response) => {
+    req.session.destroy((err) => {
+      if (err) {
+        console.error("Session destroy error:", err);
+      }
+    });
     res
       .clearCookie("token")
       .clearCookie("refreshToken")
+      .clearCookie("connect.sid")
       .status(200)
       .json(createSuccessResponse(null, "User logged out successfully"));
   },
 );
 
+//resend otp function
+
 export const resendOtp: RequestHandler = asyncHandler(
   async (req: Request, res: Response) => {
-    const { email } = req.body;
+    const email = req.user?.email;
     if (!email) {
       return res.status(401).json(createErrorResponse("Unauthorized"));
     }
@@ -216,5 +269,100 @@ export const updateProfile: RequestHandler = asyncHandler(
     return res
       .status(200)
       .json(createSuccessResponse(user, "Profile updated successfully"));
+  },
+);
+
+export const googleCallback: RequestHandler = asyncHandler(
+  async (req: Request, res: Response) => {
+    // User is attached to request by passport
+    const user = req.user as any;
+
+    if (!user) {
+      return res.redirect(
+        `${process.env.FRONTEND_URL}/sign-in?error=google_auth_failed`,
+      );
+    }
+
+    // Generate tokens
+    const tokens = authService.createTokens(
+      user.id,
+      user.email,
+      user.emailVerified,
+    );
+
+    // Set HTTP-only cookies (same as regular login)
+    res.cookie("token", tokens.accessToken, {
+      httpOnly: true,
+      secure: process.env.NODE_ENV === "production",
+      sameSite: "lax",
+      maxAge: 15 * 60 * 1000, // 15 minutes
+    });
+
+    res.cookie("refreshToken", tokens.refreshToken, {
+      httpOnly: true,
+      secure: process.env.NODE_ENV === "production",
+      sameSite: "lax",
+      maxAge: 7 * 24 * 60 * 60 * 1000, // 7 days
+    });
+
+    // Redirect to frontend
+    const frontendUrl = process.env.FRONTEND_URL || "http://localhost:3000";
+    res.redirect(`${frontendUrl}`);
+  },
+);
+
+export const getProviders: RequestHandler = asyncHandler(
+  async (req: Request, res: Response) => {
+    const userId = req.user?.userId;
+    if (!userId) {
+      return res.status(401).json(createErrorResponse("Unauthorized"));
+    }
+
+    const providers = await authService.getProviders(userId);
+
+    return res
+      .status(200)
+      .json(createSuccessResponse(providers, "Providers retrieved"));
+  },
+);
+
+export const disconnectProvider: RequestHandler = asyncHandler(
+  async (req: Request, res: Response) => {
+    const userId = req.user?.userId;
+    if (!userId) {
+      return res.status(401).json(createErrorResponse("Unauthorized"));
+    }
+
+    const providerParam = req.params.provider;
+    const provider = Array.isArray(providerParam) ? providerParam[0] : providerParam;
+    if (!provider || !["google"].includes(provider)) {
+      return res.status(400).json(createErrorResponse("Invalid provider"));
+    }
+
+    await authService.disconnectProvider(userId, provider);
+
+    return res
+      .status(200)
+      .json(createSuccessResponse(null, "Provider disconnected"));
+  },
+);
+
+export const setPassword: RequestHandler = asyncHandler(
+  async (req: Request, res: Response) => {
+    const userId = req.user?.userId;
+    if (!userId) {
+      return res.status(401).json(createErrorResponse("Unauthorized"));
+    }
+
+    const { password } = req.body;
+    if (!password) {
+      return res.status(400).json(createErrorResponse("Password is required"));
+    }
+
+    await authService.setPassword(userId, password);
+
+    return res
+      .status(200)
+      .json(createSuccessResponse(null, "Password set successfully"));
   },
 );

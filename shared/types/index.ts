@@ -5,17 +5,25 @@ export interface User {
   email: string;
   firstName: string;
   lastName: string;
-  phone: string;
+  // phone: string;
   dateOfBirth: Date;
+  emailVerified: boolean;
   referal: string;
   createdAt: Date;
   updatedAt: Date;
+  hasPassword?: boolean;
+}
+
+export interface GetMeResponse {
+  user: User;
+  accessToken: string;
+  refreshToken: string;
 }
 
 export interface UpdateUserRequest {
   firstName?: string;
   lastName?: string;
-  phone?: string;
+  // phone?: string;
   dateOfBirth?: Date;
 }
 
@@ -52,7 +60,6 @@ export interface UpdateProfileRequest {
   accountNumber?: string;
   accountName?: string;
 }
-
 
 export interface ServiceResponse<T = any> {
   success: boolean;
@@ -168,10 +175,9 @@ export interface updateRouteRequest {
   status?: "inactive" | "pending" | "active";
 }
 
-
 export interface CreateTrip {
   routeId: string;
-  driverId: string
+  driverId: string;
   date: Date;
   capacity: number;
   bookedSeats: number;

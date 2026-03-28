@@ -8,10 +8,8 @@ import type { TRoute } from "@repo/types/routeSchema";
 import dayjs from "dayjs";
 import { PlaneDots } from "@repo/ui/PlaneDots";
 import { formatPrice } from "@repo/ui/lib/utils";
-import { DriverInfo } from "~/components/DriverInfo";
-import type { DriverInfoProps } from "~/components/DriverInfo";
-
-// ----- Types -----
+import { DriverInfo } from "~/components/trip/DriverInfo";
+import type { DriverInfoProps } from "~/components/trip/DriverInfo";
 
 export interface TripStatusItem {
     id: string;
@@ -21,11 +19,7 @@ export interface TripStatusItem {
     passengerLastName: string;
 }
 
-// ----- Sub-components -----
 
-
-
-// ----- Single card -----
 
 function TripStatusCardItem({ item }: { item: TripStatusItem }) {
     const [expanded, setExpanded] = useState(false);
@@ -105,7 +99,7 @@ function TripStatusCardItem({ item }: { item: TripStatusItem }) {
                     ) : (
                         <button
                             onClick={(e) => { e.stopPropagation(); setExpanded(!expanded); }}
-                            className="text-sm text-blue-600 hover:text-blue-800 transition-colors"
+                            className="text-sm text-blue-600 hover:text-blue-800 transition-colors cursor-pointer"
                         >
                             {expanded ? "Hide details" : "Driver details"}
                         </button>

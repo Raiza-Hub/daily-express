@@ -21,6 +21,7 @@ describe("MailService", () => {
   beforeEach(() => {
     // Clear all mocks before each test
     jest.clearAllMocks();
+    process.env.EMAIL_FROM = "onboarding@resend.dev";
 
     mailService = new MailService();
   });
