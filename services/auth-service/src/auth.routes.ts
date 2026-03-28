@@ -53,13 +53,11 @@ router.get(
   authcontroller.googleCallback,
 );
 
-//token validation endpoint
 router.post(
   "/validate",
   authcontroller.validateToken
 );
 
-//protected routes with auto-refresh
 router.get(
   "/logout",
   refreshAndValidateCookie,
