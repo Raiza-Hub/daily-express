@@ -1,29 +1,33 @@
-import { Request, Response } from "express";
+import { Request, RequestHandler, Response } from "express";
 import { asyncHandler } from "@shared/middleware";
 import { DriverService } from "./driverServices";
 import { createErrorResponse, createSuccessResponse } from "@shared/utils";
 
 const driverService = new DriverService();
 
-export const getDriver = asyncHandler(async (req: Request, res: Response) => {
-  const userId = req.user.userId;
-  if (!userId) {
-    return res.status(401).json(createErrorResponse("User not authenticated"));
-  }
+export const getDriver: RequestHandler = asyncHandler(
+  async (req: Request, res: Response) => {
+    const userId = req.user?.userId;
+    if (!userId) {
+      return res
+        .status(401)
+        .json(createErrorResponse("User not authenticated"));
+    }
 
-  const driver = await driverService.getProfile(userId);
+    const driver = await driverService.getProfile(userId);
 
-  return res
-    .status(200)
-    .json(
-      createSuccessResponse(driver, "Driver profile retrieved successfully"),
-    );
-});
+    return res
+      .status(200)
+      .json(
+        createSuccessResponse(driver, "Driver profile retrieved successfully"),
+      );
+  },
+);
 
-export const createDriver = asyncHandler(
+export const createDriver: RequestHandler = asyncHandler(
   async (req: Request, res: Response) => {
     const driverData = req.body;
-    const userId = req.user.userId;
+    const userId = req.user?.userId;
     if (!userId) {
       return res
         .status(401)
@@ -38,10 +42,10 @@ export const createDriver = asyncHandler(
   },
 );
 
-export const updateDriver = asyncHandler(
+export const updateDriver: RequestHandler = asyncHandler(
   async (req: Request, res: Response) => {
     const driverData = req.body;
-    const userId = req.user.userId;
+    const userId = req.user?.userId;
     if (!userId) {
       return res
         .status(401)
@@ -56,9 +60,9 @@ export const updateDriver = asyncHandler(
   },
 );
 
-export const deleteDriver = asyncHandler(
+export const deleteDriver: RequestHandler = asyncHandler(
   async (req: Request, res: Response) => {
-    const userId = req.user.userId;
+    const userId = req.user?.userId;
     if (!userId) {
       return res
         .status(401)
