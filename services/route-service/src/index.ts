@@ -4,6 +4,7 @@ import dotenv from "dotenv";
 import helmet from "helmet";
 import routeRoutes from "./route.routes";
 import { corsOptions, errorHandler } from "@shared/middleware";
+import cookieParser from "cookie-parser";
 
 dotenv.config();
 
@@ -18,6 +19,7 @@ app.use(helmet());
 //parse JSON bodies
 app.use(express.json({ limit: "10mb" }));
 app.use(express.urlencoded({ extended: true }));
+app.use(cookieParser());
 
 app.use("/v1/route", routeRoutes);
 

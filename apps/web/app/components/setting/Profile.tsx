@@ -1,46 +1,102 @@
-"use client"
+"use client";
 
 import { zodResolver } from "@hookform/resolvers/zod";
 import { SignUpSchema, TSignUpSchema } from "@repo/types/authSchema";
 import { Button } from "@repo/ui/components/button";
 import { Calendar } from "@repo/ui/components/calendar";
-import { Field, FieldError, FieldGroup, FieldLabel } from "@repo/ui/components/field";
+import {
+    Field,
+    FieldError,
+    FieldGroup,
+    FieldLabel,
+} from "@repo/ui/components/field";
 import { Input } from "@repo/ui/components/input";
-import { Popover, PopoverContent, PopoverTrigger } from "@repo/ui/components/popover";
-import { useState } from "react";
+import {
+    Popover,
+    PopoverContent,
+    PopoverTrigger,
+} from "@repo/ui/components/popover";
+import { useEffect, useState } from "react";
 import { Controller, useForm } from "react-hook-form";
 import ChangePasswordDialog from "./ChangePasswordDialog";
 import DeleteAccount from "./DeleteAccount";
 import { z } from "zod";
 import dayjs from "dayjs";
+import {
+    useGetMe,
+    useUpdateProfile,
+    useGetProviders,
+} from "@repo/api";
+import { toast } from "@repo/ui/components/sonner";
+import { Icons } from "@repo/ui/Icons";
+import DisconnectGoogleDialog from "./DisconnectGoogleDialog";
 
-const ProfileSchema = SignUpSchema.omit({ password: true });
+const ProfileSchema = SignUpSchema.omit({ password: true }).partial();
 type TProfileSchema = z.infer<typeof ProfileSchema>;
 
-
 const Profile = () => {
-    const [open, setOpen] = useState(false)
-    const [date, setDate] = useState<Date | undefined>(undefined)
+    const { data: user, isLoading, refetch: refetchUser } = useGetMe();
+    const { data: providers, refetch: refetchProviders } = useGetProviders();
+
+    const isGoogleConnected = providers?.includes("google");
+
+    const { mutate: updateProfile, isPending: isUpdating } = useUpdateProfile({
+        onSuccess: () => {
+            refetchUser();
+            toast.success("Profile updated successfully");
+        },
+        onError: (err) => {
+            toast.error(err.message);
+        },
+    });
 
     const {
         handleSubmit,
         control,
-        watch,
-        setValue,
-        formState: { errors, isSubmitting },
+        reset,
+        formState: { isSubmitting, isDirty },
     } = useForm<TProfileSchema>({
         resolver: zodResolver(ProfileSchema),
         defaultValues: {
-            firstName: "",
-            lastName: "",
-            email: "",
-            dateOfBirth: new Date(),
+            firstName: user?.firstName || "",
+            lastName: user?.lastName || "",
+            email: user?.email || "",
+            dateOfBirth: user?.dateOfBirth ? new Date(user.dateOfBirth) : new Date(),
         },
     });
 
+    useEffect(() => {
+        if (!isLoading && user) {
+            reset({
+                firstName: user.firstName,
+                lastName: user.lastName,
+                email: user.email,
+                dateOfBirth: user.dateOfBirth ? new Date(user.dateOfBirth) : new Date(),
+            });
+        }
+    }, [user, isLoading, reset]);
+
     const onSubmit = (data: TProfileSchema) => {
-        console.log("Account form submitted:", data);
+        updateProfile({
+            firstName: data.firstName,
+            lastName: data.lastName,
+            dateOfBirth: data.dateOfBirth,
+        });
     };
+
+    if (isLoading) {
+        return (
+            <div className="w-full max-w-3xl mx-auto flex items-center justify-center py-20">
+                <div className="flex items-center gap-2 text-muted-foreground">
+                    <div className="h-5 w-5 animate-spin rounded-full border-2 border-gray-300 border-t-gray-600" />
+                    <span>Loading...</span>
+                </div>
+            </div>
+        );
+    }
+
+    // console.log(user);
+    
 
     return (
         <div className="w-full max-w-3xl mx-auto">
@@ -53,8 +109,6 @@ const Profile = () => {
                 </div>
                 <form onSubmit={handleSubmit(onSubmit)}>
                     <FieldGroup className="sm:space-y-6">
-
-                        {/* Full Name */}
                         <div className="grid grid-cols-1 sm:grid-cols-[200px_1fr] items-start gap-x-6 gap-y-2">
                             <FieldLabel htmlFor="firstName" className="pt-2.5">
                                 Full Name
@@ -123,7 +177,6 @@ const Profile = () => {
                             />
                         </div>
 
-                        {/* Date of Birth */}
                         <div className="grid grid-cols-1 sm:grid-cols-[200px_1fr] items-start gap-x-6 gap-y-2">
                             <FieldLabel htmlFor="dateOfBirth" className="pt-2.5">
                                 Date of birth
@@ -139,12 +192,16 @@ const Profile = () => {
                                             id="dateOfBirth"
                                             type="date"
                                             aria-invalid={fieldState.invalid}
-                                            value={field.value ? dayjs(field.value).format("YYYY-MM-DD") : ""}
+                                            value={
+                                                field.value
+                                                    ? dayjs(field.value).format("YYYY-MM-DD")
+                                                    : ""
+                                            }
                                             onChange={(e) =>
                                                 field.onChange(
                                                     e.target.value
                                                         ? dayjs(e.target.value).toDate()
-                                                        : undefined
+                                                        : undefined,
                                                 )
                                             }
                                         />
@@ -155,11 +212,15 @@ const Profile = () => {
                                 )}
                             />
                         </div>
-
                     </FieldGroup>
 
                     <div className="mt-8 flex justify-end">
-                        <Button variant="secondary" type="submit" className="cursor-pointer" disabled={isSubmitting}>
+                        <Button
+                            variant="secondary"
+                            type="submit"
+                            className="cursor-pointer"
+                            disabled={isSubmitting || !isDirty}
+                        >
                             {isSubmitting ? "Saving…" : "Save Changes"}
                         </Button>
                     </div>
@@ -174,16 +235,31 @@ const Profile = () => {
                     </p>
                 </div>
 
-                <div className="flex justify-between items-start gap-x-6 gap-y-2">
-                    <FieldLabel className="pt-2.5">
-                        Password
-                    </FieldLabel>
-                    <ChangePasswordDialog />
+                <div>
+                    {/* <div className="flex justify-between items-center py-2 min-h-[40px]">
+                        <FieldLabel className="mb-0">Password</FieldLabel>
+                        <ChangePasswordDialog />
+                    </div> */}
+
+                    <div className="flex justify-between items-center py-2 min-h-[40px]">
+                        <div className="flex items-center gap-3">
+                            <Icons.google className="w-5 h-5" />
+                            <span className="text-sm font-medium">Google</span>
+                        </div>
+                        {isGoogleConnected ? (
+                            <DisconnectGoogleDialog 
+                                hasPassword={!!user?.hasPassword} 
+                                onSuccess={refetchProviders} 
+                            />
+                        ) : (
+                            <Button variant="secondary" disabled className="cursor-pointer">Not connected</Button>
+                        )}
+                    </div>
                 </div>
             </div>
 
             <DeleteAccount />
         </div>
-    )
-}
-export default Profile
+    );
+};
+export default Profile;

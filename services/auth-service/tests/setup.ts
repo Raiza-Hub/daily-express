@@ -184,6 +184,7 @@ export const testUser = {
   firstName: "John",
   lastName: "Doe",
   phone: "1234567890",
+  emailVerified: false,
   dateOfBirth: new Date("1990-01-01"),
   password: "$$2a$04$hashedpasswordhashedpasswordhashedpasswordhashedpassword",
   referal: "",
@@ -203,6 +204,8 @@ export const testOtp = {
 export const testJwtPayload: JWTPayload = {
   userId: "test-user-id",
   email: testUser.email,
+  // was throwing an error for emailVerified
+  emailVerified: false,
   iat: Math.floor(Date.now() / 1000),
   exp: Math.floor(Date.now() / 1000) + 60 * 15,
 };

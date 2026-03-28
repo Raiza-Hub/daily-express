@@ -1,144 +1,49 @@
-"use client"
+"use client";
 
-
-import { useRouter } from "next/navigation"
-import { useState } from "react"
-import z from "zod"
-import { OtpSchema } from "@repo/types/authSchema"
-import { Button } from "@repo/ui/components/button"
-import { CircleNotchIcon, MailboxIcon } from "@phosphor-icons/react"
-import { OTPInput } from "@repo/ui/OTPInput"
-import ResendButton from "./ResendButton"
+import { useState } from "react";
+import { useRouter } from "next/navigation";
+import { useVerifyOtp, useGetMe, useQueryClient } from "@repo/api";
+import { OtpSchema } from "@repo/types/authSchema";
+import { Button } from "@repo/ui/components/button";
+import { CircleNotchIcon, MailboxIcon } from "@phosphor-icons/react";
+import { OTPInput } from "@repo/ui/OTPInput";
+import ResendButton from "./ResendButton";
+import { toast } from "@repo/ui/components/sonner";
 
 const VerifyEmailForm = () => {
     const router = useRouter();
-    const [otp, setOtp] = useState<string>("")
-    const [zoderr, setZoderr] = useState<string>("")
+    const queryClient = useQueryClient();
+    const { mutate: verifyOtp, isPending } = useVerifyOtp();
+    const [otp, setOtp] = useState<string>("");
+    const [zodErr, setZodErr] = useState<string>("");
+    const [serverErr, setServerErr] = useState<string>("");
 
-    const isPending = false
-    const error = ""
-    const email = "wisdomadbeola62@gmail.com"
-
-    // const { mutate, isPending, error, reset } = useMutation({
-    //     mutationFn: async (otp: string): Promise<OtpResponse> => {
-    //         const res = await fetch("/api/auth/verify-email", {
-    //             method: "PUT",
-    //             headers: { "Content-Type": "application/json" },
-    //             credentials: "include",
-    //             body: JSON.stringify({ otp }),
-    //         });
-
-    //         const data: OtpResponse = await res.json();
-
-    //         if (!res.ok) {
-    //             throw new Error(data.message);
-    //         }
-
-
-
-    //         return data;
-    //     },
-    //     onSuccess: () => {
-    //         router.push("/dashboard");
-    //     },
-    // });
-
-    const handleVerify = (otp: string) => {
+    const handleVerify = () => {
+        setServerErr("");
         try {
-            OtpSchema.parse(otp)
-            // mutate(otp)
-        } catch (err) {
-            // if (err instanceof z.ZodError) {
-            //     setZoderr(err.issues[0].message)
-            // }
+            OtpSchema.parse(otp);
+            verifyOtp(
+                { otp },
+                {
+                    onSuccess: () => {
+                        queryClient.invalidateQueries();
+                        router.push("/");
+                    },
+                    onError: (err) => {
+                        setServerErr(err.message);
+                        toast.error(err.message);
+                    },
+                },
+            );
+        } catch {
+            setZodErr("OTP must be exactly 6 digits");
         }
-    }
+    };
 
     const handleOTPChange = (value: string) => {
         setOtp(value);
+        setZodErr("");
     };
-
-    // const { mutate: resend, isPending: isResending } = useMutation({
-    //     mutationFn: async (): Promise<GetNewOtpSuccess> => {
-    //         const res = await fetch("/api/resend-otp", {
-    //             method: "GET",
-    //             headers: { "Content-Type": "application/json" },
-    //             credentials: "include",
-    //         });
-
-    //         if (!res.ok) {
-    //             const errData: GetNewOtpError = await res.json();
-
-    //             toast.custom((t) => (
-    //                 <div className="z-50 max-w-[400px] rounded-md border bg-background p-4 shadow-lg">
-    //                     <div className="flex gap-2">
-    //                         <div className="flex grow gap-3">
-    //                             <CircleAlertIcon
-    //                                 className="mt-0.5 shrink-0 text-red-500"
-    //                                 size={20}
-    //                                 aria-hidden="true"
-    //                             />
-    //                             <div className="flex grow flex-col gap-3">
-    //                                 <p className="text-sm font-medium">
-    //                                     {errData.message}
-    //                                 </p>
-
-    //                             </div>
-    //                             <Button
-    //                                 variant="ghost"
-    //                                 className="group -my-1.5 -me-2 size-8 shrink-0 p-0 hover:bg-transparent cursor-pointer"
-    //                                 aria-label="Close notification"
-    //                                 onClick={() => toast.dismiss(t)}
-    //                             >
-    //                                 <XIcon
-    //                                     size={20}
-    //                                     className="opacity-60 transition-opacity group-hover:opacity-100"
-    //                                     aria-hidden="true"
-    //                                 />
-    //                             </Button>
-    //                         </div>
-    //                     </div>
-    //                 </div>
-    //             ));
-    //         }
-    //         const data: GetNewOtpSuccess = await res.json();
-    //         return data;
-    //     },
-
-    //     onSuccess: (data) => {
-    //         toast.custom((t) => (
-    //             <div className="z-50 max-w-[400px] rounded-md border bg-background p-4 shadow-lg">
-    //                 <div className="flex gap-2">
-    //                     <div className="flex grow gap-3">
-    //                         <CircleCheckIcon
-    //                             className="mt-0.5 shrink-0 text-red-500"
-    //                             size={20}
-    //                             aria-hidden="true"
-    //                         />
-    //                         <div className="flex grow flex-col gap-3">
-    //                             <p className="text-sm font-medium">
-    //                                 {data.message}
-    //                             </p>
-
-    //                         </div>
-    //                         <Button
-    //                             variant="ghost"
-    //                             className="group -my-1.5 -me-2 size-8 shrink-0 p-0 hover:bg-transparent cursor-pointer"
-    //                             aria-label="Close notification"
-    //                             onClick={() => toast.dismiss(t)}
-    //                         >
-    //                             <XIcon
-    //                                 size={16}
-    //                                 className="opacity-60 transition-opacity group-hover:opacity-100"
-    //                                 aria-hidden="true"
-    //                             />
-    //                         </Button>
-    //                     </div>
-    //                 </div>
-    //             </div>
-    //         ));
-    //     },
-    // });
 
     return (
         <div className="flex items-center justify-center p-4 pt-20">
@@ -152,41 +57,31 @@ const VerifyEmailForm = () => {
                         <p className="text-zinc-500">
                             We&apos;ve sent a 6-digit verification code to your email
                         </p>
-                        {/* <p className="text-zinc-500">
-                            Please enter it below to continue.
-                        </p> */}
                     </div>
                     <div>
                         <OTPInput
                             length={6}
-                            // onComplete={handleOTPComplete}
                             onValueChange={handleOTPChange}
                             disabled={isPending}
-                            // error={hasError}
                             className="w-full justify-between"
                         />
                     </div>
 
-                    {error ? (
+                    {serverErr ? (
                         <p className="px-1 inline-flex font-medium justify-center text-sm text-red-500">
-                            {/* {error?.message} */}
+                            {serverErr}
                         </p>
-                    ) : zoderr ? (
-                        <p className="px-1 inline-flex font-medium  justify-center text-sm text-red-500">
-                            {zoderr}
+                    ) : zodErr ? (
+                        <p className="px-1 inline-flex font-medium justify-center text-sm text-red-500">
+                            {zodErr}
                         </p>
                     ) : null}
                     <Button
-                        disabled={isPending}
+                        disabled={isPending || otp.length !== 6}
                         className="w-full cursor-pointer"
                         variant="submit"
-                        type="submit"
-                        onClick={() => {
-                            if (zoderr.length > 1) {
-                                setZoderr("")
-                            }
-                            handleVerify(otp)
-                        }}
+                        type="button"
+                        onClick={handleVerify}
                     >
                         {isPending ? (
                             <div className="inline-flex items-center gap-2">
@@ -204,6 +99,6 @@ const VerifyEmailForm = () => {
             </div>
         </div>
     );
-}
+};
 
 export default VerifyEmailForm;

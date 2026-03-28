@@ -7,8 +7,8 @@ import { AnimatePresence, motion } from "framer-motion";
 import type { TRoute } from "@repo/types/routeSchema";
 import TripDetailsSheet from "./TripDetailsSheet";
 import { PlaneDots } from "@repo/ui/PlaneDots";
-import { DriverInfo } from "~/components/DriverInfo";
-import type { DriverInfoProps } from "~/components/DriverInfo";
+import { DriverInfo } from "~/components/trip/DriverInfo";
+import type { DriverInfoProps } from "~/components/trip/DriverInfo";
 
 
 

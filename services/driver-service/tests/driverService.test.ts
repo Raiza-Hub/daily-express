@@ -1,5 +1,4 @@
 import { DriverService } from "../src/driverServices";
-import { mocked } from "jest-mock";
 
 //Mock external dependencies
 // jest.mock("../src/authClient");
@@ -15,6 +14,7 @@ jest.mock("../src/authClient", () => {
 
 //Import mocked modules
 import { AuthClient } from "@/authClient";
+import { mocked } from "jest-mock";
 import { ServiceError } from "@shared/types";
 import { testDriver, testUpdateProfileRequest } from "./setup";
 
