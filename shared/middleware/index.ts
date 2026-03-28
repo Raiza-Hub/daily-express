@@ -142,7 +142,6 @@ export function refreshAndValidateCookie(
   const refreshToken = req.cookies?.refreshToken;
   const jwtSecret = process.env.JWT_SECRET;
   const jwtRefreshSecret = process.env.JWT_REFRESH_SECRET;
-  console.log(refreshToken, accessToken);
 
   if (!jwtSecret || !jwtRefreshSecret) {
     return res

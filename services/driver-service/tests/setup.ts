@@ -2,7 +2,7 @@ import axios from "axios";
 import { JWTPayload } from "../../../shared/types";
 
 // Mock environment variables
-process.env.AUTH_SERVICE_URL = "http://localhost:3001";
+process.env.AUTH_SERVICE_URL = "http://localhost:5001";
 process.env.NODE_ENV = "test";
 
 // setup.ts

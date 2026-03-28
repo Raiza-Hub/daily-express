@@ -3,7 +3,7 @@ import axios from "axios";
 import { route } from "db/schema";
 
 // Mock environment variables
-process.env.AUTH_SERVICE_URL = "http://localhost:3001";
+process.env.AUTH_SERVICE_URL = "http://localhost:5001";
 process.env.NODE_ENV = "test";
 
 export const testRoute = {
@@ -118,6 +118,7 @@ export const testUpdateRouteRequest = {
 export const testJwtPayload: JWTPayload = {
   userId: "test-user-id",
   email: "testdriver123@domain.com",
+  emailVerified: true,
   iat: Math.floor(Date.now() / 1000),
   exp: Math.floor(Date.now() / 1000) + 60 * 15, //15 minutes from now
 };
