@@ -8,9 +8,14 @@ import { Icons } from "@repo/ui/Icons";
 interface GoogleSignInButtonProps {
   disabled?: boolean;
   onClick?: () => void;
+  redirect?: string;
 }
 
-const GoogleSignInButton = ({ disabled, onClick }: GoogleSignInButtonProps) => {
+const GoogleSignInButton = ({
+  disabled,
+  onClick,
+  redirect,
+}: GoogleSignInButtonProps) => {
   const [isLoading, setIsLoading] = useState(false);
 
   const handleSignInWithGoogle = () => {
@@ -18,7 +23,8 @@ const GoogleSignInButton = ({ disabled, onClick }: GoogleSignInButtonProps) => {
     onClick?.();
     const apiUrl =
       process.env.NEXT_PUBLIC_API_URL || "http://localhost:5001/v1";
-    window.location.href = `${apiUrl}/auth/google`;
+    const stateParam = redirect ? `?state=${encodeURIComponent(redirect)}` : "";
+    window.location.href = `${apiUrl}/auth/google${stateParam}`;
   };
 
   const showSpinner = isLoading;

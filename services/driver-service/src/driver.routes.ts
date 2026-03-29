@@ -20,7 +20,7 @@ router.put(
   driverController.updateDriver,
 );
 router.delete(
-  "/profile",
+  "/delete",
   refreshAndValidateCookie,
   driverController.deleteDriver,
 );

@@ -216,7 +216,7 @@ export function refreshAndValidateCookie(
     });
     res.cookie("refreshToken", newRefreshToken, {
       httpOnly: true,
-      secure: false, // Set to true in production
+      secure: process.env.NODE_ENV === "production",
       sameSite: "lax",
       maxAge: 7 * 24 * 60 * 60 * 1000,
     });
