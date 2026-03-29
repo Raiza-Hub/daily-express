@@ -2,6 +2,7 @@ import { asyncHandler } from "@shared/middleware";
 // import { asyncHandler } from "../../../shared/middleware";
 import { AuthService } from "./authService";
 import type { Request, Response, RequestHandler } from "express";
+import type { User } from "../db/schema";
 import {
   createErrorResponse,
   createServiceError,
@@ -121,7 +122,9 @@ export const refreshTokens: RequestHandler = asyncHandler(
     const refreshToken = req.cookies?.refreshToken;
 
     if (!refreshToken) {
-      return res.status(401).json(createErrorResponse("No refresh token provided"));
+      return res
+        .status(401)
+        .json(createErrorResponse("No refresh token provided"));
     }
 
     const tokens = await authService.refreshToken(refreshToken);
@@ -219,8 +222,6 @@ export const verifyOtp: RequestHandler = asyncHandler(
   },
 );
 
-
-
 export const logout: RequestHandler = asyncHandler(
   async (req: Request, res: Response) => {
     req.session.destroy((err) => {
@@ -275,7 +276,7 @@ export const updateProfile: RequestHandler = asyncHandler(
 export const googleCallback: RequestHandler = asyncHandler(
   async (req: Request, res: Response) => {
     // User is attached to request by passport
-    const user = req.user as any;
+    const user = req.user as User | undefined;
 
     if (!user) {
       return res.redirect(
@@ -305,9 +306,10 @@ export const googleCallback: RequestHandler = asyncHandler(
       maxAge: 7 * 24 * 60 * 60 * 1000, // 7 days
     });
 
-    // Redirect to frontend
+    // Get redirect URL from state parameter (echoed back by Google)
+    const redirect = (req.query.state as string) || "/";
     const frontendUrl = process.env.FRONTEND_URL || "http://localhost:3000";
-    res.redirect(`${frontendUrl}`);
+    res.redirect(`${frontendUrl}${redirect}`);
   },
 );
 
@@ -334,7 +336,9 @@ export const disconnectProvider: RequestHandler = asyncHandler(
     }
 
     const providerParam = req.params.provider;
-    const provider = Array.isArray(providerParam) ? providerParam[0] : providerParam;
+    const provider = Array.isArray(providerParam)
+      ? providerParam[0]
+      : providerParam;
     if (!provider || !["google"].includes(provider)) {
       return res.status(400).json(createErrorResponse("Invalid provider"));
     }

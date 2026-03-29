@@ -14,7 +14,7 @@ import { toast } from "@repo/ui/components/sonner";
 import GoogleSignInButton from "./GoogleSignInButton";
 import { useState } from "react";
 
-const LoginForm = () => {
+const LoginForm = ({ redirect }: { redirect?: string }) => {
   const router = useRouter();
   const { mutate: login, isPending, error } = useLogin();
   const [isGoogleLoading, setIsGoogleLoading] = useState(false);
@@ -35,7 +35,7 @@ const LoginForm = () => {
       },
       {
         onSuccess: () => {
-          router.push("/");
+          router.push(redirect || "/");
         },
         onError: (err) => {
           setError("root", {
@@ -116,6 +116,7 @@ const LoginForm = () => {
             <GoogleSignInButton
               disabled={isPending || isGoogleLoading}
               onClick={() => setIsGoogleLoading(true)}
+              redirect={redirect}
             />
           </div>
 
