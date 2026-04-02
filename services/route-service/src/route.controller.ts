@@ -1,28 +1,27 @@
 import { asyncHandler } from "@shared/middleware";
 import { Request, RequestHandler, Response } from "express";
 import { RouteService } from "./routeService";
+import type { JWTPayload } from "@shared/types";
 import { createErrorResponse, createSuccessResponse } from "@shared/utils";
 
 const routeService = new RouteService();
+const ALLOWED_VEHICLE_TYPES = new Set(["car", "bus", "luxury_car"]);
+
+function getAuthenticatedUser(req: Request): JWTPayload | null {
+  return req.user ?? null;
+}
 
 //driver route
 export const getAllDriverRoutes: RequestHandler = asyncHandler(
   async (req: Request, res: Response) => {
-    const userId = req.user?.userId;
-    const authHeader = req.headers["authorization"] as string;
-    const token =
-      req.cookies?.token || (authHeader && authHeader.split(" ")[1]);
-    const cookies = req.headers.cookie || "";
-    if (!userId) {
+    const user = getAuthenticatedUser(req);
+    if (!user) {
       return res
         .status(401)
         .json(createErrorResponse("User not authenticated"));
     }
-    if (!token) {
-      return res.status(401).json(createErrorResponse("Token not provided"));
-    }
-    const routes = await routeService.getAllDriverRoutes(cookies);
-    res
+    const routes = await routeService.getAllDriverRoutes(user);
+    return res
       .status(200)
       .json(createSuccessResponse(routes, "Routes fetched successfully"));
   },
@@ -31,23 +30,14 @@ export const getAllDriverRoutes: RequestHandler = asyncHandler(
 //driver route
 export const createRoute: RequestHandler = asyncHandler(
   async (req: Request, res: Response) => {
-    const userId = req.user?.userId;
-    const authHeader = req.headers["authorization"] as string;
-    const token =
-      req.cookies?.token || (authHeader && authHeader.split(" ")[1]);
-    const cookies = req.headers.cookie || "";
-    if (!userId) {
-      res.status(401).json(createErrorResponse("User not authenticated"));
+    const user = getAuthenticatedUser(req);
+    if (!user) {
+      return res
+        .status(401)
+        .json(createErrorResponse("User not authenticated"));
     }
-    if (!token) {
-      res.status(401).json(createErrorResponse("Token not provided"));
-    }
-    const route = await routeService.createRoute(
-      userId as string,
-      cookies,
-      req.body,
-    );
-    res
+    const route = await routeService.createRoute(user, req.body);
+    return res
       .status(200)
       .json(createSuccessResponse(route, "Route created successfully"));
   },
@@ -56,16 +46,12 @@ export const createRoute: RequestHandler = asyncHandler(
 //driver and user route
 export const getRoute: RequestHandler = asyncHandler(
   async (req: Request, res: Response) => {
-    const userId = req.user?.userId;
-    if (!userId) {
-      res.status(401).json(createErrorResponse("User not authenticated"));
-    }
     const routeId = req.params.id as string;
     if (!routeId) {
-      res.status(400).json(createErrorResponse("Route ID is required"));
+      return res.status(400).json(createErrorResponse("Route ID is required"));
     }
     const route = await routeService.getRoute(routeId);
-    res
+    return res
       .status(200)
       .json(createSuccessResponse(route, "Route fetched successfully"));
   },
@@ -74,27 +60,22 @@ export const getRoute: RequestHandler = asyncHandler(
 //driver route
 export const updateRoute: RequestHandler = asyncHandler(
   async (req: Request, res: Response) => {
-    const userId = req.user?.userId;
-    const authHeader = req.headers["authorization"] as string;
-    const token =
-      req.cookies?.token || (authHeader && authHeader.split(" ")[1]);
-    const cookies = req.headers.cookie || "";
-    if (!userId) {
-      res.status(401).json(createErrorResponse("User not authenticated"));
-    }
-    if (!token) {
-      res.status(401).json(createErrorResponse("Token not provided"));
+    const user = getAuthenticatedUser(req);
+    if (!user) {
+      return res
+        .status(401)
+        .json(createErrorResponse("User not authenticated"));
     }
     const routeId = req.params.id;
     if (!routeId) {
-      res.status(400).json(createErrorResponse("Route ID is required"));
+      return res.status(400).json(createErrorResponse("Route ID is required"));
     }
     const route = await routeService.updateRoute(
-      cookies,
+      user,
       routeId as string,
       req.body,
     );
-    res
+    return res
       .status(200)
       .json(createSuccessResponse(route, "Route updated successfully"));
   },
@@ -103,19 +84,18 @@ export const updateRoute: RequestHandler = asyncHandler(
 //driver route
 export const deleteRoute: RequestHandler = asyncHandler(
   async (req: Request, res: Response) => {
+    const user = getAuthenticatedUser(req);
     const routeId = req.params.id;
-    const authHeader = req.headers["authorization"] as string;
-    const token =
-      req.cookies?.token || (authHeader && authHeader.split(" ")[1]);
-    const cookies = req.headers.cookie || "";
+    if (!user) {
+      return res
+        .status(401)
+        .json(createErrorResponse("User not authenticated"));
+    }
     if (!routeId) {
-      res.status(400).json(createErrorResponse("Route ID is required"));
+      return res.status(400).json(createErrorResponse("Route ID is required"));
     }
-    if (!token) {
-      res.status(401).json(createErrorResponse("Token not provided"));
-    }
-    const route = await routeService.deleteRoute(cookies, routeId as string);
-    res
+    const route = await routeService.deleteRoute(user, routeId as string);
+    return res
       .status(200)
       .json(createSuccessResponse(route, "Route deleted successfully"));
   },
@@ -124,54 +104,64 @@ export const deleteRoute: RequestHandler = asyncHandler(
 //driver route
 export const getAllTrips: RequestHandler = asyncHandler(
   async (req: Request, res: Response) => {
-    const userId = req.user?.userId;
-    const authHeader = req.headers["authorization"] as string;
-    const token =
-      req.cookies?.token || (authHeader && authHeader.split(" ")[1]);
-    const cookies = req.headers.cookie || "";
+    const user = getAuthenticatedUser(req);
     const { date } = req.params;
-    if (!userId) {
-      res.status(401).json(createErrorResponse("User not authenticated"));
-    }
-    if (!token) {
-      res.status(401).json(createErrorResponse("Token not provided"));
+    if (!user) {
+      return res
+        .status(401)
+        .json(createErrorResponse("User not authenticated"));
     }
     const trips = await routeService.getAllTrips(
-      cookies,
+      user,
       new Date(date as string),
     );
-    res
+    return res
       .status(200)
       .json(createSuccessResponse(trips, "Trips fetched successfully"));
   },
 );
 
 //driver route
-export const updateTripStatus: RequestHandler = asyncHandler(
+export const getTripsSummary: RequestHandler = asyncHandler(
   async (req: Request, res: Response) => {
-    const userId = req.user?.userId;
-    const authHeader = req.headers["authorization"] as string;
-    const token =
-      req.cookies?.token || (authHeader && authHeader.split(" ")[1]);
-    const cookies = req.headers.cookie || "";
-    if (!userId) {
+    const user = getAuthenticatedUser(req);
+    const { date } = req.params;
+    if (!user) {
       return res
         .status(401)
         .json(createErrorResponse("User not authenticated"));
     }
-    if (!token) {
-      return res.status(401).json(createErrorResponse("Token not provided"));
+    const summary = await routeService.getTripsSummary(
+      user,
+      new Date(date as string),
+    );
+    return res
+      .status(200)
+      .json(
+        createSuccessResponse(summary, "Trips summary fetched successfully"),
+      );
+  },
+);
+
+//driver route
+export const updateTripStatus: RequestHandler = asyncHandler(
+  async (req: Request, res: Response) => {
+    const user = getAuthenticatedUser(req);
+    if (!user) {
+      return res
+        .status(401)
+        .json(createErrorResponse("User not authenticated"));
     }
     const tripId = req.params.id;
     if (!tripId) {
       return res.status(400).json(createErrorResponse("Trip ID is required"));
     }
     const trip = await routeService.updateTripStatus(
-      cookies,
+      user,
       tripId as string,
       req.body.status,
     );
-    res
+    return res
       .status(200)
       .json(createSuccessResponse(trip, "trip status updated successfully"));
   },
@@ -180,14 +170,53 @@ export const updateTripStatus: RequestHandler = asyncHandler(
 //user route
 export const getAllUserRoutes: RequestHandler = asyncHandler(
   async (req: Request, res: Response) => {
-    const userId = req.user?.userId;
-    if (!userId) {
-      return res
-        .status(401)
-        .json(createErrorResponse("User not authenticated"));
-    }
     const routes = await routeService.getAllUserRoutes();
-    res
+    return res
+      .status(200)
+      .json(createSuccessResponse(routes, "Routes fetched successfully"));
+  },
+);
+
+//user route - search routes
+export const searchRoutes: RequestHandler = asyncHandler(
+  async (req: Request, res: Response) => {
+    const { from, to, vehicleType, limit, offset } = req.query;
+    const parsedFrom = typeof from === "string" ? from.trim() : "";
+    const parsedTo = typeof to === "string" ? to.trim() : "";
+    const parsedVehicleType =
+      typeof vehicleType === "string"
+        ? vehicleType
+            .split(",")
+            .map((value) => value.trim())
+            .filter((value) => value.length > 0)
+        : undefined;
+    const parsedLimit = typeof limit === "string" ? parseInt(limit, 10) : 20;
+    const parsedOffset = typeof offset === "string" ? parseInt(offset, 10) : 0;
+
+    if (!parsedFrom || !parsedTo) {
+      return res
+        .status(400)
+        .json(createErrorResponse("from and to are required"));
+    }
+
+    if (
+      parsedVehicleType &&
+      parsedVehicleType.some((value) => !ALLOWED_VEHICLE_TYPES.has(value))
+    ) {
+      return res
+        .status(400)
+        .json(createErrorResponse("vehicleType contains an invalid value"));
+    }
+
+    const routes = await routeService.searchRoutes({
+      from: parsedFrom,
+      to: parsedTo,
+      vehicleType: parsedVehicleType,
+      limit: parsedLimit,
+      offset: parsedOffset,
+    });
+
+    return res
       .status(200)
       .json(createSuccessResponse(routes, "Routes fetched successfully"));
   },
@@ -198,11 +227,13 @@ export const bookTrip: RequestHandler = asyncHandler(
   async (req: Request, res: Response) => {
     const userId = req.user?.userId;
     if (!userId) {
-      res.status(401).json(createErrorResponse("User not authenticated"));
+      return res
+        .status(401)
+        .json(createErrorResponse("User not authenticated"));
     }
 
     const trip = await routeService.bookTrip(userId as string, req.body);
-    res
+    return res
       .status(200)
       .json(createSuccessResponse(trip, "Trip booked successfully"));
   },
@@ -227,7 +258,7 @@ export const updateBookingStatus: RequestHandler = asyncHandler(
       bookingId as string,
       req.body.status,
     );
-    res
+    return res
       .status(200)
       .json(createSuccessResponse(booking, "Booking updated successfully"));
   },
@@ -243,7 +274,7 @@ export const getUserBookings: RequestHandler = asyncHandler(
         .json(createErrorResponse("User not authenticated"));
     }
     const bookings = await routeService.getUserBookings(userId as string);
-    res
+    return res
       .status(200)
       .json(createSuccessResponse(bookings, "Bookings fetched successfully"));
   },

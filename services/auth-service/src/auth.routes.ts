@@ -2,8 +2,8 @@ import { Router } from "express";
 import passport from "passport";
 import * as authcontroller from "./auth.controller";
 import {
-  authenticateTokenFromCookieUnverified,
-  refreshAndValidateCookie,
+  authenticateGatewayRequest,
+  authenticateVerifiedGatewayRequest,
   validateRequest,
 } from "@shared/middleware";
 import {
@@ -31,7 +31,7 @@ router.post(
 
 router.get(
   "/resend-otp",
-  authenticateTokenFromCookieUnverified,
+  authenticateGatewayRequest,
   authcontroller.resendOtp
 );
 
@@ -54,14 +54,9 @@ router.get(
   authcontroller.googleCallback
 );
 
-router.post(
-  "/validate",
-  authcontroller.validateToken
-);
-
 router.get(
   "/logout",
-  refreshAndValidateCookie,
+  authenticateVerifiedGatewayRequest,
   authcontroller.logout
 );
 
@@ -73,7 +68,7 @@ router.post(
 
 router.post(
   "/verify-otp",
-  authenticateTokenFromCookieUnverified,
+  authenticateGatewayRequest,
   authcontroller.verifyOtp
 );
 
@@ -84,19 +79,19 @@ router.post(
 );
 router.get(
   "/profile",
-  refreshAndValidateCookie,
+  authenticateVerifiedGatewayRequest,
   authcontroller.getProfile
 );
 
 router.delete(
   "/profile",
-  refreshAndValidateCookie,
+  authenticateVerifiedGatewayRequest,
   authcontroller.deleteAccount
 );
 
 router.put(
   "/profile",
-  refreshAndValidateCookie,
+  authenticateVerifiedGatewayRequest,
   validateRequest(updateProfileSchema),
   authcontroller.updateProfile
 );
@@ -104,20 +99,20 @@ router.put(
 // Connected providers
 router.get(
   "/providers",
-  refreshAndValidateCookie,
+  authenticateVerifiedGatewayRequest,
   authcontroller.getProviders
 );
 
 router.delete(
   "/providers/:provider",
-  refreshAndValidateCookie,
+  authenticateVerifiedGatewayRequest,
   authcontroller.disconnectProvider
 );
 
 // Set password (authenticated user sets password without old password)
 router.post(
   "/password",
-  refreshAndValidateCookie,
+  authenticateVerifiedGatewayRequest,
   authcontroller.setPassword
 );
 

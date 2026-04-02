@@ -12,24 +12,6 @@
     "ussd": "*945*100#"
   },
   {
-    "name": "ASO Savings and Loans",
-    "slug": "asosavings",
-    "code": "401",
-    "ussd": ""
-  },
-  {
-    "name": "Bowen Microfinance Bank",
-    "slug": "bowen-microfinance-bank",
-    "code": "50931",
-    "ussd": ""
-  },
-  {
-    "name": "CEMCS Microfinance Bank",
-    "slug": "cemcs-microfinance-bank",
-    "code": "50823",
-    "ussd": ""
-  },
-  {
     "name": "Citibank Nigeria",
     "slug": "citibank-nigeria",
     "code": "023",
@@ -40,12 +22,6 @@
     "slug": "ecobank-nigeria",
     "code": "050",
     "ussd": "*326#"
-  },
-  {
-    "name": "Ekondo Microfinance Bank",
-    "slug": "ekondo-microfinance-bank",
-    "code": "562",
-    "ussd": "*540*178#"
   },
   {
     "name": "Fidelity Bank",
@@ -78,22 +54,10 @@
     "ussd": "*737#"
   },
   {
-    "name": "Hasal Microfinance Bank",
-    "slug": "hasal-microfinance-bank",
-    "code": "50383",
-    "ussd": "*322*127#"
-  },
-  {
     "name": "Heritage Bank",
     "slug": "heritage-bank",
     "code": "030",
     "ussd": "*322#"
-  },
-  {
-    "name": "Jaiz Bank",
-    "slug": "jaiz-bank",
-    "code": "301",
-    "ussd": "*389*301#"
   },
   {
     "name": "Keystone Bank",
@@ -108,22 +72,10 @@
     "ussd": ""
   },
   {
-    "name": "Lotus Bank",
-    "slug": "lotus-bank",
-    "code": "303",
-    "ussd": "*5045#"
-  },
-  {
     "name": "Moniepoint MFB",
     "slug": "moniepoint-mfb-ng",
     "code": "50515",
     "ussd": "*5573#"
-  },
-  {
-    "name": "One Finance",
-    "slug": "one-finance",
-    "code": "565",
-    "ussd": "*1303#"
   },
   {
     "name": "OPay",
@@ -144,34 +96,10 @@
     "ussd": "*861#"
   },
   {
-    "name": "Parallex Bank",
-    "slug": "parallex-bank",
-    "code": "526",
-    "ussd": "*322*318*0#"
-  },
-  {
     "name": "Polaris Bank",
     "slug": "polaris-bank",
     "code": "076",
     "ussd": "*833#"
-  },
-  {
-    "name": "Providus Bank",
-    "slug": "providus-bank",
-    "code": "101",
-    "ussd": ""
-  },
-  {
-    "name": "Rubies MFB",
-    "slug": "rubies-mfb",
-    "code": "125",
-    "ussd": "*7797#"
-  },
-  {
-    "name": "Sparkle Microfinance Bank",
-    "slug": "sparkle-microfinance-bank",
-    "code": "51310",
-    "ussd": ""
   },
   {
     "name": "Stanbic IBTC Bank",
@@ -192,52 +120,10 @@
     "ussd": "*822#"
   },
   {
-    "name": "Suntrust Bank",
-    "slug": "suntrust-bank",
-    "code": "100",
-    "ussd": "*5230#"
-  },
-  {
-    "name": "TAJ Bank",
-    "slug": "taj-bank",
-    "code": "302",
-    "ussd": "*898#"
-  },
-  {
-    "name": "TCF MFB",
-    "slug": "tcf-mfb",
-    "code": "51211",
-    "ussd": "*908#"
-  },
-  {
-    "name": "Titan Trust Bank",
-    "slug": "titan-trust-bank",
-    "code": "102",
-    "ussd": "*922#"
-  },
-  {
-    "name": "Union Bank of Nigeria",
-    "slug": "union-bank-of-nigeria",
-    "code": "032",
-    "ussd": "*826#"
-  },
-  {
     "name": "United Bank For Africa",
     "slug": "united-bank-for-africa",
     "code": "033",
     "ussd": "*919#"
-  },
-  {
-    "name": "Unity Bank",
-    "slug": "unity-bank",
-    "code": "215",
-    "ussd": "*7799#"
-  },
-  {
-    "name": "VFD",
-    "slug": "vfd",
-    "code": "566",
-    "ussd": ""
   },
   {
     "name": "Wema Bank",

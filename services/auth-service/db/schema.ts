@@ -1,4 +1,12 @@
-import { boolean, pgTable, text, timestamp, uuid } from "drizzle-orm/pg-core";
+import {
+  boolean,
+  integer,
+  jsonb,
+  pgTable,
+  text,
+  timestamp,
+  uuid,
+} from "drizzle-orm/pg-core";
 
 export const users = pgTable("users", {
   id: uuid("id").defaultRandom().primaryKey(),
@@ -36,12 +44,28 @@ export const userProviders = pgTable("user_providers", {
   updatedAt: timestamp("updated_at").defaultNow().notNull(),
 });
 
+export const outboxEvents = pgTable("outbox_events", {
+  id: uuid("id").defaultRandom().primaryKey(),
+  eventType: text("event_type").notNull(),
+  topic: text("topic").notNull(),
+  partitionKey: text("partition_key").notNull(),
+  payload: jsonb("payload").notNull(),
+  status: text("status").default("pending").notNull(),
+  attempts: integer("attempts").default(0).notNull(),
+  lastError: text("last_error"),
+  publishedAt: timestamp("published_at"),
+  createdAt: timestamp("created_at").defaultNow().notNull(),
+  updatedAt: timestamp("updated_at").defaultNow().notNull(),
+});
+
 export type User = typeof users.$inferSelect;
 export type Otp = typeof otp.$inferSelect;
 export type UserProvider = typeof userProviders.$inferSelect;
+export type OutboxEvent = typeof outboxEvents.$inferSelect;
 
 export const schema = {
   users,
   otp,
   userProviders,
+  outboxEvents,
 };

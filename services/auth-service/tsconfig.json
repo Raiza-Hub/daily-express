@@ -13,6 +13,7 @@
     "declarationMap": true,
     "sourceMap": true,
     "removeComments": true,
+    "jsx": "react-jsx",
     "noImplicitAny": true,
     "strictNullChecks": true,
     "strictFunctionTypes": true,

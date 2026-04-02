@@ -1,17 +1,10 @@
 import { Driver, UpdateProfileRequest } from "@shared/types";
-import { AuthClient } from "./authClient";
 import { db } from "../db/db";
 import { driver } from "../db/schema";
 import { eq } from "drizzle-orm";
 import { createServiceError, sanitizeInput } from "@shared/utils";
 
 export class DriverService {
-  private authClient: AuthClient;
-
-  constructor() {
-    this.authClient = new AuthClient();
-  }
-
   async createDriver(
     userId: string,
     driverData: Partial<UpdateProfileRequest>,
@@ -44,6 +37,17 @@ export class DriverService {
     });
     if (!existingDriver) {
       throw createServiceError("Driver not found", 404);
+    }
+
+    return existingDriver;
+  }
+
+  async getProfileById(id: string): Promise<Driver | null> {
+    const existingDriver = await db.query.driver.findFirst({
+      where: eq(driver.id, id),
+    });
+    if (!existingDriver) {
+      return null;
     }
 
     return existingDriver;
@@ -103,9 +107,9 @@ export class DriverService {
     if (data.email !== undefined) {
       sanitized.email = data.email ? sanitizeInput(data.email) : null;
     }
-    if (data.gender !== undefined) {
-      sanitized.gender = data.gender ? sanitizeInput(data.gender) : null;
-    }
+    // if (data.gender !== undefined) {
+    //   sanitized.gender = data.gender ? sanitizeInput(data.gender) : null;
+    // }
     if (data.country !== undefined) {
       sanitized.country = data.country ? sanitizeInput(data.country) : null;
     }
@@ -114,6 +118,9 @@ export class DriverService {
     }
     if (data.city !== undefined) {
       sanitized.city = data.city ? sanitizeInput(data.city) : null;
+    }
+    if (data.address !== undefined) {
+      sanitized.address = data.address ? sanitizeInput(data.address) : null;
     }
     if (data.bankName !== undefined) {
       sanitized.bankName = data.bankName ? sanitizeInput(data.bankName) : null;

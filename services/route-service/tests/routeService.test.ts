@@ -1,26 +1,19 @@
 import { RouteService } from "@/routeService";
-import { mocked } from "jest-mock";
 import axios from "axios";
-import { AuthClient } from "@/authClient";
+import type { JWTPayload } from "@shared/types";
 import { testRoute } from "./setup";
-import { timestamp } from "drizzle-orm/gel-core";
 
 // // 1. Properly mock Axios
 // jest.mock("axios");
 // const mockedAxios = axios as jest.Mocked<typeof axios>;
 
-// 2. Mock AuthClient
-jest.mock("../src/authClient", () => {
-  return {
-    AuthClient: jest.fn().mockImplementation(() => ({
-      verifyToken: jest.fn(),
-      getUser: jest.fn(),
-    })),
-  };
-});
-
 // Use this to refer to the axios mock defined in setup.ts
 const mockedAxios = axios as jest.Mocked<typeof axios>;
+const testGatewayUser: JWTPayload = {
+  userId: "test-user-id",
+  email: "test@dailyexpress.app",
+  emailVerified: true,
+};
 
 // Robust helper function to test service error without 'instanceof' issues
 async function expectServiceError(
@@ -46,7 +39,6 @@ async function expectServiceError(
 
 describe("RouteService", () => {
   let routeService: RouteService;
-  let mockAuthClient: any;
 
   beforeEach(() => {
     jest.clearAllMocks();
@@ -62,19 +54,10 @@ describe("RouteService", () => {
       },
     });
 
-    mockAuthClient = {
-      verifyToken: jest.fn(),
-    };
-
-    const MockedAuthClient = mocked(AuthClient);
-    MockedAuthClient.mockImplementation(() => mockAuthClient as any);
-
     routeService = new RouteService();
   });
 
   describe("createRoute", () => {
-    const driverId = "test-driver-id";
-    const token = "mock-token";
     const routeData = {
       driverId: "test-driver-id",
       pickup_location_title: "Ogun State",
@@ -87,6 +70,7 @@ describe("RouteService", () => {
       intermediate_stops_locality: "Olurisho Street",
       intermediate_stops_label: "Olurisho Street",
       vehicleType: "bus" as "car" | "bus" | "luxury_car",
+      meeting_point: "Main Park",
       availableSeats: 14,
       price: 13000,
       status: "active" as "active" | "inactive" | "pending",
@@ -107,7 +91,7 @@ describe("RouteService", () => {
         returning: mockReturning,
       });
 
-      const result = await routeService.createRoute(driverId, token, routeData);
+      const result = await routeService.createRoute(testGatewayUser, routeData);
 
       expect(result).toEqual(testRoute);
       expect(global.mockDrizzle.insert).toHaveBeenCalled();
@@ -134,7 +118,7 @@ describe("RouteService", () => {
       );
 
       await expectServiceError(
-        () => routeService.createRoute(driverId, token, routeData),
+        () => routeService.createRoute(testGatewayUser, routeData),
         "Route already exists",
         400,
       );
@@ -154,7 +138,7 @@ describe("RouteService", () => {
       });
 
       await expectServiceError(
-        () => routeService.createRoute(driverId, token, routeData),
+        () => routeService.createRoute(testGatewayUser, routeData),
         "Driver not found", // Now this will match
         404,
       );
@@ -162,15 +146,13 @@ describe("RouteService", () => {
   });
 
   describe("getAllDriverRoutes", () => {
-    const token = "mock-token";
-
     it("should get all driver routes successfully", async () => {
       // Setup Drizzle Mocks
       (global.mockDrizzle.query.route.findMany as jest.Mock).mockResolvedValue([
         testRoute,
       ]);
 
-      const result = await routeService.getAllDriverRoutes(token);
+      const result = await routeService.getAllDriverRoutes(testGatewayUser);
 
       expect(result).toEqual([testRoute]);
       expect(global.mockDrizzle.query.route.findMany).toHaveBeenCalledWith({
@@ -184,7 +166,7 @@ describe("RouteService", () => {
         [],
       );
 
-      const result = await routeService.getAllDriverRoutes(token);
+      const result = await routeService.getAllDriverRoutes(testGatewayUser);
 
       expect(result).toEqual([]);
       expect(global.mockDrizzle.query.route.findMany).toHaveBeenCalledWith({
@@ -204,6 +186,38 @@ describe("RouteService", () => {
 
       expect(result).toEqual([testRoute]);
       expect(global.mockDrizzle.query.route.findMany).toHaveBeenCalledWith();
+    });
+  });
+
+  describe("searchRoutes", () => {
+    it("should search routes successfully", async () => {
+      (global.mockDrizzle.query.route.findMany as jest.Mock).mockResolvedValue([
+        testRoute,
+      ]);
+
+      const result = await routeService.searchRoutes({
+        from: "Ogun State",
+        to: "Funnaab",
+        vehicleType: ["bus"],
+      });
+
+      expect(result).toEqual([testRoute]);
+      expect(global.mockDrizzle.query.route.findMany).toHaveBeenCalledWith({
+        where: expect.anything(),
+      });
+    });
+
+    it("should throw when required params are missing", async () => {
+      await expectServiceError(
+        () =>
+          routeService.searchRoutes({
+            from: "Ogun State",
+          }),
+        "from and to are required",
+        400,
+      );
+
+      expect(global.mockDrizzle.query.route.findMany).not.toHaveBeenCalled();
     });
   });
 
@@ -244,7 +258,6 @@ describe("RouteService", () => {
 
   describe("updateRoute", () => {
     const routeId = "test-route-id";
-    const token = "mock-token";
     const routeData = {
       driverId: "test-driver-id",
       pickup_location_title: "Ogun State",
@@ -270,7 +283,11 @@ describe("RouteService", () => {
         testRoute,
       );
 
-      const result = await routeService.updateRoute(token, routeId, routeData);
+      const result = await routeService.updateRoute(
+        testGatewayUser,
+        routeId,
+        routeData,
+      );
 
       expect(result).toEqual(testRoute);
       expect(global.mockDrizzle.query.route.findFirst).toHaveBeenCalledWith(
@@ -286,7 +303,7 @@ describe("RouteService", () => {
       );
 
       await expectServiceError(
-        () => routeService.updateRoute(token, routeId, routeData),
+        () => routeService.updateRoute(testGatewayUser, routeId, routeData),
         "Route not found",
         404,
       );
@@ -299,7 +316,6 @@ describe("RouteService", () => {
 
   describe("deleteRoute", () => {
     const routeId = "test-route-id";
-    const token = "mock-token";
 
     it("should delete a route successfully", async () => {
       // Setup Drizzle Mocks
@@ -312,7 +328,7 @@ describe("RouteService", () => {
       (global.mockDrizzle.delete as jest.Mock).mockReturnValue({
         where: mockWhere,
       });
-      await routeService.deleteRoute(token, routeId);
+      await routeService.deleteRoute(testGatewayUser, routeId);
       expect(mockWhere).toHaveBeenCalled();
       expect(global.mockDrizzle.delete).toHaveBeenCalled();
     });
@@ -324,7 +340,7 @@ describe("RouteService", () => {
       );
 
       await expectServiceError(
-        () => routeService.deleteRoute(token, routeId),
+        () => routeService.deleteRoute(testGatewayUser, routeId),
         "Route not found",
         404,
       );
@@ -378,14 +394,13 @@ describe("RouteService", () => {
   });
 
   describe("getAllTrips", () => {
-    const token = "mock-token";
     const date = new Date("2025-07-01T00:00:00Z");
     it("should get all driver trips", async () => {
       const mockTrip = { id: "trip-uuid" };
       (global.mockDrizzle.query.trip.findMany as jest.Mock).mockResolvedValue([
         mockTrip,
       ]);
-      const result = await routeService.getAllTrips(token, date);
+      const result = await routeService.getAllTrips(testGatewayUser, date);
       expect(result).toEqual([mockTrip]);
     });
   });
@@ -423,7 +438,6 @@ describe("RouteService", () => {
   });
 
   describe("updateTripStatus", () => {
-    const token = "mock-token";
     it("should update trip status successfully", async () => {
       const tripId = "trip-uuid";
       (global.mockDrizzle.query.trip.findFirst as jest.Mock).mockResolvedValue({
@@ -443,7 +457,7 @@ describe("RouteService", () => {
       });
 
       const result = await routeService.updateTripStatus(
-        token,
+        testGatewayUser,
         tripId,
         "completed",
       );
@@ -456,7 +470,12 @@ describe("RouteService", () => {
         driverId: "another-driver",
       });
       await expectServiceError(
-        () => routeService.updateTripStatus(token, "trip-uuid", "completed"),
+        () =>
+          routeService.updateTripStatus(
+            testGatewayUser,
+            "trip-uuid",
+            "completed",
+          ),
         "You are not authorized to update this trip",
         403,
       );

@@ -12,7 +12,7 @@ import {
   CircleNotchIcon,
 } from "@phosphor-icons/react/dist/ssr";
 import { Avatar, AvatarFallback } from "@repo/ui/components/avatar";
-import { Icons } from "./Icons";
+import { Icons } from "@repo/ui/Icons";
 import NavItem from "./NavItem";
 import { UserAccountNav } from "./UserAccountNav";
 import Image from "next/image";
@@ -22,6 +22,8 @@ import {
 
 const Navbar = () => {
   const { data: user, isLoading } = useGetMe();
+  console.log(user);
+  
 
   return (
     <div className="bg-white sticky z-60 top-0 inset-x-0 h-16">

@@ -3,14 +3,24 @@ import { asyncHandler } from "@shared/middleware";
 import { AuthService } from "./authService";
 import type { Request, Response, RequestHandler } from "express";
 import type { User } from "../db/schema";
+import type { JWTPayload } from "@shared/types";
 import {
   createErrorResponse,
-  createServiceError,
   createSuccessResponse,
 } from "@shared/utils";
 // import { createSuccessResponse } from "../../../shared/utils";
 
 const authService = new AuthService();
+
+function getGatewayUser(req: Request): JWTPayload | null {
+  const user = req.user;
+
+  if (!user || !("userId" in user) || !("email" in user)) {
+    return null;
+  }
+
+  return user as JWTPayload;
+}
 
 /**
  * I didn't envision collecting the user phone on the frontend
@@ -82,76 +92,29 @@ export const login: RequestHandler = asyncHandler(
   },
 );
 
-export const validateToken: RequestHandler = asyncHandler(
-  async (req: Request, res: Response) => {
-    // Read token from cookie or body (for inter-service calls)
-    const token = req.cookies?.token || req.body.token;
-
-    if (!token) {
-      return res.status(401).json(createErrorResponse("No token provided"));
-    }
-
-    const payload = await authService.validateToken(token);
-
-    return res
-      .status(200)
-      .json(createSuccessResponse(payload, "Token is valid"));
-  },
-);
-
 export const getProfile: RequestHandler = asyncHandler(
   async (req: Request, res: Response) => {
-    const userId = req.user?.userId;
+    const gatewayUser = getGatewayUser(req);
+    const userId = gatewayUser?.userId;
     if (!userId) {
       return res.status(401).json(createErrorResponse("Unauthorized"));
     }
 
-    const user = await authService.getUserById(userId);
-    if (!user) {
+    const profile = await authService.getUserById(userId);
+    if (!profile) {
       return res.status(404).json(createErrorResponse("User not found"));
     }
 
     return res
       .status(200)
-      .json(createSuccessResponse(user, "User profile retrieved"));
-  },
-);
-
-export const refreshTokens: RequestHandler = asyncHandler(
-  async (req: Request, res: Response) => {
-    const refreshToken = req.cookies?.refreshToken;
-
-    if (!refreshToken) {
-      return res
-        .status(401)
-        .json(createErrorResponse("No refresh token provided"));
-    }
-
-    const tokens = await authService.refreshToken(refreshToken);
-
-    res.cookie("token", tokens.accessToken, {
-      httpOnly: true,
-      secure: process.env.NODE_ENV === "production",
-      sameSite: "lax",
-      maxAge: 15 * 60 * 1000,
-    });
-
-    res.cookie("refreshToken", tokens.refreshToken, {
-      httpOnly: true,
-      secure: process.env.NODE_ENV === "production",
-      sameSite: "lax",
-      maxAge: 7 * 24 * 60 * 60 * 1000,
-    });
-
-    return res
-      .status(200)
-      .json(createSuccessResponse(tokens, "Tokens refreshed successfully"));
+      .json(createSuccessResponse(profile, "User profile retrieved"));
   },
 );
 
 export const deleteAccount: RequestHandler = asyncHandler(
   async (req: Request, res: Response) => {
-    const userId = req.user?.userId;
+    const gatewayUser = getGatewayUser(req);
+    const userId = gatewayUser?.userId;
 
     if (!userId) {
       return res.status(401).json(createErrorResponse("Unauthorized"));
@@ -195,7 +158,8 @@ export const resetPassword: RequestHandler = asyncHandler(
 
 export const verifyOtp: RequestHandler = asyncHandler(
   async (req: Request, res: Response) => {
-    const email = req.user?.email;
+    const gatewayUser = getGatewayUser(req);
+    const email = gatewayUser?.email;
     if (!email) {
       return res.status(401).json(createErrorResponse("Unauthorized"));
     }
@@ -242,15 +206,16 @@ export const logout: RequestHandler = asyncHandler(
 
 export const resendOtp: RequestHandler = asyncHandler(
   async (req: Request, res: Response) => {
-    const email = req.user?.email;
+    const gatewayUser = getGatewayUser(req);
+    const email = gatewayUser?.email;
     if (!email) {
       return res.status(401).json(createErrorResponse("Unauthorized"));
     }
-    const user = await authService.getUserByEmail(email);
-    if (!user) {
+    const existingUser = await authService.getUserByEmail(email);
+    if (!existingUser) {
       return res.status(404).json(createErrorResponse("User not found"));
     }
-    if (user.emailVerified) {
+    if (existingUser.emailVerified) {
       return res.status(400).json(createErrorResponse("User already verified"));
     }
     await authService.resendOtp(email);
@@ -262,14 +227,15 @@ export const resendOtp: RequestHandler = asyncHandler(
 
 export const updateProfile: RequestHandler = asyncHandler(
   async (req: Request, res: Response) => {
-    const userId = req.user?.userId;
+    const gatewayUser = getGatewayUser(req);
+    const userId = gatewayUser?.userId;
     if (!userId) {
       return res.status(401).json(createErrorResponse("Unauthorized"));
     }
-    const user = await authService.updateProfile(userId, req.body);
+    const updatedUser = await authService.updateProfile(userId, req.body);
     return res
       .status(200)
-      .json(createSuccessResponse(user, "Profile updated successfully"));
+      .json(createSuccessResponse(updatedUser, "Profile updated successfully"));
   },
 );
 
@@ -315,7 +281,8 @@ export const googleCallback: RequestHandler = asyncHandler(
 
 export const getProviders: RequestHandler = asyncHandler(
   async (req: Request, res: Response) => {
-    const userId = req.user?.userId;
+    const gatewayUser = getGatewayUser(req);
+    const userId = gatewayUser?.userId;
     if (!userId) {
       return res.status(401).json(createErrorResponse("Unauthorized"));
     }
@@ -330,7 +297,8 @@ export const getProviders: RequestHandler = asyncHandler(
 
 export const disconnectProvider: RequestHandler = asyncHandler(
   async (req: Request, res: Response) => {
-    const userId = req.user?.userId;
+    const gatewayUser = getGatewayUser(req);
+    const userId = gatewayUser?.userId;
     if (!userId) {
       return res.status(401).json(createErrorResponse("Unauthorized"));
     }
@@ -353,7 +321,8 @@ export const disconnectProvider: RequestHandler = asyncHandler(
 
 export const setPassword: RequestHandler = asyncHandler(
   async (req: Request, res: Response) => {
-    const userId = req.user?.userId;
+    const gatewayUser = getGatewayUser(req);
+    const userId = gatewayUser?.userId;
     if (!userId) {
       return res.status(401).json(createErrorResponse("Unauthorized"));
     }

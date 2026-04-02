@@ -4,7 +4,8 @@
   "scripts": {
     "build": "turbo run build",
     "dev": "turbo run dev",
-    "dev:all": "docker compose up -d && turbo run dev",
+    "kafka:init-topics": "bun run scripts/init-kafka-topics.ts",
+    "dev:all": "docker compose up -d && bun run kafka:init-topics && turbo run dev",
     "lint": "turbo run lint",
     "format": "prettier --write \"**/*.{ts,tsx,md}\"",
     "check-types": "turbo run check-types"

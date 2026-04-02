@@ -4,15 +4,21 @@ import { eq, and } from "drizzle-orm";
 import bcrypt from "bcryptjs";
 // import { createServiceError } from "@shared/utils";
 import { createServiceError } from "../../../shared/utils";
-
-import jwt, { JwtPayload, Secret, SignOptions } from "jsonwebtoken";
 import {
-  AuthTokens,
+  enqueueNotificationEmail,
+  enqueueUserAccountDeleted,
+  isKafkaEnabled,
+} from "./kafka/outbox";
+
+import jwt, { Secret, SignOptions } from "jsonwebtoken";
+import {
   JWTPayload,
-  ServiceError,
   UpdateProfileRequest,
   UpdateUserRequest,
 } from "@shared/types";
+import { renderVerifyOtpEmail } from "./email/renderVerifyOtpEmail";
+
+const OTP_EXPIRY_MINUTES = 10;
 
 export class AuthService {
   private readonly jwtSecret: string;
@@ -51,48 +57,53 @@ export class AuthService {
       throw createServiceError("User Already Exists", 409);
     }
 
-    //hash password
+    const storedOtp = this.generateOtp();
+    const verificationEmailHtml =
+      await this.buildVerificationEmailHtml(storedOtp);
     const hashedPassword = await bcrypt.hash(password, this.bcryptRounds);
 
-    //create the new user in the database
-    const data = {
-      email,
-      password: hashedPassword,
-      firstName,
-      lastName,
-      // phone,
-      dateOfBirth,
-      referal: "",
-    };
-    const [createdUser] = await db.insert(users).values(data).returning();
+    const result = await db.transaction(async (tx) => {
+      const data = {
+        email,
+        password: hashedPassword,
+        firstName,
+        lastName,
+        dateOfBirth,
+        referal: "",
+      };
 
-    const tokens = this.generateTokens(
-      createdUser.id,
-      createdUser.email,
-      createdUser.emailVerified,
-    );
+      const [createdUser] = await tx.insert(users).values(data).returning();
 
-    const storedOtp = this.generateOtp();
+      await tx.insert(otp).values({
+        email: createdUser.email,
+        otp: storedOtp,
+        expiresAt: new Date(Date.now() + OTP_EXPIRY_MINUTES * 60 * 1000),
+      });
 
-    //send mail (don't block registration if email fails)
-    try {
-      await this.sendEmail(
-        createdUser.email,
-        "Verify your email",
-        `Verify OTP,  This is your Otp ${storedOtp}`,
-      );
-    } catch (emailError) {
-      console.error("Failed to send verification email:", emailError);
-    }
+      if (isKafkaEnabled) {
+        await enqueueNotificationEmail(tx, {
+          to: createdUser.email,
+          subject: "Verify your email",
+          html: verificationEmailHtml,
+          source: "auth-service",
+        });
+      }
 
-    //store otp in the database
-    await db.insert(otp).values({
-      email: createdUser.email,
-      otp: storedOtp,
-      expiresAt: new Date(Date.now() + 10 * 60 * 1000),
+      return createdUser;
     });
 
-    return { user: createdUser, ...tokens };
+    if (!isKafkaEnabled) {
+      await this.deliverEmailDirectly(
+        result.email,
+        "Verify your email",
+        verificationEmailHtml,
+      );
+    }
+
+    return {
+      user: result,
+      ...this.generateTokens(result.id, result.email, result.emailVerified),
+    };
   }
 
   async verifyOtp(email: string, userOtp: string) {
@@ -131,56 +142,6 @@ export class AuthService {
     };
   }
 
-  async refreshToken(refreshToken: string): Promise<any> {
-    try {
-      const decoded = jwt.verify(
-        refreshToken,
-        this.jwtRefreshSecret,
-      ) as JWTPayload;
-
-      if (!decoded) {
-        throw createServiceError(
-          "Invalid or expired refresh token, please login",
-          403,
-        );
-      }
-
-      const tokens = await this.generateTokens(
-        decoded.userId,
-        decoded.email,
-        decoded.emailVerified,
-      );
-
-      return tokens;
-    } catch (error) {
-      if (error instanceof ServiceError) {
-        throw error;
-      }
-    }
-  }
-
-  async validateToken(token: string): Promise<any> {
-    try {
-      const decoded = jwt.verify(token, this.jwtSecret) as JWTPayload;
-
-      //check if user exists
-      const user = await db.query.users.findFirst({
-        where: eq(users.id, decoded.userId),
-      });
-
-      if (!user) {
-        throw createServiceError("User not found", 404);
-      }
-
-      return decoded;
-    } catch (error) {
-      if (error instanceof jwt.JsonWebTokenError) {
-        throw createServiceError("Invalid Token", 401);
-      }
-      throw createServiceError("Token validation failed", 500, error);
-    }
-  }
-
   async forgotPassword(email: string): Promise<void> {
     const user = await db.query.users.findFirst({
       where: eq(users.email, email),
@@ -196,7 +157,17 @@ export class AuthService {
     <a href="${resetLink}">Reset Password</a>
     `;
 
-    await this.sendEmail(user.email, "Reset Password", message);
+    if (isKafkaEnabled) {
+      await enqueueNotificationEmail(db, {
+        to: user.email,
+        subject: "Reset Password",
+        html: message,
+        source: "auth-service",
+      });
+      return;
+    }
+
+    await this.deliverEmailDirectly(user.email, "Reset Password", message);
   }
 
   async resetPassword(token: string, password: string) {
@@ -218,7 +189,11 @@ export class AuthService {
 
     return { user };
   }
-  private async sendEmail(to: string, subject: string, html: string) {
+  private async deliverEmailDirectly(
+    to: string,
+    subject: string,
+    html: string,
+  ) {
     await fetch("http://localhost:3004/v1/mail/send", {
       method: "POST",
       headers: {
@@ -366,36 +341,70 @@ export class AuthService {
       throw createServiceError("User not found", 404);
     }
     const storedOtp = this.generateOtp();
-    await this.sendEmail(
-      user.email,
-      "Verify your email",
-      `Verify OTP,  This is your Otp ${storedOtp}`,
-    );
+    const verificationEmailHtml =
+      await this.buildVerificationEmailHtml(storedOtp);
     const existingOtp = await db.query.otp.findFirst({
       where: eq(otp.email, user.email),
     });
 
-    if (existingOtp) {
-      await db
-        .update(otp)
-        .set({
+    await db.transaction(async (tx) => {
+      if (existingOtp) {
+        await tx
+          .update(otp)
+          .set({
+            otp: storedOtp,
+            expiresAt: new Date(Date.now() + OTP_EXPIRY_MINUTES * 60 * 1000),
+            updatedAt: new Date(),
+          })
+          .where(eq(otp.email, user.email));
+      } else {
+        await tx.insert(otp).values({
+          email: user.email,
           otp: storedOtp,
-          expiresAt: new Date(Date.now() + 10 * 60 * 1000),
-          updatedAt: new Date(),
-        })
-        .where(eq(otp.email, user.email));
-    } else {
-      await db.insert(otp).values({
-        email: user.email,
-        otp: storedOtp,
-        expiresAt: new Date(Date.now() + 10 * 60 * 1000),
-      });
+          expiresAt: new Date(Date.now() + OTP_EXPIRY_MINUTES * 60 * 1000),
+        });
+      }
+
+      if (isKafkaEnabled) {
+        await enqueueNotificationEmail(tx, {
+          to: user.email,
+          subject: "Verify your email",
+          html: verificationEmailHtml,
+          source: "auth-service",
+        });
+      }
+    });
+
+    if (!isKafkaEnabled) {
+      await this.deliverEmailDirectly(
+        user.email,
+        "Verify your email",
+        verificationEmailHtml,
+      );
     }
     return "otp sent successfully";
   }
 
+  private async buildVerificationEmailHtml(otp: string): Promise<string> {
+    return renderVerifyOtpEmail({
+      otp,
+      expiresInMinutes: OTP_EXPIRY_MINUTES,
+      supportEmail: process.env.SUPPORT_EMAIL || "support@dailyexpress.com",
+      brandName: process.env.EMAIL_BRAND_NAME || "Daily Express",
+    });
+  }
+
   async deleteUser(userId: string): Promise<void> {
-    await db.delete(users).where(eq(users.id, userId));
+    await db.transaction(async (tx) => {
+      if (isKafkaEnabled) {
+        await enqueueUserAccountDeleted(tx, {
+          userId,
+          source: "auth-service",
+        });
+      }
+
+      await tx.delete(users).where(eq(users.id, userId));
+    });
   }
 
   async getUserByEmail(email: string) {

@@ -79,7 +79,7 @@ const PersonalInfoForm = () => {
                                                 setValue("file", undefined as unknown as File, { shouldValidate: true, shouldDirty: true });
                                             }}
                                             size="icon"
-                                            className="absolute -top-1 -right-1 size-6 rounded-full border-2 border-background"
+                                            className="absolute -top-1 -right-1 size-6 rounded-full border-2 border-background bg-red-100 text-red-600 hover:bg-red-200"
                                         >
                                             <TrashIcon className="size-3.5" />
                                         </Button>
