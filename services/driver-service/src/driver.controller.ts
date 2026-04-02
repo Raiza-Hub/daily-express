@@ -2,8 +2,13 @@ import { Request, RequestHandler, Response } from "express";
 import { asyncHandler } from "@shared/middleware";
 import { DriverService } from "./driverServices";
 import { createErrorResponse, createSuccessResponse } from "@shared/utils";
+import { Producer, Consumer } from "kafkajs";
 
-const driverService = new DriverService();
+let driverService: DriverService;
+
+export const initDriverService = (producer: Producer, consumer: Consumer) => {
+  driverService = new DriverService(producer, consumer);
+};
 
 export const getDriver: RequestHandler = asyncHandler(
   async (req: Request, res: Response) => {

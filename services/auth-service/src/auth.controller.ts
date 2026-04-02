@@ -8,9 +8,14 @@ import {
   createServiceError,
   createSuccessResponse,
 } from "@shared/utils";
+import type { Producer } from "kafkajs";
 // import { createSuccessResponse } from "../../../shared/utils";
 
-const authService = new AuthService();
+let authService: AuthService;
+
+export const initAuthService = (producer: Producer) => {
+  authService = new AuthService(producer);
+};
 
 /**
  * I didn't envision collecting the user phone on the frontend

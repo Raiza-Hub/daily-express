@@ -4,12 +4,17 @@ import { db } from "../db/db";
 import { driver } from "../db/schema";
 import { eq } from "drizzle-orm";
 import { createServiceError, sanitizeInput } from "@shared/utils";
+import { Producer, Consumer } from "kafkajs";
 
 export class DriverService {
   private authClient: AuthClient;
+  private producer: Producer;
+  private consumer: Consumer;
 
-  constructor() {
+  constructor(producer: Producer, consumer: Consumer) {
     this.authClient = new AuthClient();
+    this.producer = producer;
+    this.consumer = consumer;
   }
 
   async createDriver(
@@ -33,6 +38,27 @@ export class DriverService {
       .insert(driver)
       .values({ ...sanitizeData, userId } as any)
       .returning();
+
+    //send mail with kafka
+    try {
+      await this.producer.send({
+        topic: "driver-created",
+        messages: [
+          {
+            value: JSON.stringify({
+              email: newDriver.email,
+              subject: "Driver Profile Created",
+              text: `Your driver profile has been created successfully`,
+            }),
+          },
+        ],
+      });
+    } catch (error) {
+      console.error(error.message);
+      console.error(
+        "Failed to send driver profile creation email, please try again later",
+      );
+    }
 
     return newDriver;
   }
@@ -74,6 +100,31 @@ export class DriverService {
     return updatedDriver;
   }
 
+  //consumer
+  async startConsuming() {
+    try {
+      await this.consumer.run({
+        eachMessage: async ({ topic, message }) => {
+          const value = message.value?.toString();
+          if (!value) return;
+          // auth-service sends: { userId }
+          const { userId } = JSON.parse(value);
+          switch (topic) {
+            case "user-deleted":
+              await this.deleteDriver(userId);
+              console.log("Driver deleted successfully");
+              break;
+          }
+        },
+      });
+    } catch (error: any) {
+      if (error.statusCode) throw error;
+      throw createServiceError(
+        error.message || "Failed to start consumer",
+        500,
+      );
+    }
+  }
   async deleteDriver(userId: string): Promise<void> {
     //check if user exists
     const existingDriver = await db.query.driver.findFirst({
@@ -82,6 +133,17 @@ export class DriverService {
     if (!existingDriver) {
       throw createServiceError("Driver not found", 404);
     }
+    const driverId = existingDriver.id;
+
+    //delete driver routes using kafka
+    await this.producer.send({
+      topic: "driver-deleted",
+      messages: [
+        {
+          value: JSON.stringify({ driverId, userId }),
+        },
+      ],
+    });
 
     //delete driver
     await db.delete(driver).where(eq(driver.userId, userId));
