@@ -14,15 +14,18 @@ import {
 import { createServiceError } from "@shared/utils";
 import { booking, route, trip } from "db/schema";
 import { and, eq } from "drizzle-orm";
+import { Consumer } from "kafkajs";
 
 export class RouteService {
   private authClient: AuthClient;
   private readonly driverServiceUrl: string;
+  private consumer: Consumer;
 
-  constructor() {
+  constructor(consumer: Consumer) {
     this.authClient = new AuthClient();
     this.driverServiceUrl =
       process.env.DRIVER_SERVICE_URL || "http://localhost:3002/v1/driver";
+    this.consumer = consumer;
   }
 
   private async getDriverId(token: string): Promise<string> {
@@ -144,6 +147,38 @@ export class RouteService {
       .returning();
     return updatedRoute;
   }
+
+  async startConsuming() {
+    await this.consumer.run({
+      eachMessage: async ({ topic, message }) => {
+        const value = message.value?.toString();
+        if (!value) {
+          return;
+        }
+        const { driverId } = JSON.parse(value);
+        if (!driverId) {
+          console.warn(`Received message on topic ${topic} with no driverId`);
+          return;
+        }
+        switch (topic) {
+          case "driver-deleted":
+            await this.deleteDriverRoutes(driverId);
+            break;
+        }
+      },
+    });
+  }
+
+  private async deleteDriverRoutes(driverId: string): Promise<void> {
+    const routes = await db.query.route.findMany({
+      where: eq(route.driverId, driverId),
+    });
+    if (!routes) {
+      return;
+    }
+    await db.delete(route).where(eq(route.driverId, driverId));
+  }
+
   async deleteRoute(token: string, routeId: string): Promise<void> {
     const driverId = await this.getDriverId(token);
     if (!driverId) {

@@ -10,6 +10,8 @@ import authRoutes from "./auth.routes";
 import { corsOptions, errorHandler } from "@shared/middleware";
 import { redisHealthCheck } from "./middleware/redis.middleware";
 import passport from "./passport";
+import { Kafka } from "kafkajs";
+import { initAuthService } from "./auth.controller";
 
 dotenv.config();
 
@@ -70,15 +72,42 @@ const initializeRedis = async () => {
   app.use(express.json({ limit: "10mb" }));
   app.use(express.urlencoded({ extended: true }));
 
+  const kafka = new Kafka({
+    clientId: "auth-service",
+    brokers: ["127.0.0.1:9094"],
+  });
+
+  const producer = kafka.producer();
+
+  const connectToKafka = async () => {
+    try {
+      await producer.connect();
+      console.log("Kafka producer connected");
+      initAuthService(producer);
+    } catch (err) {
+      console.log("Kafka producer connection error", err);
+    }
+  };
+
   app.use("/v1/auth", authRoutes);
 
   app.use(errorHandler);
 
-  app.listen(PORT, () => {
+  await connectToKafka();
+
+  const server = app.listen(PORT, () => {
     console.log(`Auth service is running on port ${PORT}`);
     console.log(`Environment: ${process.env.NODE_ENV}`);
     console.log(`Health check: http://localhost:${PORT}/health`);
   });
+
+  const shutdown = async () => {
+    await producer.disconnect();
+    server.close();
+  };
+
+  process.on("SIGTERM", shutdown);
+  process.on("SIGINT", shutdown);
 };
 
 initializeRedis();

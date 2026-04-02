@@ -2,8 +2,13 @@ import { asyncHandler } from "@shared/middleware";
 import { Request, RequestHandler, Response } from "express";
 import { RouteService } from "./routeService";
 import { createErrorResponse, createSuccessResponse } from "@shared/utils";
+import { Consumer } from "kafkajs";
 
-const routeService = new RouteService();
+let routeService: RouteService;
+
+export const initializeRouteService = (consumer: Consumer) => {
+  routeService = new RouteService(consumer);
+};
 
 //driver route
 export const getAllDriverRoutes: RequestHandler = asyncHandler(
@@ -37,11 +42,14 @@ export const createRoute: RequestHandler = asyncHandler(
       req.cookies?.token || (authHeader && authHeader.split(" ")[1]);
     const cookies = req.headers.cookie || "";
     if (!userId) {
-      res.status(401).json(createErrorResponse("User not authenticated"));
+      return res
+        .status(401)
+        .json(createErrorResponse("User not authenticated"));
     }
     if (!token) {
-      res.status(401).json(createErrorResponse("Token not provided"));
+      return res.status(401).json(createErrorResponse("Token not provided"));
     }
+    // console.log("userId:", userId, "cookies:", cookies, "req.body:", req.body);
     const route = await routeService.createRoute(
       userId as string,
       cookies,
@@ -58,11 +66,13 @@ export const getRoute: RequestHandler = asyncHandler(
   async (req: Request, res: Response) => {
     const userId = req.user?.userId;
     if (!userId) {
-      res.status(401).json(createErrorResponse("User not authenticated"));
+      return res
+        .status(401)
+        .json(createErrorResponse("User not authenticated"));
     }
     const routeId = req.params.id as string;
     if (!routeId) {
-      res.status(400).json(createErrorResponse("Route ID is required"));
+      return res.status(400).json(createErrorResponse("Route ID is required"));
     }
     const route = await routeService.getRoute(routeId);
     res
@@ -80,14 +90,16 @@ export const updateRoute: RequestHandler = asyncHandler(
       req.cookies?.token || (authHeader && authHeader.split(" ")[1]);
     const cookies = req.headers.cookie || "";
     if (!userId) {
-      res.status(401).json(createErrorResponse("User not authenticated"));
+      return res
+        .status(401)
+        .json(createErrorResponse("User not authenticated"));
     }
     if (!token) {
-      res.status(401).json(createErrorResponse("Token not provided"));
+      return res.status(401).json(createErrorResponse("Token not provided"));
     }
     const routeId = req.params.id;
     if (!routeId) {
-      res.status(400).json(createErrorResponse("Route ID is required"));
+      return res.status(400).json(createErrorResponse("Route ID is required"));
     }
     const route = await routeService.updateRoute(
       cookies,
@@ -109,10 +121,10 @@ export const deleteRoute: RequestHandler = asyncHandler(
       req.cookies?.token || (authHeader && authHeader.split(" ")[1]);
     const cookies = req.headers.cookie || "";
     if (!routeId) {
-      res.status(400).json(createErrorResponse("Route ID is required"));
+      return res.status(400).json(createErrorResponse("Route ID is required"));
     }
     if (!token) {
-      res.status(401).json(createErrorResponse("Token not provided"));
+      return res.status(401).json(createErrorResponse("Token not provided"));
     }
     const route = await routeService.deleteRoute(cookies, routeId as string);
     res
@@ -131,10 +143,12 @@ export const getAllTrips: RequestHandler = asyncHandler(
     const cookies = req.headers.cookie || "";
     const { date } = req.params;
     if (!userId) {
-      res.status(401).json(createErrorResponse("User not authenticated"));
+      return res
+        .status(401)
+        .json(createErrorResponse("User not authenticated"));
     }
     if (!token) {
-      res.status(401).json(createErrorResponse("Token not provided"));
+      return res.status(401).json(createErrorResponse("Token not provided"));
     }
     const trips = await routeService.getAllTrips(
       cookies,
@@ -198,7 +212,9 @@ export const bookTrip: RequestHandler = asyncHandler(
   async (req: Request, res: Response) => {
     const userId = req.user?.userId;
     if (!userId) {
-      res.status(401).json(createErrorResponse("User not authenticated"));
+      return res
+        .status(401)
+        .json(createErrorResponse("User not authenticated"));
     }
 
     const trip = await routeService.bookTrip(userId as string, req.body);

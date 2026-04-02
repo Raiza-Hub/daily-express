@@ -13,6 +13,7 @@ import {
   UpdateProfileRequest,
   UpdateUserRequest,
 } from "@shared/types";
+import { Producer } from "kafkajs";
 
 export class AuthService {
   private readonly jwtSecret: string;
@@ -21,7 +22,9 @@ export class AuthService {
   private readonly jwtRefreshExpiresIn: string;
   private readonly bcryptRounds: number;
 
-  constructor() {
+  private readonly producer: Producer;
+
+  constructor(producer: Producer) {
     this.jwtSecret = process.env.JWT_SECRET!;
     this.jwtRefreshSecret = process.env.JWT_REFRESH_SECRET!;
     this.jwtExpiresIn = process.env.JWT_EXPIRES_IN || "15m"!;
@@ -33,6 +36,8 @@ export class AuthService {
         "JWT secrets are not defined in the envirnoment variable",
       );
     }
+
+    this.producer = producer;
   }
 
   async register(
@@ -74,23 +79,33 @@ export class AuthService {
 
     const storedOtp = this.generateOtp();
 
-    //send mail (don't block registration if email fails)
-    try {
-      await this.sendEmail(
-        createdUser.email,
-        "Verify your email",
-        `Verify OTP,  This is your Otp ${storedOtp}`,
-      );
-    } catch (emailError) {
-      console.error("Failed to send verification email:", emailError);
-    }
-
     //store otp in the database
     await db.insert(otp).values({
       email: createdUser.email,
       otp: storedOtp,
       expiresAt: new Date(Date.now() + 10 * 60 * 1000),
     });
+
+    //send mail using kafka instead(don't block registration if email fails)
+    try {
+      await this.producer.send({
+        topic: "user-created",
+        messages: [
+          {
+            value: JSON.stringify({
+              email: createdUser.email,
+              subject: "Verify your email",
+              text: `Verify OTP,  This is your Otp ${storedOtp}`,
+            }),
+          },
+        ],
+      });
+    } catch (error) {
+      console.error(error.message);
+      console.error(
+        "Failed to send verification email, please request another otp to complete verification",
+      );
+    }
 
     return { user: createdUser, ...tokens };
   }
@@ -127,7 +142,11 @@ export class AuthService {
 
     return {
       user: updatedUser[0],
-      tokens: this.generateTokens(updatedUser[0].id, updatedUser[0].email, true),
+      tokens: this.generateTokens(
+        updatedUser[0].id,
+        updatedUser[0].email,
+        true,
+      ),
     };
   }
 
@@ -189,14 +208,33 @@ export class AuthService {
       throw createServiceError("User not found", 404);
     }
 
-    const frontendUrl = process.env.FRONTEND_URL || "http://localhost:3000";
-    const resetLink = `${frontendUrl}/reset-password?token=${this.generateTokens(user.id, user.email, user.emailVerified).accessToken}`;
-    const message = `
+    const frontendUrl =
+      process.env.FRONTEND_URL || "http://localhost:5001/v1/auth";
+    const resetLink = `${frontendUrl}/reset-password/${this.generateTokens(user.id, user.email, user.emailVerified).accessToken}`;
+
+    //send mail using kafka instead(don't block registration if email fails)
+    try {
+      await this.producer.send({
+        topic: "forgot-password",
+        messages: [
+          {
+            value: JSON.stringify({
+              email: user.email,
+              subject: "Reset Password",
+              text: `
     <p>Click on the link below to reset your password</p>
     <a href="${resetLink}">Reset Password</a>
-    `;
-
-    await this.sendEmail(user.email, "Reset Password", message);
+    `,
+            }),
+          },
+        ],
+      });
+    } catch (error) {
+      console.error(error.message);
+      console.error(
+        "Failed to send verification email, please request another otp to complete verification",
+      );
+    }
   }
 
   async resetPassword(token: string, password: string) {
@@ -217,19 +255,6 @@ export class AuthService {
       .where(eq(users.id, user.id));
 
     return { user };
-  }
-  private async sendEmail(to: string, subject: string, html: string) {
-    await fetch("http://localhost:3004/v1/mail/send", {
-      method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-      },
-      body: JSON.stringify({
-        to,
-        subject,
-        html,
-      }),
-    });
   }
 
   private generateTokens(
@@ -366,11 +391,6 @@ export class AuthService {
       throw createServiceError("User not found", 404);
     }
     const storedOtp = this.generateOtp();
-    await this.sendEmail(
-      user.email,
-      "Verify your email",
-      `Verify OTP,  This is your Otp ${storedOtp}`,
-    );
     const existingOtp = await db.query.otp.findFirst({
       where: eq(otp.email, user.email),
     });
@@ -391,11 +411,48 @@ export class AuthService {
         expiresAt: new Date(Date.now() + 10 * 60 * 1000),
       });
     }
+    //send email using kafka
+    try {
+      await this.producer.send({
+        topic: "user-created",
+        messages: [
+          {
+            value: JSON.stringify({
+              email: user.email,
+              subject: "Verify your email",
+              text: `Verify OTP,  This is your Otp ${storedOtp}`,
+            }),
+          },
+        ],
+      });
+    } catch (error) {
+      console.error(error.message);
+      console.error(
+        "Failed to send verification email, please request another otp to complete verification",
+      );
+    }
     return "otp sent successfully";
   }
 
   async deleteUser(userId: string): Promise<void> {
     await db.delete(users).where(eq(users.id, userId));
+
+    //delete driver records with kafka
+    try {
+      await this.producer.send({
+        topic: "user-deleted",
+        messages: [
+          {
+            value: JSON.stringify({
+              userId: userId,
+            }),
+          },
+        ],
+      });
+    } catch (error) {
+      console.error(error.message);
+      console.error("Failed to delete driver records");
+    }
   }
 
   async getUserByEmail(email: string) {
@@ -412,6 +469,7 @@ export class AuthService {
         provider: true,
       },
     });
+
     return providers.map((p) => p.provider);
   }
 
