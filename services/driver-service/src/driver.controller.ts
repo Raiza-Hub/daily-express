@@ -24,6 +24,25 @@ export const getDriver: RequestHandler = asyncHandler(
   },
 );
 
+export const getDriverById: RequestHandler = asyncHandler(
+  async (req: Request, res: Response) => {
+    const id = req.params.id;
+    if (!id || typeof id !== "string") {
+      return res.status(400).json(createErrorResponse("Driver ID is required"));
+    }
+
+    const driver = await driverService.getProfileById(id);
+
+    if (!driver) {
+      return res.status(404).json(createErrorResponse("Driver not found"));
+    }
+
+    return res
+      .status(200)
+      .json(createSuccessResponse(driver, "Driver retrieved successfully"));
+  },
+);
+
 export const createDriver: RequestHandler = asyncHandler(
   async (req: Request, res: Response) => {
     const driverData = req.body;

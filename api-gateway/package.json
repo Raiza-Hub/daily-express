@@ -1,12 +1,39 @@
 {
   "name": "api-gateway",
-  "module": "index.ts",
+  "version": "1.0.0",
+  "description": "API Gateway for Daily Express microservices",
+  "main": "dist/index.js",
   "type": "module",
-  "private": true,
-  "devDependencies": {
-    "@types/bun": "latest"
+  "scripts": {
+    "dev": "tsx watch src/index.ts",
+    "build": "tsc",
+    "start": "node dist/index.js",
+    "lint": "eslint src/",
+    "check-types": "tsc --noEmit"
   },
-  "peerDependencies": {
-    "typescript": "^5"
+  "dependencies": {
+    "express": "^5.2.1",
+    "http-proxy-middleware": "^3.0.3",
+    "express-rate-limit": "^7.5.0",
+    "helmet": "^8.0.0",
+    "cors": "^2.8.5",
+    "cookie-parser": "^1.4.7",
+    "jsonwebtoken": "^9.0.2",
+    "dotenv": "^16.4.7",
+    "zod": "^3.24.0",
+    "morgan": "^1.10.0"
+  },
+  "devDependencies": {
+    "@types/cookie-parser": "^1.4.8",
+    "@types/cors": "^2.8.17",
+    "@types/express": "^5.0.6",
+    "@types/jsonwebtoken": "^9.0.10",
+    "@types/morgan": "^1.9.9",
+    "@types/node": "^22.15.21",
+    "tsx": "^4.19.4",
+    "typescript": "^5.9.2"
+  },
+  "engines": {
+    "node": ">=18"
   }
 }

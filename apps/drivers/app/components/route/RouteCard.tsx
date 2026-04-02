@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from "react";
+import dayjs from "dayjs";
 import { TrashIcon } from "@phosphor-icons/react";
 import EditRouteSheet from "./EditRouteSheet";
 import PassengersSheet from "./PassengersSheet";
@@ -8,190 +9,180 @@ import PassengerStatusBar from "./PassengerStatusBar";
 import { Button } from "@repo/ui/components/button";
 import RouteCardActionMenu from "./RouteCardActionMenu";
 import { PlaneDots } from "@repo/ui/PlaneDots";
+import { useGetTripsSummary, TripsSummary } from "@repo/api";
 
-interface RouteData {
-    departureTime: string;
-    departureCode: string;
-    arrivalTime: string;
-    arrivalCode: string;
+interface RouteWithTrips {
+  id: string;
+  departureTime: string;
+  departureCode: string;
+  arrivalTime: string;
+  arrivalCode: string;
+  bookedSeats: number;
+  capacity: number;
+  earnings: number;
 }
 
+function RouteCardItem({
+  route,
+  onEdit,
+  onPassengers,
+}: {
+  route: RouteWithTrips;
+  onEdit: () => void;
+  onPassengers: () => void;
+}) {
+  const [editOpen, setEditOpen] = useState(false);
+  const [passengersOpen, setPassengersOpen] = useState(false);
 
-const routes: RouteData[] = [
-    {
-        departureTime: "15:30pm",
-        departureCode: "FUNNAB",
-        arrivalTime: "09:43am",
-        arrivalCode: "OSOHDI PARK",
+  const handleEdit = () => {
+    setEditOpen(true);
+    onEdit();
+  };
 
-    },
-    {
-        departureTime: "9:30am",
-        departureCode: "LAGOS",
-        arrivalTime: "10:40am",
-        arrivalCode: "AGO-IWOYE",
+  const handlePassengers = () => {
+    setPassengersOpen(true);
+    onPassengers();
+  };
 
-    },
-    {
-        departureTime: "1:30pm",
-        departureCode: "ABEOKUTA",
-        arrivalTime: "4:44pm",
-        arrivalCode: "IBADAN",
-    },
-];
-
-// function ToggleSwitch({
-//     checked,
-//     onChange,
-// }: {
-//     checked: boolean;
-//     onChange: (val: boolean) => void;
-// }) {
-//     return (
-//         <button
-//             type="button"
-//             role="switch"
-//             aria-checked={checked}
-//             onClick={() => onChange(!checked)}
-//             className={`
-//         relative inline-flex h-5 w-9 shrink-0 cursor-pointer rounded-full
-//         border-2 border-transparent transition-colors duration-200 ease-in-out
-//         focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ring
-//         ${checked ? "bg-primary" : "bg-muted-foreground/30"}
-//       `}
-//         >
-//             <span
-//                 className={`
-//           pointer-events-none inline-block h-4 w-4 rounded-full bg-white
-//           shadow-lg ring-0 transition-transform duration-200 ease-in-out
-//           ${checked ? "translate-x-4" : "translate-x-0"}
-//         `}
-//             />
-//         </button>
-//     );
-// }
-
-function RouteCardItem({ route }: { route: RouteData }) {
-    const [editOpen, setEditOpen] = useState(false);
-    const [passengersOpen, setPassengersOpen] = useState(false);
-
-    return (
-        <div
-            className="group relative flex flex-col lg:flex-row items-stretch gap-6 rounded-xl bg-white p-6 border border-slate-200 transition-all duration-200"
-        >
-            {/* Left Section — Route Info */}
-            <div className="flex-1 flex flex-col justify-center">
-                {/* Top: Toggle Switch */}
-                {/* <div className="flex items-center justify-between gap-3 mb-6">
-                    <div className="flex items-center gap-2">
-                        <ToggleSwitch checked={routeActive} onChange={setRouteActive} />
-                        <span
-                            className={`
-                            text-xs font-semibold tracking-wide uppercase transition-colors
-                            ${routeActive ? "text-slate-600" : "text-slate-400"}
-                        `}
-                        >
-                            {routeActive ? "Active Route" : "Route Disabled"}
-                        </span>
-                    </div>
-
-                    <div className="block sm:hidden">
-                        <RouteCardActionMenu />
-                    </div>
-                </div> */}
-
-                {/* Flight Times & Route */}
-                <div className="flex flex-col gap-0.5">
-                    <div className="flex items-center gap-2">
-                        <span className="text-lg lg:text-xl font-medium text-neutral-900 tracking-tight">
-                            {route.departureTime}
-                        </span>
-                        <PlaneDots />
-                        <span className="text-lg lg:text-xl font-medium text-neutral-900 tracking-tight">
-                            {route.arrivalTime}
-                        </span>
-                    </div>
-                    <p className="text-sm text-muted-foreground">
-                        {route.departureCode} – {route.arrivalCode}
-                    </p>
-                </div>
-
-            </div>
-
-            {/* Right Section — Prices */}
-            <div className="w-full lg:w-auto flex-1 flex items-center justify-between lg:justify-end gap-6">
-                {/* Passenger Status + sm action menu */}
-                <div className="flex items-center gap-4 w-full sm:w-auto">
-                    <div className="flex-1 sm:min-w-[220px] sm:max-w-[260px]">
-                        <PassengerStatusBar />
-                    </div>
-                    {/* Action menu — sm only */}
-                    <div className="sm:hidden shrink-0">
-                        <RouteCardActionMenu
-                            onEdit={() => setEditOpen(true)}
-                            onPassengers={() => setPassengersOpen(true)}
-                            onDelete={() => console.log("delete")}
-                        />
-                    </div>
-                </div>
-
-                {/* Divider */}
-                <div className="hidden lg:block h-12 w-px bg-slate-200" />
-
-                {/* Action Buttons (desktop) + shared controlled sheets (mobile) */}
-                <div className="hidden sm:flex items-center gap-2 opacity-80 group-hover:opacity-100 transition-opacity">
-                    <EditRouteSheet
-                        defaultValues={{
-                            departureCity: { title: "", locality: "", label: "" },
-                            arrivalCity: { title: "", locality: "", label: "" },
-                            vehicleType: "car",
-                            seatNumber: 8,
-                            price: 900000,
-                            departureTime: new Date('2026-02-10T15:30:00'),
-                            estimatedArrivalTime: new Date('2026-02-11T09:43:00'),
-                        }}
-                    />
-
-                    {/* Passengers */}
-                    <PassengersSheet />
-
-                    {/* Delete - Destructive */}
-                    <Button
-                        variant="outline"
-                        size="icon-lg"
-                        className="rounded-lg border-red-200 text-red-500 hover:bg-red-50 hover:border-red-300"
-                        onClick={() => console.log("delete")}
-                    >
-                        <TrashIcon size={18} />
-                    </Button>
-                </div>
-
-                {/* Controlled sheets for mobile menu (rendered outside sm:hidden so they're always in the tree) */}
-                <EditRouteSheet
-                    open={editOpen}
-                    onOpenChange={setEditOpen}
-                    defaultValues={{
-                        departureCity: { title: "", locality: "", label: "" },
-                        arrivalCity: { title: "", locality: "", label: "" },
-                        vehicleType: "car",
-                        seatNumber: 8,
-                        price: 900000,
-                        departureTime: new Date('2026-02-10T15:30:00'),
-                        estimatedArrivalTime: new Date('2026-02-11T09:43:00'),
-                    }}
-                />
-                <PassengersSheet open={passengersOpen} onOpenChange={setPassengersOpen} />
-            </div>
+  return (
+    <div className="group relative flex flex-col lg:flex-row items-stretch gap-6 rounded-xl bg-white p-6 border border-slate-200 transition-all duration-200">
+      {/* Left Section — Route Info */}
+      <div className="flex-1 flex flex-col justify-center">
+        {/* Flight Times & Route */}
+        <div className="flex flex-col gap-0.5">
+          <div className="flex items-center gap-2">
+            <span className="text-lg lg:text-xl font-medium text-neutral-900 tracking-tight">
+              {route.departureTime}
+            </span>
+            <PlaneDots />
+            <span className="text-lg lg:text-xl font-medium text-neutral-900 tracking-tight">
+              {route.arrivalTime}
+            </span>
+          </div>
+          <p className="text-sm text-muted-foreground">
+            {route.departureCode} – {route.arrivalCode}
+          </p>
         </div>
-    );
+      </div>
+
+      {/* Right Section — Prices */}
+      <div className="w-full lg:w-auto flex-1 flex items-center justify-between lg:justify-end gap-6">
+        {/* Passenger Status + sm action menu */}
+        <div className="flex items-center gap-4 w-full sm:w-auto">
+          <div className="flex-1 sm:min-w-[220px] sm:max-w-[260px]">
+            <PassengerStatusBar
+              bookedSeats={route.bookedSeats}
+              capacity={route.capacity}
+            />
+          </div>
+          {/* Action menu — sm only */}
+          <div className="sm:hidden shrink-0">
+            <RouteCardActionMenu
+              onEdit={handleEdit}
+              onPassengers={handlePassengers}
+              onDelete={() => console.log("delete")}
+            />
+          </div>
+        </div>
+
+        {/* Divider */}
+        <div className="hidden lg:block h-12 w-px bg-slate-200" />
+
+        {/* Action Buttons (desktop) + shared controlled sheets (mobile) */}
+        <div className="hidden sm:flex items-center gap-2 opacity-80 group-hover:opacity-100 transition-opacity">
+          <EditRouteSheet
+            defaultValues={{
+              departureCity: { title: "", locality: "", label: "" },
+              arrivalCity: { title: "", locality: "", label: "" },
+              vehicleType: "car",
+              seatNumber: 8,
+              price: 900000,
+              departureTime: new Date("2026-02-10T15:30:00"),
+              estimatedArrivalTime: new Date("2026-02-11T09:43:00"),
+            }}
+          />
+
+          {/* Passengers */}
+          <PassengersSheet />
+
+          {/* Delete - Destructive */}
+          <Button
+            variant="outline"
+            size="icon-lg"
+            className="rounded-lg border-red-200 text-red-500 hover:bg-red-50 hover:border-red-300"
+            onClick={() => console.log("delete")}
+          >
+            <TrashIcon size={18} />
+          </Button>
+        </div>
+
+        {/* Controlled sheets for mobile menu (rendered outside sm:hidden so they're always in the tree) */}
+        <EditRouteSheet
+          open={editOpen}
+          onOpenChange={setEditOpen}
+          defaultValues={{
+            departureCity: { title: "", locality: "", label: "" },
+            arrivalCity: { title: "", locality: "", label: "" },
+            vehicleType: "car",
+            seatNumber: 8,
+            price: 900000,
+            departureTime: new Date("2026-02-10T15:30:00"),
+            estimatedArrivalTime: new Date("2026-02-11T09:43:00"),
+          }}
+        />
+        <PassengersSheet
+          open={passengersOpen}
+          onOpenChange={setPassengersOpen}
+        />
+      </div>
+    </div>
+  );
 }
 
 export default function RouteCard() {
+  const today = dayjs().format("YYYY-MM-DD");
+  const { data: tripsSummary, isLoading } = useGetTripsSummary(today);
+
+  const routes: RouteWithTrips[] =
+    tripsSummary?.trips.map((trip) => ({
+      id: trip.id,
+      departureTime: dayjs(trip.date).format("h:mma"),
+      departureCode: trip.route.pickup_location_title,
+      arrivalTime: dayjs(trip.date).add(2, "hour").format("h:mma"),
+      arrivalCode: trip.route.dropoff_location_title,
+      bookedSeats: trip.bookedSeats,
+      capacity:
+        trip.route.price > 0 ? Math.ceil(trip.earnings / trip.route.price) : 0,
+      earnings: trip.earnings,
+    })) || [];
+
+  if (isLoading) {
     return (
-        <div className="flex flex-col gap-4">
-            {routes.map((route, index) => (
-                <RouteCardItem key={index} route={route} />
-            ))}
-        </div>
+      <div className="flex flex-col gap-4">
+        <div className="animate-pulse h-32 bg-gray-200 rounded-xl" />
+        <div className="animate-pulse h-32 bg-gray-200 rounded-xl" />
+      </div>
     );
+  }
+
+  if (routes.length === 0) {
+    return (
+      <div className="flex flex-col gap-4 text-center py-12">
+        <p className="text-muted-foreground">No trips scheduled for today</p>
+      </div>
+    );
+  }
+
+  return (
+    <div className="flex flex-col gap-4">
+      {routes.map((route, index) => (
+        <RouteCardItem
+          key={route.id || index}
+          route={route}
+          onEdit={() => console.log("edit")}
+          onPassengers={() => console.log("passengers")}
+        />
+      ))}
+    </div>
+  );
 }

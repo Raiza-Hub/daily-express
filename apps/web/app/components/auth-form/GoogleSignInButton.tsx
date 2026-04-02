@@ -22,9 +22,9 @@ const GoogleSignInButton = ({
     setIsLoading(true);
     onClick?.();
     const apiUrl =
-      process.env.NEXT_PUBLIC_API_URL || "http://localhost:5001/v1";
+      process.env.NEXT_PUBLIC_API_GATEWAY_URL || "http://localhost:8000";
     const stateParam = redirect ? `?state=${encodeURIComponent(redirect)}` : "";
-    window.location.href = `${apiUrl}/auth/google${stateParam}`;
+    window.location.href = `${apiUrl}/api/auth/v1/auth/google${stateParam}`;
   };
 
   const showSpinner = isLoading;

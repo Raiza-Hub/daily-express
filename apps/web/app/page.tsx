@@ -5,7 +5,6 @@ import TripCard from "./components/trip/TripCard";
 import TripFilter from "./components/trip/TripFilter";
 import Footer from "@repo/ui/Footer";
 
-
 export default function Home() {
   return (
     <div className="w-full min-h-screen flex flex-col">

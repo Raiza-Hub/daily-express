@@ -6,7 +6,6 @@ import { usePathname } from "next/navigation";
 import { CaretDownIcon, ListIcon, XIcon } from "@phosphor-icons/react";
 import NavItem from "./NavItem";
 import CreateRouteDialog from "./CreateRouteDialog";
-import { Icons } from "@repo/ui/Icons";
 import { cn } from "@repo/ui/lib/utils";
 import Image from "next/image";
 
@@ -81,6 +80,12 @@ const MobileNav = () => {
 
                 {/* Nav links */}
                 <nav className="flex flex-col gap-1 px-4 py-4">
+                    <NavItem
+                        label="Routes"
+                        href="/routes"
+                        className="text-base py-2"
+                        onClick={closeMenu}
+                    />
                     <NavItem
                         label="Payouts"
                         href="/payouts"

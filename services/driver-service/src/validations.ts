@@ -24,10 +24,10 @@ export const createDriverSchema = Joi.object({
     "string.pattern.base": "Phone number must be a valid international format",
     "string.empty": "Phone number is required",
   }),
-  gender: Joi.string().valid("male", "female", "other").required().messages({
-    "any.only": "Gender must be either male, female, or other",
-    "string.empty": "Gender is required",
-  }),
+  // gender: Joi.string().valid("male", "female", "other").required().messages({
+  //   "any.only": "Gender must be either male, female, or other",
+  //   "string.empty": "Gender is required",
+  // }),
   country: Joi.string().min(2).max(100).required().messages({
     "string.empty": "Country is required",
   }),
@@ -36,6 +36,9 @@ export const createDriverSchema = Joi.object({
   }),
   city: Joi.string().min(2).max(100).required().messages({
     "string.empty": "City is required",
+  }),
+  address: Joi.string().min(1).max(200).required().messages({
+    "string.empty": "Address is required",
   }),
   bankName: Joi.string().min(2).max(100).required().messages({
     "string.empty": "Bank name is required",
@@ -66,10 +69,11 @@ export const updateDriverSchema = Joi.object({
   phone: Joi.string().regex(phoneRegex).optional().messages({
     "string.pattern.base": "Phone number must be a valid international format",
   }),
-  gender: Joi.string().valid("male", "female", "other").optional(),
+  // gender: Joi.string().valid("male", "female", "other").optional(),
   country: Joi.string().min(2).max(100).optional(),
   state: Joi.string().min(2).max(100).optional(),
   city: Joi.string().min(2).max(100).optional(),
+  address: Joi.string().min(1).max(200).optional(),
   bankName: Joi.string().min(2).max(100).optional(),
   accountNumber: Joi.string().min(2).max(100).optional(),
   accountName: Joi.string().min(2).max(100).optional(),

@@ -29,6 +29,13 @@
       "when": 1773322927962,
       "tag": "0003_lying_network",
       "breakpoints": true
+    },
+    {
+      "idx": 4,
+      "version": "7",
+      "when": 1773322927963,
+      "tag": "0004_ragged_payments",
+      "breakpoints": true
     }
   ]
 }

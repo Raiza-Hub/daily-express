@@ -5,20 +5,20 @@ const data = [
     {
         name: "Total Earnings",
         value: "₦287,654.00",
-        change: "+8.32%",
-        changeType: "positive",
+        // change: "+8.32%",
+        // changeType: "positive",
     },
     {
         name: "Pending Payments",
         value: "₦173,229.00",
-        change: "+2.87%",
-        changeType: "positive",
+        // change: "+2.87%",
+        // changeType: "positive",
     },
     {
         name: "Total Passengers",
         value: "12,435",
-        change: "+12.64%",
-        changeType: "positive",
+        // change: "+12.64%",
+        // changeType: "positive",
     },
     {
         name: "Active Routes",
@@ -45,7 +45,7 @@ export default function Stats01() {
                             <div className="text-sm font-medium text-muted-foreground">
                                 {stat.name}
                             </div>
-                            <div
+                            {/* <div
                                 className={cn(
                                     "tabular-nums text-xs font-medium",
                                     stat.changeType === "positive"
@@ -54,7 +54,7 @@ export default function Stats01() {
                                 )}
                             >
                                 {stat.change}
-                            </div>
+                            </div> */}
                             <div className="tabular-nums w-full flex-none text-3xl font-medium tracking-tight text-foreground">
                                 {stat.value}
                             </div>

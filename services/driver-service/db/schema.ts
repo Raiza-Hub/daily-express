@@ -12,7 +12,7 @@ import {
   varchar,
 } from "drizzle-orm/pg-core";
 
-export const genderEnum = pgEnum("gender", ["male", "female", "other"]);
+// export const genderEnum = pgEnum("gender", ["male", "female", "other"]);
 
 export const driver = pgTable("driver", {
   id: uuid("id").defaultRandom().primaryKey(),
@@ -22,10 +22,11 @@ export const driver = pgTable("driver", {
   email: text("email").notNull().unique(),
   profile_pic: text("profile_picture"),
   phone: text("phone").notNull(),
-  gender: genderEnum("gender").notNull(),
+  // gender: genderEnum("gender").notNull(),
   country: text("country").notNull(),
   state: text("state").notNull(),
   city: text("city").notNull(),
+  address: text("address").notNull(),
   bankName: text("bank_name").notNull(),
   accountNumber: text("account_number").notNull(),
   accountName: text("account_name").notNull(),

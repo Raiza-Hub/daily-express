@@ -47,6 +47,7 @@ export const route = pgTable("route", {
   intermediate_stops_locality: text("intermediate_stops_locality"),
   intermediate_stops_label: text("intermediate_stops_label"),
   vehicleType: vehicleTypeEnum("vehicle_type").notNull(),
+  meeting_point: text("meeting_point").notNull(),
   availableSeats: integer("available_seats").notNull(),
   price: integer("price").notNull(),
   departure_time: timestamp("departure_time").notNull(),
@@ -74,6 +75,10 @@ export const booking = pgTable("booking", {
   userId: uuid("user_id").notNull(),
   seatNumber: integer("seat_number").notNull(),
   status: tripStatusEnum("status").default("pending").notNull(),
+  paymentReference: varchar("payment_reference", { length: 128 }),
+  paymentStatus: varchar("payment_status", { length: 32 })
+    .default("initialized")
+    .notNull(),
   createdAt: timestamp("created_at").defaultNow().notNull(),
   updatedAt: timestamp("updated_at").defaultNow().notNull(),
 });

@@ -13,6 +13,7 @@ module.exports = {
   moduleNameMapper: {
     "^@/(.*)$": "<rootDir>/src/$1",
     "^@shared/(.*)$": "<rootDir>/../../shared/$1",
+    "^db/(.*)$": "<rootDir>/db/$1",
   },
   testTimeout: 10000,
   clearMocks: true,
