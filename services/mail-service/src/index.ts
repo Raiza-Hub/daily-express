@@ -1,65 +1,63 @@
+import "dotenv/config";
 import express, { type Express } from "express";
 import cors from "cors";
-import dotenv from "dotenv";
 import helmet from "helmet";
-import mailRoutes from "./mail.routes";
 import { corsOptions, errorHandler } from "@shared/middleware";
-import { Kafka } from "kafkajs";
-import { MailService } from "./mailService";
+import { startEmailConsumer } from "./kafka/consumer";
+import { logger, reportError } from "@shared/logger";
+import { initSentry, sentryServer } from "@shared/sentry";
 
-dotenv.config();
+initSentry({ serviceName: "mail-service" });
 
 const app: Express = express();
 const PORT = process.env.PORT || 3008;
 
 app.use(cors(corsOptions()));
 app.use(helmet());
-
 app.use(express.json({ limit: "10mb" }));
 app.use(express.urlencoded({ extended: true }));
 
-const kafka = new Kafka({
-  clientId: "mail-service",
-  brokers: ["127.0.0.1:9094"],
+app.get("/health", (_req, res) => {
+  res.json({
+    status: "healthy",
+    service: "mail-service",
+    timestamp: new Date().toISOString(),
+  });
 });
-
-const consumer = kafka.consumer({ groupId: "mail-service" });
-
-const startConsumer = async () => {
-  try {
-    await consumer.connect();
-    await consumer.subscribe({
-      topics: ["user-created", "forgot-password", "driver-created"],
-      fromBeginning: true,
-    });
-    console.log("Kafka consumer connected and subscribed");
-
-    const mailService = new MailService(consumer);
-    await mailService.startConsuming();
-    console.log("Kafka consumer running");
-  } catch (error) {
-    console.error("Kafka consumer error:", error);
-  }
-};
-
-app.use("/v1/mail", mailRoutes);
 
 app.use(errorHandler as unknown as express.ErrorRequestHandler);
 
-const server = app.listen(PORT, () => {
-  console.log(`Mail service is running on port ${PORT}`);
-  console.log(`Environment: ${process.env.NODE_ENV}`);
-  console.log(`Health check: http://localhost:${PORT}/health`);
-});
+const initializeMailService = async () => {
+  const consumer = await startEmailConsumer();
 
-startConsumer();
+  const server = app.listen(PORT, () => {
+    console.log(`Mail service is running on port ${PORT}`);
+  });
 
-const shutdown = async () => {
-  await consumer.disconnect();
-  server.close();
+  const shutdown = async (signal: string) => {
+    logger.info("service.shutdown_requested", { signal });
+    await consumer.disconnect();
+    server.close(async () => {
+      await sentryServer.shutdown();
+      logger.info("service.stopped", { signal });
+      process.exit(0);
+    });
+  };
+
+  process.on("SIGTERM", () => void shutdown("SIGTERM"));
+  process.on("SIGINT", () => void shutdown("SIGINT"));
 };
 
-process.on("SIGTERM", shutdown);
-process.on("SIGINT", shutdown);
+initializeMailService().catch(async (error) => {
+  sentryServer.captureException(error, "unknown", {
+    action: "initializeMailService",
+  });
+  reportError(error, {
+    source: "startup",
+    message: "Failed to start mail service",
+  });
+  await sentryServer.shutdown();
+  process.exit(1);
+});
 
 export default app;

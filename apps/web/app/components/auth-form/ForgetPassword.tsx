@@ -2,7 +2,7 @@
 
 import { useForgotPassword } from "@repo/api";
 import { zodResolver } from "@hookform/resolvers/zod";
-import { CircleNotchIcon, KeyIcon } from "@phosphor-icons/react";
+import { KeyIcon } from "@phosphor-icons/react";
 import {
   ForgetPasswordSchema,
   TForgetPasswordSchema,
@@ -11,15 +11,16 @@ import { Button, buttonVariants } from "@repo/ui/components/button";
 import { Field, FieldError, FieldLabel } from "@repo/ui/components/field";
 import { Input } from "@repo/ui/components/input";
 import Link from "next/link";
-import { useRouter } from "next/navigation";
 import { Controller, useForm } from "react-hook-form";
 import { toast } from "@repo/ui/components/sonner";
+import { posthogEvents } from "~/lib/posthog-events";
+import { usePostHog } from "posthog-js/react";
 
 const ForgetPasswordForm = () => {
-  const router = useRouter();
   const { mutate: forgotPassword, isPending, error } = useForgotPassword();
+  const posthog = usePostHog();
 
-  const { handleSubmit, control, setError } = useForm<TForgetPasswordSchema>({
+  const { handleSubmit, control } = useForm<TForgetPasswordSchema>({
     resolver: zodResolver(ForgetPasswordSchema),
     defaultValues: {
       email: "",
@@ -29,11 +30,15 @@ const ForgetPasswordForm = () => {
   const onSubmit = (data: TForgetPasswordSchema) => {
     forgotPassword(data.email, {
       onSuccess: () => {
+        posthog.capture(posthogEvents.auth_forgot_password_request_succeeded);
         toast.success("Verification link sent successfully");
       },
       onError: (err) => {
-        setError("root", { message: err.message });
-        toast.error(err.message);
+        posthog.captureException(new Error(err.message), {
+          action: "forgotPasswordRequest",
+          values: { email: data.email },
+        });
+        // toast.error("Something went wrong");
       },
     });
   };
@@ -78,11 +83,12 @@ const ForgetPasswordForm = () => {
                     )}
                   />
                 </div>
-                {/* {error && (
-                  <p className="px-1 inline-flex font-medium justify-center text-sm text-red-500">
+
+                {error && (
+                  <p className="px-1 inline-flex justify-center text-sm text-red-500">
                     {error?.message}
                   </p>
-                )} */}
+                )}
 
                 <Button
                   disabled={isPending}
@@ -90,14 +96,7 @@ const ForgetPasswordForm = () => {
                   type="submit"
                   className="w-full cursor-pointer"
                 >
-                  {isPending ? (
-                    <div className="inline-flex items-center gap-2">
-                      <CircleNotchIcon className="size-4 animate-spin" />
-                      sending...
-                    </div>
-                  ) : (
-                    "Continue"
-                  )}
+                  Continue
                 </Button>
               </div>
             </form>

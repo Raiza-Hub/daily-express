@@ -37,13 +37,3 @@ export function createServiceError(
 export function sanitizeInput(input: string): string {
   return input.replace(/[<>]/g, "").replace(/&/g, "&amp").trim();
 }
-
-  // const connectToKafka = async() => {
-  //   try {
-  //     proc
-  //     await producer.connect();
-  //     console.log("Kafka producer connected");
-  //   } catch (err) {
-  //     console.log("Kafka producer connection error", err);
-  //   }
-  // }

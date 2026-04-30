@@ -1,23 +1,29 @@
 {
   "name": "shared",
   "module": "index.ts",
-  "type": "commonjs",
+  "type": "module",
   "private": true,
+  "exports": {
+    ".": "./index.ts",
+    "./logger": "./logger.ts",
+    "./sentry": "./sentry.ts",
+    "./types": "./types/index.ts",
+    "./types/*": "./types/*"
+  },
   "devDependencies": {
     "@types/bun": "latest",
-    "@types/cors": "^2.8.19",
     "@types/express": "^5.0.6",
-    "@types/helmet": "^4.0.0",
     "typescript": "^5.9.3"
   },
   "dependencies": {
-    "@types/axios": "^0.14.4",
-    "axios": "^1.13.6",
-    "cors": "^2.8.6",
+    "@kafkajs/confluent-schema-registry": "^3.9.0",
+    "@sentry/bun": "10.50.0",
+    "@upstash/redis": "^1.36.3",
     "dotenv": "^17.3.1",
+    "drizzle-orm": "^0.45.1",
     "express": "^5.2.1",
-    "helmet": "^8.1.0",
-    "jsonwebtoken": "^9.0.3",
-    "kafkajs": "^2.2.4"
+    "kafkajs": "^2.2.4",
+    "prom-client": "^15.1.0",
+    "zod": "^4.3.6"
   }
 }

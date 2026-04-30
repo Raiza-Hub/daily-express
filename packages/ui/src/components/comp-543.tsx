@@ -21,7 +21,8 @@ export default function Component() {
     accept: "image/*",
   });
 
-  const previewUrl = files[0]?.preview || null;
+  const file = files[0];
+  const previewUrl = file?.preview || null;
 
   return (
     <div className="flex flex-col items-center gap-2">
@@ -40,7 +41,7 @@ export default function Component() {
         >
           {previewUrl ? (
             <img
-              alt={files[0]?.file?.name || "Uploaded image"}
+              alt={file?.file?.name || "Uploaded image"}
               className="size-full object-cover"
               height={64}
               src={previewUrl}
@@ -53,11 +54,11 @@ export default function Component() {
             </div>
           )}
         </button>
-        {previewUrl && (
+        {previewUrl && file && (
           <Button
             aria-label="Remove image"
             className="-top-1 -right-1 absolute size-6 rounded-full border-2 border-background shadow-none focus-visible:border-background"
-            onClick={() => removeFile(files[0]?.id)}
+            onClick={() => removeFile(file.id)}
             size="icon"
           >
             <XIcon className="size-3.5" />

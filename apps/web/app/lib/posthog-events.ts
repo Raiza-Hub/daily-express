@@ -1,0 +1,37 @@
+export const posthogEvents = {
+  auth_login_succeeded: "auth:login_succeeded",
+  auth_login_failed: "auth:login_failed",
+  auth_signup_succeeded: "auth:signup_succeeded",
+  auth_signup_failed: "auth:signup_failed",
+  auth_email_verified: "auth:email_verified",
+  auth_email_verification_failed: "auth:email_verification_failed",
+  auth_forgot_password_request_succeeded:
+    "auth:forgot_password_request_succeeded",
+  auth_forgot_password_request_failed: "auth:forgot_password_request_failed",
+  auth_password_reset_succeeded: "auth:password_reset_succeeded",
+  auth_password_reset_failed: "auth:password_reset_failed",
+  auth_google_signin_clicked: "auth:google_signin_clicked",
+  auth_otp_resend_succeeded: "auth:otp_resend_succeeded",
+  auth_otp_resend_failed: "auth:otp_resend_failed",
+  auth_logout_succeeded: "auth:logout_succeeded",
+
+  profile_update_succeeded: "profile:update_succeeded",
+  profile_update_failed: "profile:update_failed",
+  profile_password_change_succeeded: "profile:password_change_succeeded",
+  profile_password_change_failed: "profile:password_change_failed",
+  profile_google_disconnect_succeeded: "profile:google_disconnect_succeeded",
+  profile_google_disconnect_failed: "profile:google_disconnect_failed",
+  profile_password_set_succeeded: "profile:password_set_succeeded",
+  profile_password_set_failed: "profile:password_set_failed",
+  account_delete_succeeded: "account:delete_succeeded",
+  account_delete_failed: "account:delete_failed",
+
+  trip_book_initiated: "trip:book_initiated",
+  trip_book_succeeded: "trip:book_succeeded",
+  trip_book_failed: "trip:book_failed",
+  payment_initialization_succeeded: "payment:initialization_succeeded",
+  payment_initialization_failed: "payment:initialization_failed",
+
+  cookie_consent_accepted: "cookie:consent_accepted",
+  cookie_consent_declined: "cookie:consent_declined",
+} as const;

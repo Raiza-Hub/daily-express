@@ -1,197 +1,105 @@
 "use client";
 
-import { useState } from "react";
-import { TrashIcon } from "@phosphor-icons/react";
-import EditRouteSheet from "./EditRouteSheet";
-import PassengersSheet from "./PassengersSheet";
-import PassengerStatusBar from "./PassengerStatusBar";
-import { Button } from "@repo/ui/components/button";
-import RouteCardActionMenu from "./RouteCardActionMenu";
-import { PlaneDots } from "@repo/ui/PlaneDots";
+import type { TripsSummaryRange } from "@repo/api";
+import dayjs from "dayjs";
+import { useMemo } from "react";
+import { RouteWithTrips } from "~/lib/type";
+import { combineTripDateAndTime } from "~/lib/utils";
+import RouteCardItem from "./RouteCardItem";
+import { CalendarSlashIcon } from "@phosphor-icons/react";
 
-interface RouteData {
-    departureTime: string;
-    departureCode: string;
-    arrivalTime: string;
-    arrivalCode: string;
+interface RouteCardProps {
+  selectedDate?: dayjs.Dayjs;
+  tripsSummaryRange?: TripsSummaryRange[];
+  isLoading?: boolean;
 }
 
 
-const routes: RouteData[] = [
-    {
-        departureTime: "15:30pm",
-        departureCode: "FUNNAB",
-        arrivalTime: "09:43am",
-        arrivalCode: "OSOHDI PARK",
+export default function RouteCard({
+  selectedDate,
+  tripsSummaryRange,
+  isLoading = false,
+}: RouteCardProps) {
+  const activeDate = selectedDate || dayjs();
+  const selectedDateStr = activeDate.format("YYYY-MM-DD");
 
-    },
-    {
-        departureTime: "9:30am",
-        departureCode: "LAGOS",
-        arrivalTime: "10:40am",
-        arrivalCode: "AGO-IWOYE",
+  const routes: RouteWithTrips[] = useMemo(() => {
+    if (!tripsSummaryRange || !Array.isArray(tripsSummaryRange)) {
+      return [];
+    }
 
-    },
-    {
-        departureTime: "1:30pm",
-        departureCode: "ABEOKUTA",
-        arrivalTime: "4:44pm",
-        arrivalCode: "IBADAN",
-    },
-];
+    const selectedDaySummary = tripsSummaryRange.find((summary) => {
+      const summaryDate = summary.date?.split("T")[0] ?? summary.date;
+      return summaryDate === selectedDateStr;
+    });
 
-// function ToggleSwitch({
-//     checked,
-//     onChange,
-// }: {
-//     checked: boolean;
-//     onChange: (val: boolean) => void;
-// }) {
-//     return (
-//         <button
-//             type="button"
-//             role="switch"
-//             aria-checked={checked}
-//             onClick={() => onChange(!checked)}
-//             className={`
-//         relative inline-flex h-5 w-9 shrink-0 cursor-pointer rounded-full
-//         border-2 border-transparent transition-colors duration-200 ease-in-out
-//         focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ring
-//         ${checked ? "bg-primary" : "bg-muted-foreground/30"}
-//       `}
-//         >
-//             <span
-//                 className={`
-//           pointer-events-none inline-block h-4 w-4 rounded-full bg-white
-//           shadow-lg ring-0 transition-transform duration-200 ease-in-out
-//           ${checked ? "translate-x-4" : "translate-x-0"}
-//         `}
-//             />
-//         </button>
-//     );
-// }
+    if (!selectedDaySummary) {
+      return [];
+    }
 
-function RouteCardItem({ route }: { route: RouteData }) {
-    const [editOpen, setEditOpen] = useState(false);
-    const [passengersOpen, setPassengersOpen] = useState(false);
+    return selectedDaySummary.trips.map((trip) => {
+      const tripDate = new Date(trip.date);
+      const departureDateTime = combineTripDateAndTime(
+        tripDate,
+        trip.route.departure_time,
+      );
+      let arrivalDateTime = combineTripDateAndTime(
+        tripDate,
+        trip.route.arrival_time,
+      );
 
+      if (arrivalDateTime <= departureDateTime) {
+        arrivalDateTime = dayjs(arrivalDateTime).add(1, "day").toDate();
+      }
+
+      return {
+        id: trip.id,
+        tripId: trip.id,
+        departureTime: dayjs(departureDateTime).format("h:mma"),
+        departureCode: trip.route.pickup_location_title,
+        arrivalTime: dayjs(arrivalDateTime).format("h:mma"),
+        arrivalCode: trip.route.dropoff_location_title,
+        bookedSeats: trip.bookedSeats,
+        capacity: trip.capacity,
+        departureCity: {
+          title: trip.route.pickup_location_title,
+          locality: trip.route.pickup_location_locality,
+        },
+        arrivalCity: {
+          title: trip.route.dropoff_location_title,
+          locality: trip.route.dropoff_location_locality,
+        },
+      };
+    });
+  }, [selectedDateStr, tripsSummaryRange]);
+
+  if (isLoading) {
     return (
-        <div
-            className="group relative flex flex-col lg:flex-row items-stretch gap-6 rounded-xl bg-white p-6 border border-slate-200 transition-all duration-200"
-        >
-            {/* Left Section — Route Info */}
-            <div className="flex-1 flex flex-col justify-center">
-                {/* Top: Toggle Switch */}
-                {/* <div className="flex items-center justify-between gap-3 mb-6">
-                    <div className="flex items-center gap-2">
-                        <ToggleSwitch checked={routeActive} onChange={setRouteActive} />
-                        <span
-                            className={`
-                            text-xs font-semibold tracking-wide uppercase transition-colors
-                            ${routeActive ? "text-slate-600" : "text-slate-400"}
-                        `}
-                        >
-                            {routeActive ? "Active Route" : "Route Disabled"}
-                        </span>
-                    </div>
-
-                    <div className="block sm:hidden">
-                        <RouteCardActionMenu />
-                    </div>
-                </div> */}
-
-                {/* Flight Times & Route */}
-                <div className="flex flex-col gap-0.5">
-                    <div className="flex items-center gap-2">
-                        <span className="text-lg lg:text-xl font-medium text-neutral-900 tracking-tight">
-                            {route.departureTime}
-                        </span>
-                        <PlaneDots />
-                        <span className="text-lg lg:text-xl font-medium text-neutral-900 tracking-tight">
-                            {route.arrivalTime}
-                        </span>
-                    </div>
-                    <p className="text-sm text-muted-foreground">
-                        {route.departureCode} – {route.arrivalCode}
-                    </p>
-                </div>
-
-            </div>
-
-            {/* Right Section — Prices */}
-            <div className="w-full lg:w-auto flex-1 flex items-center justify-between lg:justify-end gap-6">
-                {/* Passenger Status + sm action menu */}
-                <div className="flex items-center gap-4 w-full sm:w-auto">
-                    <div className="flex-1 sm:min-w-[220px] sm:max-w-[260px]">
-                        <PassengerStatusBar />
-                    </div>
-                    {/* Action menu — sm only */}
-                    <div className="sm:hidden shrink-0">
-                        <RouteCardActionMenu
-                            onEdit={() => setEditOpen(true)}
-                            onPassengers={() => setPassengersOpen(true)}
-                            onDelete={() => console.log("delete")}
-                        />
-                    </div>
-                </div>
-
-                {/* Divider */}
-                <div className="hidden lg:block h-12 w-px bg-slate-200" />
-
-                {/* Action Buttons (desktop) + shared controlled sheets (mobile) */}
-                <div className="hidden sm:flex items-center gap-2 opacity-80 group-hover:opacity-100 transition-opacity">
-                    <EditRouteSheet
-                        defaultValues={{
-                            departureCity: { title: "", locality: "", label: "" },
-                            arrivalCity: { title: "", locality: "", label: "" },
-                            vehicleType: "car",
-                            seatNumber: 8,
-                            price: 900000,
-                            departureTime: new Date('2026-02-10T15:30:00'),
-                            estimatedArrivalTime: new Date('2026-02-11T09:43:00'),
-                        }}
-                    />
-
-                    {/* Passengers */}
-                    <PassengersSheet />
-
-                    {/* Delete - Destructive */}
-                    <Button
-                        variant="outline"
-                        size="icon-lg"
-                        className="rounded-lg border-red-200 text-red-500 hover:bg-red-50 hover:border-red-300"
-                        onClick={() => console.log("delete")}
-                    >
-                        <TrashIcon size={18} />
-                    </Button>
-                </div>
-
-                {/* Controlled sheets for mobile menu (rendered outside sm:hidden so they're always in the tree) */}
-                <EditRouteSheet
-                    open={editOpen}
-                    onOpenChange={setEditOpen}
-                    defaultValues={{
-                        departureCity: { title: "", locality: "", label: "" },
-                        arrivalCity: { title: "", locality: "", label: "" },
-                        vehicleType: "car",
-                        seatNumber: 8,
-                        price: 900000,
-                        departureTime: new Date('2026-02-10T15:30:00'),
-                        estimatedArrivalTime: new Date('2026-02-11T09:43:00'),
-                    }}
-                />
-                <PassengersSheet open={passengersOpen} onOpenChange={setPassengersOpen} />
-            </div>
-        </div>
+      <div className="flex flex-col gap-4">
+        <div className="animate-pulse h-32 bg-gray-200 rounded-xl" />
+        <div className="animate-pulse h-32 bg-gray-200 rounded-xl" />
+      </div>
     );
-}
+  }
 
-export default function RouteCard() {
+  if (routes.length === 0) {
     return (
-        <div className="flex flex-col gap-4">
-            {routes.map((route, index) => (
-                <RouteCardItem key={index} route={route} />
-            ))}
-        </div>
+      <div className="flex flex-col items-center gap-2 py-12">
+        <CalendarSlashIcon className="w-6 h-6 text-neutral-500" />
+        <p className="text-muted-foreground">No trips available for this date</p>
+      </div>
     );
+  }
+
+  return (
+    <div className="flex flex-col gap-4">
+      {routes.map((route) => (
+        <RouteCardItem
+          key={route.id}
+          route={route}
+          // onPassengers={() => console.log("passengers")}
+        />
+      ))}
+    </div>
+  );
 }

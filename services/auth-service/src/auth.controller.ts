@@ -1,57 +1,88 @@
 import { asyncHandler } from "@shared/middleware";
-// import { asyncHandler } from "../../../shared/middleware";
 import { AuthService } from "./authService";
-import type { Request, Response, RequestHandler } from "express";
+import type { CookieOptions, Request, Response, RequestHandler } from "express";
 import type { User } from "../db/schema";
+import type { JWTPayload } from "@shared/types";
+import { createErrorResponse, createSuccessResponse } from "@shared/utils";
+import { logger } from "@shared/logger";
 import {
-  createErrorResponse,
-  createServiceError,
-  createSuccessResponse,
-} from "@shared/utils";
-import type { Producer } from "kafkajs";
-// import { createSuccessResponse } from "../../../shared/utils";
+  GOOGLE_AUTH_FAILURE_REDIRECT_URL,
+  resolveFrontendRedirect,
+} from "./authUrls";
 
-let authService: AuthService;
+const authService = new AuthService();
+const ACCESS_TOKEN_MAX_AGE = 15 * 60 * 1000;
+const REFRESH_TOKEN_MAX_AGE = 7 * 24 * 60 * 60 * 1000;
 
-export const initAuthService = (producer: Producer) => {
-  authService = new AuthService(producer);
-};
+function getCookieDomain() {
+  if (process.env.NODE_ENV !== "production") {
+    return undefined;
+  }
 
-/**
- * I didn't envision collecting the user phone on the frontend
- * It's on the driver phone number I need
- * Have commented out the phone number field from the user
- */
+  return process.env.COOKIE_DOMAIN || ".dailyexpress.app";
+}
+
+function getCookieOptions(maxAge: number): CookieOptions {
+  const cookieDomain = getCookieDomain();
+
+  return {
+    httpOnly: true,
+    secure: process.env.NODE_ENV === "production",
+    sameSite: "lax",
+    maxAge,
+    ...(cookieDomain ? { domain: cookieDomain } : {}),
+  };
+}
+
+function setAuthCookies(
+  res: Response,
+  tokens: { accessToken: string; refreshToken: string },
+) {
+  res.cookie(
+    "token",
+    tokens.accessToken,
+    getCookieOptions(ACCESS_TOKEN_MAX_AGE),
+  );
+  res.cookie(
+    "refreshToken",
+    tokens.refreshToken,
+    getCookieOptions(REFRESH_TOKEN_MAX_AGE),
+  );
+}
+
+function clearAuthCookies(res: Response) {
+  const cookieDomain = getCookieDomain();
+  const clearCookieOptions: CookieOptions = cookieDomain
+    ? { domain: cookieDomain }
+    : {};
+
+  res.clearCookie("token", clearCookieOptions);
+  res.clearCookie("refreshToken", clearCookieOptions);
+  res.clearCookie("connect.sid", clearCookieOptions);
+}
+
+function getGatewayUser(req: Request): JWTPayload | null {
+  const user = req.user;
+
+  if (!user || !("userId" in user) || !("email" in user)) {
+    return null;
+  }
+
+  return user as JWTPayload;
+}
 
 export const register: RequestHandler = asyncHandler(
   async (req: Request, res: Response) => {
-    const { email, password, firstName, lastName, /*phone,*/ dateOfBirth } =
-      req.body;
+    const { email, password, firstName, lastName, dateOfBirth } = req.body;
     const tokens = await authService.register(
       email,
       password,
       firstName,
       lastName,
-      // phone,
       dateOfBirth,
     );
 
-    //send cookies
-    res.cookie("token", tokens.accessToken, {
-      httpOnly: true,
-      secure: false,
-      sameSite: "lax",
-      maxAge: 15 * 60 * 1000, //15 minutess
-    });
-
-    //send refresh cookie
-    res.cookie("refreshToken", tokens.refreshToken, {
-      httpOnly: true,
-      secure: false,
-      // path: "/api/v1/auth/refresh-token", // come back and work on refresh token later
-      sameSite: "lax",
-      maxAge: 7 * 24 * 60 * 60 * 1000, //7 days
-    });
+    setAuthCookies(res, tokens);
 
     res
       .status(201)
@@ -64,22 +95,7 @@ export const login: RequestHandler = asyncHandler(
     const { email, password } = req.body;
     const tokens = await authService.login(email, password);
 
-    //send cookies
-    res.cookie("token", tokens.accessToken, {
-      httpOnly: true,
-      secure: process.env.NODE_ENV === "production",
-      sameSite: "lax",
-      maxAge: 15 * 60 * 1000, //15 minutess
-    });
-
-    //send refresh cookie
-    res.cookie("refreshToken", tokens.refreshToken, {
-      httpOnly: true,
-      secure: process.env.NODE_ENV === "production",
-      // path: "/api/v1/auth/refresh-token", // come back and work on refresh token later
-      sameSite: "lax",
-      maxAge: 7 * 24 * 60 * 60 * 1000, //7 days
-    });
+    setAuthCookies(res, tokens);
 
     res
       .status(200)
@@ -87,76 +103,47 @@ export const login: RequestHandler = asyncHandler(
   },
 );
 
-export const validateToken: RequestHandler = asyncHandler(
-  async (req: Request, res: Response) => {
-    // Read token from cookie or body (for inter-service calls)
-    const token = req.cookies?.token || req.body.token;
-
-    if (!token) {
-      return res.status(401).json(createErrorResponse("No token provided"));
-    }
-
-    const payload = await authService.validateToken(token);
-
-    return res
-      .status(200)
-      .json(createSuccessResponse(payload, "Token is valid"));
-  },
-);
-
 export const getProfile: RequestHandler = asyncHandler(
   async (req: Request, res: Response) => {
-    const userId = req.user?.userId;
+    const gatewayUser = getGatewayUser(req);
+    const userId = gatewayUser?.userId;
     if (!userId) {
       return res.status(401).json(createErrorResponse("Unauthorized"));
     }
 
-    const user = await authService.getUserById(userId);
-    if (!user) {
+    const profile = await authService.getUserById(userId);
+    if (!profile) {
       return res.status(404).json(createErrorResponse("User not found"));
     }
 
     return res
       .status(200)
-      .json(createSuccessResponse(user, "User profile retrieved"));
+      .json(createSuccessResponse(profile, "User profile retrieved"));
   },
 );
 
-export const refreshTokens: RequestHandler = asyncHandler(
+export const getUserSessionStateInternal: RequestHandler = asyncHandler(
   async (req: Request, res: Response) => {
-    const refreshToken = req.cookies?.refreshToken;
+    const userId = req.params.id;
 
-    if (!refreshToken) {
-      return res
-        .status(401)
-        .json(createErrorResponse("No refresh token provided"));
+    if (!userId || typeof userId !== "string") {
+      return res.status(400).json(createErrorResponse("User ID is required"));
     }
 
-    const tokens = await authService.refreshToken(refreshToken);
-
-    res.cookie("token", tokens.accessToken, {
-      httpOnly: true,
-      secure: process.env.NODE_ENV === "production",
-      sameSite: "lax",
-      maxAge: 15 * 60 * 1000,
-    });
-
-    res.cookie("refreshToken", tokens.refreshToken, {
-      httpOnly: true,
-      secure: process.env.NODE_ENV === "production",
-      sameSite: "lax",
-      maxAge: 7 * 24 * 60 * 60 * 1000,
-    });
+    const sessionState = await authService.getUserSessionState(userId);
 
     return res
       .status(200)
-      .json(createSuccessResponse(tokens, "Tokens refreshed successfully"));
+      .json(
+        createSuccessResponse(sessionState, "User session state retrieved"),
+      );
   },
 );
 
 export const deleteAccount: RequestHandler = asyncHandler(
   async (req: Request, res: Response) => {
-    const userId = req.user?.userId;
+    const gatewayUser = getGatewayUser(req);
+    const userId = gatewayUser?.userId;
 
     if (!userId) {
       return res.status(401).json(createErrorResponse("Unauthorized"));
@@ -181,7 +168,10 @@ export const forgotPassword: RequestHandler = asyncHandler(
     return res
       .status(200)
       .json(
-        createSuccessResponse(null, "Forgot password link sent successfully"),
+        createSuccessResponse(
+          null,
+          "If an account exists, a reset link has been sent.",
+        ),
       );
   },
 );
@@ -200,26 +190,15 @@ export const resetPassword: RequestHandler = asyncHandler(
 
 export const verifyOtp: RequestHandler = asyncHandler(
   async (req: Request, res: Response) => {
-    const email = req.user?.email;
+    const gatewayUser = getGatewayUser(req);
+    const email = gatewayUser?.email;
     if (!email) {
       return res.status(401).json(createErrorResponse("Unauthorized"));
     }
     const { otp } = req.body;
     const { tokens } = await authService.verifyOtp(email as string, otp);
 
-    res.cookie("token", tokens.accessToken, {
-      httpOnly: true,
-      secure: process.env.NODE_ENV === "production",
-      sameSite: "lax",
-      maxAge: 15 * 60 * 1000,
-    });
-
-    res.cookie("refreshToken", tokens.refreshToken, {
-      httpOnly: true,
-      secure: process.env.NODE_ENV === "production",
-      sameSite: "lax",
-      maxAge: 7 * 24 * 60 * 60 * 1000,
-    });
+    setAuthCookies(res, tokens);
 
     return res
       .status(200)
@@ -231,34 +210,34 @@ export const logout: RequestHandler = asyncHandler(
   async (req: Request, res: Response) => {
     req.session.destroy((err) => {
       if (err) {
-        console.error("Session destroy error:", err);
+        logger.error("auth.session_destroy_failed", {
+          error: err,
+        });
       }
     });
+    clearAuthCookies(res);
     res
-      .clearCookie("token")
-      .clearCookie("refreshToken")
-      .clearCookie("connect.sid")
       .status(200)
       .json(createSuccessResponse(null, "User logged out successfully"));
   },
 );
 
-//resend otp function
-
 export const resendOtp: RequestHandler = asyncHandler(
   async (req: Request, res: Response) => {
-    const email = req.user?.email;
+    const gatewayUser = getGatewayUser(req);
+    const email = gatewayUser?.email;
     if (!email) {
       return res.status(401).json(createErrorResponse("Unauthorized"));
     }
-    const user = await authService.getUserByEmail(email);
-    if (!user) {
+    const existingUser = await authService.getUserByEmail(email);
+    if (!existingUser) {
       return res.status(404).json(createErrorResponse("User not found"));
     }
-    if (user.emailVerified) {
+    if (existingUser.emailVerified) {
       return res.status(400).json(createErrorResponse("User already verified"));
     }
     await authService.resendOtp(email);
+
     return res
       .status(200)
       .json(createSuccessResponse(null, "OTP resent successfully"));
@@ -267,14 +246,16 @@ export const resendOtp: RequestHandler = asyncHandler(
 
 export const updateProfile: RequestHandler = asyncHandler(
   async (req: Request, res: Response) => {
-    const userId = req.user?.userId;
+    const gatewayUser = getGatewayUser(req);
+    const userId = gatewayUser?.userId;
     if (!userId) {
       return res.status(401).json(createErrorResponse("Unauthorized"));
     }
-    const user = await authService.updateProfile(userId, req.body);
+    const updatedUser = await authService.updateProfile(userId, req.body);
+
     return res
       .status(200)
-      .json(createSuccessResponse(user, "Profile updated successfully"));
+      .json(createSuccessResponse(updatedUser, "Profile updated successfully"));
   },
 );
 
@@ -284,9 +265,7 @@ export const googleCallback: RequestHandler = asyncHandler(
     const user = req.user as User | undefined;
 
     if (!user) {
-      return res.redirect(
-        `${process.env.FRONTEND_URL}/sign-in?error=google_auth_failed`,
-      );
+      return res.redirect(GOOGLE_AUTH_FAILURE_REDIRECT_URL);
     }
 
     // Generate tokens
@@ -296,31 +275,18 @@ export const googleCallback: RequestHandler = asyncHandler(
       user.emailVerified,
     );
 
-    // Set HTTP-only cookies (same as regular login)
-    res.cookie("token", tokens.accessToken, {
-      httpOnly: true,
-      secure: process.env.NODE_ENV === "production",
-      sameSite: "lax",
-      maxAge: 15 * 60 * 1000, // 15 minutes
-    });
-
-    res.cookie("refreshToken", tokens.refreshToken, {
-      httpOnly: true,
-      secure: process.env.NODE_ENV === "production",
-      sameSite: "lax",
-      maxAge: 7 * 24 * 60 * 60 * 1000, // 7 days
-    });
+    setAuthCookies(res, tokens);
 
     // Get redirect URL from state parameter (echoed back by Google)
-    const redirect = (req.query.state as string) || "/";
-    const frontendUrl = process.env.FRONTEND_URL || "http://localhost:3000";
-    res.redirect(`${frontendUrl}${redirect}`);
+    const redirect = req.query.state as string | undefined;
+    res.redirect(resolveFrontendRedirect(redirect));
   },
 );
 
 export const getProviders: RequestHandler = asyncHandler(
   async (req: Request, res: Response) => {
-    const userId = req.user?.userId;
+    const gatewayUser = getGatewayUser(req);
+    const userId = gatewayUser?.userId;
     if (!userId) {
       return res.status(401).json(createErrorResponse("Unauthorized"));
     }
@@ -335,7 +301,8 @@ export const getProviders: RequestHandler = asyncHandler(
 
 export const disconnectProvider: RequestHandler = asyncHandler(
   async (req: Request, res: Response) => {
-    const userId = req.user?.userId;
+    const gatewayUser = getGatewayUser(req);
+    const userId = gatewayUser?.userId;
     if (!userId) {
       return res.status(401).json(createErrorResponse("Unauthorized"));
     }
@@ -358,7 +325,8 @@ export const disconnectProvider: RequestHandler = asyncHandler(
 
 export const setPassword: RequestHandler = asyncHandler(
   async (req: Request, res: Response) => {
-    const userId = req.user?.userId;
+    const gatewayUser = getGatewayUser(req);
+    const userId = gatewayUser?.userId;
     if (!userId) {
       return res.status(401).json(createErrorResponse("Unauthorized"));
     }

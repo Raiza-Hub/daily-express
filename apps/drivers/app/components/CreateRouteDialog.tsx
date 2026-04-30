@@ -5,130 +5,140 @@ import { zodResolver } from "@hookform/resolvers/zod";
 import { routeSchema, TRoute } from "@repo/types/index";
 import { Button } from "@repo/ui/components/button";
 import { MapPinPlusIcon } from "@phosphor-icons/react";
-import { useRef, useState } from "react";
+import { useState } from "react";
 import { CreateRouteForm } from "./route/CreateRouteForm";
 import { ResponsiveModal } from "@repo/ui/ResponsiveModal";
-import type { LocationSuggestion } from "@repo/ui/components/location-dropdown";
-import { useEffect } from "react";
-import { useClickOutside } from "@repo/ui/hooks/use-click-outside";
-import { useDebouncedCallback } from "@repo/ui/hooks/use-debounced-callback";
-import { suggestLocations } from "@repo/ui/lib/location";
+import { useCreateRoute } from "@repo/api";
+import { toast } from "@repo/ui/components/sonner";
+import { useRouteFormUi } from "./route/useRouteFormUi";
+import { posthogEvents } from "~/lib/posthog-events";
+import { usePostHog } from "posthog-js/react";
 
-export default function CreateRouteDialog() {
-    const [open, setOpen] = useState(false);
+const CreateRouteDialog = () => {
+  const [open, setOpen] = useState(false);
+  const ui = useRouteFormUi();
+  const posthog = usePostHog();
 
-    const {
-        handleSubmit,
-        control,
-        reset,
-        formState: { isSubmitting },
-    } = useForm<TRoute>({
-        resolver: zodResolver(routeSchema),
-        defaultValues: {},
-    });
+  const { handleSubmit, control, reset } = useForm<TRoute>({
+    resolver: zodResolver(routeSchema),
+    defaultValues: {
+      departureCity: {
+        title: "",
+        locality: "",
+        label: "",
+      },
+      arrivalCity: {
+        title: "",
+        locality: "",
+        label: "",
+      },
+      vehicleType: "car",
+      seatNumber: 1,
+      price: 0,
+      departureTime: new Date(),
+      estimatedArrivalTime: new Date(Date.now() + 60 * 60 * 1000),
+      meetingPoint: "",
+    },
+  });
 
-    const [departureCityQuery, setDepartureCityQuery] = useState("");
-    const [showDepartureDropdown, setShowDepartureDropdown] = useState(false);
-    const departureCityRef = useRef<HTMLDivElement>(null);
 
-    const [departureSuggestions, setDepartureSuggestions] = useState<LocationSuggestion[]>([]);
-    const [isDepartureLoading, setIsDepartureLoading] = useState(false);
+  const createRoute = useCreateRoute({
+    onSuccess: () => {
+      posthog.capture(posthogEvents.driver_route_created_succeeded);
+      toast.success("Route created successfully");
+      handleClose();
+    },
+    onError: (error: Error) => {
+      posthog.captureException(error, { action: "driver_route_create_failed" });
+      toast.error("Failed to create route");
+    },
+  });
 
-    const [arrivalCityQuery, setArrivalCityQuery] = useState("");
-    const [showArrivalDropdown, setShowArrivalDropdown] = useState(false);
-    const arrivalCityRef = useRef<HTMLDivElement>(null);
-    const [arrivalSuggestions, setArrivalSuggestions] = useState<LocationSuggestion[]>([]);
-    const [isArrivalLoading, setIsArrivalLoading] = useState(false);
+  const handleClose = () => {
+    setOpen(false);
+    reset();
+    ui.reset();
+  };
 
-    const [priceDisplay, setPriceDisplay] = useState("");
-
-    const fetchDepartureSuggestions = useDebouncedCallback(async (query: string) => {
-        const res = await suggestLocations(query);
-        setDepartureSuggestions(res);
-        setIsDepartureLoading(false);
-    }, 400);
-
-    const fetchArrivalSuggestions = useDebouncedCallback(async (query: string) => {
-        const res = await suggestLocations(query);
-        setArrivalSuggestions(res);
-        setIsArrivalLoading(false);
-    }, 400);
-
-    useClickOutside([departureCityRef, arrivalCityRef], () => {
-        setShowDepartureDropdown(false)
-        setShowArrivalDropdown(false)
-    })
-
-    const handleClose = () => {
-        setOpen(false);
-        reset();
-        setDepartureCityQuery("");
-        setArrivalCityQuery("");
-        setPriceDisplay("");
+  const onSubmit = (data: TRoute) => {
+    const transformedData = {
+      pickup_location_title: data.departureCity.title,
+      pickup_location_locality: data.departureCity.locality,
+      pickup_location_label: data.departureCity.label,
+      dropoff_location_title: data.arrivalCity.title,
+      dropoff_location_locality: data.arrivalCity.locality,
+      dropoff_location_label: data.arrivalCity.label,
+      intermediate_stops_title: null,
+      intermediate_stops_locality: null,
+      intermediate_stops_label: null,
+      vehicleType: data.vehicleType,
+      meeting_point: data.meetingPoint,
+      availableSeats: data.seatNumber,
+      price: data.price,
+      departure_time: data.departureTime,
+      arrival_time: data.estimatedArrivalTime,
+      status: "active" as const,
     };
+    createRoute.mutate(transformedData);
+  };
 
-    const onSubmit = (data: TRoute) => {
-        console.log("New route created:", data);
-        handleClose();
-    };
+  return (
+    <ResponsiveModal
+      open={open}
+      onOpenChange={(val) => {
+        if (!val) {
+          handleClose();
+        } else {
+          posthog.capture(posthogEvents.driver_route_created_succeeded, {
+            action: "started",
+          });
+          setOpen(true);
 
-    const formProps = {
-        control,
-        handleSubmit,
-        isSubmitting,
-        onSubmit,
-        onCancel: handleClose,
-        departureCityQuery,
-        setDepartureCityQuery,
-        showDepartureDropdown,
-        setShowDepartureDropdown,
-        departureCityRef: departureCityRef as React.RefObject<HTMLDivElement>,
-        departureSuggestions,
-        isDepartureLoading,
-        arrivalCityQuery,
-        setArrivalCityQuery,
-        showArrivalDropdown,
-        setShowArrivalDropdown,
-        arrivalCityRef: arrivalCityRef as React.RefObject<HTMLDivElement>,
-        arrivalSuggestions,
-        isArrivalLoading,
-        priceDisplay,
-        setPriceDisplay,
-        fetchDepartureSuggestions,
-        fetchArrivalSuggestions,
-        setIsDepartureLoading,
-        setIsArrivalLoading,
-        setDepartureSuggestions,
-        setArrivalSuggestions
-    };
+          const now = new Date();
+          reset({
+            departureCity: {
+              title: "",
+              locality: "",
+              label: "",
+            },
+            arrivalCity: {
+              title: "",
+              locality: "",
+              label: "",
+            },
+            vehicleType: "car",
+            seatNumber: 1,
+            price: 0,
+            departureTime: now,
+            estimatedArrivalTime: new Date(now.getTime() + 60 * 60 * 1000),
+            meetingPoint: "",
+          });
+        }
+      }}
+      trigger={
+        <Button className="w-full sm:w-auto cursor-pointer" variant="secondary">
+          <MapPinPlusIcon className="h-6 w-6" weight="bold" />
+          Create Route
+        </Button>
+      }
+      title="Create Route"
+      description="Fill in the route details and schedule information below."
+    >
+      <CreateRouteForm
+        control={control}
+        handleSubmit={handleSubmit}
+        isSubmitting={createRoute.isPending}
+        onSubmit={onSubmit}
+        onCancel={handleClose}
+        ui={ui}
+        FooterWrapper={({ children }) => (
+          <div className="pt-4 pb-4 border-t flex justify-end gap-2">
+            {children}
+          </div>
+        )}
+      />
+    </ResponsiveModal>
+  );
+};
 
-    return (
-        <ResponsiveModal
-            open={open}
-            onOpenChange={(val) => {
-                if (!val) handleClose();
-                else setOpen(true);
-            }}
-            trigger={
-                <Button
-                    className="w-full sm:w-auto cursor-pointer"
-                    variant="secondary"
-                >
-                    <MapPinPlusIcon className="h-6 w-6" weight="bold" />
-                    Create Route
-                </Button>
-            }
-            title="Create Route"
-            description="Fill in the route details and schedule information below."
-        >
-            <CreateRouteForm
-                {...formProps}
-                FooterWrapper={({ children }) => (
-                    <div className="pt-4 pb-4 border-t flex justify-end gap-2">
-                        {children}
-                    </div>
-                )}
-            />
-        </ResponsiveModal>
-    );
-}
+export default CreateRouteDialog;

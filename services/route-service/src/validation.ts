@@ -44,6 +44,13 @@ export const createRouteSchema = Joi.object({
       "any.required": "Vehicle type is required",
     }),
 
+  meeting_point: Joi.string().min(2).max(500).required().messages({
+    "string.empty": "Meeting point is required",
+    "string.min": "Meeting point must be at least 2 characters long",
+    "string.max": "Meeting point must not exceed 500 characters",
+    "any.required": "Meeting point is required",
+  }),
+
   availableSeats: Joi.number().integer().min(1).required().messages({
     "number.base": "Available seats must be a number",
     "number.integer": "Available seats must be a whole number",
@@ -96,6 +103,7 @@ export const updateRouteSchema = Joi.object({
   intermediate_stops_locality: Joi.string().max(500).allow(null, "").optional(),
   intermediate_stops_label: Joi.string().max(500).allow(null, "").optional(),
   vehicleType: Joi.string().valid("car", "bus", "luxury_car").optional(),
+  meeting_point: Joi.string().min(2).max(500).optional(),
   availableSeats: Joi.number().integer().min(1).optional(),
   price: Joi.number().integer().min(0).optional(),
 
@@ -112,11 +120,14 @@ export const createTripSchema = Joi.object({
     "string.guid": "Route ID must be a valid UUID",
     "any.required": "Route ID is required",
   }),
-  date: Joi.date().iso().required().messages({
-    "date.base": "Date must be a valid date",
-    "date.format": "Date must be in ISO format",
-    "any.required": "Date is required",
-  }),
+  date: Joi.string()
+    .pattern(/^\d{4}-\d{2}-\d{2}$/)
+    .required()
+    .messages({
+      "string.pattern.base": "Date must be in YYYY-MM-DD format",
+      "string.empty": "Date is required",
+      "any.required": "Date is required",
+    }),
 });
 
 export const updateTripSchema = Joi.object({

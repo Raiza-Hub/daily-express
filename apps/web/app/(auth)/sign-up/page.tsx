@@ -2,8 +2,15 @@ import Link from "next/link";
 
 import { buttonVariants } from "@repo/ui/components/button";
 import SignUpForm from "~/components/auth-form/SignUp";
+import { buildAuthHref } from "~/lib/app-routing";
 
-const Page = () => {
+const Page = async ({
+    searchParams,
+}: {
+    searchParams: Promise<{ redirect?: string }>;
+}) => {
+    const { redirect } = await searchParams;
+
     return (
         <main className="flex pt-20 p-4 flex-col items-center justify-center lg:px-0">
             <div className="mx-auto flex w-full flex-col justify-center space-y-6 sm:max-w-sm">
@@ -12,14 +19,14 @@ const Page = () => {
                     <p className="text-sm">Create a new account</p>
                 </div>
 
-                <SignUpForm />
+                <SignUpForm redirect={redirect} />
 
                 <Link
                     className={buttonVariants({
                         variant: "link",
                         className: "gap-1.5",
                     })}
-                    href="/sign-in"
+                    href={buildAuthHref("/sign-in", redirect)}
                 >
                     Already have an account? Sign in
                 </Link>
@@ -28,13 +35,13 @@ const Page = () => {
                     <p className="text-center text-xs text-muted-foreground">
                         By continuing, you acknowledge that you understand and agree to the{" "}
 
-                        <a href="#" className="text-secondary-foreground hover:underline">
+                        <Link href="/terms" className="text-secondary-foreground hover:underline">
                             Terms & Conditions
-                        </a>{" "}
+                        </Link>{" "}
                         and{" "}
-                        <a href="#" className="text-secondary-foreground hover:underline">
+                        <Link href="/privacy" className="text-secondary-foreground hover:underline">
                             Privacy Policy.
-                        </a>
+                        </Link>
                     </p>
                 </div>
             </div>

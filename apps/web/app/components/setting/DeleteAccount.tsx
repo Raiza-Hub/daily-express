@@ -5,22 +5,31 @@ import { Button } from "@repo/ui/components/button";
 import { useRouter } from "next/navigation";
 import { useLogout, useDeleteAccount } from "@repo/api";
 import { toast } from "@repo/ui/components/sonner";
+import { posthogEvents } from "~/lib/posthog-events";
+import { usePostHog } from "posthog-js/react";
 
 const DeleteAccount = () => {
   const router = useRouter();
   const { mutate: signOut } = useLogout();
   const { mutate: deleteAccount, isPending } = useDeleteAccount();
+  const posthog = usePostHog();
 
   const handleDelete = () => {
     deleteAccount(undefined, {
       onSuccess: () => {
+        posthog.capture(posthogEvents.account_delete_succeeded);
         signOut(undefined, {
           onSuccess: () => {
+            posthog.capture(posthogEvents.auth_logout_succeeded);
+            posthog.reset();
             router.push("/sign-in");
           },
         });
       },
       onError: (err) => {
+        posthog.captureException(new Error(err.message), {
+          action: "deleteAccount",
+        });
         toast.error(err.message);
       },
     });

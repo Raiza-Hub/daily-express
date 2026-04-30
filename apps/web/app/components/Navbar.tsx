@@ -1,24 +1,15 @@
 "use client";
 
 import Link from "next/link";
-
-import { Button, buttonVariants } from "@repo/ui/components/button";
-
+import { buttonVariants } from "@repo/ui/components/button";
 import {
-  BellIcon,
-  CaretDownIcon,
-  MapPinPlusIcon,
-  PlusIcon,
   CircleNotchIcon,
 } from "@phosphor-icons/react/dist/ssr";
 import { Avatar, AvatarFallback } from "@repo/ui/components/avatar";
-import { Icons } from "./Icons";
-import NavItem from "./NavItem";
 import { UserAccountNav } from "./UserAccountNav";
 import Image from "next/image";
-import {
-  useGetMe,
-} from "@repo/api";
+import { useGetMe } from "@repo/api";
+import { buildAuthHref, buildDriverSignUpUrl } from "~/lib/app-routing";
 
 const Navbar = () => {
   const { data: user, isLoading } = useGetMe();
@@ -31,11 +22,12 @@ const Navbar = () => {
             <div className="flex">
               <Link href="/">
                 <Image
-                  src="/logo2.png"
+                  src="/logo.png"
                   alt="Logo"
-                  width={40}
-                  height={40}
+                  width={520}
+                  height={530}
                   className="object-contain object-center"
+                  style={{ width: "40px", height: "auto" }}
                 />
               </Link>
             </div>
@@ -45,7 +37,7 @@ const Navbar = () => {
                 {user ? null : (
                   <div className="hidden lg:block">
                     <Link
-                      href="/sign-in"
+                      href={buildAuthHref("/sign-up", buildDriverSignUpUrl())}
                       className={buttonVariants({
                         variant: "ghost",
                       })}

@@ -1,0 +1,55 @@
+{
+  "version": "7",
+  "dialect": "postgresql",
+  "entries": [
+    {
+      "idx": 0,
+      "version": "7",
+      "when": 1775128426617,
+      "tag": "0000_loud_avengers",
+      "breakpoints": true
+    },
+    {
+      "idx": 1,
+      "version": "7",
+      "when": 1775700000000,
+      "tag": "0001_kora_checkout_hardening",
+      "breakpoints": true
+    },
+    {
+      "idx": 2,
+      "version": "7",
+      "when": 1776800000000,
+      "tag": "0002_payment_service_pg_boss",
+      "breakpoints": true
+    },
+    {
+      "idx": 3,
+      "version": "7",
+      "when": 1776900000000,
+      "tag": "0003_payment_service_strict_plan",
+      "breakpoints": true
+    },
+    {
+      "idx": 4,
+      "version": "7",
+      "when": 1777000000000,
+      "tag": "0004_booking_hold_rename",
+      "breakpoints": true
+    },
+    {
+      "idx": 5,
+      "version": "7",
+      "when": 1777050000000,
+      "tag": "0005_payment_perf_indexes",
+      "breakpoints": true
+    },
+    {
+      "idx": 6,
+      "version": "7",
+      "when": 1777200001000,
+      "tag": "0006_booking_hold_pricing",
+      "breakpoints": true
+    }
+  ]
+}

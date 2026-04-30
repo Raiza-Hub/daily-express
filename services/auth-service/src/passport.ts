@@ -5,6 +5,8 @@ import { users, userProviders } from "../db/schema";
 import { eq, and } from "drizzle-orm";
 import type { User } from "../db/schema";
 import axios from "axios";
+import { reportError } from "@shared/logger";
+import { enqueueUserIdentityUpserted } from "./kafka/outbox";
 
 interface GoogleUserInfo {
   names?: Array<{
@@ -51,7 +53,10 @@ async function getGoogleUserInfo(accessToken: string): Promise<{
 
     return { firstName, lastName, dateOfBirth };
   } catch (error) {
-    console.error("Error fetching Google user info:", error);
+    reportError(error, {
+      source: "google-people-api",
+      message: "Error fetching Google user info",
+    });
     return {
       firstName: "Google",
       lastName: "User",
@@ -81,11 +86,9 @@ passport.use(
           return done(new Error("No email provided by Google"), undefined);
         }
 
-        // Get additional user info from Google People API
         const { firstName, lastName, dateOfBirth } =
           await getGoogleUserInfo(accessToken);
 
-        // Check if user exists with this Google provider
         const existingProvider = await db.query.userProviders.findFirst({
           where: and(
             eq(userProviders.provider, "google"),
@@ -94,7 +97,6 @@ passport.use(
         });
 
         if (existingProvider) {
-          // User already has Google linked - get full user
           const user = await db.query.users.findFirst({
             where: eq(users.id, existingProvider.userId),
           });
@@ -106,7 +108,6 @@ passport.use(
           return done(null, user);
         }
 
-        // Check if user exists with same email (can link Google account)
         const existingUserByEmail = await db.query.users.findFirst({
           where: eq(users.email, googleEmail),
         });
@@ -122,25 +123,35 @@ passport.use(
           return done(null, existingUserByEmail);
         }
 
-        // Create new user with Google provider
-        const [newUser] = await db
-          .insert(users)
-          .values({
-            email: googleEmail,
-            firstName,
-            lastName,
-            password: null, // No password for Google users
-            dateOfBirth: dateOfBirth || new Date(0),
-            emailVerified: true, // Google verifies email
-            referal: "",
-          })
-          .returning();
+        const newUser = await db.transaction(async (tx) => {
+          const [createdUser] = await tx
+            .insert(users)
+            .values({
+              email: googleEmail,
+              firstName,
+              lastName,
+              password: null,
+              dateOfBirth: dateOfBirth || new Date(0),
+              emailVerified: true,
+              referal: "",
+            })
+            .returning();
 
-        // Create provider record
-        await db.insert(userProviders).values({
-          userId: newUser.id,
-          provider: "google",
-          providerId: googleId,
+          await tx.insert(userProviders).values({
+            userId: createdUser.id,
+            provider: "google",
+            providerId: googleId,
+          });
+
+          await enqueueUserIdentityUpserted(tx, {
+            userId: createdUser.id,
+            firstName: createdUser.firstName,
+            lastName: createdUser.lastName,
+            email: createdUser.email,
+            source: "auth-service",
+          });
+
+          return createdUser;
         });
 
         return done(null, newUser);

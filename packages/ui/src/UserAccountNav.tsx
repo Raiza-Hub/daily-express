@@ -6,7 +6,7 @@ import {
   AvatarImage,
   AvatarFallback,
 } from "@repo/ui/components/avatar";
-import { UserIcon } from "@phosphor-icons/react";
+import { UserIcon } from "@phosphor-icons/react/User";
 import {
   DropdownMenu,
   DropdownMenuContent,

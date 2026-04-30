@@ -1,19 +1,28 @@
+import { createHash, randomBytes } from "node:crypto";
 import { db } from "../db/db";
-import { User, users, Otp, otp, userProviders } from "../db/schema";
-import { eq, and } from "drizzle-orm";
-import bcrypt from "bcryptjs";
-// import { createServiceError } from "@shared/utils";
-import { createServiceError } from "../../../shared/utils";
-
-import jwt, { JwtPayload, Secret, SignOptions } from "jsonwebtoken";
 import {
-  AuthTokens,
-  JWTPayload,
-  ServiceError,
-  UpdateProfileRequest,
-  UpdateUserRequest,
-} from "@shared/types";
-import { Producer } from "kafkajs";
+  User,
+  users,
+  otp,
+  passwordResetTokens,
+  userProviders,
+} from "../db/schema";
+import { eq, and, isNull } from "drizzle-orm";
+import bcrypt from "bcryptjs";
+import { createServiceError } from "@shared/utils";
+import {
+  enqueueNotificationEmail,
+  enqueueUserIdentityUpserted,
+  enqueueUserAccountDeleted,
+} from "./kafka/outbox";
+
+import jwt, { Secret, SignOptions } from "jsonwebtoken";
+import { UpdateUserRequest } from "@shared/types";
+import { FRONTEND_URL } from "./authUrls";
+
+const OTP_EXPIRY_MINUTES = 10;
+const PASSWORD_RESET_EXPIRY_MINUTES = 30;
+const PASSWORD_RESET_TOKEN_BYTES = 32;
 
 export class AuthService {
   private readonly jwtSecret: string;
@@ -22,9 +31,7 @@ export class AuthService {
   private readonly jwtRefreshExpiresIn: string;
   private readonly bcryptRounds: number;
 
-  private readonly producer: Producer;
-
-  constructor(producer: Producer) {
+  constructor() {
     this.jwtSecret = process.env.JWT_SECRET!;
     this.jwtRefreshSecret = process.env.JWT_REFRESH_SECRET!;
     this.jwtExpiresIn = process.env.JWT_EXPIRES_IN || "15m"!;
@@ -36,8 +43,6 @@ export class AuthService {
         "JWT secrets are not defined in the envirnoment variable",
       );
     }
-
-    this.producer = producer;
   }
 
   async register(
@@ -45,7 +50,6 @@ export class AuthService {
     password: string,
     firstName: string,
     lastName: string,
-    // phone: string,
     dateOfBirth: Date,
   ): Promise<{ user: User; accessToken: string; refreshToken: string }> {
     //check if user exists
@@ -56,58 +60,60 @@ export class AuthService {
       throw createServiceError("User Already Exists", 409);
     }
 
-    //hash password
+    const storedOtp = this.generateOtp();
     const hashedPassword = await bcrypt.hash(password, this.bcryptRounds);
 
-    //create the new user in the database
-    const data = {
-      email,
-      password: hashedPassword,
-      firstName,
-      lastName,
-      // phone,
-      dateOfBirth,
-      referal: "",
-    };
-    const [createdUser] = await db.insert(users).values(data).returning();
+    const brandName = process.env.EMAIL_BRAND_NAME || "Daily Express";
+    const supportEmail =
+      process.env.SUPPORT_EMAIL || "support@dailyexpress.com";
 
-    const tokens = this.generateTokens(
-      createdUser.id,
-      createdUser.email,
-      createdUser.emailVerified,
-    );
-
-    const storedOtp = this.generateOtp();
-
-    //store otp in the database
-    await db.insert(otp).values({
-      email: createdUser.email,
+    const propsJson = JSON.stringify({
       otp: storedOtp,
-      expiresAt: new Date(Date.now() + 10 * 60 * 1000),
+      expiresInMinutes: OTP_EXPIRY_MINUTES,
+      brandName,
+      supportEmail,
     });
 
-    //send mail using kafka instead(don't block registration if email fails)
-    try {
-      await this.producer.send({
-        topic: "user-created",
-        messages: [
-          {
-            value: JSON.stringify({
-              email: createdUser.email,
-              subject: "Verify your email",
-              text: `Verify OTP,  This is your Otp ${storedOtp}`,
-            }),
-          },
-        ],
-      });
-    } catch (error) {
-      console.error(error.message);
-      console.error(
-        "Failed to send verification email, please request another otp to complete verification",
-      );
-    }
+    const result = await db.transaction(async (tx) => {
+      const data = {
+        email,
+        password: hashedPassword,
+        firstName,
+        lastName,
+        dateOfBirth,
+        referal: "",
+      };
 
-    return { user: createdUser, ...tokens };
+      const [createdUser] = await tx.insert(users).values(data).returning();
+
+      await tx.insert(otp).values({
+        email: createdUser.email,
+        otp: storedOtp,
+        expiresAt: new Date(Date.now() + OTP_EXPIRY_MINUTES * 60 * 1000),
+      });
+
+      await enqueueUserIdentityUpserted(tx, {
+        userId: createdUser.id,
+        firstName: createdUser.firstName,
+        lastName: createdUser.lastName,
+        email: createdUser.email,
+        source: "auth-service",
+      });
+      await enqueueNotificationEmail(tx, {
+        to: createdUser.email,
+        subject: "Verify your email",
+        template: "VerifyOtpEmail",
+        propsJson,
+        source: "auth-service",
+      });
+
+      return createdUser;
+    });
+
+    return {
+      user: result,
+      ...this.generateTokens(result.id, result.email, result.emailVerified),
+    };
   }
 
   async verifyOtp(email: string, userOtp: string) {
@@ -148,113 +154,6 @@ export class AuthService {
         true,
       ),
     };
-  }
-
-  async refreshToken(refreshToken: string): Promise<any> {
-    try {
-      const decoded = jwt.verify(
-        refreshToken,
-        this.jwtRefreshSecret,
-      ) as JWTPayload;
-
-      if (!decoded) {
-        throw createServiceError(
-          "Invalid or expired refresh token, please login",
-          403,
-        );
-      }
-
-      const tokens = await this.generateTokens(
-        decoded.userId,
-        decoded.email,
-        decoded.emailVerified,
-      );
-
-      return tokens;
-    } catch (error) {
-      if (error instanceof ServiceError) {
-        throw error;
-      }
-    }
-  }
-
-  async validateToken(token: string): Promise<any> {
-    try {
-      const decoded = jwt.verify(token, this.jwtSecret) as JWTPayload;
-
-      //check if user exists
-      const user = await db.query.users.findFirst({
-        where: eq(users.id, decoded.userId),
-      });
-
-      if (!user) {
-        throw createServiceError("User not found", 404);
-      }
-
-      return decoded;
-    } catch (error) {
-      if (error instanceof jwt.JsonWebTokenError) {
-        throw createServiceError("Invalid Token", 401);
-      }
-      throw createServiceError("Token validation failed", 500, error);
-    }
-  }
-
-  async forgotPassword(email: string): Promise<void> {
-    const user = await db.query.users.findFirst({
-      where: eq(users.email, email),
-    });
-    if (!user) {
-      throw createServiceError("User not found", 404);
-    }
-
-    const frontendUrl =
-      process.env.FRONTEND_URL || "http://localhost:5001/v1/auth";
-    const resetLink = `${frontendUrl}/reset-password/${this.generateTokens(user.id, user.email, user.emailVerified).accessToken}`;
-
-    //send mail using kafka instead(don't block registration if email fails)
-    try {
-      await this.producer.send({
-        topic: "forgot-password",
-        messages: [
-          {
-            value: JSON.stringify({
-              email: user.email,
-              subject: "Reset Password",
-              text: `
-    <p>Click on the link below to reset your password</p>
-    <a href="${resetLink}">Reset Password</a>
-    `,
-            }),
-          },
-        ],
-      });
-    } catch (error) {
-      console.error(error.message);
-      console.error(
-        "Failed to send verification email, please request another otp to complete verification",
-      );
-    }
-  }
-
-  async resetPassword(token: string, password: string) {
-    const decoded = jwt.verify(token, this.jwtSecret) as JWTPayload;
-    if (!decoded) {
-      throw createServiceError("Invalid or expired token", 401);
-    }
-    const user = await db.query.users.findFirst({
-      where: eq(users.id, decoded.userId),
-    });
-    if (!user) {
-      throw createServiceError("User not found", 404);
-    }
-    const hashedPassword = await bcrypt.hash(password, this.bcryptRounds);
-    await db
-      .update(users)
-      .set({ password: hashedPassword })
-      .where(eq(users.id, user.id));
-
-    return { user };
   }
 
   private generateTokens(
@@ -299,6 +198,134 @@ export class AuthService {
     //generate 6 digit otp
     const otp = Math.floor(100000 + Math.random() * 900000).toString();
     return otp;
+  }
+
+  private hashPasswordResetToken(token: string) {
+    return createHash("sha256").update(token).digest("hex");
+  }
+
+  private createPasswordResetToken() {
+    const rawToken = randomBytes(PASSWORD_RESET_TOKEN_BYTES).toString("hex");
+
+    return {
+      rawToken,
+      tokenHash: this.hashPasswordResetToken(rawToken),
+      expiresAt: new Date(
+        Date.now() + PASSWORD_RESET_EXPIRY_MINUTES * 60 * 1000,
+      ),
+    };
+  }
+
+  async forgotPassword(email: string): Promise<void> {
+    const user = await db.query.users.findFirst({
+      where: eq(users.email, email),
+    });
+
+    if (!user) {
+      return;
+    }
+
+    const { rawToken, tokenHash, expiresAt } = this.createPasswordResetToken();
+    const resetLink = `${FRONTEND_URL}/reset-password?token=${encodeURIComponent(rawToken)}`;
+
+    const brandName = process.env.EMAIL_BRAND_NAME;
+    const supportEmail = process.env.SUPPORT_EMAIL;
+
+    const propsJson = JSON.stringify({
+      resetUrl: resetLink,
+      brandName,
+      supportEmail,
+    });
+
+    await db.transaction(async (tx) => {
+      await tx
+        .update(passwordResetTokens)
+        .set({
+          usedAt: new Date(),
+          updatedAt: new Date(),
+        })
+        .where(
+          and(
+            eq(passwordResetTokens.userId, user.id),
+            isNull(passwordResetTokens.usedAt),
+          ),
+        );
+
+      await tx.insert(passwordResetTokens).values({
+        userId: user.id,
+        tokenHash,
+        expiresAt,
+      });
+
+      await enqueueNotificationEmail(tx, {
+        to: user.email,
+        subject: "Reset Password",
+        template: "ResetPasswordEmail",
+        propsJson,
+        source: "auth-service",
+      });
+    });
+  }
+
+  async resetPassword(token: string, password: string) {
+    const resetToken = await db.query.passwordResetTokens.findFirst({
+      where: eq(
+        passwordResetTokens.tokenHash,
+        this.hashPasswordResetToken(token),
+      ),
+    });
+
+    if (
+      !resetToken ||
+      resetToken.usedAt ||
+      resetToken.expiresAt.getTime() <= Date.now()
+    ) {
+      throw createServiceError("Invalid or expired token", 401);
+    }
+
+    const user = await db.query.users.findFirst({
+      where: eq(users.id, resetToken.userId),
+    });
+    if (!user) {
+      throw createServiceError("User not found", 404);
+    }
+    const hashedPassword = await bcrypt.hash(password, this.bcryptRounds);
+
+    await db.transaction(async (tx) => {
+      const now = new Date();
+
+      await tx
+        .update(users)
+        .set({
+          password: hashedPassword,
+          sessionInvalidBefore: now,
+          updatedAt: now,
+        })
+        .where(eq(users.id, user.id));
+
+      await tx
+        .update(passwordResetTokens)
+        .set({
+          usedAt: now,
+          updatedAt: now,
+        })
+        .where(eq(passwordResetTokens.id, resetToken.id));
+
+      await tx
+        .update(passwordResetTokens)
+        .set({
+          usedAt: now,
+          updatedAt: now,
+        })
+        .where(
+          and(
+            eq(passwordResetTokens.userId, user.id),
+            isNull(passwordResetTokens.usedAt),
+          ),
+        );
+    });
+
+    return { user };
   }
 
   async login(email: string, password: string) {
@@ -347,7 +374,6 @@ export class AuthService {
         email: true,
         firstName: true,
         lastName: true,
-        // phone: true,
         dateOfBirth: true,
         emailVerified: true,
         createdAt: true,
@@ -368,6 +394,24 @@ export class AuthService {
     };
   }
 
+  async getUserSessionState(userId: string) {
+    const user = await db.query.users.findFirst({
+      where: eq(users.id, userId),
+      columns: {
+        id: true,
+        sessionInvalidBefore: true,
+      },
+    });
+
+    if (!user) {
+      throw createServiceError("User not found", 404);
+    }
+
+    return {
+      sessionInvalidBefore: user.sessionInvalidBefore,
+    };
+  }
+
   async updateProfile(userId: string, data: UpdateUserRequest) {
     const user = await db.query.users.findFirst({
       where: eq(users.id, userId),
@@ -375,11 +419,20 @@ export class AuthService {
     if (!user) {
       throw createServiceError("User not found", 404);
     }
-    const updatedUser = await db
+    const [updatedUser] = await db
       .update(users)
       .set(data)
       .where(eq(users.id, userId))
       .returning();
+
+    await enqueueUserIdentityUpserted(db, {
+      userId: updatedUser.id,
+      firstName: updatedUser.firstName,
+      lastName: updatedUser.lastName,
+      email: updatedUser.email,
+      source: "auth-service",
+    });
+
     return updatedUser;
   }
 
@@ -395,64 +448,55 @@ export class AuthService {
       where: eq(otp.email, user.email),
     });
 
-    if (existingOtp) {
-      await db
-        .update(otp)
-        .set({
+    const brandName = process.env.EMAIL_BRAND_NAME || "Daily Express";
+    const supportEmail =
+      process.env.SUPPORT_EMAIL || "support@dailyexpress.com";
+
+    const propsJson = JSON.stringify({
+      otp: storedOtp,
+      expiresInMinutes: OTP_EXPIRY_MINUTES,
+      brandName,
+      supportEmail,
+    });
+
+    await db.transaction(async (tx) => {
+      if (existingOtp) {
+        await tx
+          .update(otp)
+          .set({
+            otp: storedOtp,
+            expiresAt: new Date(Date.now() + OTP_EXPIRY_MINUTES * 60 * 1000),
+            updatedAt: new Date(),
+          })
+          .where(eq(otp.email, user.email));
+      } else {
+        await tx.insert(otp).values({
+          email: user.email,
           otp: storedOtp,
-          expiresAt: new Date(Date.now() + 10 * 60 * 1000),
-          updatedAt: new Date(),
-        })
-        .where(eq(otp.email, user.email));
-    } else {
-      await db.insert(otp).values({
-        email: user.email,
-        otp: storedOtp,
-        expiresAt: new Date(Date.now() + 10 * 60 * 1000),
+          expiresAt: new Date(Date.now() + OTP_EXPIRY_MINUTES * 60 * 1000),
+        });
+      }
+
+      await enqueueNotificationEmail(tx, {
+        to: user.email,
+        subject: "Verify your email",
+        template: "VerifyOtpEmail",
+        propsJson,
+        source: "auth-service",
       });
-    }
-    //send email using kafka
-    try {
-      await this.producer.send({
-        topic: "user-created",
-        messages: [
-          {
-            value: JSON.stringify({
-              email: user.email,
-              subject: "Verify your email",
-              text: `Verify OTP,  This is your Otp ${storedOtp}`,
-            }),
-          },
-        ],
-      });
-    } catch (error) {
-      console.error(error.message);
-      console.error(
-        "Failed to send verification email, please request another otp to complete verification",
-      );
-    }
+    });
     return "otp sent successfully";
   }
 
   async deleteUser(userId: string): Promise<void> {
-    await db.delete(users).where(eq(users.id, userId));
-
-    //delete driver records with kafka
-    try {
-      await this.producer.send({
-        topic: "user-deleted",
-        messages: [
-          {
-            value: JSON.stringify({
-              userId: userId,
-            }),
-          },
-        ],
+    await db.transaction(async (tx) => {
+      await enqueueUserAccountDeleted(tx, {
+        userId,
+        source: "auth-service",
       });
-    } catch (error) {
-      console.error(error.message);
-      console.error("Failed to delete driver records");
-    }
+
+      await tx.delete(users).where(eq(users.id, userId));
+    });
   }
 
   async getUserByEmail(email: string) {
@@ -469,7 +513,6 @@ export class AuthService {
         provider: true,
       },
     });
-
     return providers.map((p) => p.provider);
   }
 
