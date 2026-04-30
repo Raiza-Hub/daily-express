@@ -28,6 +28,7 @@ const TOPICS = [
   "user.identity.upserted",
   "route.created",
   "route.deleted",
+  "booking.created",
   "booking.confirmed",
   "booking.cancelled",
   "trip.completed",
