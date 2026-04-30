@@ -1,4 +1,11 @@
-version: "3.8"
+x-backend-build: &backend-build
+  image: daily-express-backend
+  build:
+    context: .
+    dockerfile: Dockerfile.backend
+
+x-backend-runtime: &backend-runtime
+  image: daily-express-backend
 
 services:
   db:
@@ -12,14 +19,11 @@ services:
       - pgdata:/var/lib/postgresql
     ports:
       - "5432:5432"
-
-  redis:
-    image: redis:7-alpine
-    container_name: daily_express_redis
-    ports:
-      - "6379:6379"
-    volumes:
-      - redis_data:/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U postgres -d postgres"]
+      interval: 10s
+      timeout: 10s
+      retries: 10
 
   kafka:
     image: confluentinc/cp-kafka:7.7.1
@@ -71,6 +75,248 @@ services:
       timeout: 10s
       retries: 10
 
+  kafka-init-topics:
+    <<: *backend-build
+    environment:
+      NODE_ENV: development
+      KAFKA_BROKERS: kafka:29092
+      SCHEMA_REGISTRY_URL: http://schema-registry:8081
+    depends_on:
+      kafka:
+        condition: service_healthy
+      schema-registry:
+        condition: service_healthy
+    command: ["bun", "run", "kafka:init-topics"]
+    restart: "no"
+
+  auth-service:
+    <<: *backend-runtime
+    working_dir: /app/services/auth-service
+    env_file:
+      - ./services/auth-service/.env
+    environment:
+      DATABASE_URL: postgres://olaoluwa:ateazy@db:5432/dailyExpress_auth
+      KAFKA_BROKERS: kafka:29092
+      SCHEMA_REGISTRY_URL: http://schema-registry:8081
+    depends_on:
+      db:
+        condition: service_healthy
+      kafka-init-topics:
+        condition: service_completed_successfully
+    command: ["bun", "run", "dev"]
+    healthcheck:
+      test:
+        [
+          "CMD",
+          "bun",
+          "-e",
+          "const res = await fetch('http://localhost:5001/health'); if (!res.ok) throw new Error('status ' + res.status);",
+        ]
+      interval: 10s
+      timeout: 10s
+      retries: 10
+
+  driver-service:
+    <<: *backend-runtime
+    working_dir: /app/services/driver-service
+    env_file:
+      - ./services/driver-service/.env
+    environment:
+      DATABASE_URL: postgres://olaoluwa:ateazy@db:5432/dailyExpress_drivers
+      KAFKA_BROKERS: kafka:29092
+      SCHEMA_REGISTRY_URL: http://schema-registry:8081
+    depends_on:
+      db:
+        condition: service_healthy
+      kafka-init-topics:
+        condition: service_completed_successfully
+    command: ["bun", "run", "dev"]
+    healthcheck:
+      test:
+        [
+          "CMD",
+          "bun",
+          "-e",
+          "const res = await fetch('http://localhost:5002/health'); if (!res.ok) throw new Error('status ' + res.status);",
+        ]
+      interval: 10s
+      timeout: 10s
+      retries: 10
+
+  route-service:
+    <<: *backend-runtime
+    working_dir: /app/services/route-service
+    env_file:
+      - ./services/route-service/.env
+    environment:
+      DATABASE_URL: postgres://olaoluwa:ateazy@db:5432/dailyExpress_route
+      KAFKA_BROKERS: kafka:29092
+      SCHEMA_REGISTRY_URL: http://schema-registry:8081
+      DRIVER_SERVICE_URL: http://driver-service:5002
+    depends_on:
+      db:
+        condition: service_healthy
+      kafka-init-topics:
+        condition: service_completed_successfully
+    command: ["bun", "run", "dev"]
+    healthcheck:
+      test:
+        [
+          "CMD",
+          "bun",
+          "-e",
+          "const res = await fetch('http://localhost:5004/health'); if (!res.ok) throw new Error('status ' + res.status);",
+        ]
+      interval: 10s
+      timeout: 10s
+      retries: 10
+
+  payment-service:
+    <<: *backend-runtime
+    working_dir: /app/services/payment-service
+    env_file:
+      - ./services/payment-service/.env
+    environment:
+      DATABASE_URL: postgres://olaoluwa:ateazy@db:5432/dailyExpress_payment
+      KAFKA_BROKERS: kafka:29092
+      SCHEMA_REGISTRY_URL: http://schema-registry:8081
+      PAYMENT_PUBLIC_BASE_URL: http://api-gateway:8000/api/payments
+      KORA_WEBHOOK_URL: http://api-gateway:8000/api/payments/v1/payments/webhooks/kora
+    depends_on:
+      db:
+        condition: service_healthy
+      kafka-init-topics:
+        condition: service_completed_successfully
+    command: ["bun", "run", "dev"]
+    healthcheck:
+      test:
+        [
+          "CMD",
+          "bun",
+          "-e",
+          "const res = await fetch('http://localhost:5005/v1/payments/health'); if (!res.ok) throw new Error('status ' + res.status);",
+        ]
+      interval: 10s
+      timeout: 10s
+      retries: 10
+
+  payout-service:
+    <<: *backend-runtime
+    working_dir: /app/services/payout-service
+    env_file:
+      - ./services/payout-service/.env
+    environment:
+      DATABASE_URL: postgres://olaoluwa:ateazy@db:5432/dailyExpress_payout
+      KAFKA_BROKERS: kafka:29092
+      SCHEMA_REGISTRY_URL: http://schema-registry:8081
+    depends_on:
+      db:
+        condition: service_healthy
+      kafka-init-topics:
+        condition: service_completed_successfully
+    command: ["bun", "run", "dev"]
+    healthcheck:
+      test:
+        [
+          "CMD",
+          "bun",
+          "-e",
+          "const res = await fetch('http://localhost:5006/v1/payouts/health'); if (!res.ok) throw new Error('status ' + res.status);",
+        ]
+      interval: 10s
+      timeout: 10s
+      retries: 10
+
+  notification-service:
+    <<: *backend-runtime
+    working_dir: /app/services/notification-service
+    env_file:
+      - ./services/notification-service/.env
+    environment:
+      DATABASE_URL: postgres://olaoluwa:ateazy@db:5432/dailyExpress_notifications
+      KAFKA_BROKERS: kafka:29092
+      SCHEMA_REGISTRY_URL: http://schema-registry:8081
+    depends_on:
+      db:
+        condition: service_healthy
+      kafka-init-topics:
+        condition: service_completed_successfully
+    command: ["bun", "run", "dev"]
+    healthcheck:
+      test:
+        [
+          "CMD",
+          "bun",
+          "-e",
+          "const res = await fetch('http://localhost:5007/v1/health'); if (!res.ok) throw new Error('status ' + res.status);",
+        ]
+      interval: 10s
+      timeout: 10s
+      retries: 10
+
+  mail-service:
+    <<: *backend-runtime
+    working_dir: /app/services/mail-service
+    env_file:
+      - ./services/mail-service/.env
+    environment:
+      KAFKA_BROKERS: kafka:29092
+      SCHEMA_REGISTRY_URL: http://schema-registry:8081
+    depends_on:
+      kafka-init-topics:
+        condition: service_completed_successfully
+    command: ["bun", "run", "dev"]
+    healthcheck:
+      test:
+        [
+          "CMD",
+          "bun",
+          "-e",
+          "const res = await fetch('http://localhost:3008/health'); if (!res.ok) throw new Error('status ' + res.status);",
+        ]
+      interval: 10s
+      timeout: 10s
+      retries: 10
+
+  api-gateway:
+    <<: *backend-runtime
+    working_dir: /app/api-gateway
+    env_file:
+      - ./api-gateway/.env
+    environment:
+      AUTH_SERVICE_URL: http://auth-service:5001
+      DRIVER_SERVICE_URL: http://driver-service:5002
+      ROUTE_SERVICE_URL: http://route-service:5004
+      PAYMENT_SERVICE_URL: http://payment-service:5005
+      PAYOUT_SERVICE_URL: http://payout-service:5006
+      NOTIFICATION_SERVICE_URL: http://notification-service:5007
+    depends_on:
+      auth-service:
+        condition: service_healthy
+      driver-service:
+        condition: service_healthy
+      route-service:
+        condition: service_healthy
+      payment-service:
+        condition: service_healthy
+      payout-service:
+        condition: service_healthy
+      notification-service:
+        condition: service_healthy
+    command: ["bun", "run", "dev"]
+    ports:
+      - "8000:8000"
+    healthcheck:
+      test:
+        [
+          "CMD",
+          "bun",
+          "-e",
+          "const res = await fetch('http://localhost:8000/health'); if (!res.ok) throw new Error('status ' + res.status);",
+        ]
+      interval: 10s
+      timeout: 10s
+      retries: 10
+
 volumes:
   pgdata:
-  redis_data:

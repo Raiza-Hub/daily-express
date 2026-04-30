@@ -342,7 +342,9 @@ export const useFileUpload = (
         // In single file mode, only use the first file
         if (!multiple) {
           const file = e.dataTransfer.files[0];
-          addFiles([file]);
+          if (file) {
+            addFiles([file]);
+          }
         } else {
           addFiles(e.dataTransfer.files);
         }
@@ -409,6 +411,7 @@ export const formatBytes = (bytes: number, decimals = 2): string => {
   const sizes = ["Bytes", "KB", "MB", "GB", "TB", "PB", "EB", "ZB", "YB"];
 
   const i = Math.floor(Math.log(bytes) / Math.log(k));
+  const size = sizes[i] || "Bytes";
 
-  return Number.parseFloat((bytes / k ** i).toFixed(dm)) + sizes[i];
+  return Number.parseFloat((bytes / k ** i).toFixed(dm)) + size;
 };

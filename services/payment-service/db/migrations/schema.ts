@@ -12,7 +12,7 @@ export const payment = pgTable("payment", {
 	provider: paymentProvider().notNull(),
 	reference: varchar({ length: 128 }).notNull(),
 	providerOrderNo: varchar("provider_order_no", { length: 128 }),
-	amountTotal: integer("amount_total").notNull(),
+	amount: integer("amount").notNull(),
 	currency: varchar({ length: 8 }).notNull(),
 	country: varchar({ length: 2 }).notNull(),
 	payMethod: varchar("pay_method", { length: 32 }),

@@ -1,4 +1,4 @@
-import { z } from "zod"
+import { z } from "zod";
 
 export const onboardingSchema = z.object({
   firstName: z
@@ -11,46 +11,38 @@ export const onboardingSchema = z.object({
     .min(3, { error: "Last name is required." })
     .max(256, { error: "Last name must be at most 256 characters long." }),
 
-  file: z
-    .file({ error: "Profile photo is required." }),
-  
-  email: z
-    .email({ error: "Enter a valid email address" }),
+  file: z.file({ error: "Profile photo is required." }),
 
-  country: z
-    .string()
-    .min(1, { error: "Please select your country" }),
-  
-  address: z
-    .string()
-    .min(1, { error: "Address is required" }),
+  email: z.email({ error: "Enter a valid email address" }),
+
+  country: z.string().min(1, { error: "Please select your country" }),
+
+  currency: z.string().min(1, { error: "Currency is required" }),
+
+  address: z.string().min(1, { error: "Address is required" }),
 
   city: z
     .string()
     .min(1, { error: "City is required" })
     .max(256, { error: "City must be at most 256 characters long." }),
 
-  state: z
-    .string()
-    .min(1, { error: "State is required" }),
-  
+  state: z.string().min(1, { error: "State is required" }),
+
   phoneNumber: z
     .string()
     .min(11, { error: "Phone number is required" })
     .max(20),
-  
-  bankName: z
-    .string()
-    .min(1, { error: "Bank name is required" }),
-  
+
+  bankName: z.string().min(1, { error: "Bank name is required" }),
+
+  bankCode: z.string().optional(),
+
   accountNumber: z
     .string()
-    .min(1, { error: "Account number is required" })
-    .max(10, {error: "Account number must be at most 10 characters long."}),
-  
-  accountName: z
-    .string()
-    .min(1, { error: "Account name is required" }),
+    .min(7, { error: "Account number is required" })
+    .max(20, { error: "Account number must be at most 20 digits long." }),
+
+  accountName: z.string().min(1, { error: "Account name is required" }),
 });
 
 export type TonboardingSchema = z.infer<typeof onboardingSchema>;

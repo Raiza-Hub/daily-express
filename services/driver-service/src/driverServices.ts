@@ -1,8 +1,16 @@
-import { Driver, UpdateProfileRequest } from "@shared/types";
+import { Driver, DriverStats, UpdateProfileRequest } from "@shared/types";
 import { db } from "../db/db";
-import { driver } from "../db/schema";
+import { driver, driverStats } from "../db/schema";
 import { eq } from "drizzle-orm";
 import { createServiceError, sanitizeInput } from "@shared/utils";
+import {
+  emitDriverBankVerificationRequested,
+  emitDriverIdentityCreated,
+  emitDriverIdentityDeleted,
+  emitDriverIdentityUpdated,
+  emitDriverPayoutProfileDeleted,
+  emitDriverPayoutProfileUpserted,
+} from "./kafka/producer";
 
 export class DriverService {
   async createDriver(
@@ -21,22 +29,50 @@ export class DriverService {
     //sanitize input data
     const sanitizeData = this.sanitizeProfileData(driverData);
 
-    //create new driver
-    const [newDriver] = await db
-      .insert(driver)
-      .values({ ...sanitizeData, userId } as any)
-      .returning();
+    const newDriver = await db.transaction(async (tx) => {
+      const [createdDriver] = await tx
+        .insert(driver)
+        .values({
+          ...sanitizeData,
+          userId,
+          bankVerificationStatus: "pending",
+          bankVerificationFailureReason: null,
+          bankVerificationRequestedAt: new Date(),
+          bankVerifiedAt: null,
+        } as any)
+        .returning();
+
+      await tx.insert(driverStats).values({
+        driverId: createdDriver.id,
+      });
+
+      await emitDriverIdentityCreated(createdDriver, tx);
+      await emitDriverPayoutProfileUpserted(createdDriver, tx);
+      await emitDriverBankVerificationRequested(
+        {
+          driverId: createdDriver.id,
+          bankName: createdDriver.bankName,
+          bankCode: createdDriver.bankCode,
+          accountNumber: createdDriver.accountNumber,
+          accountName: createdDriver.accountName,
+          currency: createdDriver.currency,
+        },
+        tx,
+      );
+
+      return createdDriver;
+    });
 
     return newDriver;
   }
 
-  async getProfile(userId: string): Promise<Driver> {
+  async getProfile(userId: string): Promise<Driver | null> {
     //check if user exists
     const existingDriver = await db.query.driver.findFirst({
       where: eq(driver.userId, userId),
     });
     if (!existingDriver) {
-      throw createServiceError("Driver not found", 404);
+      return null;
     }
 
     return existingDriver;
@@ -67,13 +103,52 @@ export class DriverService {
 
     //sanitize input data
     const sanitizedData = this.sanitizeProfileData(driverData);
+    const bankDetailsChanged =
+      (sanitizedData.bankName !== undefined &&
+        sanitizedData.bankName !== existingDriver.bankName) ||
+      (sanitizedData.bankCode !== undefined &&
+        sanitizedData.bankCode !== existingDriver.bankCode) ||
+      (sanitizedData.accountNumber !== undefined &&
+        sanitizedData.accountNumber !== existingDriver.accountNumber) ||
+      (sanitizedData.accountName !== undefined &&
+        sanitizedData.accountName !== existingDriver.accountName);
 
-    //update existsing driver
-    const [updatedDriver] = await db
-      .update(driver)
-      .set(sanitizedData)
-      .where(eq(driver.userId, userId))
-      .returning();
+    const [updatedDriver] = await db.transaction(async (tx) => {
+      const [record] = await tx
+        .update(driver)
+        .set({
+          ...sanitizedData,
+          ...(bankDetailsChanged
+            ? {
+                bankVerificationStatus: "pending" as const,
+                bankVerificationFailureReason: null,
+                bankVerificationRequestedAt: new Date(),
+                bankVerifiedAt: null,
+              }
+            : {}),
+          updatedAt: new Date(),
+        })
+        .where(eq(driver.userId, userId))
+        .returning();
+
+      await emitDriverIdentityUpdated(record, tx);
+      await emitDriverPayoutProfileUpserted(record, tx);
+      if (bankDetailsChanged) {
+        await emitDriverBankVerificationRequested(
+          {
+            driverId: record.id,
+            bankName: record.bankName,
+            bankCode: record.bankCode,
+            accountNumber: record.accountNumber,
+            accountName: record.accountName,
+            currency: record.currency,
+          },
+          tx,
+        );
+      }
+
+      return [record];
+    });
 
     return updatedDriver;
   }
@@ -87,8 +162,38 @@ export class DriverService {
       throw createServiceError("Driver not found", 404);
     }
 
-    //delete driver
-    await db.delete(driver).where(eq(driver.userId, userId));
+    await db.transaction(async (tx) => {
+      await tx
+        .delete(driverStats)
+        .where(eq(driverStats.driverId, existingDriver.id));
+      await tx.delete(driver).where(eq(driver.userId, userId));
+      await emitDriverIdentityDeleted(
+        {
+          driverId: existingDriver.id,
+          userId: existingDriver.userId,
+        },
+        tx,
+      );
+      await emitDriverPayoutProfileDeleted(
+        {
+          driverId: existingDriver.id,
+          userId: existingDriver.userId,
+        },
+        tx,
+      );
+    });
+  }
+
+  async getDriverStats(driverId: string): Promise<DriverStats> {
+    const stats = await db.query.driverStats.findFirst({
+      where: eq(driverStats.driverId, driverId),
+    });
+
+    if (!stats) {
+      throw createServiceError("Driver stats not found", 404);
+    }
+
+    return stats;
   }
 
   private sanitizeProfileData(
@@ -107,11 +212,11 @@ export class DriverService {
     if (data.email !== undefined) {
       sanitized.email = data.email ? sanitizeInput(data.email) : null;
     }
-    // if (data.gender !== undefined) {
-    //   sanitized.gender = data.gender ? sanitizeInput(data.gender) : null;
-    // }
     if (data.country !== undefined) {
       sanitized.country = data.country ? sanitizeInput(data.country) : null;
+    }
+    if (data.currency !== undefined) {
+      sanitized.currency = data.currency ? sanitizeInput(data.currency) : null;
     }
     if (data.state !== undefined) {
       sanitized.state = data.state ? sanitizeInput(data.state) : null;
@@ -124,6 +229,9 @@ export class DriverService {
     }
     if (data.bankName !== undefined) {
       sanitized.bankName = data.bankName ? sanitizeInput(data.bankName) : null;
+    }
+    if (data.bankCode !== undefined) {
+      sanitized.bankCode = data.bankCode ? sanitizeInput(data.bankCode) : null;
     }
     if (data.accountNumber !== undefined) {
       sanitized.accountNumber = data.accountNumber

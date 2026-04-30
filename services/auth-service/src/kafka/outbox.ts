@@ -4,25 +4,25 @@ import { db } from "../../db/db";
 import { outboxEvents } from "../../db/schema";
 import {
   createNotificationEmailEvent,
+  createUserIdentityUpsertedEvent,
   createUserAccountDeletedEvent,
   EVENT_SCHEMAS,
   type EventByType,
   type SupportedEventType,
 } from "@shared/kafka/events";
 import { disconnectProducer, encodeEvent, getProducer } from "@shared/kafka";
-
 const OUTBOX_POLL_INTERVAL_MS = parseInt(
   process.env.OUTBOX_POLL_INTERVAL_MS || "3000",
   10,
 );
 const OUTBOX_BATCH_SIZE = parseInt(process.env.OUTBOX_BATCH_SIZE || "25", 10);
 
-export const isKafkaEnabled = process.env.KAFKA_ENABLED !== "false";
-
 interface NotificationEmailInput {
   to: string;
   subject: string;
-  html: string;
+  html?: string;
+  template?: string;
+  propsJson?: string;
   source: string;
 }
 
@@ -68,6 +68,8 @@ export async function enqueueNotificationEmail(
     to: input.to,
     subject: input.subject,
     html: input.html,
+    template: input.template,
+    propsJson: input.propsJson,
   });
 
   await insertOutboxEvent(executor, {
@@ -88,6 +90,32 @@ export async function enqueueUserAccountDeleted(
     eventId: randomUUID(),
     source: input.source,
     userId: input.userId,
+  });
+
+  await insertOutboxEvent(executor, {
+    eventType: event.eventType,
+    partitionKey: event.payload.userId,
+    payload: event,
+  });
+}
+
+export async function enqueueUserIdentityUpserted(
+  executor: OutboxExecutor,
+  input: {
+    userId: string;
+    firstName: string;
+    lastName: string;
+    email: string;
+    source: string;
+  },
+): Promise<void> {
+  const event = createUserIdentityUpsertedEvent({
+    eventId: randomUUID(),
+    source: input.source,
+    userId: input.userId,
+    firstName: input.firstName,
+    lastName: input.lastName,
+    email: input.email,
   });
 
   await insertOutboxEvent(executor, {
@@ -132,10 +160,7 @@ export async function publishPendingOutboxEvents(): Promise<void> {
 
     try {
       const payload = event.payload as EventByType[typeof event.eventType];
-      const encoded = await encodeEvent(
-        event.eventType,
-        payload,
-      );
+      const encoded = await encodeEvent(event.eventType, payload);
 
       await producer.send({
         topic: event.topic,
@@ -172,15 +197,6 @@ export async function publishPendingOutboxEvents(): Promise<void> {
 export async function startOutboxPublisher(): Promise<{
   stop: () => Promise<void>;
 }> {
-  if (!isKafkaEnabled) {
-    console.log("Kafka disabled. Auth outbox publisher is not running.");
-    return {
-      stop: async () => {
-        return;
-      },
-    };
-  }
-
   await getProducer();
   await publishPendingOutboxEvents();
 

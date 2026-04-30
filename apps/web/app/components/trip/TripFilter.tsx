@@ -1,41 +1,66 @@
 "use client";
-import { useState, useEffect } from "react";
-import { AnimatePresence, motion } from "framer-motion";
+
+import { useState, useEffect, useMemo } from "react";
+import { AnimatePresence, domAnimation, LazyMotion, m } from "framer-motion";
 import { FadersIcon, XIcon } from "@phosphor-icons/react";
-import { CheckboxItem } from "./CheckboxItem";
-import { FilterSection } from "./FilterSection";
 import { Button } from "@repo/ui/components/button";
 import { useBodyScrollLock } from "@repo/ui/hooks/use-body-scroll-lock";
 import { useQueryState } from "nuqs";
-import { searchParams } from "../../search-params";
+import type { Route } from "@shared/types";
+import ActiveCountClearButton from "../ActiveCountClearButton";
+import FilterOptions from "../FilterOptions";
+import { searchParams } from "~/lib/type";
 
-const filterData = {
-  vehicleType: [
-    { label: "Car", value: "car", count: 3 },
-    { label: "Bus", value: "bus", count: 18 },
-    { label: "Luxury Car", value: "luxury_car", count: 18 },
-  ],
-};
+const VEHICLE_TYPE_OPTIONS = [
+  { label: "Car", value: "car" },
+  { label: "Bus", value: "bus" },
+  { label: "Luxury Car", value: "luxury_car" },
+];
 
-export default function TripFilter() {
+interface TripFilterProps {
+  routes: Route[] | undefined;
+  onApplyFilters?: () => void;
+}
+
+const TripFilter = ({ routes, onApplyFilters }: TripFilterProps) => {
   const [vehicleType, setVehicleType] = useQueryState(
     "vehicleType",
     searchParams.vehicleType.withOptions({ history: "replace" }),
   );
   const [drawerOpen, setDrawerOpen] = useState(false);
+  const [mobileDraft, setMobileDraft] = useState<string[]>([]);
 
   const currentVehicleTypes = vehicleType || [];
 
-  const handleVehicleTypeToggle = (value: string) => {
-    const nextVehicleTypes = currentVehicleTypes.includes(value)
-      ? currentVehicleTypes.filter((vehicle) => vehicle !== value)
-      : [...currentVehicleTypes, value];
+  const handleVehicleTypeToggle = (value: string, isMobile = false) => {
+    const source = isMobile ? mobileDraft : currentVehicleTypes;
+    const nextVehicleTypes = source.includes(value)
+      ? source.filter((vehicle) => vehicle !== value)
+      : [...source, value];
 
-    void setVehicleType(nextVehicleTypes.length > 0 ? nextVehicleTypes : null);
+    if (isMobile) {
+      setMobileDraft(nextVehicleTypes);
+    } else {
+      void setVehicleType(
+        nextVehicleTypes.length > 0 ? nextVehicleTypes : null,
+      );
+    }
+  };
+
+  const applyMobileFilters = () => {
+    void setVehicleType(mobileDraft.length > 0 ? mobileDraft : null);
+    setDrawerOpen(false);
+    onApplyFilters?.();
+  };
+
+  const openDrawer = () => {
+    setMobileDraft(currentVehicleTypes);
+    setDrawerOpen(true);
   };
 
   const clearAllFilters = () => {
     void setVehicleType(null);
+    setMobileDraft([]);
   };
 
   useEffect(() => {
@@ -55,54 +80,51 @@ export default function TripFilter() {
 
   useBodyScrollLock(drawerOpen);
 
-  const activeCount = currentVehicleTypes.length;
+  const activeCount = drawerOpen
+    ? mobileDraft.length
+    : currentVehicleTypes.length;
 
-  const ActiveCountClear = () =>
-    activeCount > 0 && (
-      <button
-        onClick={clearAllFilters}
-        className="text-xs text-blue-600 font-semibold hover:text-blue-800 transition-colors px-2 py-1 rounded-lg hover:bg-blue-50 cursor-pointer"
-      >
-        Clear all filters ({activeCount})
-      </button>
-    );
+  const vehicleTypeData = useMemo(() => {
+    const counts: Record<string, number> = {};
+    if (routes) {
+      routes.forEach((route) => {
+        const vt = route.vehicleType?.toLowerCase();
+        counts[vt] = (counts[vt] || 0) + 1;
+      });
+    }
 
-  const FilterOptions = () => (
-    <div className="divide-y divide-slate-100">
-      {/* Vehicle Type */}
-      <FilterSection title="Vehicle Type">
-        {filterData.vehicleType.map((item) => (
-          <CheckboxItem
-            key={item.value}
-            label={item.label}
-            count={item.count}
-            checked={currentVehicleTypes.includes(item.value)}
-            onChange={() => handleVehicleTypeToggle(item.value)}
-          />
-        ))}
-      </FilterSection>
-    </div>
-  );
+    return VEHICLE_TYPE_OPTIONS.map(({ label, value }) => ({
+      label,
+      value,
+      count: routes && routes.length > 0 ? counts[value] || 0 : undefined,
+    }));
+  }, [routes]);
 
   return (
     <>
-      {/* Desktop View */}
       <div className="hidden lg:block w-80 bg-white py-6">
-        {/* Header */}
         <div className="flex items-center justify-between mb-6">
           <h2 className="text-lg text-neutral-900 font-semibold">Filter by</h2>
-          <ActiveCountClear />
+          <ActiveCountClearButton
+            activeCount={activeCount}
+            onClear={clearAllFilters}
+          />
         </div>
 
-        <FilterOptions />
+        <FilterOptions
+          currentVehicleTypes={currentVehicleTypes}
+          onToggle={(value) => handleVehicleTypeToggle(value, false)}
+          vehicleTypeData={vehicleTypeData}
+        />
       </div>
 
+      {/* refactor into its own mobile trip filter with passed props */}
       {/* Mobile View */}
       <div className="block lg:hidden w-full">
         <Button
           variant="outline"
           className="w-full flex items-center justify-center gap-2 rounded-2xl py-3 h-auto -mt-4 cursor-pointer shadow-none"
-          onClick={() => setDrawerOpen(true)}
+          onClick={openDrawer}
           aria-haspopup="dialog"
           aria-expanded={drawerOpen}
           aria-controls="trip-filter-drawer"
@@ -113,9 +135,9 @@ export default function TripFilter() {
 
         <AnimatePresence>
           {drawerOpen && (
-            <>
+            <LazyMotion features={domAnimation}>
               {/* Overlay */}
-              <motion.div
+              <m.div
                 key="trip-filter-overlay"
                 initial={{ opacity: 0 }}
                 animate={{ opacity: 1 }}
@@ -126,7 +148,7 @@ export default function TripFilter() {
               />
 
               {/* Full-screen panel */}
-              <motion.div
+              <m.div
                 key="trip-filter-panel"
                 id="trip-filter-drawer"
                 initial={{ y: "100%" }}
@@ -157,31 +179,37 @@ export default function TripFilter() {
 
                 {/* Scrollable body */}
                 <div className="flex-1 overflow-y-auto px-4 py-2">
-                  <FilterOptions />
+                  <FilterOptions
+                    currentVehicleTypes={mobileDraft}
+                    onToggle={(value) => handleVehicleTypeToggle(value, true)}
+                    vehicleTypeData={vehicleTypeData}
+                  />
                 </div>
 
                 {/* Footer */}
                 <div className="flex gap-4 p-4 border-t shrink-0">
                   <Button
                     variant="secondary"
-                    className={`flex-1 ${activeCount === 0 ? "opacity-50 cursor-not-allowed" : "cursor-pointer"}`}
-                    onClick={() => activeCount > 0 && clearAllFilters()}
-                    disabled={activeCount === 0}
+                    className={`flex-1 ${mobileDraft.length === 0 ? "opacity-50 cursor-not-allowed" : "cursor-pointer"}`}
+                    onClick={() => setMobileDraft([])}
+                    disabled={mobileDraft.length === 0}
                   >
                     Clear all
                   </Button>
                   <Button
                     className="flex-1 bg-blue-600 hover:bg-blue-700 cursor-pointer"
-                    onClick={() => setDrawerOpen(false)}
+                    onClick={applyMobileFilters}
                   >
                     Show results
                   </Button>
                 </div>
-              </motion.div>
-            </>
+              </m.div>
+            </LazyMotion>
           )}
         </AnimatePresence>
       </div>
     </>
   );
-}
+};
+
+export default TripFilter;

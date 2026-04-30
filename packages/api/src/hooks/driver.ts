@@ -1,5 +1,5 @@
 import { useMutation, useQuery } from "@tanstack/react-query";
-import { api } from "../api";
+import { api, driverApi } from "../api";
 import type { Driver, ApiResponse, UpdateProfileRequest } from "@shared/types";
 import { handleApiError } from "../utils";
 
@@ -8,12 +8,12 @@ interface CreateDriverPayload {
   lastName: string;
   email: string;
   phone: string;
-  // gender: "male" | "female" | "other";
   country: string;
   state: string;
   city: string;
   address: string;
   bankName: string;
+  bankCode: string;
   accountNumber: string;
   accountName: string;
   profile_pic: string;
@@ -94,6 +94,10 @@ export const useGetDriver = (options?: { enabled?: boolean }) => {
     queryFn: getDriverFn,
     retry: false,
     enabled: options?.enabled ?? true,
+    refetchInterval: (query) => {
+      const status = query.state.data?.bankVerificationStatus;
+      return status === "pending" ? 5000 : false;
+    },
   });
 };
 
@@ -124,5 +128,38 @@ export const useDeleteDriver = (options?: {
   return useMutation({
     mutationFn: deleteDriverFn,
     ...options,
+  });
+};
+
+export interface DriverStats {
+  id: string;
+  driverId: string;
+  totalEarnings: number;
+  pendingPayments: number;
+  totalPassengers: number;
+  activeRoutes: number;
+  createdAt: string;
+  updatedAt: string;
+}
+
+export const getDriverStatsFn = async (): Promise<DriverStats> => {
+  try {
+    const response =
+      await driverApi.get<ApiResponse<DriverStats>>("/driver/stats");
+    if (!response.data.success || !response.data.data) {
+      throw new Error(response.data.error || "Failed to get driver stats");
+    }
+    return response.data.data;
+  } catch (err) {
+    return handleApiError(err, "Failed to get driver stats") as never;
+  }
+};
+
+export const useGetDriverStats = (options?: { enabled?: boolean }) => {
+  return useQuery({
+    queryKey: ["driverStats"],
+    queryFn: getDriverStatsFn,
+    retry: false,
+    enabled: options?.enabled ?? true,
   });
 };

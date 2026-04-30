@@ -15,6 +15,27 @@
       "when": 1772844093546,
       "tag": "0001_spicy_owl",
       "breakpoints": true
+    },
+    {
+      "idx": 2,
+      "version": "7",
+      "when": 1772844093547,
+      "tag": "0002_bank_verification_status",
+      "breakpoints": true
+    },
+    {
+      "idx": 3,
+      "version": "7",
+      "when": 1772844093548,
+      "tag": "0003_driver_stats_driver_fk_cascade",
+      "breakpoints": true
+    },
+    {
+      "idx": 4,
+      "version": "7",
+      "when": 1744167840000,
+      "tag": "0004_change_bank_verification_default",
+      "breakpoints": true
     }
   ]
 }

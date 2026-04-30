@@ -16,11 +16,12 @@ const Navbar = async () => {
         <div className="flex">
           <Link href="/">
             <Image
-              src="/logo2.png"
+              src="/logo.png"
               alt="Logo"
-              width={40}
-              height={40}
+              width={520}
+              height={530}
               className="object-contain object-center"
+              style={{ width: "40px", height: "auto" }}
             />
           </Link>
         </div>

@@ -1,6 +1,6 @@
 "use client";
 
-import { useRouter } from "next/navigation";
+import { useEffect } from "react";
 import {
   QuestionIcon,
   SignOutIcon,
@@ -9,16 +9,30 @@ import {
 import { UserAccountNav as SharedUserAccountNav } from "@repo/ui/UserAccountNav";
 import { useGetDriver, useLogout } from "@repo/api";
 import { Avatar, AvatarFallback } from "@repo/ui/components/avatar";
+import { env } from "~/env";
+import { posthogEvents } from "~/lib/posthog-events";
+import { usePostHog } from "posthog-js/react";
 
 export function UserAccountNav() {
-  const router = useRouter();
   const { data: driver, isLoading } = useGetDriver();
   const { mutate: logout } = useLogout();
+  const posthog = usePostHog();
+
+  useEffect(() => {
+    if (driver?.id) {
+      posthog.identify(driver.id, {
+        email: driver.email,
+        name: `${driver.firstName} ${driver.lastName}`,
+      });
+    }
+  }, [driver, posthog]);
 
   const signOut = () => {
     logout(undefined, {
       onSuccess: () => {
-        router.push("/sign-in");
+        posthog.capture(posthogEvents.driver_logout_succeeded);
+        posthog.reset();
+        window.location.href = `${env.NEXT_PUBLIC_WEB_APP_URL}/sign-in`;
       },
     });
   };

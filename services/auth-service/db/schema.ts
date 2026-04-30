@@ -1,5 +1,6 @@
 import {
   boolean,
+  index,
   integer,
   jsonb,
   pgTable,
@@ -14,23 +15,23 @@ export const users = pgTable("users", {
   lastName: text("last_name").notNull(),
   email: text("email").notNull().unique(),
   password: text("password"),
-  // phone: text("phone").notNull(),
-  dateOfBirth: timestamp("date_of_birth").notNull(),
+  dateOfBirth: timestamp("date_of_birth", { mode: "date" }).notNull(),
   emailVerified: boolean("email_verified")
     .$defaultFn(() => false)
     .notNull(),
   referal: text("referal"),
-  createdAt: timestamp("created_at").defaultNow().notNull(),
-  updatedAt: timestamp("updated_at").defaultNow().notNull(),
+  sessionInvalidBefore: timestamp("session_invalid_before", { mode: "date" }),
+  createdAt: timestamp("created_at", { mode: "date" }).defaultNow().notNull(),
+  updatedAt: timestamp("updated_at", { mode: "date" }).defaultNow().notNull(),
 });
 
 export const otp = pgTable("otp", {
   id: uuid("id").defaultRandom().primaryKey(),
   email: text("email").notNull().unique(),
   otp: text("otp").notNull(),
-  expiresAt: timestamp("expires_at").notNull(),
-  createdAt: timestamp("created_at").defaultNow().notNull(),
-  updatedAt: timestamp("updated_at").defaultNow().notNull(),
+  expiresAt: timestamp("expires_at", { mode: "date" }).notNull(),
+  createdAt: timestamp("created_at", { mode: "date" }).defaultNow().notNull(),
+  updatedAt: timestamp("updated_at", { mode: "date" }).defaultNow().notNull(),
 });
 
 export const userProviders = pgTable("user_providers", {
@@ -40,9 +41,28 @@ export const userProviders = pgTable("user_providers", {
     .notNull(),
   provider: text("provider").notNull(),
   providerId: text("provider_id").notNull(),
-  createdAt: timestamp("created_at").defaultNow().notNull(),
-  updatedAt: timestamp("updated_at").defaultNow().notNull(),
+  createdAt: timestamp("created_at", { mode: "date" }).defaultNow().notNull(),
+  updatedAt: timestamp("updated_at", { mode: "date" }).defaultNow().notNull(),
 });
+
+export const passwordResetTokens = pgTable(
+  "password_reset_tokens",
+  {
+    id: uuid("id").defaultRandom().primaryKey(),
+    userId: uuid("user_id")
+      .references(() => users.id, { onDelete: "cascade" })
+      .notNull(),
+    tokenHash: text("token_hash").notNull().unique(),
+    expiresAt: timestamp("expires_at", { mode: "date" }).notNull(),
+    usedAt: timestamp("used_at", { mode: "date" }),
+    createdAt: timestamp("created_at", { mode: "date" }).defaultNow().notNull(),
+    updatedAt: timestamp("updated_at", { mode: "date" }).defaultNow().notNull(),
+  },
+  (table) => [
+    index("password_reset_tokens_user_id_idx").on(table.userId),
+    index("password_reset_tokens_expires_at_idx").on(table.expiresAt),
+  ],
+);
 
 export const outboxEvents = pgTable("outbox_events", {
   id: uuid("id").defaultRandom().primaryKey(),
@@ -53,19 +73,21 @@ export const outboxEvents = pgTable("outbox_events", {
   status: text("status").default("pending").notNull(),
   attempts: integer("attempts").default(0).notNull(),
   lastError: text("last_error"),
-  publishedAt: timestamp("published_at"),
-  createdAt: timestamp("created_at").defaultNow().notNull(),
-  updatedAt: timestamp("updated_at").defaultNow().notNull(),
+  publishedAt: timestamp("published_at", { mode: "date" }),
+  createdAt: timestamp("created_at", { mode: "date" }).defaultNow().notNull(),
+  updatedAt: timestamp("updated_at", { mode: "date" }).defaultNow().notNull(),
 });
 
 export type User = typeof users.$inferSelect;
 export type Otp = typeof otp.$inferSelect;
 export type UserProvider = typeof userProviders.$inferSelect;
+export type PasswordResetToken = typeof passwordResetTokens.$inferSelect;
 export type OutboxEvent = typeof outboxEvents.$inferSelect;
 
 export const schema = {
   users,
   otp,
   userProviders,
+  passwordResetTokens,
   outboxEvents,
 };

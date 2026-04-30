@@ -9,15 +9,13 @@ const locationSchema = z.object({
 export const routeSchema = z.object({
   departureCity: locationSchema,
   arrivalCity: locationSchema,
-  vehicleType: z
-    .string()
-    .min(1, { error: "Vehicle type is required" }),
+  vehicleType: z.enum(["car", "bus", "luxury_car"]),
   seatNumber: z
     .number()
     .min(1, { error: "Seat number must be greater than 0" }),
   price: z
     .number()
-    .min(0, { error: "Price must be greater than or equal to 0" }),
+    .min(1, { error: "Price must be greater than 0" }),
   departureTime: z
     .date({ error: "Departure time is required" }),
   estimatedArrivalTime: z

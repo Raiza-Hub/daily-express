@@ -1,10 +1,14 @@
 import { createHmac } from "node:crypto";
-import { PaymentService } from "@/paymentService";
-import { emitPaymentCompleted, emitPaymentFailed } from "@/kafka/producer";
 import {
-  initializePaymentSchema,
-  paystackWebhookSchema,
-} from "@/validation";
+  emitPaymentCompleted,
+  emitPaymentFailed,
+  sendRefundFailedNotification,
+} from "@/kafka/producer";
+import { paymentService } from "@/paymentService";
+import { handlePaymentExpiry } from "@/paymentExpireHandler";
+import { processWebhookJob } from "@/webhookProcessor";
+import { initializePaymentSchema, koraWebhookSchema } from "@/validation";
+import { KORA_CHECKOUT_CHANNELS } from "@shared/types";
 
 jest.mock("@/kafka/producer");
 
@@ -14,15 +18,32 @@ const mockedEmitPaymentCompleted = emitPaymentCompleted as jest.MockedFunction<
 const mockedEmitPaymentFailed = emitPaymentFailed as jest.MockedFunction<
   typeof emitPaymentFailed
 >;
+const mockedSendRefundFailedNotification =
+  sendRefundFailedNotification as jest.MockedFunction<
+    typeof sendRefundFailedNotification
+  >;
+
+const baseProjection = {
+  id: "hold-1",
+  bookingId: "booking-1",
+  tripId: "trip-1",
+  userId: "user-1",
+  fareAmount: 13000,
+  currency: "NGN",
+  expiresAt: new Date("2099-04-21T13:00:00.000Z"),
+  pgBossJobId: "job-expire-1",
+  createdAt: new Date("2099-04-21T12:00:00.000Z"),
+  updatedAt: new Date("2099-04-21T12:00:00.000Z"),
+};
 
 const basePayment = {
   id: "payment-1",
   userId: "user-1",
   bookingId: "booking-1",
-  provider: "paystack" as const,
+  provider: "kora" as const,
   reference: "DX-REFERENCE-1",
   providerTransactionId: null,
-  amountMinor: 1430000,
+  amount: 14300,
   currency: "NGN",
   productName: "Lagos to Abuja",
   productDescription: "Trip booking",
@@ -31,31 +52,39 @@ const basePayment = {
   customerMobile: "08000000000",
   status: "pending" as const,
   providerStatus: "pending",
-  checkoutUrl: "https://checkout.paystack.com/test",
-  checkoutToken: "ACCESS_CODE",
-  redirectUrl: "http://localhost:3000/payment/return?reference=DX-REFERENCE-1",
-  cancelUrl: "http://localhost:3000/payment/cancelled?reference=DX-REFERENCE-1",
+  checkoutUrl: "https://checkout.korapay.com/pay/DX-REFERENCE-1",
+  checkoutToken: "DX-REFERENCE-1",
+  redirectUrl:
+    "https://daily-express.test/api/payments/v1/payments/return?ref=DX-REFERENCE-1",
+  cancelUrl: "http://localhost:3000/trip-status",
   channels: ["bank_transfer", "card"],
   rawInitializeResponse: null,
   rawVerificationResponse: null,
-  metadata: { bookingId: "booking-1" },
+  metadata: { bookingId: "booking-1", routeId: "route-1" },
   lastStatusCheckAt: null,
   paidAt: null,
   failedAt: null,
   failureCode: null,
   failureReason: null,
-  createdAt: new Date("2025-01-01T00:00:00Z"),
-  updatedAt: new Date("2025-01-01T00:00:00Z"),
+  createdAt: new Date("2099-04-21T12:00:00.000Z"),
+  updatedAt: new Date("2099-04-21T12:00:00.000Z"),
 };
 
-function mockInsertReturning(returnValue: unknown) {
-  const values = jest.fn().mockReturnThis();
-  const returning = jest.fn().mockResolvedValue([returnValue]);
-  global.mockDrizzle.insert.mockReturnValueOnce({
+function mockInsert(returnValue?: unknown) {
+  const values = jest.fn();
+  const chain = {
     values,
-    returning,
-  });
-  return { values, returning };
+  } as Record<string, jest.Mock>;
+
+  if (returnValue !== undefined) {
+    chain.returning = jest.fn().mockResolvedValue([returnValue]);
+    values.mockReturnValue(chain);
+  } else {
+    values.mockResolvedValue(undefined);
+  }
+
+  global.mockDrizzle.insert.mockReturnValueOnce(chain);
+  return chain;
 }
 
 function mockUpdateReturning(returnValue: unknown) {
@@ -80,32 +109,34 @@ function mockUpdateWithoutReturning() {
   return { set, where };
 }
 
-describe("PaymentService", () => {
-  let paymentService: PaymentService;
-
-  beforeEach(() => {
-    paymentService = new PaymentService();
+function mockDelete() {
+  const where = jest.fn().mockResolvedValue(undefined);
+  global.mockDrizzle.delete.mockReturnValueOnce({
+    where,
   });
+  return { where };
+}
 
-  it("initializes a paystack payment and deduplicates channels", async () => {
-    global.mockDrizzle.query.payment.findFirst.mockResolvedValue(null);
-    global.mockPaystackHttp.post.mockResolvedValue({
+describe("payment-service strict plan", () => {
+  it("initializes a payment, persists the checkout, and schedules the expiry job", async () => {
+    global.mockDrizzle.query.bookingHold.findFirst
+      .mockResolvedValueOnce(baseProjection)
+      .mockResolvedValueOnce(baseProjection);
+    global.mockDrizzle.query.payment.findFirst.mockResolvedValueOnce(null);
+    global.mockKoraHttp.post.mockResolvedValue({
       data: {
         status: true,
-        message: "Authorization URL created",
+        message: "Charge created successfully",
         data: {
-          authorization_url: "https://checkout.paystack.com/test",
-          access_code: "ACCESS_CODE",
           reference: "DX-REFERENCE-1",
+          checkout_url: basePayment.checkoutUrl,
         },
       },
     });
 
-    const insertedPayment = {
-      ...basePayment,
-      channels: ["bank_transfer", "card", "ussd"],
-    };
-    const insertCall = mockInsertReturning(insertedPayment);
+    mockInsert(basePayment);
+    mockUpdateWithoutReturning();
+    global.mockBoss.send.mockResolvedValueOnce("job-expire-1");
 
     const result = await paymentService.initializePayment(
       "user-1",
@@ -113,287 +144,542 @@ describe("PaymentService", () => {
       {
         bookingId: "booking-1",
         reference: "DX-REFERENCE-1",
-        amountMinor: 1430000,
         currency: "NGN",
-        channels: ["bank_transfer", "card", "bank_transfer", "ussd"],
+        channels: ["bank_transfer", "card", "bank_transfer"],
         productName: "Lagos to Abuja",
         productDescription: "Trip booking",
-        redirectUrl:
-          "http://localhost:3000/payment/return?reference=DX-REFERENCE-1",
-        cancelUrl:
-          "http://localhost:3000/payment/cancelled?reference=DX-REFERENCE-1",
-        metadata: { routeId: "route-1" },
+        metadata: {
+          routeId: "route-1",
+          tripDate: "2026-04-21",
+        },
       },
     );
 
-    expect(result).toEqual(insertedPayment);
-    expect(global.mockPaystackHttp.post).toHaveBeenCalledWith(
-      "/transaction/initialize",
+    expect(global.mockKoraHttp.post).toHaveBeenCalledWith(
+      "/merchant/api/v1/charges/initialize",
       expect.objectContaining({
-        email: "test@example.com",
-        amount: 1430000,
-        reference: "DX-REFERENCE-1",
-        channels: ["bank_transfer", "card", "ussd"],
-        callback_url:
-          "http://localhost:3000/payment/return?reference=DX-REFERENCE-1",
+        amount: 14300,
+        channels: ["bank_transfer", "card"],
+        currency: "NGN",
+        notification_url:
+          "https://daily-express.test/api/payments/v1/payments/webhooks/kora",
+        redirect_url:
+          "https://daily-express.test/api/payments/v1/payments/return?ref=DX-REFERENCE-1",
       }),
       expect.any(Object),
     );
-    expect(insertCall.values).toHaveBeenCalledWith(
+    expect(global.mockBoss.send).toHaveBeenCalledWith(
+      "payment.expire",
+      {
+        bookingId: "booking-1",
+        reference: "DX-REFERENCE-1",
+      },
       expect.objectContaining({
-        amountMinor: 1430000,
-        checkoutUrl: "https://checkout.paystack.com/test",
-        checkoutToken: "ACCESS_CODE",
-        channels: ["bank_transfer", "card", "ussd"],
-        redirectUrl:
-          "http://localhost:3000/payment/return?reference=DX-REFERENCE-1",
+        singletonKey: "expire-booking-1",
+        startAfter: baseProjection.expiresAt,
       }),
     );
+    expect(result).toEqual({
+      ...basePayment,
+      expiresAt: baseProjection.expiresAt,
+    });
   });
 
-  it("marks a refreshed payment successful and emits the completion event", async () => {
-    global.mockDrizzle.query.payment.findFirst.mockResolvedValue(basePayment);
-    global.mockPaystackHttp.get.mockResolvedValue({
+  it("reuses an existing pending checkout when Kora still reports it pending", async () => {
+    global.mockDrizzle.query.bookingHold.findFirst.mockResolvedValueOnce(
+      baseProjection,
+    );
+    global.mockDrizzle.query.payment.findFirst.mockResolvedValueOnce(
+      basePayment,
+    );
+    global.mockKoraHttp.get.mockResolvedValue({
       data: {
         status: true,
-        message: "Verification successful",
+        message: "Charge retrieved successfully",
         data: {
-          id: 12345,
           reference: basePayment.reference,
-          status: "success",
-          amount: basePayment.amountMinor,
-          currency: basePayment.currency,
-          gateway_response: "Successful",
-          paid_at: "2025-01-02T00:00:00Z",
+          status: "pending",
+          amount: "14300.00",
+          amount_paid: "0.00",
+          currency: "NGN",
         },
       },
     });
 
-    const updatedPayment = {
+    const result = await paymentService.initializePayment(
+      "user-1",
+      "test@example.com",
+      {
+        bookingId: "booking-1",
+        currency: "NGN",
+        channels: ["bank_transfer"],
+        productName: "Lagos to Abuja",
+        productDescription: "Trip booking",
+      },
+    );
+
+    expect(global.mockKoraHttp.get).toHaveBeenCalledWith(
+      "/merchant/api/v1/charges/DX-REFERENCE-1",
+      expect.any(Object),
+    );
+    expect(global.mockKoraHttp.post).not.toHaveBeenCalled();
+    expect(global.mockDrizzle.update).not.toHaveBeenCalled();
+    expect(result).toEqual({
       ...basePayment,
-      providerTransactionId: "12345",
+      expiresAt: baseProjection.expiresAt,
+    });
+  });
+
+  it("confirms an existing pending checkout when Kora reports success during retry", async () => {
+    const successfulPayment = {
+      ...basePayment,
+      providerTransactionId: "KPY-PAY-retry-success",
       status: "successful" as const,
       providerStatus: "success",
-      paidAt: new Date("2025-01-02T00:00:00Z"),
+      paidAt: new Date("2099-04-21T12:35:00.000Z"),
       rawVerificationResponse: { status: true },
     };
-    mockUpdateReturning(updatedPayment);
 
-    const result = await paymentService.refreshPaymentStatus(
-      "user-1",
-      basePayment.reference,
-    );
-
-    expect(result).toEqual(updatedPayment);
-    expect(global.mockPaystackHttp.get).toHaveBeenCalledWith(
-      `/transaction/verify/${encodeURIComponent(basePayment.reference)}`,
-      expect.any(Object),
-    );
-    expect(mockedEmitPaymentCompleted).toHaveBeenCalledWith({
-      paymentId: updatedPayment.id,
-      bookingId: updatedPayment.bookingId,
-      paymentReference: updatedPayment.reference,
-    });
-  });
-
-  it("fails verification on amount mismatch and emits a failure event", async () => {
-    global.mockDrizzle.query.payment.findFirst.mockResolvedValue(basePayment);
-    global.mockPaystackHttp.get.mockResolvedValue({
+    global.mockDrizzle.query.bookingHold.findFirst
+      .mockResolvedValueOnce(baseProjection)
+      .mockResolvedValueOnce(baseProjection);
+    global.mockDrizzle.query.payment.findFirst
+      .mockResolvedValueOnce(basePayment)
+      .mockResolvedValueOnce(basePayment);
+    global.mockDrizzle.query.outboxEvents.findFirst.mockResolvedValueOnce(null);
+    global.mockKoraHttp.get.mockResolvedValue({
       data: {
         status: true,
-        message: "Verification successful",
+        message: "Charge retrieved successfully",
         data: {
-          id: 12345,
           reference: basePayment.reference,
+          payment_reference: "KPY-PAY-retry-success",
           status: "success",
-          amount: 1200000,
-          currency: basePayment.currency,
-          gateway_response: "Successful",
+          amount: "14300.00",
+          amount_paid: "14300.00",
+          currency: "NGN",
+          paid_at: "2099-04-21T12:35:00.000Z",
         },
       },
     });
 
-    const updatedPayment = {
-      ...basePayment,
-      providerTransactionId: "12345",
-      status: "failed" as const,
-      providerStatus: "success",
-      failureCode: "amount_mismatch",
-      failureReason:
-        "Verified payment amount does not match the booking total",
-      failedAt: new Date("2025-01-03T00:00:00Z"),
-      rawVerificationResponse: { status: true },
-    };
-    mockUpdateReturning(updatedPayment);
+    mockUpdateReturning(successfulPayment);
+    mockUpdateWithoutReturning();
 
-    const result = await paymentService.refreshPaymentStatus(
+    const result = await paymentService.initializePayment(
       "user-1",
-      basePayment.reference,
+      "test@example.com",
+      {
+        bookingId: "booking-1",
+        currency: "NGN",
+        channels: ["bank_transfer"],
+        productName: "Lagos to Abuja",
+        productDescription: "Trip booking",
+      },
     );
 
-    expect(result.status).toBe("failed");
-    expect(mockedEmitPaymentFailed).toHaveBeenCalledWith({
-      paymentId: updatedPayment.id,
-      bookingId: updatedPayment.bookingId,
-      paymentReference: updatedPayment.reference,
-      paymentStatus: "failed",
-      failureReason:
-        "Verified payment amount does not match the booking total",
+    expect(mockedEmitPaymentCompleted).toHaveBeenCalledWith({
+      bookingId: successfulPayment.bookingId,
+      paidAt: "2099-04-21T12:35:00.000Z",
+      paymentId: successfulPayment.id,
+      paymentReference: successfulPayment.reference,
+      userEmail: successfulPayment.customerEmail,
     });
+    expect(global.mockKoraHttp.post).not.toHaveBeenCalled();
+    expect(result.status).toBe("successful");
   });
 
-  it("ignores a webhook with an invalid signature", async () => {
-    mockInsertReturning({
-      id: "webhook-1",
-      provider: "paystack",
-    });
-    global.mockDrizzle.query.payment.findFirst.mockResolvedValue(basePayment);
-    const webhookUpdate = mockUpdateWithoutReturning();
+  it("refreshes an existing pending checkout when Kora reports it abandoned", async () => {
+    const refreshedPayment = {
+      ...basePayment,
+      reference: "DX-REFERENCE-2",
+      checkoutUrl: "https://checkout.korapay.com/pay/DX-REFERENCE-2",
+      checkoutToken: "DX-REFERENCE-2",
+      redirectUrl:
+        "https://daily-express.test/api/payments/v1/payments/return?ref=DX-REFERENCE-2",
+      channels: ["bank_transfer"],
+      rawInitializeResponse: { status: true },
+      updatedAt: new Date("2099-04-21T12:40:00.000Z"),
+    };
 
-    const result = await paymentService.processWebhook({
-      signature: "invalid-signature",
-      rawBody: Buffer.from(JSON.stringify({ event: "charge.success" })),
-      event: {
-        event: "charge.success",
+    global.mockDrizzle.query.bookingHold.findFirst.mockResolvedValueOnce(
+      baseProjection,
+    );
+    global.mockDrizzle.query.payment.findFirst.mockResolvedValueOnce(
+      basePayment,
+    );
+    global.mockKoraHttp.get.mockResolvedValue({
+      data: {
+        status: true,
+        message: "Charge retrieved successfully",
         data: {
-          id: 12345,
-          status: "success",
           reference: basePayment.reference,
-          amount: basePayment.amountMinor,
-          currency: basePayment.currency,
+          status: "abandoned",
+          amount: "14300.00",
+          amount_paid: "0.00",
+          currency: "NGN",
         },
       },
     });
-
-    expect(result).toEqual({
-      acknowledged: true,
-      processed: false,
+    global.mockKoraHttp.post.mockResolvedValue({
+      data: {
+        status: true,
+        message: "Charge created successfully",
+        data: {
+          reference: refreshedPayment.reference,
+          checkout_url: refreshedPayment.checkoutUrl,
+        },
+      },
     });
-    expect(global.mockPaystackHttp.get).not.toHaveBeenCalled();
-    expect(webhookUpdate.set).toHaveBeenCalledWith(
+    global.mockBoss.send.mockResolvedValueOnce("job-expire-2");
+
+    const refreshUpdate = mockUpdateReturning(refreshedPayment);
+    mockUpdateWithoutReturning();
+    mockUpdateWithoutReturning();
+
+    const result = await paymentService.initializePayment(
+      "user-1",
+      "test@example.com",
+      {
+        bookingId: "booking-1",
+        currency: "NGN",
+        channels: ["bank_transfer"],
+        productName: "Lagos to Abuja",
+        productDescription: "Trip booking",
+        metadata: {
+          routeId: "route-1",
+        },
+      },
+    );
+
+    const refreshPayload = refreshUpdate.set.mock.calls[0][0];
+    expect(global.mockBoss.cancel).toHaveBeenCalledWith(
+      "payment.expire",
+      "job-expire-1",
+    );
+    expect(global.mockKoraHttp.post).toHaveBeenCalledWith(
+      "/merchant/api/v1/charges/initialize",
       expect.objectContaining({
-        verificationNote: "Webhook signature verification failed",
+        reference: refreshPayload.reference,
+        redirect_url: expect.stringContaining(
+          encodeURIComponent(refreshPayload.reference),
+        ),
+      }),
+      expect.any(Object),
+    );
+    expect(refreshPayload).toEqual(
+      expect.objectContaining({
+        status: "pending",
+        providerStatus: "pending",
+        checkoutUrl: refreshedPayment.checkoutUrl,
+        checkoutToken: refreshedPayment.checkoutToken,
+        failureCode: null,
+        failureReason: null,
+        failedAt: null,
+        rawVerificationResponse: null,
       }),
     );
+    expect(refreshPayload.reference).not.toBe(basePayment.reference);
+    expect(global.mockBoss.send).toHaveBeenCalledWith(
+      "payment.expire",
+      {
+        bookingId: "booking-1",
+        reference: refreshPayload.reference,
+      },
+      expect.objectContaining({
+        singletonKey: "expire-booking-1",
+        startAfter: baseProjection.expiresAt,
+      }),
+    );
+    expect(mockedEmitPaymentFailed).not.toHaveBeenCalled();
+    expect(result).toEqual({
+      ...refreshedPayment,
+      expiresAt: baseProjection.expiresAt,
+    });
   });
 
-  it("processes a valid charge.success webhook by re-verifying the payment", async () => {
-    const event = {
+  it("rejects payment initialization for a booking owned by another user", async () => {
+    global.mockDrizzle.query.bookingHold.findFirst.mockResolvedValueOnce({
+      ...baseProjection,
+      userId: "user-2",
+    });
+
+    await expect(
+      paymentService.initializePayment("user-1", "test@example.com", {
+        bookingId: "booking-1",
+        productName: "Lagos to Abuja",
+        productDescription: "Trip booking",
+      }),
+    ).rejects.toMatchObject({
+      statusCode: 404,
+      message: "Booking not found",
+    });
+  });
+
+  it("resolves a successful checkout return, confirms the payment, and emits payment.completed", async () => {
+    const successfulPayment = {
+      ...basePayment,
+      providerTransactionId: "KPY-PAY-rYF4c5ZWioeb",
+      status: "successful" as const,
+      providerStatus: "success",
+      paidAt: new Date("2099-04-21T12:30:00.000Z"),
+      rawVerificationResponse: { status: true },
+    };
+
+    global.mockDrizzle.query.payment.findFirst
+      .mockResolvedValueOnce(basePayment)
+      .mockResolvedValueOnce(basePayment);
+    global.mockDrizzle.query.bookingHold.findFirst
+      .mockResolvedValueOnce(baseProjection)
+      .mockResolvedValueOnce(baseProjection);
+    global.mockDrizzle.query.outboxEvents.findFirst.mockResolvedValueOnce(null);
+    global.mockKoraHttp.get.mockResolvedValue({
+      data: {
+        status: true,
+        message: "Charge retrieved successfully",
+        data: {
+          reference: basePayment.reference,
+          payment_reference: "KPY-PAY-rYF4c5ZWioeb",
+          status: "success",
+          amount: "14300.00",
+          amount_paid: "14300.00",
+          currency: "NGN",
+          paid_at: "2099-04-21T12:30:00.000Z",
+        },
+      },
+    });
+
+    mockUpdateReturning(successfulPayment);
+    mockUpdateWithoutReturning();
+
+    const result = await paymentService.resolveReturnUrl(
+      basePayment.reference,
+      "cancelled",
+    );
+
+    expect(global.mockBoss.cancel).toHaveBeenCalledWith(
+      "payment.expire",
+      "job-expire-1",
+    );
+    expect(mockedEmitPaymentCompleted).toHaveBeenCalledWith({
+      bookingId: successfulPayment.bookingId,
+      paidAt: "2099-04-21T12:30:00.000Z",
+      paymentId: successfulPayment.id,
+      paymentReference: successfulPayment.reference,
+      userEmail: successfulPayment.customerEmail,
+    });
+    expect(result).toBe("http://localhost:3000/trip-status");
+  });
+
+  it("verifies a signed webhook, stores the audit record, and queues async processing", async () => {
+    const webhook = {
       event: "charge.success",
       data: {
-        id: 12345,
         status: "success",
         reference: basePayment.reference,
-        amount: basePayment.amountMinor,
+        amount: basePayment.amount,
         currency: basePayment.currency,
       },
     };
-    const rawBody = Buffer.from(JSON.stringify(event));
     const signature = createHmac(
-      "sha512",
-      process.env.PAYSTACK_SECRET_KEY as string,
+      "sha256",
+      process.env.KORA_SECRET_KEY as string,
     )
-      .update(rawBody)
+      .update(JSON.stringify(webhook.data))
       .digest("hex");
 
-    mockInsertReturning({
-      id: "webhook-1",
-      provider: "paystack",
+    mockInsert();
+    global.mockBoss.send.mockResolvedValueOnce("job-webhook-1");
+
+    await paymentService.handleKoraWebhook(webhook, signature);
+
+    expect(global.mockBoss.send).toHaveBeenCalledWith("process.webhook", {
+      event: "charge.success",
+      data: webhook.data,
+      _retryCount: 0,
     });
-    global.mockDrizzle.query.payment.findFirst.mockResolvedValue(basePayment);
-    global.mockPaystackHttp.get.mockResolvedValue({
+  });
+
+  it("requeues a success webhook when the booking hold has not arrived yet", async () => {
+    global.mockDrizzle.query.outboxEvents.findFirst.mockResolvedValueOnce(null);
+    global.mockDrizzle.query.payment.findFirst.mockResolvedValueOnce(
+      basePayment,
+    );
+    global.mockDrizzle.query.bookingHold.findFirst.mockResolvedValueOnce(null);
+    global.mockKoraHttp.get.mockResolvedValue({
       data: {
         status: true,
-        message: "Verification successful",
+        message: "Charge retrieved successfully",
         data: {
-          id: 12345,
           reference: basePayment.reference,
+          payment_reference: "KPY-PAY-rYF4c5ZWioeb",
           status: "success",
-          amount: basePayment.amountMinor,
-          currency: basePayment.currency,
-          gateway_response: "Successful",
-          paid_at: "2025-01-02T00:00:00Z",
+          amount: "14300.00",
+          amount_paid: "14300.00",
+          currency: "NGN",
         },
       },
     });
-    const updatedPayment = {
-      ...basePayment,
-      providerTransactionId: "12345",
-      status: "successful" as const,
-      providerStatus: "success",
-      paidAt: new Date("2025-01-02T00:00:00Z"),
-    };
-    mockUpdateReturning(updatedPayment);
-    const webhookUpdate = mockUpdateWithoutReturning();
+    global.mockBoss.send.mockResolvedValueOnce("job-webhook-retry");
 
-    const result = await paymentService.processWebhook({
-      signature,
-      rawBody,
-      event,
+    await processWebhookJob({
+      event: "charge.success",
+      data: {
+        status: "success",
+        reference: basePayment.reference,
+        amount: basePayment.amount,
+        currency: basePayment.currency,
+      },
+      _retryCount: 0,
     });
 
-    expect(result).toEqual({
-      acknowledged: true,
-      processed: true,
-      payment: updatedPayment,
-    });
-    expect(global.mockPaystackHttp.get).toHaveBeenCalledTimes(1);
-    expect(webhookUpdate.set).toHaveBeenCalledWith(
+    expect(global.mockBoss.send).toHaveBeenCalledWith(
+      "process.webhook",
       expect.objectContaining({
-        verificationNote:
-          "Webhook verified via signature and Paystack verification API",
+        _retryCount: 1,
+        event: "charge.success",
       }),
+      {
+        startAfter: 15,
+      },
     );
+  });
+
+  it("expires a pending payment at hold timeout when Kora still reports it pending", async () => {
+    const expiredPayment = {
+      ...basePayment,
+      status: "expired" as const,
+      failureCode: "PAYMENT_EXPIRED",
+      failureReason: "Seat reservation expired before payment was completed",
+      failedAt: new Date("2099-04-21T13:00:00.000Z"),
+    };
+
+    global.mockDrizzle.query.payment.findFirst
+      .mockResolvedValueOnce(basePayment)
+      .mockResolvedValueOnce(basePayment);
+    global.mockDrizzle.query.bookingHold.findFirst
+      .mockResolvedValueOnce(baseProjection)
+      .mockResolvedValueOnce(null);
+    global.mockDrizzle.query.outboxEvents.findFirst.mockResolvedValueOnce(null);
+    global.mockKoraHttp.get.mockResolvedValue({
+      data: {
+        status: true,
+        message: "Charge retrieved successfully",
+        data: {
+          reference: basePayment.reference,
+          status: "pending",
+          amount: "14300.00",
+          amount_paid: "14300.00",
+          currency: "NGN",
+        },
+      },
+    });
+
+    mockUpdateReturning(expiredPayment);
+    mockUpdateWithoutReturning();
+    mockDelete();
+
+    await handlePaymentExpiry({
+      bookingId: basePayment.bookingId,
+      reference: basePayment.reference,
+    });
+
+    expect(mockedEmitPaymentFailed).toHaveBeenCalledWith({
+      bookingId: expiredPayment.bookingId,
+      failureReason: "Seat reservation expired before payment was completed",
+      paymentId: expiredPayment.id,
+      paymentReference: expiredPayment.reference,
+      paymentStatus: "expired",
+    });
+  });
+
+  it("emails the customer when an automatic refund fails", async () => {
+    const refundPendingPayment = {
+      ...basePayment,
+      status: "refund_pending" as const,
+      providerStatus: "success",
+      failureCode: "AUTO_REFUND_INITIATED",
+      failureReason: "Seat reservation expired before payment was completed",
+      paidAt: new Date("2099-04-21T12:59:00.000Z"),
+    };
+
+    global.mockDrizzle.query.payment.findFirst.mockResolvedValueOnce(
+      basePayment,
+    );
+    global.mockDrizzle.query.bookingHold.findFirst.mockResolvedValueOnce(
+      baseProjection,
+    );
+    global.mockDrizzle.query.outboxEvents.findFirst.mockResolvedValueOnce(null);
+    global.mockKoraHttp.post.mockRejectedValueOnce(
+      new Error("Insufficient funds in disbursement wallet"),
+    );
+
+    mockUpdateReturning(refundPendingPayment);
+    mockUpdateWithoutReturning();
+    mockDelete();
+    mockUpdateWithoutReturning();
+
+    await expect(
+      paymentService.initiateAutoRefund(
+        basePayment.reference,
+        {
+          reference: basePayment.reference,
+          payment_reference: "KPY-PAY-rYF4c5ZWioeb",
+          status: "success",
+          amount: "14300.00",
+          currency: "NGN",
+          paid_at: "2099-04-21T12:59:00.000Z",
+        },
+        { status: true },
+      ),
+    ).rejects.toThrow("Insufficient funds in disbursement wallet");
+
+    expect(mockedSendRefundFailedNotification).toHaveBeenCalledWith({
+      to: "test@example.com",
+      subject: "Refund could not be completed yet",
+      template: "RefundFailedEmail",
+      propsJson: expect.any(String),
+    });
   });
 });
 
 describe("payment validation", () => {
-  it("accepts the full Paystack channel list", () => {
+  it("accepts the documented Kora checkout redirect channels", () => {
     const { error, value } = initializePaymentSchema.validate({
-      amountMinor: 1430000,
+      bookingId: "70f8cf12-b1b9-4ea7-9023-9478aa0a1fed",
       currency: "NGN",
-      channels: [
-        "bank_transfer",
-        "card",
-        "bank",
-        "ussd",
-        "qr",
-        "mobile_money",
-        "apple_pay",
-        "eft",
-        "capitec_pay",
-        "payattitude",
-      ],
+      channels: [...KORA_CHECKOUT_CHANNELS],
       productName: "Lagos to Abuja",
       productDescription: "Trip booking",
-      redirectUrl: "http://localhost:3000/payment/return",
+      metadata: {
+        routeId: "route-1",
+      },
     });
 
     expect(error).toBeUndefined();
-    expect(value.channels).toHaveLength(10);
+    expect(value.channels).toHaveLength(KORA_CHECKOUT_CHANNELS.length);
   });
 
   it("rejects unsupported payment channels", () => {
     const { error } = initializePaymentSchema.validate({
-      amountMinor: 1430000,
+      bookingId: "70f8cf12-b1b9-4ea7-9023-9478aa0a1fed",
+      amount: 14300,
       currency: "NGN",
       channels: ["crypto"],
       productName: "Lagos to Abuja",
       productDescription: "Trip booking",
-      redirectUrl: "http://localhost:3000/payment/return",
     });
 
     expect(error).toBeDefined();
   });
 
-  it("validates paystack webhook payloads", () => {
-    const { error } = paystackWebhookSchema.validate({
-      event: "charge.success",
+  it("validates Kora webhook payloads that use payment_reference", () => {
+    const { error } = koraWebhookSchema.validate({
+      event: "refund.success",
       data: {
-        id: 12345,
         status: "success",
-        reference: "DX-REFERENCE-1",
-        amount: 1430000,
+        payment_reference: "DX-REFERENCE-1",
+        amount: "14300.00",
         currency: "NGN",
       },
     });

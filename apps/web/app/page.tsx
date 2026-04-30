@@ -1,9 +1,26 @@
+import type { Metadata } from "next";
 import Navbar from "~/components/Navbar";
 import SettingNavTabs from "~/components/NavTabs";
-import { TripSearchBar } from "~/components/trip/TripSearchBar";
-import TripCard from "./components/trip/TripCard";
-import TripFilter from "./components/trip/TripFilter";
+import TripSearchSection from "./components/trip/TripSearchSection";
 import Footer from "@repo/ui/Footer";
+import { buildHomeMetadataFromSearchParams } from "./lib/seo";
+import TripSearchBar from "./components/trip/TripSearchBar";
+import { Suspense } from "react";
+
+type HomePageProps = {
+  searchParams: Promise<{
+    from?: string | string[];
+    to?: string | string[];
+    date?: string | string[];
+    vehicleType?: string | string[];
+  }>;
+};
+
+export async function generateMetadata({
+  searchParams,
+}: HomePageProps): Promise<Metadata> {
+  return buildHomeMetadataFromSearchParams(await searchParams);
+}
 
 export default function Home() {
   return (
@@ -16,14 +33,10 @@ export default function Home() {
       </div>
 
       <main className="w-full max-w-7xl mx-auto flex flex-col px-4 py-6 gap-6 flex-1">
-        <TripSearchBar />
-
-        <div className="flex flex-col lg:flex-row gap-8 items-start">
-          <TripFilter />
-          <div className="flex-1 w-full">
-            <TripCard />
-          </div>
-        </div>
+        <Suspense fallback={null}>
+          <TripSearchBar />
+          <TripSearchSection />
+        </Suspense>
       </main>
 
       <Footer className="max-w-7xl mx-auto w-full mt-auto" />

@@ -15,6 +15,8 @@ import { Input } from "@repo/ui/components/input";
 import { Field, FieldLabel } from "@repo/ui/components/field";
 import { useDisconnectProvider, useSetPassword } from "@repo/api";
 import { toast } from "@repo/ui/components/sonner";
+import { posthogEvents } from "~/lib/posthog-events";
+import { usePostHog } from "posthog-js/react";
 
 interface DisconnectGoogleDialogProps {
   hasPassword: boolean;
@@ -27,15 +29,20 @@ export default function DisconnectGoogleDialog({
 }: DisconnectGoogleDialogProps) {
   const [disconnectPassword, setDisconnectPassword] = useState("");
   const [isOpen, setIsOpen] = useState(false);
+  const posthog = usePostHog();
 
   const { mutate: disconnectProvider, isPending: isDisconnecting } =
     useDisconnectProvider({
       onSuccess: () => {
+        posthog.capture(posthogEvents.driver_google_disconnect_succeeded);
         onSuccess();
         toast.success("Google disconnected successfully");
         setIsOpen(false);
       },
       onError: (err) => {
+        posthog.captureException(new Error(err.message), {
+          action: "google_disconnect",
+        });
         toast.error(err.message);
       },
     });
@@ -43,10 +50,14 @@ export default function DisconnectGoogleDialog({
   const { mutate: setPasswordMutation, isPending: isSettingPassword } =
     useSetPassword({
       onSuccess: () => {
+        posthog.capture(posthogEvents.driver_password_set_succeeded);
         setDisconnectPassword("");
         disconnectProvider("google");
       },
       onError: (err) => {
+        posthog.captureException(new Error(err.message), {
+          action: "set_password",
+        });
         toast.error(err.message);
       },
     });
@@ -102,21 +113,7 @@ export default function DisconnectGoogleDialog({
             }
             className="w-full cursor-pointer"
           >
-            {isSettingPassword ? (
-              <div className="flex items-center gap-2">
-                <div className="h-4 w-4 animate-spin rounded-full border-2 border-white/30 border-t-white" />
-                <span>Setting Password...</span>
-              </div>
-            ) : isDisconnecting ? (
-              <div className="flex items-center gap-2">
-                <div className="h-4 w-4 animate-spin rounded-full border-2 border-white/30 border-t-white" />
-                <span>Disconnecting...</span>
-              </div>
-            ) : hasPassword ? (
-              "Disconnect Google"
-            ) : (
-              "Set Password & Disconnect"
-            )}
+            {hasPassword ? "Disconnect Google" : "Set Password & Disconnect"}
           </Button>
         </DialogFooter>
       </DialogContent>

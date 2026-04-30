@@ -33,6 +33,52 @@ export const cloudinaryUpload = async (
   });
 };
 
+export const extractPublicIdFromUrl = (url: string): string | null => {
+  if (!url || !url.includes("cloudinary.com")) return null;
+
+  try {
+    const parts = url.split("/");
+    const uploadIndex = parts.findIndex((part) => part === "upload");
+    if (uploadIndex === -1) return null;
+
+    // The segments after 'upload/' contain transformations, the version (optional), and the public_id
+    // Simple way: find the version (starts with 'v' followed by digits) or the first segment that doesn't look like a transformation
+    let publicIdSegments = parts.slice(uploadIndex + 1);
+
+    // Skip transformation segments (they usually don't contain 'v' followed by digits at the start of the path unless it's version)
+    // Actually, Cloudinary IDs can be complex. Let's use a more robust split.
+    // The public ID is everything from the version (or after transformations) until the extension.
+    
+    // Find version segment if it exists
+    const versionIndex = publicIdSegments.findIndex(seg => /^v\d+$/.test(seg));
+    if (versionIndex !== -1) {
+      publicIdSegments = publicIdSegments.slice(versionIndex + 1);
+    } else {
+      // If no version, skip transformations (segments that contain ',')
+      // Note: This is an approximation. More robust: public IDs for this project always start with 'daily-express'
+      const folderIndex = publicIdSegments.findIndex(seg => seg === "daily-express");
+      if (folderIndex !== -1) {
+        publicIdSegments = publicIdSegments.slice(folderIndex);
+      }
+    }
+
+    const publicIdWithExt = publicIdSegments.join("/");
+    // Remove the extension
+    return publicIdWithExt.replace(/\.[^/.]+$/, "");
+  } catch (error) {
+    console.error("Error extracting Cloudinary public ID:", error);
+    return null;
+  }
+};
+
+export const cloudinaryDelete = async (publicId: string): Promise<void> => {
+  try {
+    await cloudinary.uploader.destroy(publicId);
+  } catch (error) {
+    console.error("Failed to delete image from Cloudinary:", error);
+  }
+};
+
 const ALLOWED_MIME_TYPES = [
   "image/jpeg",
   "image/png",

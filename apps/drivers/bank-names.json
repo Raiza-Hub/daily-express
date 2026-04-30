@@ -1,140 +1,303 @@
 [
   {
-    "name": "Access Bank",
-    "slug": "access-bank",
+    "name": "Access Bank Nigeria",
+    "slug": "access",
     "code": "044",
-    "ussd": "*901#"
+    "country": "NG",
+    "nibss_bank_code": "000014"
   },
   {
-    "name": "ALAT by WEMA",
-    "slug": "alat-by-wema",
-    "code": "035A",
-    "ussd": "*945*100#"
+    "name": "Access Bank Plc (Diamond)",
+    "slug": "diamond",
+    "code": "063",
+    "country": "NG",
+    "nibss_bank_code": "000005"
   },
   {
-    "name": "Citibank Nigeria",
-    "slug": "citibank-nigeria",
+    "name": "ACCESS MOBILE",
+    "slug": "access",
+    "code": "323",
+    "country": "NG",
+    "nibss_bank_code": null
+  },
+  {
+    "name": "Citi Bank",
+    "slug": "citibankng",
     "code": "023",
-    "ussd": ""
+    "country": "NG",
+    "nibss_bank_code": "000009"
   },
   {
-    "name": "Ecobank Nigeria",
-    "slug": "ecobank-nigeria",
+    "name": "Ecobank",
+    "slug": "eco",
     "code": "050",
-    "ussd": "*326#"
+    "country": "NG",
+    "nibss_bank_code": "000010"
+  },
+  {
+    "name": "EcoBank Express Account",
+    "slug": "eco",
+    "code": "922",
+    "country": "NG",
+    "nibss_bank_code": "100008"
+  },
+  {
+    "name": "Ecobank Mobile",
+    "slug": "eco",
+    "code": "307",
+    "country": "NG",
+    "nibss_bank_code": null
+  },
+  {
+    "name": "Ekondo MFB",
+    "slug": "ekondo-mfb",
+    "code": "090097",
+    "country": "NG",
+    "nibss_bank_code": "090097"
+  },
+  {
+    "name": "FCMB Easy Account",
+    "slug": "fcmb",
+    "code": "100031",
+    "country": "NG",
+    "nibss_bank_code": "100031"
+  },
+  {
+    "name": "FCMB Plc",
+    "slug": "fcmb",
+    "code": "214",
+    "country": "NG",
+    "nibss_bank_code": "000003"
   },
   {
     "name": "Fidelity Bank",
-    "slug": "fidelity-bank",
+    "slug": "fidelity",
     "code": "070",
-    "ussd": "*770#"
+    "country": "NG",
+    "nibss_bank_code": "000007"
+  },
+  {
+    "name": "Fidelity Mobile",
+    "slug": "fidelity",
+    "code": "933",
+    "country": "NG",
+    "nibss_bank_code": "100019"
   },
   {
     "name": "First Bank of Nigeria",
-    "slug": "first-bank-of-nigeria",
+    "slug": "firstbank",
     "code": "011",
-    "ussd": "*894#"
+    "country": "NG",
+    "nibss_bank_code": "000016"
   },
   {
-    "name": "First City Monument Bank",
-    "slug": "first-city-monument-bank",
-    "code": "214",
-    "ussd": "*329#"
+    "name": "FirstMonie Wallet",
+    "slug": "firstbank",
+    "code": "928",
+    "country": "NG",
+    "nibss_bank_code": "100014"
+  },
+  {
+    "name": "Fortis Mobile",
+    "slug": "fortis-mobile",
+    "code": "930",
+    "country": "NG",
+    "nibss_bank_code": "100016"
+  },
+  {
+    "name": "FSDH Merchant Bank",
+    "slug": "fsdh",
+    "code": "601",
+    "country": "NG",
+    "nibss_bank_code": "400001"
   },
   {
     "name": "Globus Bank",
     "slug": "globus-bank",
-    "code": "00103",
-    "ussd": "*989#"
+    "code": "103",
+    "country": "NG",
+    "nibss_bank_code": "000027"
   },
   {
-    "name": "Guaranty Trust Bank",
-    "slug": "guaranty-trust-bank",
+    "name": "GT MOBILE",
+    "slug": "gtb",
+    "code": "923",
+    "country": "NG",
+    "nibss_bank_code": "100009"
+  },
+  {
+    "name": "GTBank Mobile Money",
+    "slug": "gtb",
+    "code": "315",
+    "country": "NG",
+    "nibss_bank_code": null
+  },
+  {
+    "name": "GTBank Plc",
+    "slug": "gtb",
     "code": "058",
-    "ussd": "*737#"
+    "country": "NG",
+    "nibss_bank_code": "000013"
   },
   {
     "name": "Heritage Bank",
-    "slug": "heritage-bank",
+    "slug": "heritage",
     "code": "030",
-    "ussd": "*322#"
+    "country": "NG",
+    "nibss_bank_code": "000020"
+  },
+  {
+    "name": "JAIZ Bank",
+    "slug": "jaiz",
+    "code": "301",
+    "country": "NG",
+    "nibss_bank_code": "000006"
   },
   {
     "name": "Keystone Bank",
-    "slug": "keystone-bank",
+    "slug": "keystone",
     "code": "082",
-    "ussd": "*7111#"
+    "country": "NG",
+    "nibss_bank_code": "000002"
   },
   {
-    "name": "Kuda Bank",
-    "slug": "kuda-bank",
+    "name": "Kuda Micro-finance Bank",
+    "slug": "kuda-mfb",
     "code": "50211",
-    "ussd": ""
+    "country": "NG",
+    "nibss_bank_code": "090267"
   },
   {
-    "name": "Moniepoint MFB",
-    "slug": "moniepoint-mfb-ng",
-    "code": "50515",
-    "ussd": "*5573#"
-  },
-  {
-    "name": "OPay",
-    "slug": "paycom",
-    "code": "999992",
-    "ussd": "*955#"
-  },
-  {
-    "name": "Paga",
+    "name": "PAGA",
     "slug": "paga",
-    "code": "327",
-    "ussd": ""
+    "code": "916",
+    "country": "NG",
+    "nibss_bank_code": "100002"
   },
   {
-    "name": "PalmPay",
+    "name": "PALMPAY",
     "slug": "palmpay",
-    "code": "999991",
-    "ussd": "*861#"
+    "code": "100033",
+    "country": "NG",
+    "nibss_bank_code": "100033"
+  },
+  {
+    "name": "PARALLEX BANK",
+    "slug": "parallex",
+    "code": "526",
+    "country": "NG",
+    "nibss_bank_code": "000030"
+  },
+  {
+    "name": "PAYCOM",
+    "slug": "paycom",
+    "code": "305",
+    "country": "NG",
+    "nibss_bank_code": "100004"
   },
   {
     "name": "Polaris Bank",
-    "slug": "polaris-bank",
+    "slug": "polaris",
     "code": "076",
-    "ussd": "*833#"
+    "country": "NG",
+    "nibss_bank_code": "000008"
+  },
+  {
+    "name": "Providus Bank",
+    "slug": "providus",
+    "code": "101",
+    "country": "NG",
+    "nibss_bank_code": "000023"
+  },
+  {
+    "name": "Sparkle",
+    "slug": "sparkle",
+    "code": "090325",
+    "country": "NG",
+    "nibss_bank_code": "090325"
+  },
+  {
+    "name": "Stanbic IBTC @ease Wallet",
+    "slug": "stanbic",
+    "code": "921",
+    "country": "NG",
+    "nibss_bank_code": "100007"
   },
   {
     "name": "Stanbic IBTC Bank",
-    "slug": "stanbic-ibtc-bank",
+    "slug": "stanbic",
     "code": "221",
-    "ussd": "*909#"
+    "country": "NG",
+    "nibss_bank_code": "000012"
+  },
+  {
+    "name": "Stanbic Mobile",
+    "slug": "stanbic",
+    "code": "304",
+    "country": "NG",
+    "nibss_bank_code": null
   },
   {
     "name": "Standard Chartered Bank",
-    "slug": "standard-chartered-bank",
+    "slug": "standard-chartered",
     "code": "068",
-    "ussd": ""
+    "country": "NG",
+    "nibss_bank_code": "000021"
   },
   {
     "name": "Sterling Bank",
-    "slug": "sterling-bank",
+    "slug": "sterling",
     "code": "232",
-    "ussd": "*822#"
+    "country": "NG",
+    "nibss_bank_code": "000001"
   },
   {
-    "name": "United Bank For Africa",
-    "slug": "united-bank-for-africa",
+    "name": "Sterling Mobile",
+    "slug": "sterling",
+    "code": "936",
+    "country": "NG",
+    "nibss_bank_code": null
+  },
+  {
+    "name": "Taj Bank",
+    "slug": "taj",
+    "code": "302",
+    "country": "NG",
+    "nibss_bank_code": "000026"
+  },
+  {
+    "name": "Union Bank",
+    "slug": "unionbank",
+    "code": "032",
+    "country": "NG",
+    "nibss_bank_code": "000018"
+  },
+  {
+    "name": "United Bank for Africa",
+    "slug": "uba",
     "code": "033",
-    "ussd": "*919#"
+    "country": "NG",
+    "nibss_bank_code": "000004"
   },
   {
     "name": "Wema Bank",
-    "slug": "wema-bank",
+    "slug": "wema",
     "code": "035",
-    "ussd": "*945#"
+    "country": "NG",
+    "nibss_bank_code": "000017"
   },
   {
-    "name": "Zenith Bank",
-    "slug": "zenith-bank",
+    "name": "Zenith Bank Plc",
+    "slug": "zenith",
     "code": "057",
-    "ussd": "*966#"
+    "country": "NG",
+    "nibss_bank_code": "000015"
+  },
+  {
+    "name": "ZENITH Mobile",
+    "slug": "zenith",
+    "code": "322",
+    "country": "NG",
+    "nibss_bank_code": "100018"
   }
 ]

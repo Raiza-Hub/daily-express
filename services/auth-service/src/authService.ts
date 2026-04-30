@@ -1,24 +1,28 @@
+import { createHash, randomBytes } from "node:crypto";
 import { db } from "../db/db";
-import { User, users, Otp, otp, userProviders } from "../db/schema";
-import { eq, and } from "drizzle-orm";
+import {
+  User,
+  users,
+  otp,
+  passwordResetTokens,
+  userProviders,
+} from "../db/schema";
+import { eq, and, isNull } from "drizzle-orm";
 import bcrypt from "bcryptjs";
-// import { createServiceError } from "@shared/utils";
-import { createServiceError } from "../../../shared/utils";
+import { createServiceError } from "@shared/utils";
 import {
   enqueueNotificationEmail,
+  enqueueUserIdentityUpserted,
   enqueueUserAccountDeleted,
-  isKafkaEnabled,
 } from "./kafka/outbox";
 
 import jwt, { Secret, SignOptions } from "jsonwebtoken";
-import {
-  JWTPayload,
-  UpdateProfileRequest,
-  UpdateUserRequest,
-} from "@shared/types";
-import { renderVerifyOtpEmail } from "./email/renderVerifyOtpEmail";
+import { UpdateUserRequest } from "@shared/types";
+import { FRONTEND_URL } from "./authUrls";
 
 const OTP_EXPIRY_MINUTES = 10;
+const PASSWORD_RESET_EXPIRY_MINUTES = 30;
+const PASSWORD_RESET_TOKEN_BYTES = 32;
 
 export class AuthService {
   private readonly jwtSecret: string;
@@ -46,7 +50,6 @@ export class AuthService {
     password: string,
     firstName: string,
     lastName: string,
-    // phone: string,
     dateOfBirth: Date,
   ): Promise<{ user: User; accessToken: string; refreshToken: string }> {
     //check if user exists
@@ -58,9 +61,18 @@ export class AuthService {
     }
 
     const storedOtp = this.generateOtp();
-    const verificationEmailHtml =
-      await this.buildVerificationEmailHtml(storedOtp);
     const hashedPassword = await bcrypt.hash(password, this.bcryptRounds);
+
+    const brandName = process.env.EMAIL_BRAND_NAME || "Daily Express";
+    const supportEmail =
+      process.env.SUPPORT_EMAIL || "support@dailyexpress.com";
+
+    const propsJson = JSON.stringify({
+      otp: storedOtp,
+      expiresInMinutes: OTP_EXPIRY_MINUTES,
+      brandName,
+      supportEmail,
+    });
 
     const result = await db.transaction(async (tx) => {
       const data = {
@@ -80,25 +92,23 @@ export class AuthService {
         expiresAt: new Date(Date.now() + OTP_EXPIRY_MINUTES * 60 * 1000),
       });
 
-      if (isKafkaEnabled) {
-        await enqueueNotificationEmail(tx, {
-          to: createdUser.email,
-          subject: "Verify your email",
-          html: verificationEmailHtml,
-          source: "auth-service",
-        });
-      }
+      await enqueueUserIdentityUpserted(tx, {
+        userId: createdUser.id,
+        firstName: createdUser.firstName,
+        lastName: createdUser.lastName,
+        email: createdUser.email,
+        source: "auth-service",
+      });
+      await enqueueNotificationEmail(tx, {
+        to: createdUser.email,
+        subject: "Verify your email",
+        template: "VerifyOtpEmail",
+        propsJson,
+        source: "auth-service",
+      });
 
       return createdUser;
     });
-
-    if (!isKafkaEnabled) {
-      await this.deliverEmailDirectly(
-        result.email,
-        "Verify your email",
-        verificationEmailHtml,
-      );
-    }
 
     return {
       user: result,
@@ -138,73 +148,12 @@ export class AuthService {
 
     return {
       user: updatedUser[0],
-      tokens: this.generateTokens(updatedUser[0].id, updatedUser[0].email, true),
+      tokens: this.generateTokens(
+        updatedUser[0].id,
+        updatedUser[0].email,
+        true,
+      ),
     };
-  }
-
-  async forgotPassword(email: string): Promise<void> {
-    const user = await db.query.users.findFirst({
-      where: eq(users.email, email),
-    });
-    if (!user) {
-      throw createServiceError("User not found", 404);
-    }
-
-    const frontendUrl = process.env.FRONTEND_URL || "http://localhost:3000";
-    const resetLink = `${frontendUrl}/reset-password?token=${this.generateTokens(user.id, user.email, user.emailVerified).accessToken}`;
-    const message = `
-    <p>Click on the link below to reset your password</p>
-    <a href="${resetLink}">Reset Password</a>
-    `;
-
-    if (isKafkaEnabled) {
-      await enqueueNotificationEmail(db, {
-        to: user.email,
-        subject: "Reset Password",
-        html: message,
-        source: "auth-service",
-      });
-      return;
-    }
-
-    await this.deliverEmailDirectly(user.email, "Reset Password", message);
-  }
-
-  async resetPassword(token: string, password: string) {
-    const decoded = jwt.verify(token, this.jwtSecret) as JWTPayload;
-    if (!decoded) {
-      throw createServiceError("Invalid or expired token", 401);
-    }
-    const user = await db.query.users.findFirst({
-      where: eq(users.id, decoded.userId),
-    });
-    if (!user) {
-      throw createServiceError("User not found", 404);
-    }
-    const hashedPassword = await bcrypt.hash(password, this.bcryptRounds);
-    await db
-      .update(users)
-      .set({ password: hashedPassword })
-      .where(eq(users.id, user.id));
-
-    return { user };
-  }
-  private async deliverEmailDirectly(
-    to: string,
-    subject: string,
-    html: string,
-  ) {
-    await fetch("http://localhost:3004/v1/mail/send", {
-      method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-      },
-      body: JSON.stringify({
-        to,
-        subject,
-        html,
-      }),
-    });
   }
 
   private generateTokens(
@@ -249,6 +198,134 @@ export class AuthService {
     //generate 6 digit otp
     const otp = Math.floor(100000 + Math.random() * 900000).toString();
     return otp;
+  }
+
+  private hashPasswordResetToken(token: string) {
+    return createHash("sha256").update(token).digest("hex");
+  }
+
+  private createPasswordResetToken() {
+    const rawToken = randomBytes(PASSWORD_RESET_TOKEN_BYTES).toString("hex");
+
+    return {
+      rawToken,
+      tokenHash: this.hashPasswordResetToken(rawToken),
+      expiresAt: new Date(
+        Date.now() + PASSWORD_RESET_EXPIRY_MINUTES * 60 * 1000,
+      ),
+    };
+  }
+
+  async forgotPassword(email: string): Promise<void> {
+    const user = await db.query.users.findFirst({
+      where: eq(users.email, email),
+    });
+
+    if (!user) {
+      return;
+    }
+
+    const { rawToken, tokenHash, expiresAt } = this.createPasswordResetToken();
+    const resetLink = `${FRONTEND_URL}/reset-password?token=${encodeURIComponent(rawToken)}`;
+
+    const brandName = process.env.EMAIL_BRAND_NAME;
+    const supportEmail = process.env.SUPPORT_EMAIL;
+
+    const propsJson = JSON.stringify({
+      resetUrl: resetLink,
+      brandName,
+      supportEmail,
+    });
+
+    await db.transaction(async (tx) => {
+      await tx
+        .update(passwordResetTokens)
+        .set({
+          usedAt: new Date(),
+          updatedAt: new Date(),
+        })
+        .where(
+          and(
+            eq(passwordResetTokens.userId, user.id),
+            isNull(passwordResetTokens.usedAt),
+          ),
+        );
+
+      await tx.insert(passwordResetTokens).values({
+        userId: user.id,
+        tokenHash,
+        expiresAt,
+      });
+
+      await enqueueNotificationEmail(tx, {
+        to: user.email,
+        subject: "Reset Password",
+        template: "ResetPasswordEmail",
+        propsJson,
+        source: "auth-service",
+      });
+    });
+  }
+
+  async resetPassword(token: string, password: string) {
+    const resetToken = await db.query.passwordResetTokens.findFirst({
+      where: eq(
+        passwordResetTokens.tokenHash,
+        this.hashPasswordResetToken(token),
+      ),
+    });
+
+    if (
+      !resetToken ||
+      resetToken.usedAt ||
+      resetToken.expiresAt.getTime() <= Date.now()
+    ) {
+      throw createServiceError("Invalid or expired token", 401);
+    }
+
+    const user = await db.query.users.findFirst({
+      where: eq(users.id, resetToken.userId),
+    });
+    if (!user) {
+      throw createServiceError("User not found", 404);
+    }
+    const hashedPassword = await bcrypt.hash(password, this.bcryptRounds);
+
+    await db.transaction(async (tx) => {
+      const now = new Date();
+
+      await tx
+        .update(users)
+        .set({
+          password: hashedPassword,
+          sessionInvalidBefore: now,
+          updatedAt: now,
+        })
+        .where(eq(users.id, user.id));
+
+      await tx
+        .update(passwordResetTokens)
+        .set({
+          usedAt: now,
+          updatedAt: now,
+        })
+        .where(eq(passwordResetTokens.id, resetToken.id));
+
+      await tx
+        .update(passwordResetTokens)
+        .set({
+          usedAt: now,
+          updatedAt: now,
+        })
+        .where(
+          and(
+            eq(passwordResetTokens.userId, user.id),
+            isNull(passwordResetTokens.usedAt),
+          ),
+        );
+    });
+
+    return { user };
   }
 
   async login(email: string, password: string) {
@@ -297,7 +374,6 @@ export class AuthService {
         email: true,
         firstName: true,
         lastName: true,
-        // phone: true,
         dateOfBirth: true,
         emailVerified: true,
         createdAt: true,
@@ -318,6 +394,24 @@ export class AuthService {
     };
   }
 
+  async getUserSessionState(userId: string) {
+    const user = await db.query.users.findFirst({
+      where: eq(users.id, userId),
+      columns: {
+        id: true,
+        sessionInvalidBefore: true,
+      },
+    });
+
+    if (!user) {
+      throw createServiceError("User not found", 404);
+    }
+
+    return {
+      sessionInvalidBefore: user.sessionInvalidBefore,
+    };
+  }
+
   async updateProfile(userId: string, data: UpdateUserRequest) {
     const user = await db.query.users.findFirst({
       where: eq(users.id, userId),
@@ -325,11 +419,20 @@ export class AuthService {
     if (!user) {
       throw createServiceError("User not found", 404);
     }
-    const updatedUser = await db
+    const [updatedUser] = await db
       .update(users)
       .set(data)
       .where(eq(users.id, userId))
       .returning();
+
+    await enqueueUserIdentityUpserted(db, {
+      userId: updatedUser.id,
+      firstName: updatedUser.firstName,
+      lastName: updatedUser.lastName,
+      email: updatedUser.email,
+      source: "auth-service",
+    });
+
     return updatedUser;
   }
 
@@ -341,10 +444,19 @@ export class AuthService {
       throw createServiceError("User not found", 404);
     }
     const storedOtp = this.generateOtp();
-    const verificationEmailHtml =
-      await this.buildVerificationEmailHtml(storedOtp);
     const existingOtp = await db.query.otp.findFirst({
       where: eq(otp.email, user.email),
+    });
+
+    const brandName = process.env.EMAIL_BRAND_NAME || "Daily Express";
+    const supportEmail =
+      process.env.SUPPORT_EMAIL || "support@dailyexpress.com";
+
+    const propsJson = JSON.stringify({
+      otp: storedOtp,
+      expiresInMinutes: OTP_EXPIRY_MINUTES,
+      brandName,
+      supportEmail,
     });
 
     await db.transaction(async (tx) => {
@@ -365,43 +477,23 @@ export class AuthService {
         });
       }
 
-      if (isKafkaEnabled) {
-        await enqueueNotificationEmail(tx, {
-          to: user.email,
-          subject: "Verify your email",
-          html: verificationEmailHtml,
-          source: "auth-service",
-        });
-      }
+      await enqueueNotificationEmail(tx, {
+        to: user.email,
+        subject: "Verify your email",
+        template: "VerifyOtpEmail",
+        propsJson,
+        source: "auth-service",
+      });
     });
-
-    if (!isKafkaEnabled) {
-      await this.deliverEmailDirectly(
-        user.email,
-        "Verify your email",
-        verificationEmailHtml,
-      );
-    }
     return "otp sent successfully";
-  }
-
-  private async buildVerificationEmailHtml(otp: string): Promise<string> {
-    return renderVerifyOtpEmail({
-      otp,
-      expiresInMinutes: OTP_EXPIRY_MINUTES,
-      supportEmail: process.env.SUPPORT_EMAIL || "support@dailyexpress.com",
-      brandName: process.env.EMAIL_BRAND_NAME || "Daily Express",
-    });
   }
 
   async deleteUser(userId: string): Promise<void> {
     await db.transaction(async (tx) => {
-      if (isKafkaEnabled) {
-        await enqueueUserAccountDeleted(tx, {
-          userId,
-          source: "auth-service",
-        });
-      }
+      await enqueueUserAccountDeleted(tx, {
+        userId,
+        source: "auth-service",
+      });
 
       await tx.delete(users).where(eq(users.id, userId));
     });

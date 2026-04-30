@@ -1,8 +1,8 @@
 "use client";
 
-import { useResetPassword } from "@repo/api";
 import { zodResolver } from "@hookform/resolvers/zod";
-import { CircleNotchIcon, PasswordIcon } from "@phosphor-icons/react";
+import { PasswordIcon } from "@phosphor-icons/react";
+import { useResetPassword } from "@repo/api";
 import {
   ResetPasswordSchema,
   TresetPasswordSchema,
@@ -10,26 +10,18 @@ import {
 import { Button } from "@repo/ui/components/button";
 import { Field, FieldError, FieldLabel } from "@repo/ui/components/field";
 import { Input } from "@repo/ui/components/input";
-import { useRouter, useSearchParams } from "next/navigation";
+import { toast } from "@repo/ui/components/sonner";
+import { useRouter } from "next/navigation";
 import { Controller, useForm } from "react-hook-form";
-import { Suspense, useState } from "react";
+import { posthogEvents } from "~/lib/posthog-events";
+import { usePostHog } from "posthog-js/react";
 
-const ResetPasswordForm = () => {
-  return (
-    <Suspense fallback={<div>Loading...</div>}>
-      <ResetPasswordFormContent />
-    </Suspense>
-  );
-};
-
-const ResetPasswordFormContent = () => {
+const ResetPasswordForm = ({ token }: { token?: string }) => {
   const router = useRouter();
-  const searchParams = useSearchParams();
-  const token = searchParams.get("token");
-  const { mutate: resetPassword, isPending } = useResetPassword();
-  const [serverError, setServerError] = useState<string>("");
+  const { mutate: resetPassword, isPending, error } = useResetPassword();
+  const posthog = usePostHog();
 
-  const { handleSubmit, control, setError } = useForm<TresetPasswordSchema>({
+  const { handleSubmit, control } = useForm<TresetPasswordSchema>({
     resolver: zodResolver(ResetPasswordSchema),
     defaultValues: {
       newPassword: "",
@@ -39,17 +31,21 @@ const ResetPasswordFormContent = () => {
 
   const onSubmit = (data: TresetPasswordSchema) => {
     if (!token) {
-      setServerError("Invalid or missing reset token");
+      toast.error("Invalid or missing reset token");
       return;
     }
     resetPassword(
       { token, password: data.newPassword },
       {
         onSuccess: () => {
+          posthog.capture(posthogEvents.auth_password_reset_succeeded);
           router.push("/sign-in");
         },
         onError: (err) => {
-          setServerError(err.message);
+          posthog.captureException(new Error(err.message), {
+            action: "resetPassword",
+          });
+          // toast.error("Something went wrong");
         },
       },
     );
@@ -119,9 +115,9 @@ const ResetPasswordFormContent = () => {
                   />
                 </div>
 
-                {serverError && (
-                  <p className="px-1 inline-flex font-medium justify-center text-sm text-red-500">
-                    {serverError}
+                {error && (
+                  <p className="px-1 inline-flex justify-center text-sm text-red-500">
+                    {error?.message}
                   </p>
                 )}
 
@@ -131,14 +127,7 @@ const ResetPasswordFormContent = () => {
                   disabled={isPending}
                   className="w-full cursor-pointer"
                 >
-                  {isPending ? (
-                    <div className="inline-flex items-center gap-2">
-                      <CircleNotchIcon className="size-4 animate-spin" />
-                      resetting...
-                    </div>
-                  ) : (
-                    "Reset Password"
-                  )}
+                  Reset Password
                 </Button>
               </div>
             </form>

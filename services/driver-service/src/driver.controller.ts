@@ -24,25 +24,6 @@ export const getDriver: RequestHandler = asyncHandler(
   },
 );
 
-export const getDriverById: RequestHandler = asyncHandler(
-  async (req: Request, res: Response) => {
-    const id = req.params.id;
-    if (!id || typeof id !== "string") {
-      return res.status(400).json(createErrorResponse("Driver ID is required"));
-    }
-
-    const driver = await driverService.getProfileById(id);
-
-    if (!driver) {
-      return res.status(404).json(createErrorResponse("Driver not found"));
-    }
-
-    return res
-      .status(200)
-      .json(createSuccessResponse(driver, "Driver retrieved successfully"));
-  },
-);
-
 export const createDriver: RequestHandler = asyncHandler(
   async (req: Request, res: Response) => {
     const driverData = req.body;
@@ -53,6 +34,7 @@ export const createDriver: RequestHandler = asyncHandler(
         .json(createErrorResponse("User not authenticated"));
     }
     const driver = await driverService.createDriver(userId, driverData);
+
     return res
       .status(201)
       .json(
@@ -71,6 +53,7 @@ export const updateDriver: RequestHandler = asyncHandler(
         .json(createErrorResponse("User not authenticated"));
     }
     const driver = await driverService.updateDriver(userId, driverData);
+
     return res
       .status(200)
       .json(
@@ -88,8 +71,33 @@ export const deleteDriver: RequestHandler = asyncHandler(
         .json(createErrorResponse("User not authenticated"));
     }
     await driverService.deleteDriver(userId);
+
     return res
       .status(200)
       .json(createSuccessResponse(null, "Driver profile deleted successfully"));
+  },
+);
+
+export const getDriverStats: RequestHandler = asyncHandler(
+  async (req: Request, res: Response) => {
+    const userId = req.user?.userId;
+    if (!userId) {
+      return res
+        .status(401)
+        .json(createErrorResponse("User not authenticated"));
+    }
+
+    const driver = await driverService.getProfile(userId);
+    if (!driver) {
+      return res.status(404).json(createErrorResponse("Driver not found"));
+    }
+
+    const stats = await driverService.getDriverStats(driver.id);
+
+    return res
+      .status(200)
+      .json(
+        createSuccessResponse(stats, "Driver stats retrieved successfully"),
+      );
   },
 );

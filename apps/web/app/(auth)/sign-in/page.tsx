@@ -1,6 +1,7 @@
 import { buttonVariants } from "@repo/ui/components/button";
 import Link from "next/link";
 import LoginForm from "~/components/auth-form/Login";
+import { buildAuthHref } from "~/lib/app-routing";
 
 const Page = async ({
   searchParams,
@@ -26,7 +27,7 @@ const Page = async ({
             variant: "link",
             className: "gap-1.5",
           })}
-          href="/sign-up"
+          href={buildAuthHref("/sign-up", redirect)}
         >
           Don&apos;t have an account? Sign up
         </Link>
@@ -34,13 +35,13 @@ const Page = async ({
         <div className="pt-2">
           <p className="text-center text-xs text-muted-foreground">
             By continuing, you acknowledge that you understand and agree to the{" "}
-            <a href="#" className="text-secondary-foreground hover:underline">
+            <Link href="/terms" className="text-secondary-foreground hover:underline">
               Terms & Conditions
-            </a>{" "}
+            </Link>{" "}
             and{" "}
-            <a href="#" className="text-secondary-foreground hover:underline">
+            <Link href="/privacy" className="text-secondary-foreground hover:underline">
               Privacy Policy.
-            </a>
+            </Link>
           </p>
         </div>
       </div>

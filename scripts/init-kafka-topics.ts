@@ -1,3 +1,4 @@
+import "dotenv/config";
 import { ensureTopics } from "../shared/kafka";
 
 const MAX_RETRIES = 15;
@@ -26,7 +27,9 @@ async function main() {
   }
 }
 
-main().catch((error) => {
-  console.error("Failed to initialize Kafka topics", error);
-  process.exit(1);
-});
+if (import.meta.main) {
+  main().catch((error) => {
+    console.error("Failed to initialize Kafka topics", error);
+    process.exit(1);
+  });
+}

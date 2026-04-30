@@ -18,18 +18,16 @@ export const createDriverSchema = Joi.object({
     "string.email": "Please provide a valid email address",
     "string.empty": "Email is required",
   }),
-  //can be nulll
-  profile_pic: Joi.string().optional(),
+  profile_pic: Joi.string(),
   phone: Joi.string().regex(phoneRegex).required().messages({
     "string.pattern.base": "Phone number must be a valid international format",
     "string.empty": "Phone number is required",
   }),
-  // gender: Joi.string().valid("male", "female", "other").required().messages({
-  //   "any.only": "Gender must be either male, female, or other",
-  //   "string.empty": "Gender is required",
-  // }),
   country: Joi.string().min(2).max(100).required().messages({
     "string.empty": "Country is required",
+  }),
+  currency: Joi.string().min(2).max(3).required().messages({
+    "string.empty": "Currency is required",
   }),
   state: Joi.string().min(2).max(100).required().messages({
     "string.empty": "State is required",
@@ -42,6 +40,9 @@ export const createDriverSchema = Joi.object({
   }),
   bankName: Joi.string().min(2).max(100).required().messages({
     "string.empty": "Bank name is required",
+  }),
+  bankCode: Joi.string().min(2).max(20).required().messages({
+    "string.empty": "Bank code is required",
   }),
   accountNumber: Joi.string().min(2).max(100).required().messages({
     "string.empty": "Account number is required",
@@ -69,12 +70,14 @@ export const updateDriverSchema = Joi.object({
   phone: Joi.string().regex(phoneRegex).optional().messages({
     "string.pattern.base": "Phone number must be a valid international format",
   }),
-  // gender: Joi.string().valid("male", "female", "other").optional(),
+  profile_pic: Joi.string(),
   country: Joi.string().min(2).max(100).optional(),
+  currency: Joi.string().min(2).max(3).optional(),
   state: Joi.string().min(2).max(100).optional(),
   city: Joi.string().min(2).max(100).optional(),
   address: Joi.string().min(1).max(200).optional(),
   bankName: Joi.string().min(2).max(100).optional(),
+  bankCode: Joi.string().min(2).max(20).optional(),
   accountNumber: Joi.string().min(2).max(100).optional(),
   accountName: Joi.string().min(2).max(100).optional(),
 }).min(1); // Ensures at least one field is provided for an update

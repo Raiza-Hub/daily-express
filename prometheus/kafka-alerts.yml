@@ -1,0 +1,100 @@
+groups:
+  - name: kafka-consumer-lag
+    rules:
+      # Consumer Lag Warning
+      - alert: KafkaConsumerLagWarning
+        expr: sum(kafka_consumergroup_lag) by (group) > 1000
+        for: 5m
+        labels:
+          severity: warning
+        annotations:
+          summary: "Consumer lag above 1000 messages"
+          description: "Consumer group {{ $labels.group }} has lag of {{ $value }} messages"
+
+      # Consumer Lag Critical
+      - alert: KafkaConsumerLagCritical
+        expr: sum(kafka_consumergroup_lag) by (group) > 5000
+        for: 5m
+        labels:
+          severity: critical
+        annotations:
+          summary: "Consumer lag above 5000 messages - CRITICAL"
+          description: "Consumer group {{ $labels.group }} has lag of {{ $value }} messages"
+
+      # Consumer Lag Emergency
+      - alert: KafkaConsumerLagEmergency
+        expr: sum(kafka_consumergroup_lag) by (group) > 10000
+        for: 2m
+        labels:
+          severity: emergency
+        annotations:
+          summary: "Consumer lag above 10000 messages - EMERGENCY"
+          description: "Consumer group {{ $labels.group }} has {{ $value }} messages behind. Immediate action required!"
+
+  - name: kafka-outbox-backpressure
+    rules:
+      # Outbox Pending Warning
+      - alert: KafkaOutboxPendingWarning
+        expr: kafka_outbox_pending_total > 10000
+        for: 10m
+        labels:
+          severity: warning
+        annotations:
+          summary: "Outbox backlog growing"
+          description: "Service {{ $labels.service }} has {{ $value }} pending events"
+
+      # Outbox Pending Critical
+      - alert: KafkaOutboxPendingCritical
+        expr: kafka_outbox_pending_total > 50000
+        for: 5m
+        labels:
+          severity: critical
+        annotations:
+          summary: "Outbox backlog critical"
+          description: "Service {{ $labels.service }} has {{ $value }} pending events - backpressure active"
+
+      # Outbox Pending Emergency
+      - alert: KafkaOutboxPendingEmergency
+        expr: kafka_outbox_pending_total > 100000
+        for: 2m
+        labels:
+          severity: emergency
+        annotations:
+          summary: "Outbox backlog emergency - blocking new writes"
+          description: "Service {{ $labels.service }} has {{ $value }} pending events - consider blocking new writes"
+
+  - name: kafka-dlq
+    rules:
+      # DLQ High Rate
+      - alert: KafkaDLQHighRate
+        expr: rate(kafka_dlq_messages_total[5m]) > 10
+        for: 5m
+        labels:
+          severity: critical
+        annotations:
+          summary: "High rate of DLQ messages"
+          description: "Topic {{ $labels.topic }} has {{ $value }} msg/sec going to DLQ"
+
+  - name: kafka-processing
+    rules:
+      # High Processing Time
+      - alert: KafkaProcessingTimeHigh
+        expr: histogram_quantile(0.99, rate(kafka_message_processing_duration_seconds_bucket[5m])) > 5
+        for: 5m
+        labels:
+          severity: warning
+        annotations:
+          summary: "Message processing time P99 > 5 seconds"
+          description: "Topic {{ $labels.topic }} in service {{ $labels.service }} has P99 processing time of {{ $value }}s"
+
+  - name: kafka-poison-message
+    rules:
+      # Poison Message Detection
+      - alert: KafkaPoisonMessageDetected
+        expr: increase(kafka_outbox_failed_total[1h]) > 0
+        for: 1m
+        labels:
+          severity: critical
+        annotations:
+          summary: "Poison message detected"
+          description: "Poison message detected in topic {{ $labels.topic }}, error type: {{ $labels.error_type }}"

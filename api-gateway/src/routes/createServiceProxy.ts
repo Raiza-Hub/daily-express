@@ -20,6 +20,10 @@ function getForwardHeaders(req: Request): GatewayUserHeaders {
   const userEmail = req.headers["x-user-email"];
   const userEmailVerified = req.headers["x-user-email-verified"];
   const userRole = req.headers["x-user-role"];
+  const requestId = req.headers["x-request-id"];
+  const correlationId = req.headers["x-correlation-id"];
+  const sentryTrace = req.headers["sentry-trace"];
+  const baggage = req.headers["baggage"];
 
   return {
     "x-user-id": typeof userId === "string" ? userId : undefined,
@@ -27,6 +31,12 @@ function getForwardHeaders(req: Request): GatewayUserHeaders {
     "x-user-email-verified":
       typeof userEmailVerified === "string" ? userEmailVerified : undefined,
     "x-user-role": typeof userRole === "string" ? userRole : undefined,
+    "x-request-id": typeof requestId === "string" ? requestId : undefined,
+    "x-correlation-id":
+      typeof correlationId === "string" ? correlationId : undefined,
+    "sentry-trace":
+      typeof sentryTrace === "string" ? sentryTrace : undefined,
+    baggage: typeof baggage === "string" ? baggage : undefined,
   };
 }
 
@@ -39,6 +49,20 @@ function applyForwardHeaders(
       proxyReq.setHeader(name, value);
     }
   });
+}
+
+function getContentType(req: Request): string {
+  const value = req.headers["content-type"];
+  return typeof value === "string" ? value.toLowerCase() : "";
+}
+
+function shouldRewriteJsonBody(req: Request): boolean {
+  if (!["POST", "PUT", "PATCH"].includes(req.method || "")) {
+    return false;
+  }
+
+  const contentType = getContentType(req);
+  return contentType.includes("application/json") || contentType.includes("+json");
 }
 
 export function createServiceProxy({
@@ -56,13 +80,23 @@ export function createServiceProxy({
       on: {
         proxyReq: (proxyReq, req) => {
           applyForwardHeaders(proxyReq, getForwardHeaders(req));
-          if (req.body && ["POST", "PUT", "PATCH"].includes(req.method || "")) {
+
+          if (!shouldRewriteJsonBody(req) || req.body == null) {
+            return;
+          }
+
+          if (typeof req.body === "object") {
             const bodyData = JSON.stringify(req.body);
             proxyReq.setHeader("Content-Length", Buffer.byteLength(bodyData));
             proxyReq.write(bodyData);
           }
         },
-        error: (_error, _req, res) => {
+        error: (error, req, res) => {
+          console.error("Proxy request failed", {
+            service_name: serviceName,
+            path: req.originalUrl,
+            error: error.message,
+          });
           if (isExpressResponse(res) && !res.headersSent) {
             res.status(502).json({
               success: false,

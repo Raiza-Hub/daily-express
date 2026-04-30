@@ -2,6 +2,7 @@
   "name": "@repo/api",
   "version": "0.0.0",
   "private": true,
+  "type": "module",
   "exports": {
     ".": "./index.ts"
   },
@@ -11,8 +12,7 @@
   "dependencies": {
     "@tanstack/react-query": "^5.74.4",
     "axios": "^1.13.6",
-    "shared": "workspace:*",
-    "zustand": "^5.0.12"
+    "shared": "workspace:*"
   },
   "devDependencies": {
     "@repo/typescript-config": "workspace:*",

@@ -5,6 +5,8 @@ const publicRoutes = [
   '/sign-in',
   '/sign-up',
   '/verify-email',
+  '/forgot-password',
+  '/reset-password',
 ]
 
 const authRoutes = ['/sign-in', '/sign-up', '/forgot-password', '/reset-password']
@@ -33,5 +35,7 @@ export default async function proxy(req: NextRequest) {
 }
 
 export const config = {
-  matcher: ['/((?!api|_next/static|_next/image|.*\\.png$).*)'],
+  matcher: [
+    "/((?!api|_next/static|_next/image|favicon.ico|sitemap.xml|robots.txt|opengraph-image|twitter-image|.*\\.png$).*)",
+  ],
 }

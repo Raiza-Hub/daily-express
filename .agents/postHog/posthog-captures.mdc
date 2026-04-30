@@ -1,0 +1,388 @@
+---
+description: 
+globs: 
+alwaysApply: false
+---
+# PostHog Integration Guide
+
+## Core Principles
+
+### API Key Management
+
+- **Never hallucinate an API key**. Always use the API key populated in the `.env` file.
+- Use environment variables for all PostHog configuration.
+
+### User Identification
+
+- Call `posthog.identify(userId)` once during login/authentication
+- After identification, PostHog automatically associates all subsequent events with that user
+- **Do NOT include email/user info in every capture** - it's redundant and can cause issues
+
+## Event Tracking Patterns
+
+### 1. Server Actions (Server-Side)
+
+**Rule**: Only track exceptions in catch blocks, not success cases.
+
+```typescript
+// ✅ Correct - Exception tracking only with action name
+try {
+  const res = await someServerAction(values);
+  // No PostHog tracking for success cases
+  return { success: true, message: "Success" };
+} catch (error) {
+  // PostHog exception tracking for server action catch block
+ // (method) PostHogBackendClient.captureException(error: unknown, distinctId?: string, additionalProperties?: Record<string | number, any>): void
+  posthogServer.captureException(
+    error,
+    (await cookies()).get("email")?.value || "unknown",
+    {
+      action: "someServerAction", // Always include action name
+      values, // Include input context
+    }
+  );
+
+  return { success: false, message: "Failed" };
+}
+```
+
+### 2. Client Components (Client-Side)
+
+**Rule**: Track success, failures, and exceptions comprehensively.
+
+```typescript
+// ✅ Complete client-side tracking pattern
+const onSubmit = async (values: FormValues) => {
+  try {
+    const res = await serverAction(values);
+
+    if (res.success) {
+      toast.success(res.message);
+
+      // Success tracking
+     // PostHog.capture(event_name: EventName, properties?: Properties | null, options?: CaptureOptions): CaptureResult | undefined
+      posthog.capture(posthogEvents.operation_success, {
+        message: res.message,
+        values,
+      });
+    } else {
+      toast.error(res.message);
+
+      // Failed response tracking
+      posthog.captureException(new Error(res.message), { res, values });
+    }
+  } catch (error) {
+    toast.error("Something went wrong");
+
+    // Catch block exception tracking
+    posthog.captureException(error, { values });
+  }
+};
+```
+
+### 3. DO NOT INCLUDE WebSocket Hooks (Client-Side)
+
+## Method Usage Guidelines
+
+### When to use `capture()` vs `captureException()`
+
+#### ✅ Use `capture()` for:
+
+- **Success events** (user completed action successfully)
+- **Business events** (user viewed page, clicked button)
+- **Milestone events** (user reached certain state)
+
+```typescript
+// Success events
+posthog.capture(posthogEvents.user_registered, { plan: "premium" });
+posthog.capture(posthogEvents.file_uploaded, { fileType: "image" });
+
+// Business events
+posthog.capture(posthogEvents.page_viewed, { page: "/dashboard" });
+```
+
+#### ✅ Use `captureException()` for:
+
+- **Failed API responses** (server returned error)
+- **Catch block errors** (unexpected exceptions)
+- **Validation failures** (data didn't meet requirements)
+- **Connection errors** (network/WebSocket issues)
+
+```typescript
+// Failed responses
+posthog.captureException(new Error(res.message), { res, values });
+
+// Catch block errors
+posthog.captureException(error, { values });
+
+// Validation failures
+posthog.captureException(new Error("Invalid file format"), {
+  fileType: file.type,
+});
+```
+
+## Event Naming Conventions
+
+### Event Name Structure
+
+Use clear, descriptive names following this pattern:
+
+- `{action}_{entity}_{status}`
+- Examples: `add_user_success`, `upload_file_failed`, `verify_terminal_success`
+
+### Constants Management
+
+Store all event names in a centralized constants file:
+
+```typescript
+// constants.ts
+export const posthogEvents = {
+  // Success events
+  add_user_success: "user:add_user_success",
+  upload_file_success: "media:upload_file_success",
+
+  // Failure events (for captureException context)
+  login_failed: "auth:login_failed",
+  upload_failed: "media:upload_failed",
+} as const;
+```
+
+## Context and Data Inclusion
+
+### Always Include Input Context
+
+When tracking exceptions, always include the input data that caused the failure:
+
+```typescript
+// ✅ Include values for debugging context
+posthog.captureException(error, { values, userId });
+
+// ✅ Include relevant IDs and parameters
+posthog.captureException(error, { draw_id, results });
+
+// ✅ Sanitize sensitive data
+posthog.captureException(error, {
+  values: { ...values, password: "[REDACTED]" },
+});
+```
+
+### Server Actions: Always Include Action Name
+
+For server actions, always include the action name in the additionalProperties for better debugging and filtering:
+
+```typescript
+// ✅ Server action with action name
+export const createUser = async (values: CreateUserType) => {
+  try {
+    // Business logic
+    const result = await apiCall(values);
+    return { success: true, data: result };
+  } catch (error) {
+    posthogServer.captureException(error, lmcId, {
+      action: "createUser", // Action name for filtering/debugging
+      values,
+    });
+    return { success: false, message: "Failed to create user" };
+  }
+};
+```
+
+### Data Sanitization
+
+Remove or redact sensitive information:
+
+```typescript
+// ✅ Remove file objects and sensitive data
+const sanitizedValues = { ...values, id_image: "", password: "" };
+posthog.captureException(error, { values: sanitizedValues });
+```
+
+## Server vs Client Patterns
+
+### Server Actions Pattern
+
+```typescript
+"use server";
+
+export const serverAction = async (values: FormData) => {
+  try {
+    // Business logic
+    const result = await apiCall(values);
+    return { success: true, data: result };
+  } catch (error) {
+    // Only exception tracking in server actions
+    posthogServer.captureException(
+      error,
+      (await cookies()).get("email")?.value || "unknown",
+      {
+        action: "serverAction", // Always include action name
+        values,
+      }
+    );
+
+    return { success: false, message: "Operation failed" };
+  }
+};
+```
+
+### Client Component Pattern
+
+```typescript
+"use client";
+
+const ClientComponent = () => {
+  const handleSubmit = async (values: FormData) => {
+    try {
+      const res = await serverAction(values);
+
+      if (res.success) {
+        // Success tracking
+        posthog.capture(posthogEvents.operation_success, {
+          message: "Operation completed",
+          values,
+        });
+      } else {
+        // Failure tracking
+        posthog.captureException(new Error(res.message), { res, values });
+      }
+    } catch (error) {
+      // Exception tracking
+      posthog.captureException(error, { values });
+    }
+  };
+};
+```
+
+## Method Signatures Reference
+
+### Server-Side (PostHogBackendClient)
+
+```typescript
+posthogServer.captureException(
+  error: unknown,
+  distinctId?: string,
+  additionalProperties?: Record<string | number, any>
+): void
+```
+
+**Usage Examples:**
+
+```typescript
+// Basic exception with distinctId and action
+posthogServer.captureException(error, userId, { action: "actionName" });
+
+// Exception with context and action
+posthogServer.captureException(error, userId, {
+  action: "actionName",
+  values,
+  additionalContext: "info",
+});
+
+// Exception without distinctId (uses "unknown")
+posthogServer.captureException(error, "unknown", {
+  action: "actionName",
+  values,
+});
+```
+
+### Client-Side (PostHog)
+
+```typescript
+posthog.captureException(
+  error: unknown,
+  additionalProperties?: Properties
+): void
+```
+
+**Usage Examples:**
+
+```typescript
+// Basic exception
+posthog.captureException(error);
+
+// Exception with context
+posthog.captureException(error, { values, userId, action: "submit" });
+
+// Exception from failed response
+posthog.captureException(new Error(res.message), { res, values });
+```
+
+## Common Anti-Patterns to Avoid
+
+### ❌ Don't Do This:
+
+```typescript
+// ❌ Wrong: Using capture() for exceptions
+posthog.capture("error_occurred", { error: error.message });
+
+// ❌ Wrong: Including email after posthog.identify()
+posthog.capture("user_action", { email: user.email, action: "click" });
+
+// ❌ Wrong: Tracking success in server actions
+posthogServer.capture({ event: "success", ... }); // Server actions = exceptions only
+
+// ❌ Wrong: Not including input context
+posthog.captureException(error); // Missing values/context for debugging
+
+// ❌ Wrong: Server action without action name
+posthogServer.captureException(error, lmcId, { values }); // Missing action name
+
+// ❌ Wrong: Using capture() for failed responses
+if (!res.success) {
+  posthog.capture("operation_failed", { message: res.message });
+}
+
+// ❌ Wrong: Incorrect captureException signature
+posthog.captureException({ error, values }); // Should be (error, { values })
+posthogServer.captureException({ error, distinctId, values }); // Should be (error, distinctId, { values })
+```
+
+### ✅ Do This Instead:
+
+```typescript
+// ✅ Correct: Using captureException() for exceptions
+posthog.captureException(error, { values });
+
+// ✅ Correct: No email after identification
+posthog.capture("user_action", { action: "click" });
+
+// ✅ Correct: Server actions only track exceptions with action name
+posthogServer.captureException(error, distinctId, {
+  action: "actionName",
+  values,
+}); // Catch blocks only
+
+// ✅ Correct: Always include context
+posthog.captureException(error, { values, userId });
+
+// ✅ Correct: Using captureException() for failed responses
+if (!res.success) {
+  posthog.captureException(new Error(res.message), { res, values });
+}
+
+// ✅ Correct: Proper captureException signatures
+posthog.captureException(error, { values }); // Client-side
+posthogServer.captureException(error, distinctId, {
+  action: "actionName",
+  values,
+}); // Server-side
+```
+
+## Summary Checklist
+
+- [ ] API keys from environment variables only
+- [ ] `posthog.identify()` called once at login
+- [ ] Server actions: Exception tracking only (`captureException()`)
+- [ ] Client components: Success + failure + exception tracking
+- [ ] Failed responses use `captureException()`, not `capture()`
+- [ ] Always include input context in exceptions
+- [ ] **Server actions: Always include action name in additionalProperties**
+- [ ] Sanitize sensitive data before tracking
+- [ ] Use descriptive event names stored in constants
+- [ ] Feature flags used sparingly with validation
+- [ ] Custom properties follow consistent naming
+- [ ] Use correct `captureException()` method signatures
+- [ ] Server-side: `captureException(error, distinctId, { action: "actionName", ...additionalProperties })`
+- [ ] Client-side: `captureException(error, additionalProperties)`
+
+This pattern ensures comprehensive, consistent, and secure PostHog integration across your entire codebase with proper action tracking for debugging and filtering.

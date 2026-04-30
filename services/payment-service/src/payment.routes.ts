@@ -1,10 +1,11 @@
 import { Router } from "express";
 import {
+  authenticateInternalServiceRequest,
   authenticateVerifiedGatewayRequest,
   validateRequest,
 } from "@shared/middleware";
 import * as paymentController from "./payment.controller";
-import { initializePaymentSchema, paystackWebhookSchema } from "./validation";
+import { initializePaymentSchema, upsertBookingHoldSchema } from "./validation";
 
 const router: Router = Router();
 
@@ -17,25 +18,19 @@ router.get("/health", (_req, res) => {
 });
 
 router.post(
-  "/initialize",
+  "/internal/booking-holds",
+  authenticateInternalServiceRequest,
+  validateRequest(upsertBookingHoldSchema),
+  paymentController.upsertBookingHold,
+);
+router.post(
+  "/internal/initialize",
+  authenticateInternalServiceRequest,
   authenticateVerifiedGatewayRequest,
   validateRequest(initializePaymentSchema),
   paymentController.initializePayment,
 );
-router.get(
-  "/reference/:reference",
-  authenticateVerifiedGatewayRequest,
-  paymentController.getPaymentByReference,
-);
-router.post(
-  "/reference/:reference/refresh",
-  authenticateVerifiedGatewayRequest,
-  paymentController.refreshPaymentStatus,
-);
-router.post(
-  "/webhooks/paystack",
-  validateRequest(paystackWebhookSchema),
-  paymentController.handleWebhook,
-);
+router.get("/return", paymentController.handleReturn);
+router.post("/webhooks/kora", paymentController.handleWebhook);
 
 export default router;

@@ -1,11 +1,13 @@
 export interface PaymentServiceConfig {
   port: number;
   nodeEnv: string;
-  paystackSecretKey?: string;
-  paystackBaseUrl: string;
-  paystackRequestTimeoutMs: number;
-  defaultRedirectUrl?: string;
-  defaultCancelUrl?: string;
+  koraSecretKey?: string;
+  koraBaseUrl: string;
+  koraWebhookSecret?: string;
+  koraRequestTimeoutMs: number;
+  koraWebhookUrl?: string;
+  frontendUrl: string;
+  paymentPublicBaseUrl?: string;
 }
 
 let config: PaymentServiceConfig | null = null;
@@ -27,14 +29,13 @@ export function loadConfig(): PaymentServiceConfig {
   config = {
     port: parseInteger(process.env.PORT, 5005),
     nodeEnv: process.env.NODE_ENV || "development",
-    paystackSecretKey: process.env.PAYSTACK_SECRET_KEY,
-    paystackBaseUrl: process.env.PAYSTACK_BASE_URL || "https://api.paystack.co",
-    paystackRequestTimeoutMs: parseInteger(
-      process.env.PAYSTACK_TIMEOUT_MS,
-      15000,
-    ),
-    defaultRedirectUrl: process.env.PAYMENT_DEFAULT_REDIRECT_URL,
-    defaultCancelUrl: process.env.PAYMENT_DEFAULT_CANCEL_URL,
+    koraSecretKey: process.env.KORA_SECRET_KEY,
+    koraBaseUrl: process.env.KORA_BASE_URL || "https://api.korapay.com",
+    koraWebhookSecret: process.env.KORA_WEBHOOK_SECRET,
+    koraRequestTimeoutMs: parseInteger(process.env.KORA_TIMEOUT_MS, 15000),
+    koraWebhookUrl: process.env.KORA_WEBHOOK_URL,
+    frontendUrl: process.env.FRONTEND_URL || "http://localhost:3000",
+    paymentPublicBaseUrl: process.env.PAYMENT_PUBLIC_BASE_URL,
   };
 
   return config;

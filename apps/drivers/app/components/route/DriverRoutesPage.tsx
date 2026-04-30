@@ -5,13 +5,12 @@ import DriverRouteDetailsCard from "./DriverRouteDetailsCard";
 import DriverRoutesEmptyState from "./DriverRoutesEmptyState";
 import DriverRoutesErrorState from "./DriverRoutesErrorState";
 import DriverRoutesLoadingState from "./DriverRoutesLoadingState";
-import { sortDriverRoutes } from "./driverRoutesShared";
 
 export default function DriverRoutesPage() {
-  const { data, isLoading, isError, error, refetch, isFetching } =
+  const { data, isLoading, isError, refetch } =
     useGetAllDriverRoutes();
 
-  const routes = sortDriverRoutes(data ?? []);
+  const routes = data ?? [];
 
   return (
     <div className="mx-auto flex w-full max-w-7xl flex-1 flex-col gap-6 px-4 py-8">
@@ -23,9 +22,6 @@ export default function DriverRoutesPage() {
           <p className="text-sm text-muted-foreground">
             View every route you&apos;ve created and keep track of their status.
           </p>
-          {isFetching && !isLoading ? (
-            <p className="text-xs text-muted-foreground">Refreshing routes...</p>
-          ) : null}
         </div>
       </div>
 
@@ -33,16 +29,14 @@ export default function DriverRoutesPage() {
 
       {isError ? (
         <DriverRoutesErrorState
-          message={
-            error instanceof Error
-              ? error.message
-              : "An unexpected error occurred while fetching routes."
-          }
+          message="An unexpected error occurred while fetching routes."
           onRetry={() => refetch()}
         />
       ) : null}
 
-      {!isLoading && !isError && routes.length === 0 ? <DriverRoutesEmptyState /> : null}
+      {!isLoading && !isError && routes.length === 0 ? (
+        <DriverRoutesEmptyState />
+      ) : null}
 
       {!isLoading && !isError && routes.length > 0 ? (
         <div className="grid gap-4">
@@ -51,7 +45,7 @@ export default function DriverRoutesPage() {
               key={route.id}
               route={route}
               onRouteChanged={() => {
-                void refetch();
+                refetch();
               }}
             />
           ))}
