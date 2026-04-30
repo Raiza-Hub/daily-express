@@ -62,6 +62,8 @@ function getKafkaConfig() {
       "plain") as SASLMechanism,
     schemaRegistryUsername,
     schemaRegistryPassword,
+    connectionTimeout: 30000,
+    requestTimeout: 30000,
   };
 }
 
@@ -99,6 +101,8 @@ function createKafkaClient(clientId?: string) {
         ? logLevel.NOTHING
         : logLevel.WARN,
     ssl: getKafkaSslConfig(config.ssl),
+    connectionTimeout: config.connectionTimeout,
+    requestTimeout: config.requestTimeout,
   };
 
   if (sasl) {
@@ -301,6 +305,7 @@ export const TOPICS = {
   USER_IDENTITY_UPSERTED: "user.identity.upserted",
   ROUTE_CREATED: "route.created",
   ROUTE_DELETED: "route.deleted",
+  BOOKING_CREATED: "booking.created",
   BOOKING_CONFIRMED: "booking.confirmed",
   BOOKING_CANCELLED: "booking.cancelled",
   TRIP_COMPLETED: "trip.completed",

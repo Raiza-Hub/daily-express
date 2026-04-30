@@ -95,6 +95,7 @@ async function createApp(): Promise<Express> {
         trustProxyHops: config.TRUST_PROXY_HOPS,
         ip: req.ip,
         ips: req.ips,
+        rateLimitKey: req.ip,
         socketRemoteAddress: req.socket.remoteAddress,
         headers: {
           xRealIp: req.header("x-real-ip"),

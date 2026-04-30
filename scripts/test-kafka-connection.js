@@ -17,6 +17,8 @@ const kafka = new Kafka({
   brokers: ['pkc-oxqxx9.us-east-1.aws.confluent.cloud:9092'],
   ssl: getSslConfig(),
   sasl: { mechanism: 'plain', username: '3EH7KQJIHPRMB5DX', password: 'cfltwTIFYQgBdicizks3VwpzzIw9Yk/P2i3inHiBGL9WhGjsIM+DCGTHaZT9W55g' },
+  connectionTimeout: 30000,
+  requestTimeout: 30000,
   retry: { retries: 10, initialRetryTime: 3000, factor: 1 },
   logLevel: 0 // disable kafkajs logging
 });
