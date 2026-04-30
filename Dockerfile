@@ -1,4 +1,3 @@
-# syntax=docker/dockerfile:1
 FROM oven/bun:1.3.6-debian AS base
 
 WORKDIR /app
