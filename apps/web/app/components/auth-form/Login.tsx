@@ -2,24 +2,27 @@
 
 import { zodResolver } from "@hookform/resolvers/zod";
 import { SignInSchema, TSignInSchema } from "@repo/types/authSchema";
-import { useLogin } from "@repo/api";
+import { getDriverFn, useLogin } from "@repo/api";
 import { Button } from "@repo/ui/components/button";
 import { Field, FieldError, FieldLabel } from "@repo/ui/components/field";
 import { Input } from "@repo/ui/components/input";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { Controller, useForm } from "react-hook-form";
-import { CircleNotchIcon } from "@phosphor-icons/react";
-import { toast } from "@repo/ui/components/sonner";
+// import { toast } from "@repo/ui/components/sonner";
 import GoogleSignInButton from "./GoogleSignInButton";
 import { useState } from "react";
+import { resolvePostAuthDestination } from "~/lib/app-routing";
+import { posthogEvents } from "~/lib/posthog-events";
+import { usePostHog } from "posthog-js/react";
 
 const LoginForm = ({ redirect }: { redirect?: string }) => {
   const router = useRouter();
   const { mutate: login, isPending, error } = useLogin();
+  const posthog = usePostHog();
   const [isGoogleLoading, setIsGoogleLoading] = useState(false);
 
-  const { handleSubmit, control, setError } = useForm<TSignInSchema>({
+  const { handleSubmit, control } = useForm<TSignInSchema>({
     resolver: zodResolver(SignInSchema),
     defaultValues: {
       email: "",
@@ -34,14 +37,42 @@ const LoginForm = ({ redirect }: { redirect?: string }) => {
         password: data.password,
       },
       {
-        onSuccess: () => {
-          router.push(redirect || "/");
+        onSuccess: async () => {
+          posthog.capture(posthogEvents.auth_login_succeeded);
+          let isDriver = false;
+
+          try {
+            await getDriverFn();
+            isDriver = true;
+          } catch (error) {
+            if (
+              !(error instanceof Error) ||
+              !error.message.toLowerCase().includes("driver not found")
+            ) {
+              console.error("Driver lookup failed after login", error);
+            }
+          }
+
+          const destination = resolvePostAuthDestination({
+            redirect,
+            isDriver,
+          });
+          if (
+            destination.startsWith("http://") ||
+            destination.startsWith("https://")
+          ) {
+            window.location.assign(destination);
+            return;
+          }
+
+          router.push(destination);
         },
         onError: (err) => {
-          setError("root", {
-            message: err.message || "Something went wrong",
+          posthog.captureException(new Error(err.message), {
+            action: "login",
+            values: { email: data.email },
           });
-          toast.error(err.message);
+          // toast.error("Something went wrong");
         },
       },
     );
@@ -82,7 +113,7 @@ const LoginForm = ({ redirect }: { redirect?: string }) => {
                   <div className="flex items-center justify-between">
                     <FieldLabel htmlFor="password">Password</FieldLabel>
                     <Link
-                      href="/forget-password"
+                      href="/forgot-password"
                       className="text-sm text-muted-foreground"
                     >
                       Forgot password?
@@ -120,11 +151,11 @@ const LoginForm = ({ redirect }: { redirect?: string }) => {
             />
           </div>
 
-          {/* {error && (
-            <p className="px-1 inline-flex justify-center text-xs text-center text-red-500">
+          {error && (
+            <p className="px-1 inline-flex justify-center text-sm text-red-500">
               {error?.message}
             </p>
-          )} */}
+          )}
 
           <Button
             className="cursor-pointer"
@@ -132,11 +163,7 @@ const LoginForm = ({ redirect }: { redirect?: string }) => {
             disabled={isPending || isGoogleLoading}
             type="submit"
           >
-            {isPending ? (
-              <CircleNotchIcon className="size-4 animate-spin" />
-            ) : (
-              "Sign in"
-            )}
+            Sign in
           </Button>
         </div>
       </form>

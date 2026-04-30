@@ -24,12 +24,19 @@
     "baseUrl": "./",
     "paths": {
       "@/*": ["src/*"],
-      "@shared/*": ["../../shared/*"]
+      "@shared/*": ["../../shared/*"],
+      "@repo/email": ["../../email/src/index.ts"]
     },
     "types": ["jest", "node"],
     "typeRoots": ["./node_modules/@types", "./types"]
   },
-  "include": ["src/**/*", "../../shared/**/*", "tests/**/*", "types/**/*.d.ts"],
+  "include": [
+    "src/**/*",
+    "../../shared/**/*",
+    "../../email/**/*",
+    "tests/**/*",
+    "types/**/*.d.ts"
+  ],
   "exclude": ["node_modules", "dist"]
 }
 

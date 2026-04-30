@@ -1,26 +1,33 @@
 "use client";
 
-import { CircleNotchIcon, TrashIcon } from "@phosphor-icons/react";
+import { TrashIcon } from "@phosphor-icons/react";
 import { Button } from "@repo/ui/components/button";
-import { useRouter } from "next/navigation";
 import { toast } from "@repo/ui/components/sonner";
 import { useDeleteDriver, useLogout } from "@repo/api";
+import { env } from "~/env";
+import { posthogEvents } from "~/lib/posthog-events";
+import { usePostHog } from "posthog-js/react";
 
 const DeleteAccount = () => {
-  const router = useRouter();
   const { mutate: signOut } = useLogout();
   const { mutate: deleteDriver, isPending } = useDeleteDriver();
+  const posthog = usePostHog();
 
   const handleDelete = () => {
     deleteDriver(undefined, {
       onSuccess: () => {
+        posthog.capture(posthogEvents.driver_account_delete_succeeded);
         signOut(undefined, {
           onSuccess: () => {
-            router.push("/sign-in");
+            posthog.capture(posthogEvents.driver_logout_succeeded);
+            window.location.href = `${env.NEXT_PUBLIC_WEB_APP_URL}/sign-in`;
           },
         });
       },
       onError: (err) => {
+        posthog.captureException(new Error(err.message), {
+          action: "account_delete_failed",
+        });
         toast.error(err.message);
       },
     });
@@ -51,17 +58,8 @@ const DeleteAccount = () => {
           disabled={isPending}
           onClick={handleDelete}
         >
-          {isPending ? (
-            <>
-              <CircleNotchIcon className="size-4 animate-spin" />
-              <span>Deleting account</span>
-            </>
-          ) : (
-            <>
-              <TrashIcon className="size-4" />
-              <span>Delete Account</span>
-            </>
-          )}
+          <TrashIcon className="size-4" />
+          <span>Delete Account</span>
         </Button>
       </div>
     </div>

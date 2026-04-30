@@ -1,121 +1,107 @@
 "use client";
 
-import { Badge } from "@repo/ui/components/badge";
+import { useDriverPayoutBalance, useGetDriver } from "@repo/api";
 import Image from "next/image";
-import { CircleNotchIcon } from "@phosphor-icons/react";
-import { useGetDriver } from "@repo/api";
+import BankList from "../../../bank-names.json";
+import VerificationBadge from "../VerificationBadge";
 import ChangeBankDetailsDialog from "./ChangeBankDetailsDialog";
+import { Bank } from "~/lib/type";
+import { formatCurrency } from "~/lib/utils";
+import Loader from "../Loader";
 
-const bankSlugMap: Record<string, string> = {
-  OPay: "paycom",
-};
-
-export default function PayoutSettings() {
+const PayoutSettings = () => {
   const { data: driver, isLoading } = useGetDriver();
+  const { data: payoutBalance, isError: isPayoutBalanceError } =
+    useDriverPayoutBalance();
 
-  const bankSlug =
-    bankSlugMap[driver?.bankName || ""] ||
-    driver?.bankName?.toLowerCase().replace(/\s+/g, "-") ||
-    "";
-  const isActive = driver?.isActive ?? null;
+  const matchedBank = (BankList as Bank[]).find(
+    (bank) =>
+      bank.code === driver?.bankCode ||
+      bank.name.toLowerCase() === driver?.bankName?.toLowerCase(),
+  );
+  const bankSlug = matchedBank?.slug || "";
+  const hasBankDetails = Boolean(driver?.bankName && driver?.bankCode);
 
   if (isLoading) {
     return (
-      <div>
-        <div className="mb-6 py-4 border-b border-gray-100">
-          <h1 className="text-xl font-semibold mb-1">Bank Details</h1>
-          <p className="text-sm text-muted-foreground">
-            Manage your payout accounts and banking details. Payouts are
-            processed every 2 hours during active trips, subject to bank
-            processing times.
-          </p>
-        </div>
-
-        <div className="flex items-center justify-center py-12">
-          <div className="flex items-center gap-2 text-muted-foreground">
-            <CircleNotchIcon className="h-5 w-5 animate-spin" />
-            <span>Loading...</span>
-          </div>
-        </div>
+      <div className="flex items-center justify-center py-12">
+        <Loader text="Loading payout details..." />
       </div>
     );
   }
 
   return (
     <div>
-      <div className="mb-6 py-4 border-b border-gray-100">
-        <h1 className="text-xl font-semibold mb-1">Bank Details</h1>
+      <div className="mb-6 border-b border-gray-100 py-4">
+        <h1 className="mb-1 text-xl font-semibold">Bank Details</h1>
         <p className="text-sm text-muted-foreground">
-          Manage your payout accounts and banking details. Payouts are processed
-          every 2 hours during active trips, subject to bank processing times.
+          Manage your payout account. Payouts are processed automatically
+          shortly after trip completion.
         </p>
       </div>
 
-      <div className="">
-        {/* Bank Row */}
-        <div className="flex flex-col gap-3 md:flex-row md:gap-0 md:justify-between md:items-center">
-          {/* Logo + Badge row on small screens */}
-          <div className="flex items-center justify-between md:contents">
-            {/* Bank Logo */}
-            <div className="flex items-center justify-center">
+      <div className="flex flex-col gap-3 md:flex-row md:items-center md:justify-between md:gap-4">
+        <div className="flex items-center justify-between md:contents">
+          <div className="flex items-center justify-center relative w-10 h-10">
+            {bankSlug ? (
               <Image
                 src={`/logos/${bankSlug}.png`}
                 alt={driver?.bankName || "Bank"}
-                width={40}
-                height={40}
+                fill
+                sizes="40px"
+                unoptimized
                 className="rounded-sm object-contain"
               />
-            </div>
-
-            {/* Status Badge */}
-            <div className="md:order-3">
-              {isActive === true && (
-                <Badge className="gap-1.5" variant="secondary">
-                  <span
-                    aria-hidden="true"
-                    className="size-1.5 rounded-full bg-emerald-500"
-                  />
-                  Active
-                </Badge>
-              )}
-              {isActive === false && (
-                <Badge className="gap-1.5" variant="destructive">
-                  <span
-                    aria-hidden="true"
-                    className="size-1.5 rounded-full bg-red-500"
-                  />
-                  Failed
-                </Badge>
-              )}
-              {isActive === null && (
-                <Badge className="gap-1.5" variant="outline">
-                  <span
-                    aria-hidden="true"
-                    className="size-1.5 rounded-full bg-gray-400"
-                  />
-                  No bank set
-                </Badge>
-              )}
-            </div>
+            ) : (
+              <div className="h-10 w-10 rounded-sm bg-muted" />
+            )}
           </div>
 
-          {/* Account Details */}
-          <div className="mt-2 md:mt-0 md:order-2">
-            <p className="font-semibold tracking-wide">
-              {driver?.accountName || "No account set"}
+          <div className="md:order-3">
+            <VerificationBadge
+              hasBankDetails={hasBankDetails}
+              status={driver?.bankVerificationStatus}
+            />
+          </div>
+        </div>
+
+        <div className="mt-2 md:order-2 md:mt-0">
+          <p className="font-semibold tracking-wide">
+            {driver?.accountName || "No account set"}
+          </p>
+          <p className="mt-1 text-sm text-muted-foreground">
+            {driver?.accountNumber ? `${driver.accountNumber} · ` : ""}
+            {driver?.bankName || "No bank set"}
+          </p>
+          <p className="mt-1 text-sm text-muted-foreground">
+            Available payout:{" "}
+            {isPayoutBalanceError
+              ? "Unavailable right now"
+              : formatCurrency(
+                  payoutBalance?.availableAmountMinor || 0,
+                  driver?.currency,
+                )}
+          </p>
+          {driver?.bankVerificationStatus === "pending" && (
+            <p className="mt-2 text-sm text-amber-700">
+              We are verifying this account with Kora. Payouts will start after
+              the status turns active.
             </p>
-            <p className="text-sm text-muted-foreground mt-1">
-              {driver?.accountNumber ? `${driver.accountNumber} · ` : ""}
-              {driver?.bankName || "No bank set"}
+          )}
+          {driver?.bankVerificationStatus === "failed" && (
+            <p className="mt-2 text-sm text-red-600">
+              {driver.bankVerificationFailureReason ||
+                "Bank verification failed. Update the details and try again."}
             </p>
-          </div>
+          )}
+        </div>
 
-          {/* Action Dialog */}
-          <div className="mt-2 md:mt-0 md:order-4 flex justify-end">
-            <ChangeBankDetailsDialog />
-          </div>
+        <div className="mt-2 flex justify-end md:order-4 md:mt-0">
+          <ChangeBankDetailsDialog />
         </div>
       </div>
     </div>
   );
-}
+};
+
+export default PayoutSettings;

@@ -120,11 +120,14 @@ export const createTripSchema = Joi.object({
     "string.guid": "Route ID must be a valid UUID",
     "any.required": "Route ID is required",
   }),
-  date: Joi.date().iso().required().messages({
-    "date.base": "Date must be a valid date",
-    "date.format": "Date must be in ISO format",
-    "any.required": "Date is required",
-  }),
+  date: Joi.string()
+    .pattern(/^\d{4}-\d{2}-\d{2}$/)
+    .required()
+    .messages({
+      "string.pattern.base": "Date must be in YYYY-MM-DD format",
+      "string.empty": "Date is required",
+      "any.required": "Date is required",
+    }),
 });
 
 export const updateTripSchema = Joi.object({

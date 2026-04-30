@@ -21,36 +21,45 @@ import {
 } from "@repo/ui/components/card";
 import { formatPrice, getDuration } from "@repo/ui/lib/utils";
 import { toast } from "@repo/ui/components/sonner";
+import EditRouteSheet from "./EditRouteSheet";
+import { usePostHog } from "posthog-js/react";
 import {
   DriverRoute,
   formatRouteStatus,
   statusStyles,
-  vehicleMeta,
-} from "./driverRoutesShared";
-import EditRouteSheet from "./EditRouteSheet";
+  vehicleMeta
+} from "~/lib/utils";
+import { posthogEvents } from "~/lib/posthog-events";
 
 interface DriverRouteDetailsCardProps {
   route: DriverRoute;
   onRouteChanged: () => void;
 }
 
-export default function DriverRouteDetailsCard({
+const DriverRouteDetailsCard = ({
   route,
   onRouteChanged,
-}: DriverRouteDetailsCardProps) {
+}: DriverRouteDetailsCardProps) => {
+
   const [editOpen, setEditOpen] = useState(false);
   const departure = new Date(route.departure_time);
   const arrival = new Date(route.arrival_time);
   const vehicle = vehicleMeta[route.vehicleType]!;
   const VehicleIcon = vehicle.Icon;
   const duration = getDuration(departure, arrival);
+  const posthog = usePostHog();
+
   const deleteRoute = useDeleteRoute({
     onSuccess: () => {
       toast.success("Route deleted successfully");
+      posthog.capture(posthogEvents.driver_route_delete_succeeded);
       onRouteChanged();
     },
     onError: (error) => {
-      toast.error(error.message || "Failed to delete route");
+      toast.error("Failed to delete route");
+      posthog.captureException(new Error(error.message), {
+        action: "delete_account",
+      });
     },
   });
 
@@ -74,9 +83,6 @@ export default function DriverRouteDetailsCard({
   } as const;
 
   const handleDelete = () => {
-    if (!window.confirm("Delete this route? This action cannot be undone.")) {
-      return;
-    }
     deleteRoute.mutate(route.id);
   };
 
@@ -169,3 +175,5 @@ export default function DriverRouteDetailsCard({
     </Card>
   );
 }
+
+export default DriverRouteDetailsCard;

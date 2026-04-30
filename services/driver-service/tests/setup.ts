@@ -1,4 +1,3 @@
-import axios from "axios";
 import { JWTPayload } from "../../../shared/types";
 
 // Mock environment variables
@@ -6,13 +5,18 @@ process.env.AUTH_SERVICE_URL = "http://localhost:5001";
 process.env.NODE_ENV = "test";
 
 // setup.ts
-const mockDrizzleClient = {
+const mockDrizzleClient: any = {
   query: {
     driver: {
       findFirst: jest.fn(),
       findMany: jest.fn(),
     },
+    driverStats: {
+      findFirst: jest.fn(),
+      findMany: jest.fn(),
+    },
   },
+  transaction: jest.fn(async (callback: any) => callback(mockDrizzleClient)),
   select: jest.fn(() => ({
     from: jest.fn(() => ({
       where: jest.fn(() => ({
@@ -24,38 +28,33 @@ const mockDrizzleClient = {
     values: jest.fn().mockReturnThis(),
     returning: jest.fn().mockReturnThis(),
   }),
-  update: jest.fn().mockReturnThis(),
-  delete: jest.fn().mockReturnThis(),
+  update: jest.fn().mockReturnValue({
+    set: jest.fn().mockReturnThis(),
+    where: jest.fn().mockReturnThis(),
+    returning: jest.fn().mockReturnThis(),
+  }),
+  delete: jest.fn().mockReturnValue({
+    where: jest.fn().mockReturnThis(),
+  }),
 };
-
-// //Mock the database module
-// jest.mock("../src/database", () => mockDrizzleClient);
 
 // Properly mock the named export 'db' from your db module
 jest.mock("../db/db", () => ({
   db: mockDrizzleClient,
 }));
 
-//mock axios for authClient
-// jest.mock("axios");
-jest.mock("axios", () => ({
-  default: {
-    get: jest.fn(),
-    post: jest.fn(),
-    put: jest.fn(),
-    delete: jest.fn(),
-    create: jest.fn().mockReturnThis(),
-  },
-  get: jest.fn(),
-  post: jest.fn(),
-  create: jest.fn().mockReturnThis(),
+jest.mock("../src/kafka/producer", () => ({
+  emitDriverBankVerificationRequested: jest.fn(),
+  emitDriverIdentityCreated: jest.fn(),
+  emitDriverIdentityUpdated: jest.fn(),
+  emitDriverIdentityDeleted: jest.fn(),
+  emitDriverPayoutProfileUpserted: jest.fn(),
+  emitDriverPayoutProfileDeleted: jest.fn(),
+  getProducer: jest.fn(),
 }));
-
-const mockedAxios = axios as jest.Mocked<typeof axios>;
 
 // If you need global access for tests
 (global as any).mockDrizzle = mockDrizzleClient;
-(global as any).mockAxios = mockedAxios;
 
 //reset all mocks before each test
 beforeEach(() => {
@@ -76,8 +75,14 @@ export const testDriver = {
   state: "Lagos State",
   city: "Lagos",
   bankName: "GTBank",
+  bankCode: "058",
   accountNumber: "1234567890",
   accountName: "Test User",
+  currency: "NGN",
+  bankVerificationStatus: "active" as const,
+  bankVerificationFailureReason: null,
+  bankVerificationRequestedAt: new Date("2025-07-01T00:00:00Z"),
+  bankVerifiedAt: new Date("2025-07-01T00:00:00Z"),
   createdAt: new Date("2025-07-01T00:00:00Z"),
   updatedAt: new Date("2025-07-01T00:00:00Z"),
 };
@@ -92,6 +97,7 @@ export const testUpdateProfileRequest = {
   state: "Lagos State",
   city: "Lagos",
   bankName: "GTBank",
+  bankCode: "058",
   accountNumber: "1234567890",
   accountName: "Test User",
   profile_pic: "https://example.com/test-driver.jpg",
@@ -121,26 +127,24 @@ export function resetAllMocks() {
   (mockDrizzleClient.delete as jest.Mock).mockClear();
 }
 
-// declare global {
-//   var mockDrizzle: typeof mockDrizzleClient;
-// }
-
 declare global {
-  // Changing this to 'any' or a more flexible type
-  // prevents the 'never' conflict across all test files
   var mockDrizzle: {
     query: {
       driver: {
         findFirst: jest.Mock;
         findMany: jest.Mock;
       };
+      driverStats: {
+        findFirst: jest.Mock;
+        findMany: jest.Mock;
+      };
     };
     insert: jest.Mock;
+    transaction: jest.Mock;
     update: jest.Mock;
     delete: jest.Mock;
     select: jest.Mock;
   };
-  var mockedAxios: jest.Mocked<typeof axios>;
 }
 
 // Now this will work without the error

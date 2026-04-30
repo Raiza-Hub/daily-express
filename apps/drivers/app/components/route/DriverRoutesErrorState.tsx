@@ -26,7 +26,7 @@ export default function DriverRoutesErrorState({
         <CardDescription>{message}</CardDescription>
       </CardHeader>
       <CardContent>
-        <Button onClick={onRetry} className="cursor-pointer">
+        <Button variant="secondary" onClick={onRetry} className="cursor-pointer">
           <ArrowClockwiseIcon size={16} />
           Try again
         </Button>

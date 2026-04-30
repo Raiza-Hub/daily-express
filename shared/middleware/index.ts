@@ -1,10 +1,8 @@
 import type { RequestHandler, Request, Response, NextFunction } from "express";
-import {
-  logError,
-  type JWTPayload,
-  type ServiceError,
-} from "../types";
+import { type JWTPayload, type ServiceError } from "../types";
 import { createErrorResponse } from "../utils";
+import { reportError } from "../logger";
+import { sentryServer } from "../sentry";
 
 function getHeaderValue(
   value: string | string[] | undefined,
@@ -74,6 +72,23 @@ export function authenticateVerifiedGatewayRequest(
   next();
 }
 
+export function authenticateInternalServiceRequest(
+  req: Request,
+  res: Response,
+  next: NextFunction,
+): Response | void {
+  const expectedToken = process.env.INTERNAL_SERVICE_TOKEN;
+  const providedToken = getHeaderValue(req.headers["x-internal-service-token"]);
+
+  if (!expectedToken || !providedToken || providedToken !== expectedToken) {
+    return res
+      .status(401)
+      .json(createErrorResponse("Internal service authentication required"));
+  }
+
+  next();
+}
+
 export function asyncHandler(
   fn: (req: Request, res: Response, next: NextFunction) => Promise<unknown>,
 ): RequestHandler {
@@ -99,7 +114,7 @@ export function validateRequest(schema: any): RequestHandler {
         if (!errors[field]) {
           errors[field] = [];
         }
-        errors[field].push(details.message);
+        errors[field]?.push(details.message);
       });
 
       return res.status(400).json({
@@ -117,21 +132,41 @@ export function errorHandler(
   error: ServiceError,
   req: Request,
   res: Response,
-  next: NextFunction,
+  _next: NextFunction,
 ) {
-  logError(error, {
+  const requestUser = (
+    req as Request & {
+      user?: {
+        userId?: string;
+        role?: string;
+      };
+    }
+  ).user;
+
+  reportError(error, {
+    source: "express",
     method: req.method,
-    url: req.url,
-    body: req.body,
+    path: req.originalUrl,
     params: req.params,
     query: req.query,
+    body: req.body,
+    actor_id: requestUser?.userId,
+    actor_role: requestUser?.role,
   });
+
+  sentryServer.captureException(error, requestUser?.userId || "unknown", {
+    action: "express_error_handler",
+    method: req.method,
+    path: req.originalUrl,
+    params: req.params,
+    query: req.query,
+    body: req.body,
+  });
+
   const statusCode = error.statusCode || 500;
-  const message = error.message || "Internal Serer Error";
+  const message = error.message || "Internal Server Error";
 
   res.status(statusCode).json(createErrorResponse(message));
-
-  next();
 }
 
 export function corsOptions() {
@@ -141,7 +176,12 @@ export function corsOptions() {
   return {
     origin: origins.length > 1 ? origins : origins[0],
     methods: ["GET", "POST", "PUT", "DELETE", "OPTIONS"],
-    allowedHeaders: ["Content-Type", "Authorization"],
+    allowedHeaders: [
+      "Content-Type",
+      "Authorization",
+      "baggage",
+      "sentry-trace",
+    ],
     credentials: process.env.CORS_CREDENTIALS === "true",
   };
 }

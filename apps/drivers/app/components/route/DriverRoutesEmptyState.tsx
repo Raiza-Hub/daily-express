@@ -13,7 +13,7 @@ export default function DriverRoutesEmptyState() {
       <CardHeader className="gap-2">
         <CardTitle>No routes yet</CardTitle>
         <CardDescription>
-          Create your first route to start publishing trip options for riders.
+          Create your first route to start publishing trip options for passengers.
         </CardDescription>
       </CardHeader>
     </Card>

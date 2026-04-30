@@ -1,7 +1,8 @@
 "use client";
 
 import { zodResolver } from "@hookform/resolvers/zod";
-import { SignUpSchema, TSignUpSchema } from "@repo/types/authSchema";
+import { useGetMe, useGetProviders, useUpdateProfile } from "@repo/api";
+import { SignUpSchema } from "@repo/types/authSchema";
 import { Button } from "@repo/ui/components/button";
 import {
   Field,
@@ -10,16 +11,17 @@ import {
   FieldLabel,
 } from "@repo/ui/components/field";
 import { Input } from "@repo/ui/components/input";
-import { useEffect } from "react";
-import { Controller, useForm } from "react-hook-form";
-import ChangePasswordDialog from "./ChangePasswordDialog";
-import DeleteAccount from "./DeleteAccount";
-import { z } from "zod";
-import dayjs from "dayjs";
-import { useGetMe, useUpdateProfile, useGetProviders } from "@repo/api";
 import { toast } from "@repo/ui/components/sonner";
 import { Icons } from "@repo/ui/Icons";
+import dayjs from "dayjs";
+import { useEffect } from "react";
+import { Controller, useForm } from "react-hook-form";
+import { z } from "zod";
+import DeleteAccount from "./DeleteAccount";
 import DisconnectGoogleDialog from "./DisconnectGoogleDialog";
+import { posthogEvents } from "~/lib/posthog-events";
+import { usePostHog } from "posthog-js/react";
+import Loader from "../Loader";
 
 const ProfileSchema = SignUpSchema.omit({ password: true }).partial();
 type TProfileSchema = z.infer<typeof ProfileSchema>;
@@ -27,18 +29,20 @@ type TProfileSchema = z.infer<typeof ProfileSchema>;
 const Profile = () => {
   const { data: user, isLoading, refetch: refetchUser } = useGetMe();
   const { data: providers, refetch: refetchProviders } = useGetProviders();
-
-  console.log(user);
-  
+  const posthog = usePostHog();
 
   const isGoogleConnected = providers?.includes("google");
 
-  const { mutate: updateProfile, isPending: isUpdating } = useUpdateProfile({
+  const { mutate: updateProfile } = useUpdateProfile({
     onSuccess: () => {
+      posthog.capture(posthogEvents.driver_profile_update_succeeded);
       refetchUser();
       toast.success("Profile updated successfully");
     },
     onError: (err) => {
+      posthog.captureException(new Error(err.message), {
+        action: "update_profile",
+      });
       toast.error(err.message);
     },
   });
@@ -80,10 +84,7 @@ const Profile = () => {
   if (isLoading) {
     return (
       <div className="w-full max-w-3xl mx-auto flex items-center justify-center py-20">
-        <div className="flex items-center gap-2 text-muted-foreground">
-          <div className="h-5 w-5 animate-spin rounded-full border-2 border-gray-300 border-t-gray-600" />
-          <span>Loading...</span>
-        </div>
+        <Loader text="Loading profile..." />
       </div>
     );
   }

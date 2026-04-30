@@ -8,11 +8,6 @@ import { cn } from "@repo/ui/lib/utils";
 const tabs: { name: string; href: string; icon: Icon }[] = [
     { name: "Book a trip", href: "/", icon: CarProfileIcon },
     { name: "Trip status", href: "/trip-status", icon: PathIcon },
-    // { name: "Accounts", href: "/settings/accounts" },
-    // { name: "Bank Details", href: "/settings/bank-details" },
-    // { name: "Preferences", href: "/settings/preferences" },
-    // { name: "Team", href: "/settings/team" },
-    // { name: "API Keys & Webhooks", href: "/settings/api-keys" },
 ];
 
 const NavTabs = () => {

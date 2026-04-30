@@ -6,11 +6,15 @@ export const handleApiError = (
 ): never => {
   if (err instanceof AxiosError) {
     if (err.response?.data) {
-      const { error, message } = err.response.data as {
+      const { error, message, errors } = err.response.data as {
         error?: string;
         message?: string;
+        errors?: Record<string, string[]>;
       };
-      throw new Error(error || message || fallbackMessage);
+      const firstFieldError = errors
+        ? Object.values(errors).flat().find(Boolean)
+        : undefined;
+      throw new Error(error || message || firstFieldError || fallbackMessage);
     }
     if (err.request) {
       throw new Error("Unable to connect to server");

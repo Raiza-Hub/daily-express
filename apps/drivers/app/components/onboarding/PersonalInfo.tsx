@@ -1,24 +1,37 @@
 "use client";
 
+import Image from "next/image";
 import { useFileUpload } from "@repo/ui/hooks/use-file-upload";
 import { cn } from "@repo/ui/lib/utils";
 import { TonboardingSchema } from "@repo/types/index";
-import { useEffect, useMemo, useRef } from "react";
+import { useEffect, useRef } from "react";
 import { Controller, useFormContext, useWatch } from "react-hook-form";
 import { Button } from "@repo/ui/components/button";
-import { Select, SelectContent, SelectItem, SelectSeparator, SelectTrigger, SelectValue } from "@repo/ui/components/select";
 import { Input } from "@repo/ui/components/input";
 import { TrashIcon, UserCircleIcon } from "@phosphor-icons/react";
 import { Field, FieldError, FieldGroup, FieldLabel } from "@repo/ui/components/field";
 
 const PersonalInfoForm = () => {
-    const { control, setValue, formState: { errors } } = useFormContext<TonboardingSchema>();
+    const {
+        control,
+        setValue,
+        formState: { errors }
+    } = useFormContext<TonboardingSchema>();
 
     const formFile = useWatch({ control, name: "file" });
 
     const [
         { isDragging, files },
-        { removeFile, openFileDialog, getInputProps, handleDragEnter, handleDragLeave, handleDragOver, handleDrop, addFiles }
+        {
+            removeFile,
+            openFileDialog,
+            getInputProps,
+            handleDragEnter,
+            handleDragLeave,
+            handleDragOver,
+            handleDrop,
+            addFiles
+        }
     ] = useFileUpload({
         accept: "image/*",
         multiple: false,
@@ -65,7 +78,14 @@ const PersonalInfoForm = () => {
                                         onDrop={handleDrop}
                                     >
                                         {currentFile?.preview ? (
-                                            <img src={currentFile.preview} alt="Logo preview" className="object-cover size-full" />
+                                            <Image
+                                                src={currentFile.preview}
+                                                alt="Logo preview"
+                                                fill
+                                                unoptimized
+                                                sizes="96px"
+                                                className="object-cover"
+                                            />
                                         ) : (
                                             <UserCircleIcon className="size-6 opacity-60" />
                                         )}
@@ -109,6 +129,7 @@ const PersonalInfoForm = () => {
                                         id="firstName"
                                         aria-invalid={fieldState.invalid}
                                         placeholder="First name on ID"
+                         
                                     />
                                     {fieldState.invalid && (
                                         <FieldError errors={[fieldState.error]} />
@@ -132,6 +153,7 @@ const PersonalInfoForm = () => {
                                         id="lastName"
                                         aria-invalid={fieldState.invalid}
                                         placeholder="Last name on ID"
+                                
                                     />
                                     {fieldState.invalid && (
                                         <FieldError errors={[fieldState.error]} />
@@ -155,6 +177,7 @@ const PersonalInfoForm = () => {
                                         id="email"
                                         aria-invalid={fieldState.invalid}
                                         placeholder="Email"
+                           
                                     />
                                     {fieldState.invalid && (
                                         <FieldError errors={[fieldState.error]} />

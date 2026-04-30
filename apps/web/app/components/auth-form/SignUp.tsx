@@ -11,20 +11,19 @@ import dayjs from "dayjs";
 import { useRouter } from "next/navigation";
 import { useState } from "react";
 import { Controller, useForm } from "react-hook-form";
-import { toast } from "@repo/ui/components/sonner";
 import GoogleSignInButton from "./GoogleSignInButton";
+import { buildVerifyEmailHref } from "~/lib/app-routing";
+import { posthogEvents } from "~/lib/posthog-events";
+import { usePostHog } from "posthog-js/react";
 
-const SignUpForm = () => {
+const SignUpForm = ({ redirect }: { redirect?: string }) => {
   const router = useRouter();
   const [isVisible, setIsVisible] = useState<boolean>(false);
   const { mutate: register, isPending, error } = useRegister();
   const [isGoogleLoading, setIsGoogleLoading] = useState(false);
+  const posthog = usePostHog();
 
-  const {
-    handleSubmit,
-    control,
-    setError,
-  } = useForm<TSignUpSchema>({
+  const { handleSubmit, control, setError } = useForm<TSignUpSchema>({
     resolver: zodResolver(SignUpSchema),
     defaultValues: {
       firstName: "",
@@ -46,13 +45,21 @@ const SignUpForm = () => {
       },
       {
         onSuccess: () => {
-          router.push("/verify-email");
+          router.push(buildVerifyEmailHref(redirect));
+          posthog.capture(posthogEvents.auth_signup_succeeded);
         },
         onError: (err) => {
+          posthog.captureException(new Error(err.message), {
+            action: "register",
+            values: {
+              email: data.email,
+              firstName: data.firstName,
+              lastName: data.lastName,
+            },
+          });
           setError("root", {
             message: err.message || "Something went wrong",
           });
-          toast.error(err.message);
         },
       },
     );
@@ -207,14 +214,15 @@ const SignUpForm = () => {
             <GoogleSignInButton
               disabled={isPending || isGoogleLoading}
               onClick={() => setIsGoogleLoading(true)}
+              redirect={redirect}
             />
           </div>
 
-          {/* {error && (
+          {error && (
             <p className="px-1 inline-flex justify-center text-sm text-red-500">
               {error?.message}
             </p>
-          )} */}
+          )}
           <Button
             className="cursor-pointer"
             variant="submit"

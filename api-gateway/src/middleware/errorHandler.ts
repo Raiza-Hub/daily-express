@@ -1,5 +1,6 @@
 import type { Request, Response, NextFunction } from "express";
 import type { ServiceError } from "../types/index.js";
+import { sentryServer } from "shared/sentry";
 
 export function errorHandler(
   err: ServiceError,
@@ -11,13 +12,30 @@ export function errorHandler(
   const message = err.message || "Internal Server Error";
   const code = err.code || "INTERNAL_ERROR";
 
-  console.error(`[${new Date().toISOString()}] Error:`, {
+  console.error("Error occurred", {
+    message: err.message,
+    stack: err.stack,
     method: req.method,
-    path: req.path,
+    path: req.originalUrl,
     statusCode,
-    message,
     code,
-    stack: process.env.NODE_ENV === "development" ? err.stack : undefined,
+    timestamp: new Date().toISOString(),
+  });
+
+  const userId =
+    (typeof req.headers["x-user-id"] === "string"
+      ? req.headers["x-user-id"]
+      : req.headers["x-user-id"]?.[0]) || "unknown";
+
+  sentryServer.captureException(err, userId, {
+    action: "gateway_error_handler",
+    method: req.method,
+    path: req.originalUrl,
+    statusCode,
+    code,
+    params: req.params,
+    query: req.query,
+    body: req.body,
   });
 
   res.status(statusCode).json({
@@ -28,10 +46,7 @@ export function errorHandler(
 }
 
 export function notFoundHandler(req: Request, res: Response): void {
-  console.warn(`[${new Date().toISOString()}] 404 Not Found:`, {
-    method: req.method,
-    path: req.path,
-  });
+  console.warn(`Route ${req.method} ${req.path} not found`);
 
   res.status(404).json({
     success: false,
@@ -45,13 +60,10 @@ export function serviceUnavailableHandler(
   res: Response,
   serviceName: string,
 ): void {
-  console.error(
-    `[${new Date().toISOString()}] Service unavailable: ${serviceName}`,
-    {
-      method: req.method,
-      path: req.path,
-    },
-  );
+  console.error(`Service unavailable: ${serviceName}`, {
+    method: req.method,
+    path: req.originalUrl,
+  });
 
   res.status(503).json({
     success: false,

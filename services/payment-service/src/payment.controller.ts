@@ -1,10 +1,33 @@
 import type { Request, RequestHandler, Response } from "express";
 import { asyncHandler } from "@shared/middleware";
 import { createErrorResponse, createSuccessResponse } from "@shared/utils";
-import { PaymentService } from "./paymentService";
-import type { PaystackWebhookPayload } from "./types";
+import { paymentService } from "./paymentService";
+import type { KoraWebhookPayload } from "./types";
 
-const paymentService = new PaymentService();
+function isKoraWebhookPayload(value: unknown): value is KoraWebhookPayload {
+  if (!value || typeof value !== "object") {
+    return false;
+  }
+
+  const payload = value as Record<string, unknown>;
+  const data = payload.data;
+
+  if (!data || typeof data !== "object") {
+    return false;
+  }
+
+  const webhookData = data as Record<string, unknown>;
+
+  return (
+    typeof payload.event === "string" &&
+    typeof webhookData.status === "string" &&
+    typeof webhookData.currency === "string" &&
+    (typeof webhookData.reference === "string" ||
+      typeof webhookData.payment_reference === "string") &&
+    (typeof webhookData.amount === "number" ||
+      typeof webhookData.amount === "string")
+  );
+}
 
 function getAuthenticatedUserId(req: Request) {
   return req.user?.userId || null;
@@ -12,10 +35,6 @@ function getAuthenticatedUserId(req: Request) {
 
 function getAuthenticatedUserEmail(req: Request) {
   return req.user?.email || null;
-}
-
-function getRouteParam(value: string | string[] | undefined) {
-  return typeof value === "string" ? value : null;
 }
 
 export const initializePayment: RequestHandler = asyncHandler(
@@ -29,7 +48,11 @@ export const initializePayment: RequestHandler = asyncHandler(
         .json(createErrorResponse("User not authenticated"));
     }
 
-    const payment = await paymentService.initializePayment(userId, email, req.body);
+    const payment = await paymentService.initializePayment(
+      userId,
+      email,
+      req.body,
+    );
 
     return res
       .status(201)
@@ -37,64 +60,52 @@ export const initializePayment: RequestHandler = asyncHandler(
   },
 );
 
-export const getPaymentByReference: RequestHandler = asyncHandler(
+export const upsertBookingHold: RequestHandler = asyncHandler(
   async (req: Request, res: Response) => {
-    const userId = getAuthenticatedUserId(req);
-    const reference = getRouteParam(req.params.reference);
-
-    if (!userId) {
-      return res
-        .status(401)
-        .json(createErrorResponse("User not authenticated"));
-    }
-
-    if (!reference) {
-      return res
-        .status(400)
-        .json(createErrorResponse("Payment reference is required"));
-    }
-
-    const payment = await paymentService.getPaymentByReference(userId, reference);
+    await paymentService.upsertBookingHold(req.body);
 
     return res
       .status(200)
-      .json(createSuccessResponse(payment, "Payment fetched successfully"));
-  },
-);
-
-export const refreshPaymentStatus: RequestHandler = asyncHandler(
-  async (req: Request, res: Response) => {
-    const userId = getAuthenticatedUserId(req);
-    const reference = getRouteParam(req.params.reference);
-
-    if (!userId) {
-      return res
-        .status(401)
-        .json(createErrorResponse("User not authenticated"));
-    }
-
-    if (!reference) {
-      return res
-        .status(400)
-        .json(createErrorResponse("Payment reference is required"));
-    }
-
-    const payment = await paymentService.refreshPaymentStatus(userId, reference);
-
-    return res
-      .status(200)
-      .json(createSuccessResponse(payment, "Payment status refreshed successfully"));
+      .json(createSuccessResponse(null, "Booking hold upserted successfully"));
   },
 );
 
 export const handleWebhook: RequestHandler = asyncHandler(
   async (req: Request, res: Response) => {
-    await paymentService.processWebhook({
-      signature: req.header("x-paystack-signature") || undefined,
-      rawBody: req.rawBody,
-      event: req.body as PaystackWebhookPayload,
-    });
+    if (!isKoraWebhookPayload(req.body)) {
+      return res
+        .status(400)
+        .json(createErrorResponse("Invalid Kora webhook payload"));
+    }
 
-    return res.sendStatus(200);
+    await paymentService.handleKoraWebhook(
+      req.body,
+      req.header("x-korapay-signature") || undefined,
+    );
+
+    return res.status(200).json({ received: true });
+  },
+);
+
+export const handleReturn: RequestHandler = asyncHandler(
+  async (req: Request, res: Response) => {
+    const reference =
+      typeof req.query.ref === "string"
+        ? req.query.ref
+        : typeof req.query.reference === "string"
+          ? req.query.reference
+          : null;
+    const providerStatus =
+      typeof req.query.status === "string"
+        ? req.query.status
+        : typeof req.query.result === "string"
+          ? req.query.result
+          : null;
+
+    const redirectUrl = await paymentService.resolveReturnUrl(
+      reference,
+      providerStatus,
+    );
+    return res.redirect(redirectUrl);
   },
 );

@@ -1,30 +1,49 @@
-import { Resend } from "resend";
+import nodemailer, { type Transporter } from "nodemailer";
 import { createServiceError } from "@shared/utils";
+import { sentryServer } from "@shared/sentry";
 
-const resend = new Resend(process.env.RESEND_API_KEY || "dummy_key");
+function getRequiredEnv(name: string): string {
+  const value = process.env[name];
+
+  if (!value) {
+    throw createServiceError(`${name} is required`, 500);
+  }
+
+  return value;
+}
 
 export class MailService {
-  private resend: Resend;
+  private transporter: Transporter;
+  private fromAddress: string;
 
   constructor() {
-    this.resend = new Resend(process.env.RESEND_API_KEY || "dummy_key");
+    this.fromAddress = getRequiredEnv("EMAIL_FROM");
+    this.transporter = nodemailer.createTransport({
+      host: getRequiredEnv("SMTP_HOST"),
+      port: Number(getRequiredEnv("SMTP_PORT")),
+      secure: false,
+      requireTLS: true,
+      auth: {
+        user: getRequiredEnv("SMTP_USERNAME"),
+        pass: getRequiredEnv("SMTP_PASSWORD"),
+      },
+    });
   }
 
   async sendMail(to: string, subject: string, html: string) {
     try {
-      const response = await this.resend.emails.send({
-        from: `Daily Express <${process.env.EMAIL_FROM || "onboarding@resend.dev"}>`,
+      const info = await this.transporter.sendMail({
+        from: `Daily Express <${this.fromAddress}>`,
         to,
         subject,
         html,
       });
 
-      if (response.error) {
-        throw createServiceError(response.error.message, 400);
-      }
-
-      return response.data;
+      return { id: info.messageId };
     } catch (error: any) {
+      sentryServer.captureException(error, "system", {
+        action: "send_mail",
+      });
       if (error.statusCode) throw error;
       throw createServiceError(error.message || "Failed to send email", 500);
     }

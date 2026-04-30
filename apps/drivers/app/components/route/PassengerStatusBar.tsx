@@ -3,38 +3,38 @@ import { Slider } from "@repo/ui/components/slider";
 import { cn } from "@repo/ui/lib/utils";
 
 interface PassengerStatusBarProps {
-  bookedSeats?: number;
-  capacity?: number;
+  bookedSeats: number;
+  capacity: number;
 }
 
 const PassengerStatusBar = ({
-  bookedSeats = 0,
-  capacity = 8,
+  bookedSeats,
+  capacity,
 }: PassengerStatusBarProps) => {
-  const max = capacity;
   const skipInterval = 2;
-  const ticks = [...Array(max + 1)].map((_, i) => i);
+  const ticks = [...Array(capacity + 1)].map((_, i) => i);
 
   return (
     <div className="*:not-first:mt-4">
       <Label className="text-sm">
-        Passengers - {bookedSeats}/{max}
+        Passengers - {bookedSeats}
       </Label>
       <div>
         <Slider
           aria-label="Slider with ticks"
           value={[bookedSeats]}
-          max={max}
+          max={capacity}
           disabled
+          className="[&_[data-slot=slider-range]]:bg-blue-600 [&_[data-slot=slider-track]]:bg-slate-200"
         />
         <span
           aria-hidden="true"
           className="mt-3 flex w-full items-center justify-between gap-1 px-2.5 font-medium text-muted-foreground text-xs"
         >
-          {ticks.map((_, i) => (
+          {ticks.map((tickValue, i) => (
             <span
               className="flex w-0 flex-col items-center justify-center gap-2"
-              key={String(i)}
+              key={`tick-${tickValue}`}
             >
               <span
                 className={cn(
@@ -43,7 +43,7 @@ const PassengerStatusBar = ({
                 )}
               />
               <span className={cn(i % skipInterval !== 0 && "opacity-0")}>
-                {i}
+                {tickValue}
               </span>
             </span>
           ))}

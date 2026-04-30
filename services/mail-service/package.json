@@ -5,6 +5,7 @@
   "private": true,
   "scripts": {
     "dev": "bun --watch src/index.ts",
+    "start": "bun src/index.ts",
     "test": "jest",
     "lint": "eslint ."
   },
@@ -12,8 +13,8 @@
     "@types/bun": "latest",
     "@types/cors": "^2.8.19",
     "@types/express": "^5.0.6",
-    "@types/helmet": "^4.0.0",
     "@types/jest": "^30.0.0",
+    "@types/nodemailer": "^7.0.3",
     "@types/node": "^25.5.0",
     "jest": "^30.2.0",
     "ts-jest": "^29.4.6",
@@ -27,7 +28,9 @@
     "dotenv": "^17.3.1",
     "express": "^5.2.1",
     "helmet": "^8.1.0",
-    "joi": "^18.0.2",
-    "resend": "^3.5.0"
+    "@repo/email": "workspace:*",
+    "nodemailer": "^7.0.5",
+    "react": "^19.2.0",
+    "react-dom": "^19.2.0"
   }
 }

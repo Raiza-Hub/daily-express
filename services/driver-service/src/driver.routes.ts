@@ -1,4 +1,5 @@
 import {
+  authenticateInternalServiceRequest,
   authenticateVerifiedGatewayRequest,
   validateRequest,
 } from "@shared/middleware";
@@ -9,13 +10,13 @@ import { cloudinaryMiddleware } from "./cloudinary";
 
 const router: Router = Router();
 
+
 //Protected routes
 router.get(
   "/profile",
   authenticateVerifiedGatewayRequest,
   driverController.getDriver,
 );
-router.get("/public/:id", driverController.getDriverById);
 router.post(
   "/create",
   authenticateVerifiedGatewayRequest,
@@ -34,6 +35,11 @@ router.delete(
   "/delete",
   authenticateVerifiedGatewayRequest,
   driverController.deleteDriver,
+);
+router.get(
+  "/stats",
+  authenticateVerifiedGatewayRequest,
+  driverController.getDriverStats,
 );
 
 export default router;

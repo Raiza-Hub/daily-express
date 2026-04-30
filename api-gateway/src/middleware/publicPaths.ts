@@ -5,7 +5,7 @@ export interface PublicPath {
   pattern: RegExp;
   methods: readonly HttpMethod[];
   description: string;
-  group: "auth" | "route" | "payment" | "system";
+  group: "auth" | "route" | "payment" | "payout" | "system";
 }
 
 export const PUBLIC_PATHS: readonly PublicPath[] = [
@@ -46,9 +46,9 @@ export const PUBLIC_PATHS: readonly PublicPath[] = [
     group: "auth",
   },
   {
-    pattern: /^(?:\/api\/routes)?\/v1\/route\/user\/routes$/,
+    pattern: /^(?:\/api\/routes)?\/v1\/route\/search$/,
     methods: ["GET"],
-    description: "Browse/search all routes",
+    description: "Search routes by criteria",
     group: "route",
   },
   {
@@ -58,10 +58,22 @@ export const PUBLIC_PATHS: readonly PublicPath[] = [
     group: "route",
   },
   {
-    pattern: /^(?:\/api\/payments)?\/v1\/payments\/webhooks\/paystack$/,
+    pattern: /^(?:\/api\/payments)?\/v1\/payments\/webhooks\/kora$/,
     methods: ["POST"],
-    description: "Paystack payment webhook",
+    description: "Kora payment webhook",
     group: "payment",
+  },
+  {
+    pattern: /^(?:\/api\/payments)?\/v1\/payments\/return$/,
+    methods: ["GET"],
+    description: "Hosted checkout return",
+    group: "payment",
+  },
+  {
+    pattern: /^(?:\/api\/payouts)?\/v1\/payouts\/webhooks\/kora$/,
+    methods: ["POST"],
+    description: "Kora payout webhook",
+    group: "payout",
   },
   {
     pattern: /^\/health$/,

@@ -4,6 +4,9 @@ import { useState } from "react";
 import { Button } from "@repo/ui/components/button";
 import { CircleNotchIcon } from "@phosphor-icons/react";
 import { Icons } from "@repo/ui/Icons";
+import { env } from "~/env";
+import { posthogEvents } from "~/lib/posthog-events";
+import { usePostHog } from "posthog-js/react";
 
 interface GoogleSignInButtonProps {
   disabled?: boolean;
@@ -17,12 +20,13 @@ const GoogleSignInButton = ({
   redirect,
 }: GoogleSignInButtonProps) => {
   const [isLoading, setIsLoading] = useState(false);
+  const posthog = usePostHog();
 
   const handleSignInWithGoogle = () => {
     setIsLoading(true);
     onClick?.();
-    const apiUrl =
-      process.env.NEXT_PUBLIC_API_GATEWAY_URL || "http://localhost:8000";
+    posthog.capture(posthogEvents.auth_google_signin_clicked);
+    const apiUrl = env.NEXT_PUBLIC_API_GATEWAY_URL;
     const stateParam = redirect ? `?state=${encodeURIComponent(redirect)}` : "";
     window.location.href = `${apiUrl}/api/auth/v1/auth/google${stateParam}`;
   };

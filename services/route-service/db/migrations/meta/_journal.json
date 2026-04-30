@@ -36,6 +36,27 @@
       "when": 1773322927963,
       "tag": "0004_ragged_payments",
       "breakpoints": true
+    },
+    {
+      "idx": 5,
+      "version": "7",
+      "when": 1773322927964,
+      "tag": "0005_tasty_booking_holds",
+      "breakpoints": true
+    },
+    {
+      "idx": 6,
+      "version": "7",
+      "when": 1773322927965,
+      "tag": "0006_trip_summary_indexes",
+      "breakpoints": true
+    },
+    {
+      "idx": 7,
+      "version": "7",
+      "when": 1777200002000,
+      "tag": "0013_active_booking_unique",
+      "breakpoints": true
     }
   ]
 }

@@ -1,87 +1,125 @@
 "use client";
 
-import {
-    Sheet,
-    SheetContent,
-    SheetDescription,
-    SheetHeader,
-    SheetTitle,
-    SheetTrigger,
-} from "@repo/ui/components/sheet";
+import { CircleNotchIcon, UsersIcon, UsersThreeIcon } from "@phosphor-icons/react";
+import { useGetTripBookings } from "@repo/api";
 import { Button } from "@repo/ui/components/button";
-import { UsersThreeIcon } from "@phosphor-icons/react";
-
-interface Passenger {
-    firstName: string;
-    lastName: string;
-}
-
-// Mock passenger data — replace with real data as needed
-const passengers: Passenger[] = [
-    { firstName: "Amara", lastName: "Okafor" },
-    { firstName: "Chukwuemeka", lastName: "Nwosu" },
-    { firstName: "Fatima", lastName: "Bello" },
-    { firstName: "Oluwaseun", lastName: "Adeyemi" },
-    { firstName: "Ngozi", lastName: "Eze" },
-    { firstName: "Babatunde", lastName: "Adeola" },
-];
+import {
+  Sheet,
+  SheetContent,
+  SheetDescription,
+  SheetHeader,
+  SheetTitle,
+  SheetTrigger,
+} from "@repo/ui/components/sheet";
+import { useState } from "react";
 
 interface PassengersSheetProps {
-    open?: boolean;
-    onOpenChange?: (open: boolean) => void;
+  tripId: string;
+  open?: boolean;
+  onOpenChange?: (open: boolean) => void;
 }
 
-export default function PassengersSheet({ open, onOpenChange }: PassengersSheetProps) {
-    const isControlled = open !== undefined;
-    return (
-        <Sheet open={isControlled ? open : undefined} onOpenChange={isControlled ? onOpenChange : undefined}>
-            {!isControlled && (
-                <SheetTrigger asChild>
-                    <Button
-                        variant="outline"
-                        size="icon-lg"
-                        className="rounded-lg border-slate-200 hover:bg-slate-100"
-                    >
-                        <UsersThreeIcon size={18} />
-                    </Button>
-                </SheetTrigger>
-            )}
+export default function PassengersSheet({
+  tripId,
+  open,
+  onOpenChange,
+}: PassengersSheetProps) {
+  const isControlled = open !== undefined;
+  const [internalOpen, setInternalOpen] = useState(false);
+  const isOpen = isControlled ? !!open : internalOpen;
 
-            <SheetContent className="w-full sm:max-w-[420px] overflow-y-aut">
-                <SheetHeader className="pb-4 border-b px-6">
-                    <SheetTitle className="text-xl font-semibold">Passengers</SheetTitle>
-                    <SheetDescription className="text-sm text-muted-foreground mt-1">
-                        List of passengers booked on this route.
-                    </SheetDescription>
-                </SheetHeader>
+  const handleOpenChange = (nextOpen: boolean) => {
+    if (!isControlled) {
+      setInternalOpen(nextOpen);
+      return;
+    }
 
-                <div className="py-6 space-y-3 px-6">
-                    {passengers.length === 0 ? (
-                        <p className="text-sm text-muted-foreground text-center py-8">
-                            No passengers booked yet.
-                        </p>
-                    ) : (
-                        passengers.map((passenger, index) => (
-                            <div
-                                key={index}
-                                className="flex items-center gap-3 p-3 rounded-lg border border-slate-100 bg-slate-50 hover:bg-slate-100 transition-colors"
-                            >
-                                {/* Avatar */}
-                                <div className="shrink-0 w-9 h-9 rounded-full bg-slate-200 flex items-center justify-center text-sm font-semibold text-slate-600">
-                                    {passenger.firstName[0]}{passenger.lastName[0]}
-                                </div>
+    onOpenChange?.(nextOpen);
+  };
 
-                                {/* Name */}
-                                <div>
-                                    <p className="text-sm font-medium text-slate-900">
-                                        {passenger.firstName} {passenger.lastName}
-                                    </p>
-                                </div>
-                            </div>
-                        ))
-                    )}
+  const {
+    data: bookings,
+    isLoading,
+    isError,
+    refetch,
+  } = useGetTripBookings(tripId, {
+    enabled: !!tripId && isOpen,
+  });
+
+  return (
+    <Sheet open={isOpen} onOpenChange={handleOpenChange}>
+      {!isControlled && tripId && (
+        <SheetTrigger asChild>
+          <Button
+            variant="outline"
+            size="icon-lg"
+            className="rounded-lg border-slate-200 hover:bg-slate-100"
+          >
+            <UsersThreeIcon size={18} />
+          </Button>
+        </SheetTrigger>
+      )}
+
+      <SheetContent className="w-full sm:max-w-[420px] overflow-y-auto">
+        <SheetHeader className="pb-4 border-b px-6">
+          <SheetTitle className="text-xl font-semibold">Passengers</SheetTitle>
+          <SheetDescription className="text-sm text-muted-foreground mt-1">
+            {bookings?.length
+              ? `${bookings.length} passenger${bookings.length > 1 ? "s" : ""} booked on this trip.`
+              : "List of passengers booked on this trip."}
+          </SheetDescription>
+        </SheetHeader>
+
+        <div className="py-6 space-y-3 px-6">
+          {!tripId ? (
+            <p className="text-sm text-muted-foreground text-center py-8">
+              No trip selected.
+            </p>
+          ) : isLoading ? (
+            <p className="flex flex-col items-center  text-center py-8">
+              <CircleNotchIcon className="h-6 w-6 text-neutral-500" />
+              <p className="text-sm text-muted-foreground">Loading passengers...</p>
+            </p>
+          ) : isError ? (
+            <div className="flex flex-col items-center gap-3 py-8 text-center">
+              <p className="text-sm text-muted-foreground">
+                Failed to load passengers for this trip.
+              </p>
+              <Button variant="submit" onClick={() => refetch()}>
+                Retry
+              </Button>
+            </div>
+          ) : !bookings || bookings.length === 0 ? (
+            <div className="flex flex-col items-center gap-4 py-8 text-center">
+              <UsersIcon className="h-6 w-6 text-neutral-500" />
+              <p className="text-sm text-muted-foreground ">No passengers booked yet.</p>
+            </div>
+          ) : (
+            bookings.map((booking) => (
+              <div
+                key={booking.id}
+                className="rounded-lg border border-neutral-100 bg-neutral-50 p-4 transition-colors hover:bg-neutral-100"
+              >
+                <div className="flex items-center gap-3">
+                  {/* use an avatar here */}
+                  <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-slate-200 text-sm font-semibold text-neutral-600">
+                    {booking.user?.firstName?.[0] || "?"}
+                    {booking.user?.lastName?.[0] || ""}
+                  </div>
+
+                  <div className="min-w-0 flex-1">
+                    <p className="truncate text-sm font-medium text-neutral-900">
+                      {booking.user
+                        ? `${booking.user.firstName} ${booking.user.lastName}`
+                        : "Passenger details unavailable"}
+                    </p>
+                  </div>
                 </div>
-            </SheetContent>
-        </Sheet>
-    );
+              </div>
+            ))
+          )}
+        </div>
+      </SheetContent>
+    </Sheet>
+  );
 }

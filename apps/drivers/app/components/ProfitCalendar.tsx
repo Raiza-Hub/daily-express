@@ -1,58 +1,88 @@
 "use client";
 
-import * as React from "react";
-import dayjs from "dayjs";
+import { useState, useMemo, type FC } from "react";
+import dayjs, { Dayjs } from "dayjs";
 import isoWeek from "dayjs/plugin/isoWeek";
 import { CaretLeftIcon, CaretRightIcon } from "@phosphor-icons/react/dist/ssr";
 import { cn, formatPrice } from "@repo/ui/lib/utils";
 import { Button } from "@repo/ui/components/button";
-import { useGetTripsSummary } from "@repo/api";
+import type { TripsSummaryRange } from "@repo/api";
 
 dayjs.extend(isoWeek);
 
-// ------------------
-// Component
-// ------------------
+interface ProfitCalendarProps {
+  viewDate?: Dayjs;
+  onViewDateChange?: (date: Dayjs) => void;
+  selectedDate?: Dayjs;
+  onSelectedDateChange?: (date: Dayjs) => void;
+  tripsSummaryRange?: TripsSummaryRange[];
+  isLoading?: boolean;
+}
 
-export const ProfitCalendar: React.FC = () => {
-  const [viewDate, setViewDate] = React.useState(dayjs());
-  const [selectedDate, setSelectedDate] = React.useState(dayjs());
+export const ProfitCalendar: FC<ProfitCalendarProps> = ({
+  viewDate: externalViewDate,
+  onViewDateChange,
+  selectedDate: externalSelectedDate,
+  onSelectedDateChange,
+  tripsSummaryRange,
+  isLoading = false,
+}) => {
+  const [internalViewDate, setInternalViewDate] = useState(() => dayjs());
 
-  const selectedDateStr = selectedDate.format("YYYY-MM-DD");
-  const { data: tripsSummary, isLoading } = useGetTripsSummary(selectedDateStr);
+  // Use external state if provided, otherwise use internal state
+  const viewDate = externalViewDate || internalViewDate;
+  const setViewDate = onViewDateChange
+    ? (date: Dayjs) => onViewDateChange(date)
+    : setInternalViewDate;
 
-  const visibleDays = React.useMemo(() => {
+  const [internalSelectedDate, setInternalSelectedDate] =
+ useState(() => dayjs());
+
+  // Use external selectedDate if provided, otherwise use internal state
+  const selectedDate = externalSelectedDate || internalSelectedDate;
+  const setSelectedDate = onSelectedDateChange
+    ? (date: Dayjs) => onSelectedDateChange(date)
+    : setInternalSelectedDate;
+
+  const visibleDays = useMemo(() => {
     const start = viewDate.startOf("isoWeek");
     return Array.from({ length: 7 }, (_, i) => start.add(i, "day"));
   }, [viewDate]);
 
+  const earningsByDate = useMemo(() => {
+    const map: Record<string, number> = {};
+    if (tripsSummaryRange && Array.isArray(tripsSummaryRange)) {
+      for (const summary of tripsSummaryRange) {
+        const dateStr = summary.date?.split("T")[0] ?? "";
+        if (dateStr) {
+          map[dateStr] = summary.totalEarnings ?? 0;
+        }
+      }
+    }
+    return map;
+  }, [tripsSummaryRange]);
+
   const handlePrev = () => {
-    setViewDate((prev) => prev.subtract(1, "week"));
+    setViewDate(viewDate.subtract(1, "week"));
   };
 
   const handleNext = () => {
-    setViewDate((prev) => prev.add(1, "week"));
+    setViewDate(viewDate.add(1, "week"));
   };
 
-  const headerLabel = React.useMemo(() => {
+  const headerLabel = useMemo(() => {
     return viewDate.format("MMMM YYYY");
   }, [viewDate]);
 
   const getAmountForDate = (date: dayjs.Dayjs): string => {
     if (isLoading) return "...";
     const dateStr = date.format("YYYY-MM-DD");
-    if (
-      tripsSummary?.date?.startsWith(dateStr) &&
-      tripsSummary.totalEarnings > 0
-    ) {
-      return formatPrice(tripsSummary.totalEarnings);
-    }
-    return formatPrice(0);
+    const earnings = earningsByDate[dateStr] || 0;
+    return formatPrice(earnings);
   };
 
   return (
     <div className="w-full">
-      {/* Header */}
       <div className="flex items-center justify-between mb-3">
         <h2 className="text-base md:text-lg font-semibold text-gray-900">
           {headerLabel}
@@ -79,7 +109,6 @@ export const ProfitCalendar: React.FC = () => {
         </div>
       </div>
 
-      {/* Calendar */}
       <div className="rounded-2xl bg-neutral-50 overflow-x-auto">
         <div className="grid grid-cols-7 divide-x divide-neutral-200 min-w-max">
           {visibleDays.map((day) => {
@@ -98,7 +127,6 @@ export const ProfitCalendar: React.FC = () => {
                   isSelected && "bg-white",
                 )}
               >
-                {/* Date Label */}
                 <span
                   className={cn(
                     "text-xs md:text-sm mb-1",
@@ -109,7 +137,6 @@ export const ProfitCalendar: React.FC = () => {
                   {day.format("ddd, D MMM")}
                 </span>
 
-                {/* Amount */}
                 <span
                   className={cn(
                     "text-sm md:text-base font-medium",
@@ -119,7 +146,6 @@ export const ProfitCalendar: React.FC = () => {
                   {getAmountForDate(day)}
                 </span>
 
-                {/* Active Indicator */}
                 {isSelected && (
                   <div className="absolute bottom-0 left-4 right-4 h-[3px] bg-blue-600 rounded-t-full" />
                 )}

@@ -46,4 +46,8 @@ export interface GatewayUserHeaders {
   "x-user-email"?: string;
   "x-user-email-verified"?: string;
   "x-user-role"?: string;
+  "x-request-id"?: string;
+  "x-correlation-id"?: string;
+  baggage?: string;
+  "sentry-trace"?: string;
 }

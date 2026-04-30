@@ -1,50 +1,74 @@
+import "dotenv/config";
 import express, { type Express } from "express";
-import dotenv from "dotenv";
 import helmet from "helmet";
 import routeRoutes from "./route.routes";
 import { errorHandler } from "@shared/middleware";
 import { startRouteConsumer } from "./kafka/consumer";
+import { createOutboxWorker } from "@shared/kafka";
+import { logger, reportError } from "@shared/logger";
+import { initSentry, sentryServer } from "@shared/sentry";
+import { db } from "../db/db";
+import { outboxEvents } from "../db/schema";
 
-dotenv.config();
+initSentry({ serviceName: "route-service" });
 
 const app: Express = express();
 const PORT = process.env.PORT || 3003;
 
-//setup middleware
 app.use(helmet());
-
-//parse JSON bodies
 app.use(express.json({ limit: "10mb" }));
 app.use(express.urlencoded({ extended: true }));
+
+app.get("/health", (_req, res) => {
+  res.json({
+    status: "healthy",
+    service: "route-service",
+    timestamp: new Date().toISOString(),
+  });
+});
 
 app.use("/v1/route", routeRoutes);
 
 app.use(errorHandler);
 
 const initializeRouteService = async () => {
-  const kafkaEnabled = process.env.KAFKA_ENABLED !== "false";
-  const consumer = kafkaEnabled ? await startRouteConsumer() : null;
+  const consumer = await startRouteConsumer();
+
+  const outboxWorker = createOutboxWorker({
+    db,
+    outboxTable: outboxEvents,
+    serviceName: "route-service",
+  });
+  await outboxWorker.start();
 
   const server = app.listen(PORT, () => {
     console.log(`Route service is running on port ${PORT}`);
-    console.log(`Environment: ${process.env.NODE_ENV}`);
-    console.log(`Health check: http://localhost:${PORT}/health`);
   });
 
   const shutdown = async (signal: string) => {
-    console.log(`${signal} received. Shutting down route service...`);
-    if (consumer) {
-      await consumer.disconnect();
-    }
-    server.close(() => process.exit(0));
+    logger.info("service.shutdown_requested", { signal });
+    await outboxWorker.stop();
+    await consumer.disconnect();
+    server.close(async () => {
+      await sentryServer.shutdown();
+      logger.info("service.stopped", { signal });
+      process.exit(0);
+    });
   };
 
   process.on("SIGTERM", () => void shutdown("SIGTERM"));
   process.on("SIGINT", () => void shutdown("SIGINT"));
 };
 
-initializeRouteService().catch((error) => {
-  console.error("Failed to start route service:", error);
+initializeRouteService().catch(async (error) => {
+  sentryServer.captureException(error, "unknown", {
+    action: "initializeRouteService",
+  });
+  reportError(error, {
+    source: "startup",
+    message: "Failed to start route service",
+  });
+  await sentryServer.shutdown();
   process.exit(1);
 });
 
