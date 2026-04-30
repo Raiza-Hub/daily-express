@@ -6,7 +6,6 @@ import { usePathname } from "next/navigation";
 import { CaretDownIcon, ListIcon, XIcon } from "@phosphor-icons/react";
 import NavItem from "./NavItem";
 import CreateRouteDialog from "./CreateRouteDialog";
-import { Icons } from "@repo/ui/Icons";
 import { cn } from "@repo/ui/lib/utils";
 import Image from "next/image";
 
@@ -27,10 +26,8 @@ const MobileNav = () => {
         setSettingsOpen(false);
     };
 
-
     return (
         <>
-            {/* Hamburger button */}
             <button
                 onClick={() => setOpen((prev) => !prev)}
                 className="flex items-center justify-center rounded-md p-1.5 text-muted-foreground hover:text-foreground hover:bg-muted transition-colors lg:hidden cursor-pointer"
@@ -39,8 +36,9 @@ const MobileNav = () => {
                 <ListIcon size={18} weight="bold" />
             </button>
 
-            {/* Backdrop */}
-            <div
+            <button
+                type="button"
+                aria-label="Close navigation menu"
                 onClick={closeMenu}
                 className={cn(
                     "fixed inset-0 z-40 bg-black/20 backdrop-blur-sm lg:hidden",
@@ -49,7 +47,6 @@ const MobileNav = () => {
                 )}
             />
 
-            {/* Top-sliding panel — starts from top-0 */}
             <div
                 className={cn(
                     "fixed top-0 left-0 right-0 z-50 bg-background border-b border-neutral-200 shadow-lg lg:hidden",
@@ -59,15 +56,15 @@ const MobileNav = () => {
                         : "-translate-y-full opacity-0 pointer-events-none"
                 )}
             >
-                {/* Header: logo + close button */}
                 <div className="flex items-center justify-between px-4 h-16 border-b border-neutral-100">
                     <Link href='/' onClick={closeMenu}>
                         <Image
-                            src="/logo2.png"
+                            src="/logo.png"
                             alt="Logo"
-                            width={40}
-                            height={40}
+                            width={520}
+                            height={530}
                             className='object-contain object-center'
+                            style={{ width: "40px", height: "auto" }}
                         />
                     </Link>
                     <button
@@ -79,8 +76,13 @@ const MobileNav = () => {
                     </button>
                 </div>
 
-                {/* Nav links */}
                 <nav className="flex flex-col gap-1 px-4 py-4">
+                    <NavItem
+                        label="Routes"
+                        href="/routes"
+                        className="text-base py-2"
+                        onClick={closeMenu}
+                    />
                     <NavItem
                         label="Payouts"
                         href="/payouts"
@@ -88,7 +90,6 @@ const MobileNav = () => {
                         onClick={closeMenu}
                     />
 
-                    {/* Settings — expandable */}
                     <div>
                         <button
                             onClick={() => setSettingsOpen((prev) => !prev)}
@@ -141,7 +142,6 @@ const MobileNav = () => {
                     </div>
                 </nav>
 
-                {/* Create Route button */}
                 <div className="px-4 pb-5">
                     <CreateRouteDialog />
                 </div>

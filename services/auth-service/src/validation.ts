@@ -63,3 +63,10 @@ export const resetPasswordSchema = Joi.object({
     "any.required": "Password is required",
   }),
 });
+
+export const setPasswordSchema = Joi.object({
+  password: Joi.string().min(8).required().messages({
+    "string.min": "Password must be at least 8 characters",
+    "any.required": "Password is required",
+  }),
+});

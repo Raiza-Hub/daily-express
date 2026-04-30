@@ -1,44 +1,82 @@
-"use client"
+"use client";
 
-import { useRouter } from "next/navigation"
-import { QuestionIcon, SignOutIcon } from "@phosphor-icons/react"
-import { UserAccountNav as SharedUserAccountNav } from "@repo/ui/UserAccountNav"
-
-// TODO: replace with real user from your auth provider (e.g. WorkOS, NextAuth)
-const mockUser = {
-    firstName: "Daniel",
-    lastName: "Okafor",
-    email: "daniel.okafor24@example.com",
-    profilePictureUrl:
-        "https://images.unsplash.com/photo-1617244147030-8bd6f9e21d1e?q=80&w=987&auto=format&fit=crop&ixlib=rb-4.1.0&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D",
-}
+import { useEffect } from "react";
+import {
+  QuestionIcon,
+  SignOutIcon,
+  CircleNotchIcon,
+} from "@phosphor-icons/react";
+import { UserAccountNav as SharedUserAccountNav } from "@repo/ui/UserAccountNav";
+import { useGetDriver, useLogout } from "@repo/api";
+import { Avatar, AvatarFallback } from "@repo/ui/components/avatar";
+import { env } from "~/env";
+import { posthogEvents } from "~/lib/posthog-events";
+import { usePostHog } from "posthog-js/react";
 
 export function UserAccountNav() {
-    const router = useRouter()
+  const { data: driver, isLoading } = useGetDriver();
+  const { mutate: logout } = useLogout();
+  const posthog = usePostHog();
 
-    const signOut = () => {
-        console.log("User signed out")
+  useEffect(() => {
+    if (driver?.id) {
+      posthog.identify(driver.id, {
+        email: driver.email,
+        name: `${driver.firstName} ${driver.lastName}`,
+      });
     }
+  }, [driver, posthog]);
 
+  const signOut = () => {
+    logout(undefined, {
+      onSuccess: () => {
+        posthog.capture(posthogEvents.driver_logout_succeeded);
+        posthog.reset();
+        window.location.href = `${env.NEXT_PUBLIC_WEB_APP_URL}/sign-in`;
+      },
+    });
+  };
+
+  if (isLoading) {
     return (
-        <SharedUserAccountNav
-            user={mockUser}
-            menuItems={[
-                {
-                    key: "support",
-                    icon: <QuestionIcon weight="bold" />,
-                    label: "Support",
-                    href: "mailto:support@yourdomain.com",
-                },
-            ]}
-            footerItems={[
-                {
-                    key: "signout",
-                    icon: <SignOutIcon weight="bold" />,
-                    label: "Log out",
-                    onClick: signOut,
-                },
-            ]}
-        />
-    )
+      <Avatar className="h-10 w-10">
+        <AvatarFallback>
+          <CircleNotchIcon className="h-5 w-5 animate-spin text-muted-foreground" />
+        </AvatarFallback>
+      </Avatar>
+    );
+  }
+
+  if (!driver) {
+    return null;
+  }
+
+  const user = {
+    firstName: driver.firstName,
+    lastName: driver.lastName,
+    email: driver.email,
+    profilePictureUrl: driver.profile_pic || undefined,
+  };
+
+  return (
+    <SharedUserAccountNav
+      user={user}
+      menuItems={[
+        {
+          key: "support",
+          icon: <QuestionIcon weight="bold" />,
+          label: "Support",
+          href: "mailto:support@yourdomain.com",
+        },
+      ]}
+      footerItems={[
+        {
+          key: "signout",
+          icon: <SignOutIcon weight="bold" />,
+          label: "Log out",
+          onClick: signOut,
+        },
+      ]}
+    />
+  );
 }

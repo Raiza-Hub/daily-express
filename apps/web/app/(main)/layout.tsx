@@ -1,8 +1,19 @@
+import type { Metadata } from "next";
 import Footer from "@repo/ui/Footer";
 import { ReactNode } from "react";
 import Navbar from "~/components/Navbar";
 import NavTabs from "~/components/NavTabs";
 
+export const metadata: Metadata = {
+    robots: {
+        index: false,
+        follow: false,
+        googleBot: {
+            index: false,
+            follow: false,
+        },
+    },
+};
 
 const Layout = ({ children }: { children: ReactNode }) => {
     return (

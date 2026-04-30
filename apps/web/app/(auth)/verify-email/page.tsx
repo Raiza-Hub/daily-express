@@ -1,10 +1,15 @@
 import VerifyEmailForm from "~/components/auth-form/VerifyEmail";
 
 
-const VerifyEmailPage = async () => {
+const VerifyEmailPage = async ({
+    searchParams,
+}: {
+    searchParams: Promise<{ redirect?: string }>;
+}) => {
+    const { redirect } = await searchParams;
 
     return (
-       <VerifyEmailForm />
+       <VerifyEmailForm redirect={redirect} />
     );
 }
 

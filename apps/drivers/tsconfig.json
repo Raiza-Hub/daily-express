@@ -10,7 +10,11 @@
       "@/*": ["./src/*"],
       "~/*": ["./app/*"],
       "@repo/ui/*": ["../../packages/ui/src/*"],
-      "@repo/types/*": ["../../packages/types/*"]
+      "@repo/types/*": ["../../packages/types/*"],
+      "@repo/api": ["../../packages/api/index.ts"],
+      "@shared/*": ["../../shared/*"],
+      "@shared/types": ["../../shared/types/index.ts"],
+      "@shared/types/*": ["../../shared/types/*"]
     }
   },
   "include": [
@@ -20,7 +24,5 @@
     "next.config.js",
     ".next/types/**/*.ts"
   ],
-  "exclude": [
-    "node_modules"
-  ],
+  "exclude": ["node_modules"]
 }

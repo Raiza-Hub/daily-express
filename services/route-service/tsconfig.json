@@ -13,6 +13,7 @@
     "declarationMap": true,
     "sourceMap": true,
     "removeComments": true,
+    "jsx": "react-jsx",
     "noImplicitAny": true,
     "strictNullChecks": true,
     "strictFunctionTypes": true,
@@ -23,13 +24,19 @@
     "baseUrl": "./",
     "paths": {
       "@/*": ["src/*"],
-      "@shared/*": ["../../shared/*"]
+      "@shared/*": ["../../shared/*"],
+      "@repo/email": ["../../email/src/index.ts"]
     },
     "types": ["jest", "node"],
     "typeRoots": ["./node_modules/@types", "./types"]
   },
-  "include": ["src/**/*", "../../shared/**/*", "tests/**/*", "types/**/*.d.ts", "tests"],
+  "include": [
+    "src/**/*",
+    "../../shared/**/*",
+    "../../email/**/*",
+    "tests/**/*",
+    "types/**/*.d.ts",
+    "tests"
+  ],
   "exclude": ["node_modules", "dist"]
 }
-
-//"**/*.test.ts"

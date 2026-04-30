@@ -1,7 +1,12 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { api } from "../api";
-import type { User, ApiResponse, GetMeResponse, AuthTokens } from "@shared/types";
-import { AxiosError } from "axios";
+import { authApi } from "../api";
+import type {
+  User,
+  ApiResponse,
+  GetMeResponse,
+  AuthTokens,
+} from "@shared/types";
+import { handleApiError } from "../utils";
 
 interface RegisterPayload {
   email: string;
@@ -31,32 +36,11 @@ interface ResetPasswordPayload {
   password: string;
 }
 
-
-
-const handleApiError = (err: unknown, fallbackMessage: string): never => {
-  if (err instanceof AxiosError) {
-    if (err.response?.data) {
-      const { error, message } = err.response.data as {
-        error?: string;
-        message?: string;
-      };
-      throw new Error(error || message || fallbackMessage);
-    }
-    if (err.request) {
-      throw new Error("Unable to connect to server");
-    }
-  }
-  if (err instanceof Error) {
-    throw err;
-  }
-  throw new Error(fallbackMessage);
-};
-
 export const registerFn = async (
   data: RegisterPayload,
 ): Promise<GetMeResponse> => {
   try {
-    const response = await api.post<ApiResponse<GetMeResponse>>(
+    const response = await authApi.post<ApiResponse<GetMeResponse>>(
       "/auth/register",
       data,
     );
@@ -71,7 +55,7 @@ export const registerFn = async (
 
 export const loginFn = async (data: LoginPayload): Promise<AuthTokens> => {
   try {
-    const response = await api.post<ApiResponse<AuthTokens>>(
+    const response = await authApi.post<ApiResponse<AuthTokens>>(
       "/auth/login",
       data,
     );
@@ -88,7 +72,7 @@ export const verifyOtpFn = async (
   data: VerifyOtpPayload,
 ): Promise<AuthTokens> => {
   try {
-    const response = await api.post<ApiResponse<AuthTokens>>(
+    const response = await authApi.post<ApiResponse<AuthTokens>>(
       "/auth/verify-otp",
       data,
     );
@@ -103,9 +87,7 @@ export const verifyOtpFn = async (
 
 export const resendOtpFn = async (): Promise<void> => {
   try {
-    const response = await api.get<ApiResponse<null>>(
-      "/auth/resend-otp",
-    );
+    const response = await authApi.get<ApiResponse<null>>("/auth/resend-otp");
     if (!response.data.success) {
       throw new Error(response.data.error || "Failed to resend OTP");
     }
@@ -116,9 +98,11 @@ export const resendOtpFn = async (): Promise<void> => {
 
 export const forgotPasswordFn = async (email: string): Promise<void> => {
   try {
-    const response = await api.post<ApiResponse<null>>(
+    const response = await authApi.post<ApiResponse<null>>(
       "/auth/forget-password",
-      { email },
+      {
+        email,
+      },
     );
     if (!response.data.success) {
       throw new Error(response.data.error || "Failed to send reset email");
@@ -128,13 +112,12 @@ export const forgotPasswordFn = async (email: string): Promise<void> => {
   }
 };
 
-
 export const resetPasswordFn = async ({
   token,
   password,
 }: ResetPasswordPayload): Promise<void> => {
   try {
-    const response = await api.post<ApiResponse<null>>(
+    const response = await authApi.post<ApiResponse<null>>(
       `/auth/reset-password/${token}`,
       { password },
     );
@@ -148,7 +131,7 @@ export const resetPasswordFn = async ({
 
 export const logoutFn = async (): Promise<void> => {
   try {
-    const response = await api.get<ApiResponse<null>>("/auth/logout");
+    const response = await authApi.get<ApiResponse<null>>("/auth/logout");
     if (!response.data.success) {
       throw new Error(response.data.error || "Logout failed");
     }
@@ -159,7 +142,7 @@ export const logoutFn = async (): Promise<void> => {
 
 export const getMeFn = async (): Promise<User> => {
   try {
-    const response = await api.get<ApiResponse<User>>("/auth/profile");
+    const response = await authApi.get<ApiResponse<User>>("/auth/profile");
     if (!response.data.success || !response.data.data) {
       throw new Error(response.data.error || "Failed to get user");
     }
@@ -184,12 +167,11 @@ export const useRefetchUser = () => {
   return () => queryClient.refetchQueries({ queryKey: ["user"] });
 };
 
-
 export const updateProfileFn = async (
   data: UpdateProfilePayload,
 ): Promise<User> => {
   try {
-    const response = await api.put<ApiResponse<User>>(
+    const response = await authApi.put<ApiResponse<User>>(
       "/auth/profile",
       data,
     );
@@ -204,8 +186,7 @@ export const updateProfileFn = async (
 
 export const deleteAccountFn = async (): Promise<void> => {
   try {
-    const response =
-      await api.delete<ApiResponse<null>>("/auth/profile");
+    const response = await authApi.delete<ApiResponse<null>>("/auth/profile");
     if (!response.data.success) {
       throw new Error(response.data.error || "Failed to delete account");
     }
@@ -254,7 +235,10 @@ export const useLogout = () => {
   });
 };
 
-export const useUpdateProfile = (options?: { onSuccess?: (data: any) => void; onError?: (error: any) => void }) =>
+export const useUpdateProfile = (options?: {
+  onSuccess?: (data: any) => void;
+  onError?: (error: any) => void;
+}) =>
   useMutation({
     mutationFn: updateProfileFn,
     ...options,
@@ -269,7 +253,8 @@ export type Provider = "google";
 
 export const getProvidersFn = async (): Promise<Provider[]> => {
   try {
-    const response = await api.get<ApiResponse<Provider[]>>("/auth/providers");
+    const response =
+      await authApi.get<ApiResponse<Provider[]>>("/auth/providers");
     if (!response.data.success || !response.data.data) {
       throw new Error(response.data.error || "Failed to get providers");
     }
@@ -286,9 +271,13 @@ export const useGetProviders = () =>
     retry: false,
   });
 
-export const disconnectProviderFn = async (provider: Provider): Promise<void> => {
+export const disconnectProviderFn = async (
+  provider: Provider,
+): Promise<void> => {
   try {
-    const response = await api.delete<ApiResponse<null>>(`/auth/providers/${provider}`);
+    const response = await authApi.delete<ApiResponse<null>>(
+      `/auth/providers/${provider}`,
+    );
     if (!response.data.success) {
       throw new Error(response.data.error || "Failed to disconnect provider");
     }
@@ -297,7 +286,10 @@ export const disconnectProviderFn = async (provider: Provider): Promise<void> =>
   }
 };
 
-export const useDisconnectProvider = (options?: { onSuccess?: () => void; onError?: (error: any) => void }) =>
+export const useDisconnectProvider = (options?: {
+  onSuccess?: () => void;
+  onError?: (error: any) => void;
+}) =>
   useMutation({
     mutationFn: disconnectProviderFn,
     ...options,
@@ -305,7 +297,9 @@ export const useDisconnectProvider = (options?: { onSuccess?: () => void; onErro
 
 export const setPasswordFn = async (password: string): Promise<void> => {
   try {
-    const response = await api.post<ApiResponse<null>>("/auth/password", { password });
+    const response = await authApi.post<ApiResponse<null>>("/auth/password", {
+      password,
+    });
     if (!response.data.success) {
       throw new Error(response.data.error || "Failed to set password");
     }
@@ -314,7 +308,10 @@ export const setPasswordFn = async (password: string): Promise<void> => {
   }
 };
 
-export const useSetPassword = (options?: { onSuccess?: () => void; onError?: (error: any) => void }) =>
+export const useSetPassword = (options?: {
+  onSuccess?: () => void;
+  onError?: (error: any) => void;
+}) =>
   useMutation({
     mutationFn: setPasswordFn,
     ...options,

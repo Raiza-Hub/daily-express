@@ -1,16 +1,14 @@
-const mockSend = jest.fn();
+const mockSendMail = jest.fn();
+const mockCreateTransport = jest.fn(() => ({
+  sendMail: mockSendMail,
+}));
 
-jest.mock("resend", () => {
-  return {
-    Resend: jest.fn().mockImplementation(() => {
-      return {
-        emails: {
-          send: mockSend,
-        },
-      };
-    }),
-  };
-});
+jest.mock("nodemailer", () => ({
+  __esModule: true,
+  default: {
+    createTransport: mockCreateTransport,
+  },
+}));
 
 // Import MailService after the mock is defined
 import { MailService } from "../src/mailService";
@@ -21,17 +19,19 @@ describe("MailService", () => {
   beforeEach(() => {
     // Clear all mocks before each test
     jest.clearAllMocks();
-    process.env.EMAIL_FROM = "onboarding@resend.dev";
+    process.env.EMAIL_FROM = "noreply@dailyexpress.app";
+    process.env.SMTP_HOST = "email-smtp.us-east-1.amazonaws.com";
+    process.env.SMTP_PORT = "587";
+    process.env.SMTP_USERNAME = "smtp-user";
+    process.env.SMTP_PASSWORD = "smtp-password";
 
     mailService = new MailService();
   });
 
   describe("sendMail", () => {
     it("should successfully send an email", async () => {
-      // Mock successful response
-      mockSend.mockResolvedValueOnce({
-        data: { id: "resend_123" },
-        error: null,
+      mockSendMail.mockResolvedValueOnce({
+        messageId: "ses-message-123",
       });
 
       const result = await mailService.sendMail(
@@ -40,33 +40,49 @@ describe("MailService", () => {
         "<p>Test HTML</p>"
       );
 
-      expect(mockSend).toHaveBeenCalledWith({
-        from: "Daily Express <onboarding@resend.dev>",
+      expect(mockCreateTransport).toHaveBeenCalledWith({
+        host: "email-smtp.us-east-1.amazonaws.com",
+        port: 587,
+        secure: false,
+        requireTLS: true,
+        auth: {
+          user: "smtp-user",
+          pass: "smtp-password",
+        },
+      });
+      expect(mockSendMail).toHaveBeenCalledWith({
+        from: "Daily Express <noreply@dailyexpress.app>",
         to: "test@example.com",
         subject: "Test Subject",
         html: "<p>Test HTML</p>",
       });
-      expect(result).toEqual({ id: "resend_123" });
+      expect(result).toEqual({ id: "ses-message-123" });
     });
 
-    it("should throw a ServiceError if Resend returns an error", async () => {
-      // Mock Resend returning an error object
-      mockSend.mockResolvedValueOnce({
-        data: null,
-        error: { message: "Invalid email" },
-      });
+    it("should throw a ServiceError if SMTP sending fails", async () => {
+      mockSendMail.mockRejectedValueOnce(new Error("Invalid login"));
 
       await expect(
         mailService.sendMail("invalid", "Subject", "<p>HTML</p>")
       ).rejects.toMatchObject({
-        message: "Invalid email",
-        statusCode: 400,
+        message: "Invalid login",
+        statusCode: 500,
       });
     });
 
+    it("should throw a ServiceError if transport configuration is missing", () => {
+      delete process.env.SMTP_HOST;
+
+      expect(() => new MailService()).toThrow(
+        expect.objectContaining({
+          message: "SMTP_HOST is required",
+          statusCode: 500,
+        })
+      );
+    });
+
     it("should throw a ServiceError if an exception occurs during sending", async () => {
-      // Mock Resend throwing an exception
-      mockSend.mockRejectedValueOnce(new Error("Network error"));
+      mockSendMail.mockRejectedValueOnce(new Error("Network error"));
 
       await expect(
         mailService.sendMail("test@example.com", "Subject", "<p>HTML</p>")

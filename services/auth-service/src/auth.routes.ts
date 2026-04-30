@@ -2,8 +2,9 @@ import { Router } from "express";
 import passport from "passport";
 import * as authcontroller from "./auth.controller";
 import {
-  authenticateTokenFromCookieUnverified,
-  refreshAndValidateCookie,
+  authenticateInternalServiceRequest,
+  authenticateGatewayRequest,
+  authenticateVerifiedGatewayRequest,
   validateRequest,
 } from "@shared/middleware";
 import {
@@ -12,7 +13,9 @@ import {
   updateProfileSchema,
   forgotPasswordSchema,
   resetPasswordSchema,
+  setPasswordSchema,
 } from "./validation";
+import { GOOGLE_AUTH_FAILURE_REDIRECT_URL } from "./authUrls";
 
 const router: Router = Router();
 
@@ -20,7 +23,7 @@ const router: Router = Router();
 router.post(
   "/register",
   validateRequest(registerSchema),
-  authcontroller.register
+  authcontroller.register,
 );
 
 router.post(
@@ -31,7 +34,7 @@ router.post(
 
 router.get(
   "/resend-otp",
-  authenticateTokenFromCookieUnverified,
+  authenticateGatewayRequest,
   authcontroller.resendOtp
 );
 
@@ -50,75 +53,79 @@ router.get("/google", (req, res, next) => {
 
 router.get(
   "/google/callback",
-  passport.authenticate("google", { failureRedirect: "/login" }),
-  authcontroller.googleCallback
-);
-
-router.post(
-  "/validate",
-  authcontroller.validateToken
+  passport.authenticate("google", {
+    failureRedirect: GOOGLE_AUTH_FAILURE_REDIRECT_URL,
+  }),
+  authcontroller.googleCallback,
 );
 
 router.get(
   "/logout",
-  refreshAndValidateCookie,
-  authcontroller.logout
+  authenticateVerifiedGatewayRequest,
+  authcontroller.logout,
 );
 
 router.post(
   "/forget-password",
   validateRequest(forgotPasswordSchema),
-  authcontroller.forgotPassword
+  authcontroller.forgotPassword,
 );
 
 router.post(
   "/verify-otp",
-  authenticateTokenFromCookieUnverified,
-  authcontroller.verifyOtp
+  authenticateGatewayRequest,
+  authcontroller.verifyOtp,
 );
 
 router.post(
   "/reset-password/:token",
   validateRequest(resetPasswordSchema),
-  authcontroller.resetPassword
+  authcontroller.resetPassword,
 );
 router.get(
+  "/internal/users/:id/session",
+  authenticateInternalServiceRequest,
+  authcontroller.getUserSessionStateInternal,
+);
+
+router.get(
   "/profile",
-  refreshAndValidateCookie,
-  authcontroller.getProfile
+  authenticateVerifiedGatewayRequest,
+  authcontroller.getProfile,
 );
 
 router.delete(
   "/profile",
-  refreshAndValidateCookie,
-  authcontroller.deleteAccount
+  authenticateVerifiedGatewayRequest,
+  authcontroller.deleteAccount,
 );
 
 router.put(
   "/profile",
-  refreshAndValidateCookie,
+  authenticateVerifiedGatewayRequest,
   validateRequest(updateProfileSchema),
-  authcontroller.updateProfile
+  authcontroller.updateProfile,
 );
 
 // Connected providers
 router.get(
   "/providers",
-  refreshAndValidateCookie,
-  authcontroller.getProviders
+  authenticateVerifiedGatewayRequest,
+  authcontroller.getProviders,
 );
 
 router.delete(
   "/providers/:provider",
-  refreshAndValidateCookie,
-  authcontroller.disconnectProvider
+  authenticateVerifiedGatewayRequest,
+  authcontroller.disconnectProvider,
 );
 
 // Set password (authenticated user sets password without old password)
 router.post(
   "/password",
-  refreshAndValidateCookie,
-  authcontroller.setPassword
+  authenticateVerifiedGatewayRequest,
+  validateRequest(setPasswordSchema),
+  authcontroller.setPassword,
 );
 
 export default router;

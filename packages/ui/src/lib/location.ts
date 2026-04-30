@@ -1,63 +1,65 @@
-"use server";
-
-import { SuggestCommand, GetPlaceCommand } from "@aws-sdk/client-geo-places";
+import type { AWSPlaceDetails } from "@repo/types";
 import type { LocationSuggestion } from "../components/location-dropdown";
-import { getGeoPlacesClient, getRedis } from "./location-client";
 
-export async function suggestLocations(query: string): Promise<LocationSuggestion[]> {
-    try {
-        if (!query || query.trim().length === 0) return [];
+type SuggestLocationsResponse = {
+  suggestions?: LocationSuggestion[];
+  message?: string;
+};
 
-        const client = getGeoPlacesClient();
+type PlaceDetailsResponse = {
+  details?: AWSPlaceDetails | null;
+  message?: string;
+};
 
-        const command = new SuggestCommand({
-            QueryText: query,
-            MaxResults: 5,
-            BiasPosition: [8.6753, 9.0820], // Nigeria coordinates [Longitude, Latitude]
-        });
+async function parseLocationResponse<T extends { message?: string }>(
+  response: Response,
+): Promise<T> {
+  const payload = (await response.json().catch(() => ({}))) as T;
 
-        const response = await client.send(command);
+  if (!response.ok) {
+    throw new Error(payload.message || "Location lookup failed.");
+  }
 
-        const suggestions: LocationSuggestion[] = (response.ResultItems || []).map((item) => ({
-            placeId: item.Place?.PlaceId || "",
-            title: item.Title || "Unknown Location",
-            label: item.Place?.Address?.Label || "Unknown Location"
-        })).filter(s => s.placeId !== "");
+  return payload;
+}
 
-        return suggestions;
-    } catch (error) {
-        console.error("Error suggesting locations:", error);
-        return [];
-    }
+export async function suggestLocations(
+  query: string,
+): Promise<LocationSuggestion[]> {
+  const trimmedQuery = query.trim();
+
+  if (!trimmedQuery) {
+    return [];
+  }
+
+  const searchParams = new URLSearchParams({
+    query: trimmedQuery,
+  });
+  const response = await fetch(`/api/location/suggest?${searchParams}`, {
+    method: "GET",
+    credentials: "include",
+    cache: "no-store",
+  });
+  const payload =
+    await parseLocationResponse<SuggestLocationsResponse>(response);
+
+  return payload.suggestions ?? [];
 }
 
 export async function getPlaceDetails(placeId: string) {
-    try {
-        if (!placeId) return null;
+  if (!placeId) {
+    return null;
+  }
 
-        const cacheKey = `location:place:${placeId}`;
-        const redis = getRedis();
+  const searchParams = new URLSearchParams({
+    placeId,
+  });
+  const response = await fetch(`/api/location/place?${searchParams}`, {
+    method: "GET",
+    credentials: "include",
+    cache: "no-store",
+  });
+  const payload = await parseLocationResponse<PlaceDetailsResponse>(response);
 
-        if (redis) {
-            const cached = await redis.get(cacheKey);
-            if (cached) return cached;
-        }
-
-        const client = getGeoPlacesClient();
-
-        const command = new GetPlaceCommand({
-            PlaceId: placeId,
-        });
-
-        const response = await client.send(command);
-
-        if (redis && response) {
-            await redis.set(cacheKey, response, { ex: 60 * 60 * 24 * 30 }); // Cache for 30 days
-        }
-        
-        return response;
-    } catch (error) {
-        console.error("Error getting place details:", error);
-        return null;
-    }
+  return payload.details ?? null;
 }
