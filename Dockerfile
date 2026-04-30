@@ -28,8 +28,7 @@ COPY patches ./patches
 COPY email ./email
 COPY shared ./shared
 
-RUN --mount=type=cache,target=/root/.bun/install/cache \
-  bun install \
+RUN bun install \
   --frozen-lockfile \
   --production \
   --omit optional \
@@ -67,3 +66,5 @@ COPY turbo.json tsconfig.json ./
 
 ENV PATH="/app/node_modules/.bin:${PATH}"
 USER bun
+
+CMD ["sh", "-lc", "bun run --cwd \"${SERVICE_PATH:?Set SERVICE_PATH for this Railway service}\" start"]
