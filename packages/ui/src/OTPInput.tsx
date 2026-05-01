@@ -1,7 +1,7 @@
 // components/otp/OTPInput.tsx
 
 import React from "react";
-import { OTPInputProps } from "@repo/types";
+import type { OTPInputProps } from "./types";
 import { useOTP } from "./hooks/use-otp";
 import { OTPInputField } from "./components/otp-input-field";
 

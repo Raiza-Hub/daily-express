@@ -3,7 +3,7 @@
 import { useEffect } from "react";
 import { AnimatePresence, motion } from "framer-motion";
 import { useIsMobile } from "@repo/ui/hooks/use-is-mobile";
-import type { ResponsiveModalProps } from "@repo/types";
+import type { ResponsiveModalProps } from "./types";
 import {
     Dialog,
     DialogContent,
