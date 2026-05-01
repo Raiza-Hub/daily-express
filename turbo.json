@@ -4,6 +4,27 @@
   "tasks": {
     "build": {
       "dependsOn": ["^build"],
+      "env": [
+        "LOCATION_UPSTASH_REDIS_REST_URL",
+        "NOTIFICATION_UPSTASH_REDIS_REST_URL",
+        "AWS_REGION",
+        "NEXT_PUBLIC_API_GATEWAY_URL",
+        "NEXT_PUBLIC_DRIVER_APP_URL",
+        "NEXT_PUBLIC_POSTHOG_HOST",
+        "NEXT_PUBLIC_POSTHOG_KEY",
+        "NEXT_PUBLIC_POSTHOG_UI_HOST",
+        "NEXT_PUBLIC_WEB_APP_URL",
+        "DISABLE_LOCATION_SUGGESTIONS_CACHE",
+        "UPSTASH_LOCATION_SUGGEST_LIMIT",
+        "UPSTASH_LOCATION_PLACE_LIMIT",
+        "ROUTE_SERVICE_TIMEZONE"
+      ],
+      "passThroughEnv": [
+        "LOCATION_UPSTASH_REDIS_REST_TOKEN",
+        "NOTIFICATION_UPSTASH_REDIS_REST_TOKEN",
+        "AWS_ACCESS_KEY_ID",
+        "AWS_SECRET_ACCESS_KEY"
+      ],
       "inputs": ["$TURBO_DEFAULT$", ".env*"],
       "outputs": [".next/**", "!.next/cache/**", "dist/**"]
     },
