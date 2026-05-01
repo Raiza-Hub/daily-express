@@ -14,8 +14,13 @@
     "axios": "^1.13.6",
     "shared": "workspace:*"
   },
+  "peerDependencies": {
+    "react": "^19.2.0"
+  },
   "devDependencies": {
     "@repo/typescript-config": "workspace:*",
+    "@types/react": "19.2.2",
+    "react": "^19.2.0",
     "typescript": "5.9.2"
   }
 }
