@@ -138,7 +138,7 @@ export function ResponsiveModal({
             {trigger && <DialogTrigger asChild>{trigger}</DialogTrigger>}
             <DialogContent
                 className={cn(
-                    "max-w-[540px] max-h-[90vh] overflow-y-auto",
+                    "max-w-135 max-h-[90vh] overflow-y-auto",
                     dialogClassName
                 )}
                 onOpenAutoFocus={(e) => e.preventDefault()}
