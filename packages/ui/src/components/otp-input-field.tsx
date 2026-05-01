@@ -1,7 +1,7 @@
 // components/otp/OTPInputField.tsx
 
 import React from "react";
-import { OTPInputFieldProps } from "@repo/types";
+import type { OTPInputFieldProps } from "../types";
 
 export const OTPInputField: React.FC<OTPInputFieldProps> = ({
     value,
