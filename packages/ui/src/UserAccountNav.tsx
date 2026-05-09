@@ -6,7 +6,6 @@ import {
   AvatarImage,
   AvatarFallback,
 } from "@repo/ui/components/avatar";
-import { UserIcon } from "@phosphor-icons/react/User";
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -34,26 +33,17 @@ export interface UserAccountNavUser {
 }
 
 export interface UserAccountNavMenuItem {
-  /** Unique key for the item */
   key: string;
-  /** Icon element to render */
   icon: React.ReactNode;
-  /** Label text */
   label: string;
-  /** Href — renders as an <a> tag if provided, otherwise a <button> */
   href?: string;
-  /** onClick handler */
   onClick?: () => void;
-  /** If true, renders with destructive/danger styling */
 }
 
 export interface UserAccountNavProps {
   user: UserAccountNavUser;
-  /** Menu items rendered in the main group */
   menuItems?: UserAccountNavMenuItem[];
-  /** Items rendered in a separate group at the bottom (e.g. Sign out) */
   footerItems?: UserAccountNavMenuItem[];
-  /** Whether to show the mobile Sheet variant. Defaults to auto-detect via useIsMobile. */
   forceMobile?: boolean;
 }
 
@@ -62,14 +52,16 @@ export interface UserAccountNavProps {
 function UserInfoContent({ user }: { user: UserAccountNavUser }) {
   return (
     <div className="flex items-center gap-2 px-1 py-1.5 text-left text-sm">
-      <Avatar className="h-8 w-8">
+      <Avatar className="h-10 w-10 *:">
         <AvatarImage
           className="object-cover"
           src={user.profilePictureUrl || ""}
           alt={`${user.firstName} ${user.lastName ?? ""}`}
         />
         <AvatarFallback>
-          <UserIcon className="h-4 w-4" />
+          <span className="text-xs font-medium">
+            {user.firstName?.[0]}{user.lastName?.[0]}
+          </span>
         </AvatarFallback>
       </Avatar>
       <div className="grid flex-1 text-left text-sm leading-tight">
@@ -182,14 +174,16 @@ export function UserAccountNav({
     return (
       <Sheet open={sheetOpen} onOpenChange={setSheetOpen}>
         <SheetTrigger>
-          <Avatar className="h-10 w-10 cursor-pointer">
+          <Avatar className="h-10 w-10  cursor-pointer">
             <AvatarImage
               className="object-cover"
               src={user.profilePictureUrl || ""}
               alt={`${user.firstName} ${user.lastName ?? ""}`}
             />
             <AvatarFallback>
-              <UserIcon className="h-5 w-5" />
+              <span className="text-xs font-medium">
+                {user.firstName?.[0]}{user.lastName?.[0]}
+              </span>
             </AvatarFallback>
           </Avatar>
         </SheetTrigger>
@@ -235,7 +229,9 @@ export function UserAccountNav({
             alt={`${user.firstName} ${user.lastName ?? ""}`}
           />
           <AvatarFallback>
-            <UserIcon className="h-5 w-5" />
+            <span className="text-xs font-medium">
+              {user.firstName?.[0]}{user.lastName?.[0]}
+            </span>
           </AvatarFallback>
         </Avatar>
       </DropdownMenuTrigger>

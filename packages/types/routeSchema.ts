@@ -1,4 +1,4 @@
-import { z } from "zod";
+import { z } from "zod/v4";
 
 const locationSchema = z.object({
   title: z.string().min(1, { error: "Location title is required" }),
@@ -9,7 +9,7 @@ const locationSchema = z.object({
 export const routeSchema = z.object({
   departureCity: locationSchema,
   arrivalCity: locationSchema,
-  vehicleType: z.enum(["car", "bus", "luxury_car"]),
+  vehicleType: z.enum(["car", "bus", "luxury car"]),
   seatNumber: z
     .number()
     .min(1, { error: "Seat number must be greater than 0" }),
