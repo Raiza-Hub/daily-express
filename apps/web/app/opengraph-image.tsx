@@ -1,4 +1,5 @@
 import { ImageResponse } from "next/og";
+import { readFile } from "node:fs/promises";
 
 const brandLogoUrl = new URL("../public/brand-logo.png", import.meta.url);
 
@@ -9,7 +10,10 @@ export const size = {
 
 export const contentType = "image/png";
 
-export default function OpenGraphImage() {
+export default async function OpenGraphImage() {
+  const brandLogoData = await readFile(brandLogoUrl, "base64");
+  const brandLogoSrc = `data:image/png;base64,${brandLogoData}`;
+
   return new ImageResponse(
     (
       <div
@@ -44,7 +48,7 @@ export default function OpenGraphImage() {
             }}
           >
             <img
-              src={brandLogoUrl.toString()}
+              src={brandLogoSrc}
               alt="Daily Express"
               width={300}
               height={107}
