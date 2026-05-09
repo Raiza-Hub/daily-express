@@ -16,7 +16,7 @@ import dayjs from "dayjs";
 import { usePostHog } from "posthog-js/react";
 import { useEffect } from "react";
 import { Controller, useForm } from "react-hook-form";
-import { z } from "zod";
+import { z } from "zod/v4";
 import { posthogEvents } from "~/lib/posthog-events";
 import DeleteAccount from "./DeleteAccount";
 import DisconnectGoogleDialog from "./DisconnectGoogleDialog";

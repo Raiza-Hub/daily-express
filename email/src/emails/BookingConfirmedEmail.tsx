@@ -12,6 +12,7 @@ import {
   Row,
   Column,
 } from "@react-email/components";
+import { EMAIL_LOGO_CONTENT_ID } from "../assets";
 
 export interface BookingConfirmedEmailProps {
   frontendUrl: string;
@@ -30,7 +31,6 @@ export interface BookingConfirmedEmailProps {
 }
 
 const BookingConfirmedEmail = ({
-  frontendUrl = "",
   passengerName,
   paymentReference,
   pricePaid,
@@ -45,7 +45,6 @@ const BookingConfirmedEmail = ({
   driverPhone,
 }: BookingConfirmedEmailProps) => {
   const previewText = `Your booking to ${dropoffTitle} is confirmed!`;
-  const assetBaseUrl = frontendUrl || "";
 
   return (
     <Html>
@@ -55,8 +54,9 @@ const BookingConfirmedEmail = ({
         <Container style={page}>
           <Section style={brandSection}>
             <Img
-              src={`${assetBaseUrl}/static/email-logo.png`}
+              src={`cid:${EMAIL_LOGO_CONTENT_ID}`}
               alt="Daily Express Logo"
+              width="112"
               height="40"
               style={logo}
             />
@@ -221,6 +221,8 @@ const brandSection = {
 
 const logo = {
   display: "inline-block",
+  height: "40px",
+  width: "112px",
 };
 
 const card = {

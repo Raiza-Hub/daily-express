@@ -6,8 +6,6 @@ import type {
   DriverPayoutHistoryItem,
   DriverPayoutSummary,
   PayoutStatus,
-  ResolveBankAccountRequest,
-  ResolveBankAccountResponse,
 } from "@shared/types";
 import { handleApiError } from "../utils";
 
@@ -16,7 +14,7 @@ export const getDriverPayoutBalanceFn =
     try {
       const response =
         await payoutApi.get<ApiResponse<DriverPayoutBalance>>(
-          "/payouts/balance",
+          "/balance",
         );
 
       if (!response.data.success || !response.data.data) {
@@ -51,7 +49,7 @@ export const getDriverPayoutHistoryFn = async (params?: {
     const response = await payoutApi.get<
       ApiResponse<DriverPayoutHistoryItem[]>
     >(
-      `/payouts/history${searchParams.size ? `?${searchParams.toString()}` : ""}`,
+      `/history${searchParams.size ? `?${searchParams.toString()}` : ""}`,
     );
 
     if (!response.data.success || !response.data.data) {
@@ -69,7 +67,7 @@ export const getDriverPayoutSummaryFn = async (
 ): Promise<DriverPayoutSummary> => {
   try {
     const response = await payoutApi.get<ApiResponse<DriverPayoutSummary>>(
-      `/payouts/summary?week=${encodeURIComponent(week)}`,
+      `/summary?week=${encodeURIComponent(week)}`,
     );
 
     if (!response.data.success || !response.data.data) {
@@ -79,24 +77,6 @@ export const getDriverPayoutSummaryFn = async (
     return response.data.data;
   } catch (err) {
     return handleApiError(err, "Failed to fetch payout summary") as never;
-  }
-};
-
-export const resolveBankAccountFn = async (
-  data: ResolveBankAccountRequest,
-): Promise<ResolveBankAccountResponse> => {
-  try {
-    const response = await payoutApi.post<
-      ApiResponse<ResolveBankAccountResponse>
-    >("/payouts/bank-accounts/resolve", data);
-
-    if (!response.data.success || !response.data.data) {
-      throw new Error(response.data.error || "Failed to resolve bank account");
-    }
-
-    return response.data.data;
-  } catch (err) {
-    return handleApiError(err, "Failed to resolve bank account") as never;
   }
 };
 

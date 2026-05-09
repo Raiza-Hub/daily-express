@@ -10,7 +10,6 @@ import {
 } from "@repo/ui/components/sheet";
 import { Button } from "@repo/ui/components/button";
 import { Separator } from "@repo/ui/components/separator";
-import { toast } from "@repo/ui/components/sonner";
 import {
   CarProfileIcon,
   InfoIcon,
@@ -18,6 +17,7 @@ import {
   SpinnerIcon,
   VanIcon,
 } from "@phosphor-icons/react";
+import { useState } from "react";
 import { formatPrice, getDuration } from "@repo/ui/lib/utils";
 import dayjs from "dayjs";
 import { useCreateTripCheckout } from "@repo/api";
@@ -73,6 +73,8 @@ const TripDetailsSheet = ({
   const totalAmount = trip.price + transactionFee;
   const hasTripDeparted = () => dayjs().isAfter(scheduledDepartureTime);
   const hasDeparturePassed = hasTripDeparted();
+  const [bookError, setBookError] = useState<string | null>(null);
+  const [isCheckoutRedirecting, setIsCheckoutRedirecting] = useState(false);
 
   const { mutateAsync: createTripCheckout, isPending: isCreatingCheckout } =
     useCreateTripCheckout({
@@ -96,21 +98,28 @@ const TripDetailsSheet = ({
           return;
         }
 
-        toast.error(message);
+        setBookError(message);
       },
     });
 
   const handleBookTrip = async () => {
+    if (isCreatingCheckout || isCheckoutRedirecting) {
+      return;
+    }
+
     if (!bookingContext) {
       return;
     }
 
     if (hasTripDeparted()) {
-      toast.error("This trip has already departed and can no longer be booked.");
+      setBookError("This trip has already departed and can no longer be booked.");
       return;
     }
 
     try {
+      setBookError(null);
+      setIsCheckoutRedirecting(false);
+
       posthog.capture(posthogEvents.trip_book_initiated, {
         routeId: bookingContext.routeId,
         tripDate: bookingContext.tripDate,
@@ -136,8 +145,10 @@ const TripDetailsSheet = ({
         checkoutUrl: checkout.checkoutUrl,
       });
 
+      setIsCheckoutRedirecting(true);
       window.location.assign(checkout.checkoutUrl);
     } catch (error) {
+      setIsCheckoutRedirecting(false);
       const message =
         error instanceof Error ? error.message : "Unable to start payment";
       const requiresAuthentication =
@@ -150,11 +161,11 @@ const TripDetailsSheet = ({
         return;
       }
 
-      toast.error(message);
+      setBookError(message);
     }
   };
 
-  const isSubmitting = isCreatingCheckout;
+  const isSubmitting = isCreatingCheckout || isCheckoutRedirecting;
   const canBook = allowBooking && Boolean(bookingContext) && !hasDeparturePassed;
 
   return (
@@ -312,6 +323,11 @@ const TripDetailsSheet = ({
 
           {allowBooking && (
             <div className="px-6 pb-6 pt-2 border-t border-gray-100">
+              {bookError && (
+                <p className="px-1 pb-2 inline-flex justify-center text-sm text-red-500">
+                  {bookError}
+                </p>
+              )}
               <Button
                 className="w-full h-12 text-base font-semibold rounded-xl bg-blue-600 hover:bg-blue-700 cursor-pointer"
                 disabled={!canBook || isSubmitting}

@@ -13,12 +13,12 @@ import {
   varchar,
 } from "drizzle-orm/pg-core";
 
-//update vehicleEnum to bus, car, luxury_car
+//update vehicleEnum to bus, car, luxury car
 export const statusEnum = pgEnum("status", ["inactive", "pending", "active"]);
 export const vehicleTypeEnum = pgEnum("vehicle_type", [
   "car",
   "bus",
-  "luxury_car",
+  "luxury car",
 ]);
 export interface LocationObject {
   title: string;

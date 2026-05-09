@@ -26,13 +26,12 @@ import {
   PopoverContent,
   PopoverTrigger,
 } from "@repo/ui/components/popover";
-import { toast } from "@repo/ui/components/sonner";
 import { cn } from "@repo/ui/lib/utils";
 import Image from "next/image";
 import { usePostHog } from "posthog-js/react";
 import { useEffect, useState } from "react";
 import { Controller, useForm } from "react-hook-form";
-import { z } from "zod";
+import { z } from "zod/v4";
 import { posthogEvents } from "~/lib/posthog-events";
 import { Bank } from "~/lib/type";
 import BankList from "../../../bank-names.json";
@@ -49,6 +48,7 @@ type TBankDetailsFormValues = z.infer<typeof ChangeBankDetailsSchema>;
 export default function ChangeBankDetailsDialog() {
   const [open, setOpen] = useState(false);
   const [openBank, setOpenBank] = useState(false);
+  const [bankError, setBankError] = useState<string | null>(null);
   const posthog = usePostHog();
 
   const { data: driver, refetch } = useGetDriver();
@@ -57,14 +57,13 @@ export default function ChangeBankDetailsDialog() {
     onSuccess: () => {
       posthog.capture(posthogEvents.driver_bank_details_update_succeeded);
       refetch();
-      toast.success("Bank details updated successfully!");
       setOpen(false);
     },
     onError: (error: Error) => {
       posthog.captureException(error, {
         action: "driver_bank_details_update_failed",
       });
-      toast.error("Failed to update bank details");
+      setBankError(error.message);
     },
   });
 
@@ -289,6 +288,11 @@ export default function ChangeBankDetailsDialog() {
             />
           </div>
         </div>
+        {bankError && (
+          <p className="px-1 pb-2 inline-flex justify-center text-sm text-red-500">
+            {bankError}
+          </p>
+        )}
         <div className="px-4 pb-4 pt-2 flex justify-end gap-2">
           <Button
             type="button"

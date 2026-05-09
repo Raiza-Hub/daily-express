@@ -16,6 +16,7 @@ services:
       - POSTGRES_PASSWORD=ateazy
     volumes:
       - ./init-database.sql:/docker-entrypoint-initdb.d/init-database.sql
+      - ./init-dailyexpress-api-database.sql:/docker-entrypoint-initdb.d/init-dailyexpress-api-database.sql
       - pgdata:/var/lib/postgresql
     ports:
       - "5432:5432"

@@ -15,9 +15,16 @@ import { useState } from "react";
 interface RouteCardActionMenuProps {
     onPassengers: () => void;
     onStopBooking: () => void;
+    stopBookingDisabled?: boolean;
+    stopBookingLabel?: string;
 }
 
-export default function RouteCardActionMenu({ onPassengers, onStopBooking }: RouteCardActionMenuProps) {
+export default function RouteCardActionMenu({
+    onPassengers,
+    onStopBooking,
+    stopBookingDisabled = false,
+    stopBookingLabel = "Stop Booking",
+}: RouteCardActionMenuProps) {
     const [open, setOpen] = useState(false);
     useBodyScrollLock(open);
 
@@ -35,9 +42,14 @@ export default function RouteCardActionMenu({ onPassengers, onStopBooking }: Rou
                         Passengers
                     </DropdownMenuItem>
                     <DropdownMenuSeparator />
-                    <DropdownMenuItem variant="destructive" className="cursor-pointer" onSelect={onStopBooking}>
+                    <DropdownMenuItem
+                        variant="destructive"
+                        className="cursor-pointer"
+                        disabled={stopBookingDisabled}
+                        onSelect={onStopBooking}
+                    >
                         <ProhibitIcon aria-hidden="true" size={16} />
-                        Stop Booking
+                        {stopBookingLabel}
                     </DropdownMenuItem>
                 </DropdownMenuGroup>
             </DropdownMenuContent>

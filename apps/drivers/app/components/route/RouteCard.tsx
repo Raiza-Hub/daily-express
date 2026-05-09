@@ -55,6 +55,7 @@ export default function RouteCard({
       return {
         id: trip.id,
         tripId: trip.id,
+        status: trip.status,
         departureTime: dayjs(departureDateTime).format("h:mma"),
         departureCode: trip.route.pickup_location_title,
         arrivalTime: dayjs(arrivalDateTime).format("h:mma"),

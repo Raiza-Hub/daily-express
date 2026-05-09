@@ -17,6 +17,7 @@ export interface CreateRouteFormProps {
   onSubmit: (data: TRoute) => void;
   onCancel: () => void;
   ui: RouteFormUi;
+  error?: string | null;
   FooterWrapper: React.FC<{ children: React.ReactNode }>;
 }
 
@@ -27,6 +28,7 @@ export function CreateRouteForm({
   onSubmit,
   onCancel,
   ui,
+  error,
   FooterWrapper,
 }: CreateRouteFormProps) {
   return (
@@ -37,6 +39,12 @@ export function CreateRouteForm({
       <RouteInformationSection control={control} ui={ui} />
       <RoutePricingSection control={control} ui={ui} />
       <RouteScheduleSection control={control} />
+
+      {error && (
+        <p className="px-1 pb-2 inline-flex justify-center text-sm text-red-500">
+          {error}
+        </p>
+      )}
 
       <FooterWrapper>
         <Button

@@ -1,0 +1,26 @@
+{
+  "compilerOptions": {
+    "target": "ES2020",
+    "module": "Preserve",
+    "moduleDetection": "force",
+    "lib": ["ES2020"],
+    "strict": true,
+    "esModuleInterop": true,
+    "skipLibCheck": true,
+    "forceConsistentCasingInFileNames": true,
+    "resolveJsonModule": true,
+    "allowImportingTsExtensions": true,
+    "noEmit": true,
+    "declaration": false,
+    "declarationMap": false,
+    "moduleResolution": "bundler",
+    "jsx": "react-jsx",
+    "types": ["bun"],
+    "paths": {
+      "@shared/*": ["../shared/*"],
+      "@repo/email": ["../email/src"]
+    }
+  },
+  "include": ["**/*.ts", "../shared/**/*.ts"],
+  "exclude": ["node_modules", "dist"]
+}
