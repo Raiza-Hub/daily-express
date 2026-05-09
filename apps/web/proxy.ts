@@ -36,6 +36,9 @@ export default async function proxy(req: NextRequest) {
 
 export const config = {
   matcher: [
-    "/((?!api|_next/static|_next/image|favicon.ico|sitemap.xml|robots.txt|opengraph-image|twitter-image|.*\\.png$).*)",
+    // daily-express-flow is excluded because it's a rewrite to PostHog (see next.config.js).
+    // The proxy runs before next.config.js rewrites, so without this exclusion,
+    // auth redirects would intercept PostHog asset requests and break analytics.
+    "/((?!api|_next/static|_next/image|favicon.ico|sitemap.xml|robots.txt|opengraph-image|twitter-image|.*\\.png$|daily-express-flow).*)",
   ],
 }

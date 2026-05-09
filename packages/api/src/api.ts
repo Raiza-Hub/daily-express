@@ -1,21 +1,14 @@
 import axios from "axios";
 
-const API_GATEWAY_URL =
-  process.env.NEXT_PUBLIC_API_GATEWAY_URL || "http://localhost:8000";
+const DAILYEXPRESS_API_URL =
+  process.env.NEXT_PUBLIC_DAILYEXPRESS_API_URL || "http://localhost:8000";
 
-const DRIVER_BASE_URL = `${API_GATEWAY_URL}/api/drivers/v1`;
-const AUTH_BASE_URL = `${API_GATEWAY_URL}/api/auth/v1`;
-const ROUTE_BASE_URL = `${API_GATEWAY_URL}/api/routes/v1`;
-const CHECKOUT_BASE_URL = `${API_GATEWAY_URL}/api/checkout/v1`;
-const PAYMENT_BASE_URL = `${API_GATEWAY_URL}/api/payments/v1`;
-const PAYOUT_BASE_URL = `${API_GATEWAY_URL}/api/payouts/v1`;
-const NOTIFICATION_BASE_URL = `${API_GATEWAY_URL}/api/notifications/v1`;
-
-export const api = axios.create({
-  baseURL: DRIVER_BASE_URL,
-  headers: { "Content-Type": "application/json" },
-  withCredentials: true,
-});
+const DRIVER_BASE_URL = `${DAILYEXPRESS_API_URL}/api/v1/driver`;
+const AUTH_BASE_URL = `${DAILYEXPRESS_API_URL}/api/v1/auth`;
+const ROUTE_BASE_URL = `${DAILYEXPRESS_API_URL}/api/v1/route`;
+const PAYMENT_BASE_URL = `${DAILYEXPRESS_API_URL}/api/v1/payments`;
+const PAYOUT_BASE_URL = `${DAILYEXPRESS_API_URL}/api/v1/payouts`;
+const NOTIFICATION_BASE_URL = `${DAILYEXPRESS_API_URL}/api/v1/notifications`;
 
 export const driverApi = axios.create({
   baseURL: DRIVER_BASE_URL,
@@ -31,12 +24,6 @@ export const authApi = axios.create({
 
 export const routeApi = axios.create({
   baseURL: ROUTE_BASE_URL,
-  headers: { "Content-Type": "application/json" },
-  withCredentials: true,
-});
-
-export const checkoutApi = axios.create({
-  baseURL: CHECKOUT_BASE_URL,
   headers: { "Content-Type": "application/json" },
   withCredentials: true,
 });

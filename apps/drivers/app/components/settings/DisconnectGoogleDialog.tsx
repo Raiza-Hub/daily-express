@@ -14,7 +14,6 @@ import {
 import { Input } from "@repo/ui/components/input";
 import { Field, FieldLabel } from "@repo/ui/components/field";
 import { useDisconnectProvider, useSetPassword } from "@repo/api";
-import { toast } from "@repo/ui/components/sonner";
 import { posthogEvents } from "~/lib/posthog-events";
 import { usePostHog } from "posthog-js/react";
 
@@ -29,6 +28,7 @@ export default function DisconnectGoogleDialog({
 }: DisconnectGoogleDialogProps) {
   const [disconnectPassword, setDisconnectPassword] = useState("");
   const [isOpen, setIsOpen] = useState(false);
+  const [googleError, setGoogleError] = useState<string | null>(null);
   const posthog = usePostHog();
 
   const { mutate: disconnectProvider, isPending: isDisconnecting } =
@@ -36,14 +36,13 @@ export default function DisconnectGoogleDialog({
       onSuccess: () => {
         posthog.capture(posthogEvents.driver_google_disconnect_succeeded);
         onSuccess();
-        toast.success("Google disconnected successfully");
         setIsOpen(false);
       },
       onError: (err) => {
         posthog.captureException(new Error(err.message), {
           action: "google_disconnect",
         });
-        toast.error(err.message);
+        setGoogleError(err.message);
       },
     });
 
@@ -58,7 +57,7 @@ export default function DisconnectGoogleDialog({
         posthog.captureException(new Error(err.message), {
           action: "set_password",
         });
-        toast.error(err.message);
+        setGoogleError(err.message);
       },
     });
 
@@ -103,6 +102,11 @@ export default function DisconnectGoogleDialog({
         )}
 
         <DialogFooter>
+          {googleError && (
+            <p className="px-1 pb-2 inline-flex justify-center text-sm text-red-500">
+              {googleError}
+            </p>
+          )}
           <Button
             variant="destructive"
             onClick={handleDisconnect}

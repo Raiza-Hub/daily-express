@@ -26,9 +26,9 @@ const GoogleSignInButton = ({
     setIsLoading(true);
     onClick?.();
     posthog.capture(posthogEvents.auth_google_signin_clicked);
-    const apiUrl = env.NEXT_PUBLIC_API_GATEWAY_URL;
+    const apiUrl = env.NEXT_PUBLIC_DAILYEXPRESS_API_URL;
     const stateParam = redirect ? `?state=${encodeURIComponent(redirect)}` : "";
-    window.location.href = `${apiUrl}/api/auth/v1/auth/google${stateParam}`;
+    window.location.href = `${apiUrl}/api/v1/auth/google${stateParam}`;
   };
 
   const showSpinner = isLoading;

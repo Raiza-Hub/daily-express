@@ -2,7 +2,6 @@ import type { Metadata } from "next";
 import Navbar from "./components/Navbar";
 import StatsCard from "./components/StatsCard";
 import { DashboardRoutes } from "./components/DashboardRoutes";
-import Footer from "@repo/ui/Footer";
 import { buildDriverMetadata } from "./lib/seo";
 
 export const metadata: Metadata = buildDriverMetadata({
@@ -33,7 +32,6 @@ export default function Home() {
           <DashboardRoutes />
         </div>
       </main>
-      <Footer className="px-4 md:px-6 mt-auto" />
     </div>
   );
 }

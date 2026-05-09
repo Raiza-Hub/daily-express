@@ -1,13 +1,12 @@
 "use client";
 
 import { MailboxIcon } from "@phosphor-icons/react";
-import { getDriverFn, useQueryClient, useVerifyOtp } from "@repo/api";
+import { useQueryClient, useVerifyOtp } from "@repo/api";
 import { OtpSchema } from "@repo/types/authSchema";
 import { Button } from "@repo/ui/components/button";
 import { OTPInput } from "@repo/ui/OTPInput";
 import { useRouter } from "next/navigation";
 import { useState } from "react";
-import { resolvePostAuthDestination } from "~/lib/app-routing";
 import { posthogEvents } from "~/lib/posthog-events";
 import ResendButton from "./ResendButton";
 import { usePostHog } from "posthog-js/react";
@@ -26,40 +25,10 @@ const VerifyEmailForm = ({ redirect }: { redirect?: string }) => {
       verifyOtp(
         { otp },
         {
-          onSuccess: async () => {
+          onSuccess: () => {
             posthog.capture(posthogEvents.auth_email_verified);
             queryClient.invalidateQueries();
-            let isDriver = false;
-
-            try {
-              await getDriverFn();
-              isDriver = true;
-            } catch (error) {
-              if (
-                !(error instanceof Error) ||
-                !error.message.toLowerCase().includes("driver not found")
-              ) {
-                console.error(
-                  "Driver lookup failed after email verification",
-                  error,
-                );
-              }
-            }
-
-            const destination = resolvePostAuthDestination({
-              redirect,
-              isDriver,
-            });
-
-            if (
-              destination.startsWith("http://") ||
-              destination.startsWith("https://")
-            ) {
-              window.location.assign(destination);
-              return;
-            }
-
-            router.push(destination);
+            router.push(redirect || "/");
           },
           onError: (err) => {
             posthog.captureException(new Error(err.message), {

@@ -9,13 +9,16 @@ import { useState } from "react";
 import { CreateRouteForm } from "./route/CreateRouteForm";
 import { ResponsiveModal } from "@repo/ui/ResponsiveModal";
 import { useCreateRoute } from "@repo/api";
-import { toast } from "@repo/ui/components/sonner";
 import { useRouteFormUi } from "./route/useRouteFormUi";
 import { posthogEvents } from "~/lib/posthog-events";
 import { usePostHog } from "posthog-js/react";
+import { useRouter, usePathname } from "next/navigation";
 
 const CreateRouteDialog = () => {
+  const router = useRouter();
+  const pathname = usePathname();
   const [open, setOpen] = useState(false);
+  const [createError, setCreateError] = useState<string | null>(null);
   const ui = useRouteFormUi();
   const posthog = usePostHog();
 
@@ -45,12 +48,15 @@ const CreateRouteDialog = () => {
   const createRoute = useCreateRoute({
     onSuccess: () => {
       posthog.capture(posthogEvents.driver_route_created_succeeded);
-      toast.success("Route created successfully");
-      handleClose();
+      if (pathname === "/routes") {
+        handleClose();
+      } else {
+        router.push("/routes");
+      }
     },
     onError: (error: Error) => {
       posthog.captureException(error, { action: "driver_route_create_failed" });
-      toast.error("Failed to create route");
+      setCreateError(error.message);
     },
   });
 
@@ -131,6 +137,7 @@ const CreateRouteDialog = () => {
         onSubmit={onSubmit}
         onCancel={handleClose}
         ui={ui}
+        error={createError}
         FooterWrapper={({ children }) => (
           <div className="pt-4 pb-4 border-t flex justify-end gap-2">
             {children}

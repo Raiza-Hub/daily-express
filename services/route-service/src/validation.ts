@@ -36,10 +36,10 @@ export const createRouteSchema = Joi.object({
   intermediate_stops_label: Joi.string().max(500).allow(null, "").optional(),
 
   vehicleType: Joi.string()
-    .valid("car", "bus", "luxury_car")
+    .valid("car", "bus", "luxury car")
     .required()
     .messages({
-      "any.only": "Vehicle type must be one of: car, bus, luxury_car",
+      "any.only": "Vehicle type must be one of: car, bus, luxury car",
       "string.empty": "Vehicle type is required",
       "any.required": "Vehicle type is required",
     }),
@@ -102,7 +102,7 @@ export const updateRouteSchema = Joi.object({
   intermediate_stops_title: Joi.string().max(500).allow(null, "").optional(),
   intermediate_stops_locality: Joi.string().max(500).allow(null, "").optional(),
   intermediate_stops_label: Joi.string().max(500).allow(null, "").optional(),
-  vehicleType: Joi.string().valid("car", "bus", "luxury_car").optional(),
+  vehicleType: Joi.string().valid("car", "bus", "luxury car").optional(),
   meeting_point: Joi.string().min(2).max(500).optional(),
   availableSeats: Joi.number().integer().min(1).optional(),
   price: Joi.number().integer().min(0).optional(),

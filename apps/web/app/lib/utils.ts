@@ -163,7 +163,7 @@ export function transformToTripStatusItem(booking: UserBookingWithTrip): TripSta
                 locality: route.dropoffLocationLocality,
                 label: route.dropoffLocationLabel,
             },
-            vehicleType: route.vehicleType as "car" | "bus" | "luxury_car",
+            vehicleType: route.vehicleType as "car" | "bus" | "luxury car",
             seatNumber: trip.capacity,
             price: route.price,
             departureTime,

@@ -6,7 +6,7 @@ const WEB_APP_NAME = "Daily Express";
 const DEFAULT_WEB_DESCRIPTION =
   "Search Daily Express routes, compare fares, and book intercity trips with confidence.";
 const DEFAULT_WEB_APP_URL = env.NEXT_PUBLIC_WEB_APP_URL;
-const API_GATEWAY_URL = env.NEXT_PUBLIC_API_GATEWAY_URL;
+const DAILYEXPRESS_API_URL = env.NEXT_PUBLIC_DAILYEXPRESS_API_URL;
 
 export const webAppName = WEB_APP_NAME;
 export const webAppUrl = new URL(DEFAULT_WEB_APP_URL);
@@ -167,7 +167,7 @@ async function fetchSearchRoutePreview(params: {
 
   try {
     const response = await fetch(
-      `${API_GATEWAY_URL}/api/routes/v1/route/search?${searchParams.toString()}`,
+      `${DAILYEXPRESS_API_URL}/api/v1/route/search?${searchParams.toString()}`,
       {
         next: { revalidate: 300 },
       },

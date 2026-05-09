@@ -11,6 +11,7 @@
     "dev:backend": "docker compose up --build db kafka schema-registry kafka-init-topics auth-service driver-service route-service payment-service payout-service notification-service mail-service api-gateway",
     "dev:backend:detach": "docker compose up -d --build db kafka schema-registry kafka-init-topics auth-service driver-service route-service payment-service payout-service notification-service mail-service api-gateway",
     "dev:all": "docker compose up -d && turbo run dev",
+    "dev:web-api": "./scripts/dev/start-web-api.sh",
     "dev:full": "./scripts/dev/start-dev.sh",
     "lint": "turbo run lint",
     "format": "prettier --write \"**/*.{ts,tsx,md}\"",
@@ -33,11 +34,13 @@
     "packages/*",
     "services/*",
     "shared",
-    "api-gateway"
+    "api-gateway",
+    "dailyexpress-api"
   ],
   "dependencies": {
     "dotenv": "^17.4.2",
-    "tsx": "^4.21.0"
+    "tsx": "^4.21.0",
+    "zod": "^4.4.3"
   },
   "patchedDependencies": {
     "kafkajs@2.2.4": "patches/kafkajs@2.2.4.patch"

@@ -11,6 +11,7 @@ export type NotificationTab = "all" | "unread";
 export interface RouteWithTrips {
   id: string;
   tripId: string;
+  status: string;
   departureTime: string;
   departureCode: string;
   arrivalTime: string;

@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { env } from "~/env";
 
-const API_GATEWAY_URL = env.NEXT_PUBLIC_API_GATEWAY_URL;
+const DAILYEXPRESS_API_URL = env.NEXT_PUBLIC_DAILYEXPRESS_API_URL;
 
 export const runtime = "nodejs";
 
@@ -34,7 +34,7 @@ export async function GET(request: NextRequest) {
       .join("; ");
 
     const response = await fetch(
-      `${API_GATEWAY_URL}/api/routes/v1/route/user/bookings/search?ref=${encodeURIComponent(
+      `${DAILYEXPRESS_API_URL}/api/v1/route/user/bookings/search?ref=${encodeURIComponent(
         ref,
       )}&lastName=${encodeURIComponent(lastName)}`,
       {

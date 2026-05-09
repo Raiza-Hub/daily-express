@@ -51,12 +51,11 @@ const DriverRouteDetailsCard = ({
 
   const deleteRoute = useDeleteRoute({
     onSuccess: () => {
-      toast.success("Route deleted successfully");
       posthog.capture(posthogEvents.driver_route_delete_succeeded);
       onRouteChanged();
     },
     onError: (error) => {
-      toast.error("Failed to delete route");
+      toast.error(error.message);
       posthog.captureException(new Error(error.message), {
         action: "delete_account",
       });

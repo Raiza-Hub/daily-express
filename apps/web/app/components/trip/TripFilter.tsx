@@ -14,7 +14,7 @@ import { searchParams } from "~/lib/type";
 const VEHICLE_TYPE_OPTIONS = [
   { label: "Car", value: "car" },
   { label: "Bus", value: "bus" },
-  { label: "Luxury Car", value: "luxury_car" },
+  { label: "Luxury Car", value: "luxury car" },
 ];
 
 interface TripFilterProps {

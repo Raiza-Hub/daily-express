@@ -1,5 +1,10 @@
+import process from "node:process";
+
 /** @type {import('next').NextConfig} */
+const deploymentId = process.env.VERCEL_GIT_COMMIT_SHA ?? "local-dev";
+
 const nextConfig = {
+  deploymentId,
   transpilePackages: ["@repo/ui"],
   async rewrites() {
     return [

@@ -11,12 +11,26 @@ function getHeaderValue(
 }
 
 function parseGatewayUser(req: Request): JWTPayload | null {
+  const requestUser = req.user as Partial<JWTPayload> | undefined;
+
+  if (
+    requestUser &&
+    typeof requestUser.userId === "string" &&
+    typeof requestUser.email === "string" &&
+    typeof requestUser.emailVerified === "boolean"
+  ) {
+    return {
+      userId: requestUser.userId,
+      email: requestUser.email,
+      emailVerified: requestUser.emailVerified,
+    };
+  }
+
   const userId = getHeaderValue(req.headers["x-user-id"]);
   const email = getHeaderValue(req.headers["x-user-email"]);
   const emailVerifiedHeader = getHeaderValue(
     req.headers["x-user-email-verified"],
   );
-  const role = getHeaderValue(req.headers["x-user-role"]);
 
   if (!userId || !email || !emailVerifiedHeader) {
     return null;
@@ -26,7 +40,6 @@ function parseGatewayUser(req: Request): JWTPayload | null {
     userId,
     email,
     emailVerified: emailVerifiedHeader === "true",
-    role,
   };
 }
 
@@ -138,7 +151,6 @@ export function errorHandler(
     req as Request & {
       user?: {
         userId?: string;
-        role?: string;
       };
     }
   ).user;
@@ -151,7 +163,6 @@ export function errorHandler(
     query: req.query,
     body: req.body,
     actor_id: requestUser?.userId,
-    actor_role: requestUser?.role,
   });
 
   sentryServer.captureException(error, requestUser?.userId || "unknown", {

@@ -6,22 +6,25 @@ import { usePostHog } from "posthog-js/react";
 
 import posthog from "posthog-js";
 import { PostHogProvider as PHProvider } from "posthog-js/react";
+import { useGetDriver } from "@repo/api";
 import { cookieConsentGiven } from "./Banner";
 import { env } from "~/env";
 
-// function PostHogUserIdentification() {
-//   const posthog = usePostHog();
-//   const { data: user } = useGetMe();
-//   const { data: driver } = useGetDriver({ enabled: Boolean(user?.id) });
+function PostHogUserIdentification() {
+  const posthog = usePostHog();
+  const { data: driver } = useGetDriver();
 
-//   useEffect(() => {
-//     if (user?.id && posthog) {
-//       posthog.identify(user.id);
-//     }
-//   }, [user, posthog, driver]);
+  useEffect(() => {
+    if (driver?.id) {
+      posthog.identify(driver.id, {
+        email: driver.email,
+        name: `${driver.firstName} ${driver.lastName}`,
+      });
+    }
+  }, [driver, posthog]);
 
-//   return null;
-// }
+  return null;
+}
 
 export function PostHogProvider({ children }: { children: React.ReactNode }) {
   useEffect(() => {
@@ -32,6 +35,7 @@ export function PostHogProvider({ children }: { children: React.ReactNode }) {
     posthog.init(env.NEXT_PUBLIC_POSTHOG_KEY, {
       api_host: env.NEXT_PUBLIC_POSTHOG_HOST,
       ui_host: env.NEXT_PUBLIC_POSTHOG_UI_HOST,
+      defaults: "2026-01-30",
       person_profiles: "identified_only",
       capture_pageleave: true,
       capture_exceptions: true,
@@ -46,7 +50,7 @@ export function PostHogProvider({ children }: { children: React.ReactNode }) {
 
   return (
     <PHProvider client={posthog}>
-      {/* <PostHogUserIdentification /> */}
+      <PostHogUserIdentification />
       <SuspendedPostHogPageView />
       {children}
     </PHProvider>

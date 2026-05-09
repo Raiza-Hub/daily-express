@@ -1,4 +1,3 @@
-export { api } from "./src/api";
 export { useQueryClient } from "@tanstack/react-query";
 export { QueryProvider } from "./src/providers/QueryProvider";
 export * from "./src/hooks/auth";

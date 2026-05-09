@@ -18,23 +18,36 @@ const RouteCardItem = ({
     route: RouteWithTrips;
 }) => {
     const [passengersOpen, setPassengersOpen] = useState(false);
+    const isBookingClosed = route.status === "booking_closed";
+    const isTripFull = route.bookedSeats >= route.capacity;
 
     const handlePassengers = () => {
         setPassengersOpen(true);
     };
 
     const updateTripStatus = useUpdateTripStatus({
-        onSuccess: () => {
-            toast.success("Booking stopped successfully");
-        },
         onError: (error) => {
             toast.error(error.message);
         },
     });
 
     const handleStopBooking = () => {
+        if (isBookingClosed || isTripFull || updateTripStatus.isPending) {
+            return;
+        }
+
         updateTripStatus.mutate({ id: route.tripId, status: "booking_closed" });
     };
+
+    const stopBookingDisabled =
+        isBookingClosed || isTripFull || updateTripStatus.isPending;
+    const stopBookingLabel = isBookingClosed
+        ? "Booking Stopped"
+        : isTripFull
+            ? "Trip Full"
+            : updateTripStatus.isPending
+                ? "Stopping..."
+                : "Stop Booking";
 
     return (
         <div className="group relative flex flex-col rounded-xl bg-white border border-slate-200 transition-all duration-200">
@@ -67,16 +80,19 @@ const RouteCardItem = ({
                         <Button
                             variant="outline"
                             className="hidden md:inline-flex rounded-lg border-red-200 text-red-500 hover:bg-red-50 hover:border-red-300 gap-2 font-medium"
+                            disabled={stopBookingDisabled}
                             onClick={handleStopBooking}
                         >
                             <ProhibitIcon size={18} />
-                            Stop Booking
+                            {stopBookingLabel}
                         </Button>
 
                         <div className="md:hidden shrink-0">
                             <RouteCardActionMenu
                                 onPassengers={handlePassengers}
                                 onStopBooking={handleStopBooking}
+                                stopBookingDisabled={stopBookingDisabled}
+                                stopBookingLabel={stopBookingLabel}
                             />
                         </div>
                     </div>
