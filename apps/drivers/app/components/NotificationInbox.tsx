@@ -21,8 +21,6 @@ import { useRouter } from "next/navigation";
 import { useState } from "react";
 import { NotificationTab } from "~/lib/type";
 import { formatRelativeTime, getToneClasses } from "~/lib/utils";
-import { usePushSubscription } from "~/hooks/usePushSubscription";
-import { useDriverNotificationsRealtime } from "~/hooks/useDriverNotificationsRealtime";
 
 const NotificationInbox = () => {
   const router = useRouter();
@@ -45,8 +43,6 @@ const NotificationInbox = () => {
 
   const notifications = data?.pages.flatMap((page) => page.notifications) ?? [];
 
-  useDriverNotificationsRealtime();
-
   useBodyScrollLock(open);
 
   const unreadCount = notifications.filter((item) => !item.readAt).length;
@@ -57,7 +53,6 @@ const NotificationInbox = () => {
 
   const markReadMutation = useMarkDriverNotificationRead();
   const markAllReadMutation = useMarkAllDriverNotificationsRead();
-  const push = usePushSubscription();
 
   const handleNotificationClick = (notification: DriverNotification) => {
     if (!notification.readAt) {
@@ -119,7 +114,7 @@ const NotificationInbox = () => {
                 className={cn(
                   "rounded-full px-3 py-1 text-xs font-medium transition-colors cursor-pointer",
                   tab === "all"
-                    ? "bg-foreground text-background"
+                    ? "bg-blue-100 text-blue-700"
                     : "bg-muted text-muted-foreground hover:text-foreground",
                 )}
               >
@@ -131,7 +126,7 @@ const NotificationInbox = () => {
                 className={cn(
                   "rounded-full px-3 py-1 text-xs font-medium transition-colors cursor-pointer",
                   tab === "unread"
-                    ? "bg-foreground text-background"
+                    ? "bg-blue-100 text-blue-700 "
                     : "bg-muted text-muted-foreground hover:text-foreground",
                 )}
               >
@@ -152,35 +147,6 @@ const NotificationInbox = () => {
         </div>
 
         <div className="max-h-[28rem] overflow-y-auto">
-          {push.isSupported &&
-            !push.isSubscribed &&
-            typeof Notification !== "undefined" &&
-            Notification.permission === "default" && (
-              <div className="border-b bg-muted/30 px-4 py-4">
-                <div className="flex items-start gap-3">
-                  <div className="mt-0.5 rounded-full bg-primary/10 p-2 text-primary">
-                    <BellIcon className="h-4 w-4" />
-                  </div>
-                  <div className="flex-1">
-                    <p className="text-sm font-semibold text-foreground">
-                      Don&apos;t miss a trip or payout
-                    </p>
-                    <p className="mt-0.5 text-sm text-muted-foreground leading-relaxed">
-                      Get real-time updates on new trips, earnings, and
-                      important account activity.
-                    </p>
-                    <button
-                      type="button"
-                      onClick={() => push.subscribe()}
-                      className="mt-3 text-xs font-bold text-primary hover:underline cursor-pointer"
-                    >
-                      Turn on notifications
-                    </button>
-                  </div>
-                </div>
-              </div>
-            )}
-
           {isLoadingDriver || isLoading ? (
             <div className="flex items-center justify-center gap-2 px-4 py-8 text-sm text-muted-foreground">
               <SpinnerIcon className="h-4 w-4 animate-spin" />

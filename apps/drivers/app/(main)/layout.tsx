@@ -2,8 +2,8 @@ import type { Metadata } from "next";
 import { ReactNode } from "react";
 import { cookies } from "next/headers";
 import { redirect } from "next/navigation";
+import { DriverRealtimeSync } from "~/components/DriverRealtimeSync";
 import Navbar from "~/components/Navbar";
-import Footer from "@repo/ui/Footer";
 import { env } from "~/env";
 
 export const metadata: Metadata = {
@@ -36,11 +36,11 @@ const Layout = async ({ children }: { children: ReactNode }) => {
     ]
         .filter(Boolean)
         .join("; ");
-    const apiGatewayUrl = env.NEXT_PUBLIC_API_GATEWAY_URL;
+    const dailyExpressApiUrl = env.NEXT_PUBLIC_DAILYEXPRESS_API_URL;
 
     try {
         const profileResponse = await fetch(
-            `${apiGatewayUrl}/api/drivers/v1/driver/profile`,
+            `${dailyExpressApiUrl}/api/v1/driver/profile`,
             {
                 headers: {
                     cookie: cookieHeader,
@@ -63,9 +63,9 @@ const Layout = async ({ children }: { children: ReactNode }) => {
             </div>
 
             <div className="w-full flex flex-col flex-1">
+                <DriverRealtimeSync />
                 {children}
             </div>
-            <Footer className="px-4 md:px-6 mt-auto" />
         </div>
     );
 }

@@ -11,12 +11,11 @@ import {
   FieldLabel,
 } from "@repo/ui/components/field";
 import { Input } from "@repo/ui/components/input";
-import { toast } from "@repo/ui/components/sonner";
 import { Icons } from "@repo/ui/Icons";
 import dayjs from "dayjs";
-import { useEffect } from "react";
+import { useEffect, useState } from "react";
 import { Controller, useForm } from "react-hook-form";
-import { z } from "zod";
+import { z } from "zod/v4";
 import DeleteAccount from "./DeleteAccount";
 import DisconnectGoogleDialog from "./DisconnectGoogleDialog";
 import { posthogEvents } from "~/lib/posthog-events";
@@ -27,6 +26,7 @@ const ProfileSchema = SignUpSchema.omit({ password: true }).partial();
 type TProfileSchema = z.infer<typeof ProfileSchema>;
 
 const Profile = () => {
+  const [profileError, setProfileError] = useState<string | null>(null);
   const { data: user, isLoading, refetch: refetchUser } = useGetMe();
   const { data: providers, refetch: refetchProviders } = useGetProviders();
   const posthog = usePostHog();
@@ -37,13 +37,12 @@ const Profile = () => {
     onSuccess: () => {
       posthog.capture(posthogEvents.driver_profile_update_succeeded);
       refetchUser();
-      toast.success("Profile updated successfully");
     },
     onError: (err) => {
       posthog.captureException(new Error(err.message), {
         action: "update_profile",
       });
-      toast.error(err.message);
+      setProfileError(err.message);
     },
   });
 
@@ -205,6 +204,11 @@ const Profile = () => {
             </div>
           </FieldGroup>
 
+          {profileError && (
+            <p className="px-1 pb-2 inline-flex justify-center text-sm text-red-500">
+              {profileError}
+            </p>
+          )}
           <div className="mt-8 flex justify-end">
             <Button
               variant="secondary"

@@ -26,7 +26,7 @@ import type { RouteFormUi, RouteLocationUi } from "./useRouteFormUi";
 const VEHICLE_TYPE = [
   { label: "Car", value: "car" },
   { label: "Bus", value: "bus" },
-  { label: "Luxury Car", value: "luxury_car" },
+  { label: "Luxury Car", value: "luxury car" },
 ] as const;
 
 function RouteLocationField({

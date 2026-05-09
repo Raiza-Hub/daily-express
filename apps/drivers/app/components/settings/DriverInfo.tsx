@@ -5,12 +5,11 @@ import { useGetDriver, useUpdateDriver } from "@repo/api";
 import { onboardingSchema } from "@repo/types/index";
 import { Button } from "@repo/ui/components/button";
 import { FieldGroup } from "@repo/ui/components/field";
-import { toast } from "@repo/ui/components/sonner";
 import { useFileUpload } from "@repo/ui/hooks/use-file-upload";
 import { useEffect, useState } from "react";
 import { useForm } from "react-hook-form";
 import "react-phone-number-input/style.css";
-import { z } from "zod";
+import { z } from "zod/v4";
 import CountryList from "../../../country-list.json";
 import {
   CountryField,
@@ -44,6 +43,7 @@ type TDriverInfoSchema = z.infer<typeof DriverInfoSchema>;
 const DriverInfo = () => {
   const [openCountry, setOpenCountry] = useState(false);
   const [openState, setOpenState] = useState(false);
+  const [driverInfoError, setDriverInfoError] = useState<string | null>(null);
   const posthog = usePostHog();
 
   const { data: driver, isLoading, refetch } = useGetDriver();
@@ -51,13 +51,12 @@ const DriverInfo = () => {
     onSuccess: () => {
       posthog.capture(posthogEvents.driver_profile_update_succeeded);
       refetch();
-      toast.success("Profile updated successfully!");
     },
     onError: (error: Error) => {
       posthog.captureException(error, {
         action: "driver_profile_update_failed",
       });
-      toast.error("Failed to update profile");
+      setDriverInfoError(error.message);
     },
   });
 
@@ -224,6 +223,11 @@ const DriverInfo = () => {
           <PhoneField control={control} errors={errors} />
         </FieldGroup>
 
+        {driverInfoError && (
+          <p className="px-1 pb-2 inline-flex justify-center text-sm text-red-500">
+            {driverInfoError}
+          </p>
+        )}
         <div className="mt-8 flex justify-end">
           <Button
             variant="secondary"

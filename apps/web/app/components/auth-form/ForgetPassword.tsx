@@ -38,7 +38,6 @@ const ForgetPasswordForm = () => {
           action: "forgotPasswordRequest",
           values: { email: data.email },
         });
-        // toast.error("Something went wrong");
       },
     });
   };

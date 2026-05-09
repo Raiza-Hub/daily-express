@@ -1,5 +1,7 @@
 import { ImageResponse } from "next/og";
 
+const brandLogoUrl = new URL("../public/brand-logo.png", import.meta.url);
+
 export const size = {
   width: 1200,
   height: 630,
@@ -41,18 +43,18 @@ export default function OpenGraphImage() {
               gap: "18px",
             }}
           >
-            <div
+            <img
+              src={brandLogoUrl.toString()}
+              alt="Daily Express"
+              width={300}
+              height={107}
               style={{
                 display: "flex",
-                fontSize: 28,
-                fontWeight: 700,
-                letterSpacing: "0.28em",
-                textTransform: "uppercase",
-                color: "#bfdbfe",
+                width: "300px",
+                height: "107px",
+                objectFit: "contain",
               }}
-            >
-              Daily Express
-            </div>
+            />
             <div
               style={{
                 display: "flex",

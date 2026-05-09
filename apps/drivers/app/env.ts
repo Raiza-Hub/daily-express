@@ -1,5 +1,5 @@
 import { createEnv } from "@t3-oss/env-nextjs";
-import { z } from "zod";
+import { z } from "zod/v4";
 
 export const env = createEnv({
   server: {
@@ -7,7 +7,7 @@ export const env = createEnv({
     NOTIFICATION_UPSTASH_REDIS_REST_URL: z.string().url().optional(),
   },
   client: {
-    NEXT_PUBLIC_API_GATEWAY_URL: z
+    NEXT_PUBLIC_DAILYEXPRESS_API_URL: z
       .string()
       .url()
       .default("http://localhost:8000"),
@@ -24,7 +24,8 @@ export const env = createEnv({
     NEXT_PUBLIC_WEB_APP_URL: z.string().url().default("http://localhost:3000"),
   },
   experimental__runtimeEnv: {
-    NEXT_PUBLIC_API_GATEWAY_URL: process.env.NEXT_PUBLIC_API_GATEWAY_URL,
+    NEXT_PUBLIC_DAILYEXPRESS_API_URL:
+      process.env.NEXT_PUBLIC_DAILYEXPRESS_API_URL,
     NEXT_PUBLIC_DRIVER_APP_URL: process.env.NEXT_PUBLIC_DRIVER_APP_URL,
     NEXT_PUBLIC_POSTHOG_HOST: process.env.NEXT_PUBLIC_POSTHOG_HOST,
     NEXT_PUBLIC_POSTHOG_KEY: process.env.NEXT_PUBLIC_POSTHOG_KEY,
