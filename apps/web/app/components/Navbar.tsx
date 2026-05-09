@@ -19,16 +19,17 @@ const Navbar = () => {
       <header className="relative bg-gray-50">
         <div className="mx-auto w-full max-w-7xl px-4 md:px-6 ">
           <div className="flex h-16 items-center">
-            <div className="flex">
-              <Link href="/">
+            <div className="flex items-center gap-2">
+              <Link href="/" className="flex items-center gap-2">
                 <Image
                   src="/logo.png"
                   alt="Logo"
                   width={520}
                   height={530}
                   className="object-contain object-center"
-                  style={{ width: "40px", height: "auto" }}
+                  style={{ width: "28px", height: "auto" }}
                 />
+                <h1 className="text-xl font-semibold leading-none">Daily Express</h1>
               </Link>
             </div>
 

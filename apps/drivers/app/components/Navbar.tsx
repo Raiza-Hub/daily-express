@@ -13,19 +13,21 @@ const Navbar = async () => {
       <div className="flex h-16 items-center gap-3">
         <MobileNav />
 
-        <div className="flex">
-          <Link href="/">
+        <div className="flex items-center gap-2">
+          <Link href="/" className="flex items-center gap-2">
             <Image
               src="/logo.png"
               alt="Logo"
               width={520}
               height={530}
               className="object-contain object-center"
-              style={{ width: "40px", height: "auto" }}
+              style={{ width: "28px", height: "auto" }}
             />
+            <h1 className="text-xl font-semibold leading-none">Daily Express</h1>
           </Link>
         </div>
 
+        
         <div className="hidden z-50 lg:ml-8 lg:flex lg:items-center lg:">
           <NavItem label="Routes" href="/routes" />
           <NavItem label="Payouts" href="/payouts" />

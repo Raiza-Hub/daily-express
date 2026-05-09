@@ -1,10 +1,7 @@
 import {
-  and,
-  inArray,
-  isNotNull,
   lte,
-  notInArray,
   relations,
+  sql,
 } from "drizzle-orm";
 import {
   check,
@@ -160,21 +157,15 @@ export const booking = pgTable(
     index("booking_user_visible_created_at_idx")
       .on(table.userId, table.createdAt.desc())
       .where(
-        and(
-          inArray(table.status, ["confirmed", "completed"]),
-          notInArray(table.paymentStatus, ["failed", "cancelled", "expired"]),
-        )!,
+        sql`${table.status} in ('confirmed', 'completed') and ${table.paymentStatus} not in ('failed', 'cancelled', 'expired')`,
       ),
     uniqueIndex("booking_trip_id_user_id_active_idx")
       .on(table.tripId, table.userId)
-      .where(inArray(table.status, ["pending", "confirmed"])),
+      .where(sql`${table.status} in ('pending', 'confirmed')`),
     uniqueIndex("booking_trip_id_seat_number_active_idx")
       .on(table.tripId, table.seatNumber)
       .where(
-        and(
-          isNotNull(table.seatNumber),
-          inArray(table.status, ["pending", "confirmed"]),
-        )!,
+        sql`${table.seatNumber} is not null and ${table.status} in ('pending', 'confirmed')`,
       ),
   ],
 );
