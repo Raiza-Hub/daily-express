@@ -57,7 +57,7 @@ function formatPrice(amount: number): string {
   }).format(amount);
 }
 
-const ALLOWED_VEHICLE_TYPES = ["car", "bus", "luxury_car"] as const;
+const ALLOWED_VEHICLE_TYPES = ["car", "bus", "luxury car"] as const;
 const ROUTE_DUPLICATE_CONSTRAINT =
   "route_driver_origin_destination_departure_unique_idx";
 const ACTIVE_BOOKING_CONSTRAINT = "booking_trip_id_user_id_active_idx";

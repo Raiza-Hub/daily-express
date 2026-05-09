@@ -5,7 +5,7 @@ import type { JWTPayload } from "@shared/types";
 import { createErrorResponse, createSuccessResponse } from "@shared/utils";
 
 const routeService = new RouteService();
-const ALLOWED_VEHICLE_TYPES = new Set(["car", "bus", "luxury_car"]);
+const ALLOWED_VEHICLE_TYPES = new Set(["car", "bus", "luxury car"]);
 const DATE_ONLY_REGEX = /^\d{4}-\d{2}-\d{2}$/;
 const MAX_TRIPS_SUMMARY_RANGE_DAYS = 31;
 

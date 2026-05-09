@@ -57,6 +57,13 @@
       "when": 1777200002000,
       "tag": "0013_active_booking_unique",
       "breakpoints": true
+    },
+    {
+      "idx": 8,
+      "version": "7",
+      "when": 1777200003000,
+      "tag": "0014_vehicle_type_luxury_car_label",
+      "breakpoints": true
     }
   ]
 }
