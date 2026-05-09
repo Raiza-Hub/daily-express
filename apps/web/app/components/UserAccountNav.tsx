@@ -55,7 +55,7 @@ export function UserAccountNav({ user }: UserAccountNavProps) {
     firstName: user?.firstName ?? "",
     lastName: user?.lastName ?? "",
     email: user?.email ?? "",
-    profilePictureUrl: undefined,
+    profilePictureUrl: user?.profilePictureUrl ?? undefined,
   };
 
   return (

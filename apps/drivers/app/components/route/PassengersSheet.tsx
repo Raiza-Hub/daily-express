@@ -2,6 +2,7 @@
 
 import { CircleNotchIcon, UsersIcon, UsersThreeIcon } from "@phosphor-icons/react";
 import { useGetTripBookings } from "@repo/api";
+import { Avatar, AvatarFallback, AvatarImage } from "@repo/ui/components/avatar";
 import { Button } from "@repo/ui/components/button";
 import {
   Sheet,
@@ -101,11 +102,17 @@ export default function PassengersSheet({
                 className="rounded-lg border border-neutral-100 bg-neutral-50 p-4 transition-colors hover:bg-neutral-100"
               >
                 <div className="flex items-center gap-3">
-                  {/* use an avatar here */}
-                  <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-slate-200 text-sm font-semibold text-neutral-600">
-                    {booking.user?.firstName?.[0] || "?"}
-                    {booking.user?.lastName?.[0] || ""}
-                  </div>
+                  <Avatar className="h-9 w-9">
+                    <AvatarImage
+                      src={booking.user?.profilePictureUrl ?? ""}
+                      alt={`${booking.user?.firstName ?? ""} ${booking.user?.lastName ?? ""}`}
+                      className="object-cover"
+                    />
+                    <AvatarFallback className="bg-slate-200 text-sm font-semibold text-neutral-600">
+                      {booking.user?.firstName?.[0] || "?"}
+                      {booking.user?.lastName?.[0] || ""}
+                    </AvatarFallback>
+                  </Avatar>
 
                   <div className="min-w-0 flex-1">
                     <p className="truncate text-sm font-medium text-neutral-900">

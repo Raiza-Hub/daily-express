@@ -49,7 +49,7 @@ const LoginForm = ({ redirect }: { redirect?: string }) => {
               !(error instanceof Error) ||
               !error.message.toLowerCase().includes("driver not found")
             ) {
-              console.error("Driver lookup failed after login", error);
+              // console.error("Driver lookup failed after login", error);
             }
           }
 
@@ -72,7 +72,6 @@ const LoginForm = ({ redirect }: { redirect?: string }) => {
             action: "login",
             values: { email: data.email },
           });
-          // toast.error("Something went wrong");
         },
       },
     );

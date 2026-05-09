@@ -11,10 +11,13 @@ import { useRealtime } from "~/lib/realtime-client";
 import { getDriverNotificationChannel } from "~/lib/realtime-shared";
 
 const DRIVER_NOTIFICATIONS_QUERY_KEY = ["driver-notifications"] as const;
+const DRIVER_QUERY_KEY = ["driver"] as const;
 const DRIVER_STATS_QUERY_KEY = ["driverStats"] as const;
 const DRIVER_ROUTES_QUERY_KEY = ["driverRoutes"] as const;
 const TRIPS_SUMMARY_RANGE_QUERY_KEY = ["tripsSummaryRange"] as const;
 const BOOKING_CONFIRMED_NOTIFICATION_TYPE = "booking_confirmed";
+const PROFILE_PICTURE_UPLOAD_SUCCEEDED_NOTIFICATION_TYPE =
+  "profile_picture_upload_succeeded";
 
 interface NotificationsPage {
   notifications: DriverNotification[];
@@ -101,6 +104,17 @@ export function useDriverNotificationsRealtime() {
       if (event === "notification.created") {
         if (realtimeData.payload.type === BOOKING_CONFIRMED_NOTIFICATION_TYPE) {
           void invalidateDriverDashboardQueries(queryClient);
+        }
+
+        if (
+          realtimeData.payload.type ===
+          PROFILE_PICTURE_UPLOAD_SUCCEEDED_NOTIFICATION_TYPE
+        ) {
+          void queryClient.invalidateQueries({
+            queryKey: DRIVER_QUERY_KEY,
+            exact: true,
+            refetchType: "active",
+          });
         }
 
         queryClient.setQueriesData<

@@ -7,7 +7,7 @@ import {
 } from "~/lib/realtime";
 import { env } from "~/env";
 
-const API_GATEWAY_URL = env.NEXT_PUBLIC_API_GATEWAY_URL;
+const DAILYEXPRESS_API_URL = env.NEXT_PUBLIC_DAILYEXPRESS_API_URL;
 
 export const dynamic = "force-dynamic";
 
@@ -19,7 +19,7 @@ async function getCurrentDriver(request: Request): Promise<Driver | null> {
 
   try {
     const response = await fetch(
-      `${API_GATEWAY_URL}/api/drivers/v1/driver/profile`,
+      `${DAILYEXPRESS_API_URL}/api/v1/driver/profile`,
       {
         headers: {
           Cookie: cookieHeader,

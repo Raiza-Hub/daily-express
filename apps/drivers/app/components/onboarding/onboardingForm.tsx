@@ -18,7 +18,6 @@ import { useCreateDriver, useGetDriver } from "@repo/api";
 import { useEffect } from "react";
 import { FormProvider, useForm } from "react-hook-form";
 import { Button } from "@repo/ui/components/button";
-import { toast } from "@repo/ui/components/sonner";
 import { usePostHog } from "posthog-js/react";
 import { posthogEvents } from "~/lib/posthog-events";
 import PersonalInfoForm from "./PersonalInfo";
@@ -55,6 +54,7 @@ const OnboardingForm = () => {
   const router = useRouter();
   const posthog = usePostHog();
   const [currentStep, setCurrentStep] = useState<number>(1);
+  const [onboardError, setOnboardError] = useState<string | null>(null);
 
   const { data: driver, isLoading } = useGetDriver({ enabled: true });
 
@@ -73,7 +73,7 @@ const OnboardingForm = () => {
       posthog.captureException(error, {
         action: "driver_onboarding_submission_failed",
       });
-      toast.error("Something went wrong.", { description: error.message });
+      setOnboardError(error.message);
     },
   });
 
@@ -229,6 +229,11 @@ const OnboardingForm = () => {
               Prev step
             </Button>
 
+            {onboardError && (
+              <p className="px-1 pb-2 inline-flex justify-center text-sm text-red-500">
+                {onboardError}
+              </p>
+            )}
             <Button
               className="w-32 cursor-pointer"
               type="button"

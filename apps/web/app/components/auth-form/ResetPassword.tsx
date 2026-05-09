@@ -10,9 +10,9 @@ import {
 import { Button } from "@repo/ui/components/button";
 import { Field, FieldError, FieldLabel } from "@repo/ui/components/field";
 import { Input } from "@repo/ui/components/input";
-import { toast } from "@repo/ui/components/sonner";
 import { useRouter } from "next/navigation";
 import { Controller, useForm } from "react-hook-form";
+import { useState } from "react";
 import { posthogEvents } from "~/lib/posthog-events";
 import { usePostHog } from "posthog-js/react";
 
@@ -21,6 +21,7 @@ const ResetPasswordForm = ({ token }: { token?: string }) => {
   const { mutate: resetPassword, isPending, error } = useResetPassword();
   const posthog = usePostHog();
 
+  const [tokenError, setTokenError] = useState<string | null>(null);
   const { handleSubmit, control } = useForm<TresetPasswordSchema>({
     resolver: zodResolver(ResetPasswordSchema),
     defaultValues: {
@@ -31,7 +32,7 @@ const ResetPasswordForm = ({ token }: { token?: string }) => {
 
   const onSubmit = (data: TresetPasswordSchema) => {
     if (!token) {
-      toast.error("Invalid or missing reset token");
+      setTokenError("Invalid or missing reset token");
       return;
     }
     resetPassword(
@@ -45,7 +46,6 @@ const ResetPasswordForm = ({ token }: { token?: string }) => {
           posthog.captureException(new Error(err.message), {
             action: "resetPassword",
           });
-          // toast.error("Something went wrong");
         },
       },
     );
@@ -115,9 +115,9 @@ const ResetPasswordForm = ({ token }: { token?: string }) => {
                   />
                 </div>
 
-                {error && (
+                {(error || tokenError) && (
                   <p className="px-1 inline-flex justify-center text-sm text-red-500">
-                    {error?.message}
+                    {tokenError || error?.message}
                   </p>
                 )}
 

@@ -7,7 +7,7 @@ const DRIVER_APP_NAME = "Daily Express Driver";
 const DEFAULT_DRIVER_DESCRIPTION =
   "Manage Daily Express routes, monitor trip activity, and stay on top of payouts from one driver dashboard.";
 const DEFAULT_DRIVER_APP_URL = env.NEXT_PUBLIC_DRIVER_APP_URL;
-const API_GATEWAY_URL = env.NEXT_PUBLIC_API_GATEWAY_URL;
+const DAILYEXPRESS_API_URL = env.NEXT_PUBLIC_DAILYEXPRESS_API_URL;
 
 export const driverAppName = DRIVER_APP_NAME;
 export const driverAppUrl = new URL(DEFAULT_DRIVER_APP_URL);
@@ -94,7 +94,7 @@ export async function getDriverRoutesForMetadata() {
 
   try {
     const response = await fetch(
-      `${API_GATEWAY_URL}/api/routes/v1/route/driver/routes`,
+      `${DAILYEXPRESS_API_URL}/api/v1/route/driver/routes`,
       {
         headers: {
           Cookie: cookieHeader,

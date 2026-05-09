@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useMemo, useRef } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { routeSchema, TRoute } from "@repo/types/index";
@@ -16,7 +16,6 @@ import {
 } from "@repo/ui/components/sheet";
 import { Button } from "@repo/ui/components/button";
 import { NotePencilIcon } from "@phosphor-icons/react";
-import { toast } from "@repo/ui/components/sonner";
 import {
   RouteInformationSection,
   RoutePricingSection,
@@ -48,6 +47,7 @@ export default function EditRouteSheet({
   const posthog = usePostHog();
   const uiRef = useRef(ui);
   uiRef.current = ui;
+  const [routeError, setRouteError] = useState<string | null>(null);
 
   const {
     handleSubmit,
@@ -59,13 +59,12 @@ export default function EditRouteSheet({
   });
   const updateRoute = useUpdateRoute({
     onSuccess: () => {
-      toast.success("Route updated successfully");
       posthog.capture(posthogEvents.driver_route_updated_succeeded);
       onSuccess?.();
       onOpenChange?.(false);
     },
     onError: (err) => {
-      toast.error("Failed to update route");
+      setRouteError(err.message);
       posthog.captureException(new Error(err.message), {
         action: "driver_route_update_failed",
       });
@@ -144,6 +143,11 @@ export default function EditRouteSheet({
           <RouteScheduleSection control={control} />
 
           <SheetFooter className="pt-4 pb-0">
+            {routeError && (
+              <p className="px-1 pb-2 inline-flex justify-center text-sm text-red-500">
+                {routeError}
+              </p>
+            )}
             <Button
               type="submit"
               disabled={updateRoute.isPending}

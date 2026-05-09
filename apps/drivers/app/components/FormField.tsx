@@ -3,7 +3,6 @@ import {
   CaretDownIcon,
   CheckIcon,
   TrashIcon,
-  UserCircleIcon,
 } from "@phosphor-icons/react";
 import { Button } from "@repo/ui/components/button";
 import {
@@ -46,7 +45,7 @@ import {
 } from "react-hook-form";
 import PhoneNumberInput from "react-phone-number-input";
 import "react-phone-number-input/style.css";
-import { z } from "zod";
+import { z } from "zod/v4";
 import CountryList from "../../country-list.json";
 import { onboardingSchema } from "@repo/types/index";
 
@@ -174,7 +173,9 @@ export function ProfileImageField({
                       alt="Profile picture"
                     />
                   ) : (
-                    <UserCircleIcon className="size-6 opacity-60" />
+                    <span className="flex h-9 w-9 items-center justify-center rounded-full bg-muted text-sm font-medium">
+                      {driver?.firstName?.[0]}{driver?.lastName?.[0]}
+                    </span>
                   )}
                 </button>
 

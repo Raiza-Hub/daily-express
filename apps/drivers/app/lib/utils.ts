@@ -45,7 +45,7 @@ export function getRouteAnalyticsProperties(route: {
   pickup_location_locality: string;
   dropoff_location_title: string;
   dropoff_location_locality: string;
-  vehicleType: "car" | "bus" | "luxury_car";
+  vehicleType: "car" | "bus" | "luxury car";
   availableSeats: number;
   price: number;
   departure_time: Date | string;
@@ -131,7 +131,7 @@ export const vehicleMeta: Record<
 > = {
   car: { label: "Car", Icon: CarIcon },
   bus: { label: "Bus", Icon: BusIcon },
-  luxury_car: { label: "Luxury Car", Icon: SparkleIcon },
+  "luxury car": { label: "Luxury Car", Icon: SparkleIcon },
 };
 
 export function formatRouteStatus(status: DriverRoute["status"]) {

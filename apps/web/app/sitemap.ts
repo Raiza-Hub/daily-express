@@ -18,6 +18,18 @@ export default function sitemap(): MetadataRoute.Sitemap {
       priority: 0.3,
     },
     {
+      url: buildWebAbsoluteUrl("/cookies"),
+      lastModified,
+      changeFrequency: "yearly",
+      priority: 0.3,
+    },
+    {
+      url: buildWebAbsoluteUrl("/about"),
+      lastModified,
+      changeFrequency: "yearly",
+      priority: 0.4,
+    },
+    {
       url: buildWebAbsoluteUrl("/terms"),
       lastModified,
       changeFrequency: "yearly",
