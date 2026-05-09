@@ -1,6 +1,10 @@
 import nodemailer, { type Transporter } from "nodemailer";
 import { createServiceError } from "@shared/utils";
 import { sentryServer } from "@shared/sentry";
+import {
+  EMAIL_LOGO_CONTENT_ID,
+  getEmailLogoAttachmentPath,
+} from "@repo/email";
 
 function getRequiredEnv(name: string): string {
   const value = process.env[name];
@@ -37,6 +41,13 @@ export class MailService {
         to,
         subject,
         html,
+        attachments: [
+          {
+            filename: "email-logo.png",
+            path: getEmailLogoAttachmentPath(),
+            cid: EMAIL_LOGO_CONTENT_ID,
+          },
+        ],
       });
 
       return { id: info.messageId };

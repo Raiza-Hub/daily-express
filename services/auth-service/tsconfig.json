@@ -36,7 +36,7 @@
     "../../email/**/*",
     "tests/**/*",
     "types/**/*.d.ts"
-  ],
+, "../../dailyexpress-api/db"  ],
   "exclude": ["node_modules", "dist"]
 }
 

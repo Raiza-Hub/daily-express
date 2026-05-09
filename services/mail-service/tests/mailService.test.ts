@@ -55,6 +55,12 @@ describe("MailService", () => {
         to: "test@example.com",
         subject: "Test Subject",
         html: "<p>Test HTML</p>",
+        attachments: [
+          expect.objectContaining({
+            filename: "email-logo.png",
+            cid: "dailyexpress-email-logo",
+          }),
+        ],
       });
       expect(result).toEqual({ id: "ses-message-123" });
     });

@@ -1,5 +1,5 @@
 // shared typescript types
-import { z } from "zod";
+import { z } from "zod/v4";
 
 export interface User {
   id: string;
@@ -12,6 +12,7 @@ export interface User {
   createdAt: Date;
   updatedAt: Date;
   hasPassword?: boolean;
+  profilePictureUrl?: string | null;
 }
 
 export interface GetMeResponse {
@@ -116,7 +117,6 @@ export interface JWTPayload {
   userId: string;
   email: string;
   emailVerified: boolean;
-  role?: string;
   iat?: number;
   exp?: number;
 }
@@ -161,7 +161,7 @@ export interface Route {
   intermediate_stops_title: string | null;
   intermediate_stops_locality: string | null;
   intermediate_stops_label: string | null;
-  vehicleType: "car" | "bus" | "luxury_car";
+  vehicleType: "car" | "bus" | "luxury car";
   meeting_point: string;
   availableSeats: number;
   remainingSeats: number;
@@ -192,7 +192,7 @@ export interface CreateRoute {
   intermediate_stops_title: string | null;
   intermediate_stops_locality: string | null;
   intermediate_stops_label: string | null;
-  vehicleType: "car" | "bus" | "luxury_car";
+  vehicleType: "car" | "bus" | "luxury car";
   meeting_point: string;
   availableSeats: number;
   price: number;
@@ -211,7 +211,7 @@ export interface updateRouteRequest {
   intermediate_stops_title?: string | null;
   intermediate_stops_locality?: string | null;
   intermediate_stops_label?: string | null;
-  vehicleType?: "car" | "bus" | "luxury_car";
+  vehicleType?: "car" | "bus" | "luxury car";
   meeting_point?: string;
   availableSeats?: number;
   price?: number;
@@ -530,7 +530,7 @@ export interface PushNotificationPayload {
   urgency?: "low" | "normal" | "high";
 }
 
-export const driverNotificationSchema = z.object({
+export const driverNotificationSchema: z.ZodType<DriverNotification> = z.object({
   id: z.string(),
   driverId: z.string(),
   notificationKey: z.string(),
@@ -553,19 +553,19 @@ export const driverNotificationRealtimeEnvelopeSchema = z.object({
   timestamp: z.number().int(),
 });
 
-export const driverNotificationCreatedRealtimeEventSchema = z.object({
+export const driverNotificationCreatedRealtimeEventSchema: z.ZodType<DriverNotificationCreatedRealtimeEvent> = z.object({
   ...driverNotificationRealtimeEnvelopeSchema.shape,
   type: z.literal("notification.created"),
   payload: driverNotificationSchema,
 });
 
-export const driverNotificationReadRealtimeEventSchema = z.object({
+export const driverNotificationReadRealtimeEventSchema: z.ZodType<DriverNotificationReadRealtimeEvent> = z.object({
   ...driverNotificationRealtimeEnvelopeSchema.shape,
   type: z.literal("notification.read"),
   payload: z.object({ id: z.string() }),
 });
 
-export const driverNotificationReadAllRealtimeEventSchema = z.object({
+export const driverNotificationReadAllRealtimeEventSchema: z.ZodType<DriverNotificationReadAllRealtimeEvent> = z.object({
   ...driverNotificationRealtimeEnvelopeSchema.shape,
   type: z.literal("notification.read_all"),
   payload: z.object({}),
