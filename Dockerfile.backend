@@ -15,6 +15,7 @@ COPY services/notification-service/package.json services/notification-service/pa
 COPY services/payment-service/package.json services/payment-service/package.json
 COPY services/payout-service/package.json services/payout-service/package.json
 COPY services/route-service/package.json services/route-service/package.json
+COPY dailyexpress-api/package.json dailyexpress-api/package.json
 COPY email/package.json email/package.json
 COPY packages/api/package.json packages/api/package.json
 COPY packages/eslint-config/package.json packages/eslint-config/package.json
@@ -39,6 +40,7 @@ RUN bun install \
   --filter=payout-service \
   --filter=notification-service \
   --filter=mail-service \
+  --filter=@dailyexpress-api \
   --filter=shared \
   --filter=@repo/email
 
@@ -54,12 +56,14 @@ COPY --from=install /app/services/notification-service/node_modules ./services/n
 COPY --from=install /app/services/payment-service/node_modules ./services/payment-service/node_modules
 COPY --from=install /app/services/payout-service/node_modules ./services/payout-service/node_modules
 COPY --from=install /app/services/route-service/node_modules ./services/route-service/node_modules
+COPY --from=install /app/dailyexpress-api/node_modules ./dailyexpress-api/node_modules
 COPY --from=install /app/email/node_modules ./email/node_modules
 COPY package.json bun.lock ./
 COPY api-gateway ./api-gateway
 COPY email ./email
 COPY shared ./shared
 COPY services ./services
+COPY dailyexpress-api ./dailyexpress-api
 COPY scripts ./scripts
 COPY turbo.json tsconfig.json ./
 

@@ -57,15 +57,16 @@ const MobileNav = () => {
                 )}
             >
                 <div className="flex items-center justify-between px-4 h-16 border-b border-neutral-100">
-                    <Link href='/' onClick={closeMenu}>
+                    <Link href="/" onClick={closeMenu} className="flex items-center gap-2">
                         <Image
                             src="/logo.png"
                             alt="Logo"
                             width={520}
                             height={530}
-                            className='object-contain object-center'
-                            style={{ width: "40px", height: "auto" }}
+                            className="object-contain object-center"
+                            style={{ width: "28px", height: "auto" }}
                         />
+                        <h1 className="text-xl font-semibold leading-none">Daily Express</h1>
                     </Link>
                     <button
                         onClick={closeMenu}
