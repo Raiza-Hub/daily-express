@@ -13,6 +13,7 @@ import {
   Column,
 } from "@react-email/components";
 import * as React from "react";
+import { EMAIL_LOGO_CONTENT_ID } from "../assets";
 
 export interface PayoutFailedEmailProps {
   frontendUrl: string;
@@ -35,7 +36,6 @@ function formatCurrency(amountMinor: number, currency: string = "NGN") {
 }
 
 const PayoutFailedEmail = ({
-  frontendUrl = "",
   driverName,
   driverEmail,
   amountMinor,
@@ -47,7 +47,6 @@ const PayoutFailedEmail = ({
 }: PayoutFailedEmailProps) => {
   const greetingName = driverName || driverEmail;
   const previewText = "Payout Failed - Action Required";
-  const assetBaseUrl = frontendUrl || "";
 
   return (
     <Html>
@@ -57,8 +56,9 @@ const PayoutFailedEmail = ({
         <Container style={page}>
           <Section style={brandSection}>
             <Img
-              src={`${assetBaseUrl}/static/email-logo.png`}
+              src={`cid:${EMAIL_LOGO_CONTENT_ID}`}
               alt="Daily Express Logo"
+              width="112"
               height="40"
               style={logo}
             />
@@ -205,6 +205,8 @@ const brandSection = {
 
 const logo = {
   display: "inline-block",
+  height: "40px",
+  width: "112px",
 };
 
 const card = {

@@ -9,6 +9,7 @@ import {
   Section,
   Text,
 } from "@react-email/components";
+import { EMAIL_LOGO_CONTENT_ID } from "../assets";
 
 export interface VerifyOtpEmailProps {
   otp: string;
@@ -25,9 +26,7 @@ const VerifyOtpEmail = ({
   brandName = "Daily Express",
   supportEmail = "support@dailyexpress.com",
   year = new Date().getFullYear(),
-  frontendUrl,
 }: VerifyOtpEmailProps) => {
-  const assetBaseUrl = frontendUrl || "";
   const previewText = `${otp} is your ${brandName} verification code`;
 
   return (
@@ -38,8 +37,9 @@ const VerifyOtpEmail = ({
         <Container style={page}>
           <Section style={brandSection}>
             <Img
-              src={`${assetBaseUrl}/static/email-logo.png`}
+              src={`cid:${EMAIL_LOGO_CONTENT_ID}`}
               alt="Daily Express Logo"
+              width="112"
               height="40"
               style={logo}
             />
@@ -104,6 +104,8 @@ const brandSection = {
 
 const logo = {
   display: "block",
+  height: "40px",
+  width: "112px",
 };
 
 const card = {

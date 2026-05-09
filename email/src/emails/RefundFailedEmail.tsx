@@ -10,6 +10,7 @@ import {
   Section,
   Text,
 } from "@react-email/components";
+import { EMAIL_LOGO_CONTENT_ID } from "../assets";
 
 export interface RefundFailedEmailProps {
   frontendUrl: string;
@@ -34,7 +35,6 @@ function formatCurrency(amountMinor: number, currency: string = "NGN") {
 }
 
 const RefundFailedEmail = ({
-  frontendUrl = "",
   customerName,
   customerEmail,
   paymentReference,
@@ -48,7 +48,6 @@ const RefundFailedEmail = ({
 }: RefundFailedEmailProps) => {
   const greetingName = customerName || customerEmail;
   const previewText = "We could not complete your refund automatically";
-  const assetBaseUrl = frontendUrl || "";
 
   return (
     <Html>
@@ -59,8 +58,9 @@ const RefundFailedEmail = ({
           {/* Dark logo header */}
           <Section style={brandSection}>
             <Img
-              src={`${assetBaseUrl}/static/email-logo.png`}
+              src={`cid:${EMAIL_LOGO_CONTENT_ID}`}
               alt="Daily Express Logo"
+              width="112"
               height="40"
               style={logo}
             />
@@ -88,8 +88,7 @@ const RefundFailedEmail = ({
 
             <Text style={summary}>
               Please review the refund details below and follow the steps outlined to
-              help us process your refund as quickly as possible. We aim to resolve
-              all manual refund cases within <strong style={strong}>3 to 5 business days</strong>.
+              help us process your refund as quickly as possible.
             </Text>
 
             <Hr style={divider} />
@@ -181,6 +180,8 @@ const brandSection = {
 
 const logo = {
   display: "inline-block",
+  height: "40px",
+  width: "112px",
 };
 
 const card = {

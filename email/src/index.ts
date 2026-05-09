@@ -1,4 +1,5 @@
 export * from "./registry";
+export * from "./assets";
 export { default as BookingConfirmedEmail } from "./emails/BookingConfirmedEmail";
 export type { BookingConfirmedEmailProps } from "./emails/BookingConfirmedEmail";
 export { default as RefundFailedEmail } from "./emails/RefundFailedEmail";
