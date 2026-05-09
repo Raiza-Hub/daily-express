@@ -9,7 +9,6 @@ import { routeApi } from "../api";
 import type {
   Route,
   Trip,
-  Booking,
   ApiResponse,
   CreateRoute,
   updateRouteRequest,
@@ -119,7 +118,7 @@ export interface UserBookingsPage {
 export const getAllDriverRoutesFn = async (): Promise<Route[]> => {
   try {
     const response = await routeApi.get<ApiResponse<Route[]>>(
-      "/route/driver/routes",
+      "/driver/routes",
     );
     if (!response.data.success || !response.data.data) {
       throw new Error(response.data.error || "Failed to get driver routes");
@@ -133,7 +132,7 @@ export const getAllDriverRoutesFn = async (): Promise<Route[]> => {
 export const createRouteFn = async (data: CreateRoute): Promise<Route> => {
   try {
     const response = await routeApi.post<ApiResponse<Route>>(
-      "/route/create/driver/route",
+      "/create/driver/route",
       data,
     );
     if (!response.data.success || !response.data.data) {
@@ -154,7 +153,7 @@ export const updateRouteFn = async ({
 }): Promise<Route> => {
   try {
     const response = await routeApi.put<ApiResponse<Route>>(
-      `/route/update/driver/route/${id}`,
+      `/update/driver/route/${id}`,
       data,
     );
     if (!response.data.success || !response.data.data) {
@@ -169,7 +168,7 @@ export const updateRouteFn = async ({
 export const deleteRouteFn = async (id: string): Promise<void> => {
   try {
     const response = await routeApi.delete<ApiResponse<null>>(
-      `/route/driver/route/${id}`,
+      `/driver/route/${id}`,
     );
     if (!response.data.success) {
       throw new Error(response.data.error || "Failed to delete route");
@@ -210,7 +209,7 @@ export const getTripsSummaryRangeFn = async (
 ): Promise<TripsSummaryRange[]> => {
   try {
     const response = await routeApi.get<ApiResponse<TripsSummaryRange[]>>(
-      "/route/driver/trips-summary-range",
+      "/driver/trips-summary-range",
       {
         params: { startDate, endDate },
       },
@@ -231,16 +230,11 @@ export const updateTripStatusFn = async ({
   status,
 }: {
   id: string;
-  status:
-    | "pending"
-    | "confirmed"
-    | "cancelled"
-    | "completed"
-    | "booking_closed";
+  status: "booking_closed";
 }): Promise<Trip> => {
   try {
     const response = await routeApi.patch<ApiResponse<Trip>>(
-      `/route/driver/trip/${id}`,
+      `/driver/trip/${id}`,
       { status },
     );
     if (!response.data.success || !response.data.data) {
@@ -274,7 +268,7 @@ export const searchRoutesFn = async (
     searchParams.set("offset", String(offset));
 
     const response = await routeApi.get<ApiResponse<Route[]>>(
-      `/route/search?${searchParams.toString()}`,
+      `/search?${searchParams.toString()}`,
     );
     if (!response.data.success || !response.data.data) {
       throw new Error(response.data.error || "Failed to search routes");
@@ -326,7 +320,7 @@ export const getUserBookingsFn = async (
     });
 
     const response = await routeApi.get<ApiResponse<UserBookingsPage>>(
-      `/route/user/bookings?${searchParams.toString()}`,
+      `/user/bookings?${searchParams.toString()}`,
     );
     if (!response.data.success || !response.data.data) {
       throw new Error(response.data.error || "Failed to get user bookings");
@@ -476,6 +470,7 @@ export const useUpdateTripStatus = (options?: {
     mutationFn: updateTripStatusFn,
     onSuccess: (data, variables) => {
       void queryClient.invalidateQueries({ queryKey: ["driverRoutes"] });
+      void queryClient.invalidateQueries({ queryKey: ["tripsSummaryRange"] });
       void queryClient.invalidateQueries({
         queryKey: ["tripBookings", variables.id],
       });
@@ -519,7 +514,7 @@ interface TripBooking {
     firstName: string;
     lastName: string;
     email: string;
-    phone: string;
+    profilePictureUrl?: string | null;
   };
 }
 
@@ -528,7 +523,7 @@ export const getTripBookingsFn = async (
 ): Promise<TripBooking[]> => {
   try {
     const response = await routeApi.get<ApiResponse<TripBooking[]>>(
-      `/route/driver/trip/${tripId}/bookings`,
+      `/driver/trip/${tripId}/bookings`,
     );
     if (!response.data.success || !response.data.data) {
       throw new Error(response.data.error || "Failed to get trip bookings");

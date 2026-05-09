@@ -41,7 +41,7 @@ export const registerFn = async (
 ): Promise<GetMeResponse> => {
   try {
     const response = await authApi.post<ApiResponse<GetMeResponse>>(
-      "/auth/register",
+      "/register",
       data,
     );
     if (!response.data.success || !response.data.data) {
@@ -56,7 +56,7 @@ export const registerFn = async (
 export const loginFn = async (data: LoginPayload): Promise<AuthTokens> => {
   try {
     const response = await authApi.post<ApiResponse<AuthTokens>>(
-      "/auth/login",
+      "/login",
       data,
     );
     if (!response.data.success || !response.data.data) {
@@ -73,7 +73,7 @@ export const verifyOtpFn = async (
 ): Promise<AuthTokens> => {
   try {
     const response = await authApi.post<ApiResponse<AuthTokens>>(
-      "/auth/verify-otp",
+      "/verify-otp",
       data,
     );
     if (!response.data.success || !response.data.data) {
@@ -87,7 +87,7 @@ export const verifyOtpFn = async (
 
 export const resendOtpFn = async (): Promise<void> => {
   try {
-    const response = await authApi.get<ApiResponse<null>>("/auth/resend-otp");
+    const response = await authApi.get<ApiResponse<null>>("/resend-otp");
     if (!response.data.success) {
       throw new Error(response.data.error || "Failed to resend OTP");
     }
@@ -99,7 +99,7 @@ export const resendOtpFn = async (): Promise<void> => {
 export const forgotPasswordFn = async (email: string): Promise<void> => {
   try {
     const response = await authApi.post<ApiResponse<null>>(
-      "/auth/forget-password",
+      "/forget-password",
       {
         email,
       },
@@ -118,7 +118,7 @@ export const resetPasswordFn = async ({
 }: ResetPasswordPayload): Promise<void> => {
   try {
     const response = await authApi.post<ApiResponse<null>>(
-      `/auth/reset-password/${token}`,
+      `/reset-password/${token}`,
       { password },
     );
     if (!response.data.success) {
@@ -131,7 +131,7 @@ export const resetPasswordFn = async ({
 
 export const logoutFn = async (): Promise<void> => {
   try {
-    const response = await authApi.get<ApiResponse<null>>("/auth/logout");
+    const response = await authApi.get<ApiResponse<null>>("/logout");
     if (!response.data.success) {
       throw new Error(response.data.error || "Logout failed");
     }
@@ -142,7 +142,7 @@ export const logoutFn = async (): Promise<void> => {
 
 export const getMeFn = async (): Promise<User> => {
   try {
-    const response = await authApi.get<ApiResponse<User>>("/auth/profile");
+    const response = await authApi.get<ApiResponse<User>>("/profile");
     if (!response.data.success || !response.data.data) {
       throw new Error(response.data.error || "Failed to get user");
     }
@@ -172,7 +172,7 @@ export const updateProfileFn = async (
 ): Promise<User> => {
   try {
     const response = await authApi.put<ApiResponse<User>>(
-      "/auth/profile",
+      "/profile",
       data,
     );
     if (!response.data.success || !response.data.data) {
@@ -186,7 +186,7 @@ export const updateProfileFn = async (
 
 export const deleteAccountFn = async (): Promise<void> => {
   try {
-    const response = await authApi.delete<ApiResponse<null>>("/auth/profile");
+    const response = await authApi.delete<ApiResponse<null>>("/profile");
     if (!response.data.success) {
       throw new Error(response.data.error || "Failed to delete account");
     }
@@ -254,7 +254,7 @@ export type Provider = "google";
 export const getProvidersFn = async (): Promise<Provider[]> => {
   try {
     const response =
-      await authApi.get<ApiResponse<Provider[]>>("/auth/providers");
+      await authApi.get<ApiResponse<Provider[]>>("/providers");
     if (!response.data.success || !response.data.data) {
       throw new Error(response.data.error || "Failed to get providers");
     }
@@ -276,7 +276,7 @@ export const disconnectProviderFn = async (
 ): Promise<void> => {
   try {
     const response = await authApi.delete<ApiResponse<null>>(
-      `/auth/providers/${provider}`,
+      `/providers/${provider}`,
     );
     if (!response.data.success) {
       throw new Error(response.data.error || "Failed to disconnect provider");
@@ -297,7 +297,7 @@ export const useDisconnectProvider = (options?: {
 
 export const setPasswordFn = async (password: string): Promise<void> => {
   try {
-    const response = await authApi.post<ApiResponse<null>>("/auth/password", {
+    const response = await authApi.post<ApiResponse<null>>("/password", {
       password,
     });
     if (!response.data.success) {

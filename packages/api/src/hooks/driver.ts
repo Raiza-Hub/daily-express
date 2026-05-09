@@ -1,5 +1,5 @@
 import { useMutation, useQuery } from "@tanstack/react-query";
-import { api, driverApi } from "../api";
+import { driverApi } from "../api";
 import type { Driver, ApiResponse, UpdateProfileRequest } from "@shared/types";
 import { handleApiError } from "../utils";
 
@@ -21,7 +21,7 @@ interface CreateDriverPayload {
 
 export const getDriverFn = async (): Promise<Driver> => {
   try {
-    const response = await api.get<ApiResponse<Driver>>("/driver/profile");
+    const response = await driverApi.get<ApiResponse<Driver>>("/profile");
     if (!response.data.success || !response.data.data) {
       throw new Error(response.data.error || "Failed to get driver profile");
     }
@@ -36,8 +36,8 @@ export const createDriverFn = async (
 ): Promise<Driver> => {
   const isFormData = data instanceof FormData;
   try {
-    const response = await api.post<ApiResponse<Driver>>(
-      "/driver/create",
+    const response = await driverApi.post<ApiResponse<Driver>>(
+      "/create",
       data,
       {
         headers: isFormData
@@ -59,8 +59,8 @@ export const updateDriverFn = async (
 ): Promise<Driver> => {
   const isFormData = data instanceof FormData;
   try {
-    const response = await api.put<ApiResponse<Driver>>(
-      "/driver/update",
+    const response = await driverApi.put<ApiResponse<Driver>>(
+      "/update",
       data,
       {
         headers: isFormData
@@ -79,7 +79,7 @@ export const updateDriverFn = async (
 
 export const deleteDriverFn = async (): Promise<void> => {
   try {
-    const response = await api.delete<ApiResponse<null>>("/driver/delete");
+    const response = await driverApi.delete<ApiResponse<null>>("/delete");
     if (!response.data.success) {
       throw new Error(response.data.error || "Failed to delete driver profile");
     }
@@ -145,7 +145,7 @@ export interface DriverStats {
 export const getDriverStatsFn = async (): Promise<DriverStats> => {
   try {
     const response =
-      await driverApi.get<ApiResponse<DriverStats>>("/driver/stats");
+      await driverApi.get<ApiResponse<DriverStats>>("/stats");
     if (!response.data.success || !response.data.data) {
       throw new Error(response.data.error || "Failed to get driver stats");
     }
