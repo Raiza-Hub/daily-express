@@ -7,14 +7,14 @@
       "dependencies": {
         "dotenv": "^17.4.2",
         "tsx": "^4.21.0",
-        "zod": "^4.4.3",
+        "zod": "^4.4.3"
       },
       "devDependencies": {
         "bun-types": "^1.3.11",
         "prettier": "^3.7.4",
         "turbo": "^2.9.12",
-        "typescript": "5.9.2",
-      },
+        "typescript": "5.9.2"
+      }
     },
     "api-gateway": {
       "name": "api-gateway",
@@ -31,7 +31,7 @@
         "jsonwebtoken": "^9.0.2",
         "rate-limit-redis": "^4.3.1",
         "shared": "workspace:*",
-        "zod": "^3.24.0",
+        "zod": "^3.24.0"
       },
       "devDependencies": {
         "@types/cookie-parser": "^1.4.8",
@@ -39,8 +39,8 @@
         "@types/express": "^5.0.6",
         "@types/jsonwebtoken": "^9.0.10",
         "@types/node": "^22.15.21",
-        "typescript": "^5.9.2",
-      },
+        "typescript": "^5.9.2"
+      }
     },
     "apps/drivers": {
       "name": "drivers",
@@ -60,7 +60,7 @@
         "react-dom": "^19.2.6",
         "react-hook-form": "^7.75.0",
         "react-phone-number-input": "^3.4.16",
-        "zod": "^4.4.3",
+        "zod": "^4.4.3"
       },
       "devDependencies": {
         "@repo/eslint-config": "workspace:*",
@@ -71,8 +71,8 @@
         "@types/react-dom": "19.2.3",
         "eslint": "^10.3.0",
         "postcss": "^8.5.14",
-        "typescript": "6.0.3",
-      },
+        "typescript": "6.0.3"
+      }
     },
     "apps/web": {
       "name": "web",
@@ -92,7 +92,7 @@
         "react": "^19.2.6",
         "react-dom": "^19.2.6",
         "react-hook-form": "^7.75.0",
-        "zod": "^4.4.3",
+        "zod": "^4.4.3"
       },
       "devDependencies": {
         "@repo/eslint-config": "workspace:*",
@@ -103,8 +103,8 @@
         "@types/react-dom": "19.2.3",
         "eslint": "^10.3.0",
         "postcss": "^8.5.14",
-        "typescript": "6.0.3",
-      },
+        "typescript": "6.0.3"
+      }
     },
     "dailyexpress-api": {
       "name": "@dailyexpress-api",
@@ -134,7 +134,7 @@
         "postgres": "^3.4.9",
         "rate-limit-redis": "^5.0.0",
         "shared": "workspace:*",
-        "zod": "^4.4.3",
+        "zod": "^4.4.3"
       },
       "devDependencies": {
         "@types/bcryptjs": "^3.0.0",
@@ -144,8 +144,8 @@
         "@types/node": "^25.7.0",
         "@types/nodemailer": "^8.0.0",
         "drizzle-kit": "^0.31.10",
-        "typescript": "^6.0.3",
-      },
+        "typescript": "^6.0.3"
+      }
     },
     "email": {
       "name": "@repo/email",
@@ -154,14 +154,14 @@
         "@react-email/components": "^0.5.7",
         "@react-email/render": "^1.4.0",
         "react": "^19.2.0",
-        "react-dom": "^19.2.0",
+        "react-dom": "^19.2.0"
       },
       "devDependencies": {
         "@types/react": "19.2.2",
         "@types/react-dom": "19.2.2",
         "react-email": "5.1.0",
-        "typescript": "^5.0.0",
-      },
+        "typescript": "^5.0.0"
+      }
     },
     "packages/api": {
       "name": "@repo/api",
@@ -169,17 +169,17 @@
       "dependencies": {
         "@tanstack/react-query": "^5.74.4",
         "axios": "^1.13.6",
-        "shared": "workspace:*",
+        "shared": "workspace:*"
       },
       "devDependencies": {
         "@repo/typescript-config": "workspace:*",
         "@types/react": "19.2.2",
         "react": "^19.2.0",
-        "typescript": "5.9.2",
+        "typescript": "5.9.2"
       },
       "peerDependencies": {
-        "react": "^19.2.0",
-      },
+        "react": "^19.2.0"
+      }
     },
     "packages/eslint-config": {
       "name": "@repo/eslint-config",
@@ -195,23 +195,23 @@
         "eslint-plugin-turbo": "^2.7.1",
         "globals": "^16.5.0",
         "typescript": "^5.9.2",
-        "typescript-eslint": "^8.50.0",
-      },
+        "typescript-eslint": "^8.50.0"
+      }
     },
     "packages/types": {
       "name": "@repo/types",
       "version": "0.0.0",
       "dependencies": {
-        "zod": "^4.4.3",
+        "zod": "^4.4.3"
       },
       "devDependencies": {
         "@repo/typescript-config": "workspace:*",
-        "typescript": "5.9.2",
-      },
+        "typescript": "5.9.2"
+      }
     },
     "packages/typescript-config": {
       "name": "@repo/typescript-config",
-      "version": "0.0.0",
+      "version": "0.0.0"
     },
     "packages/ui": {
       "name": "@repo/ui",
@@ -242,7 +242,7 @@
         "tailwind-merge": "^3.4.0",
         "tailwindcss": "^4.1.18",
         "tw-animate-css": "^1.4.0",
-        "vaul": "^1.1.2",
+        "vaul": "^1.1.2"
       },
       "devDependencies": {
         "@repo/eslint-config": "workspace:*",
@@ -253,8 +253,8 @@
         "@types/react": "19.2.2",
         "@types/react-dom": "19.2.2",
         "eslint": "^9.39.1",
-        "typescript": "5.9.2",
-      },
+        "typescript": "5.9.2"
+      }
     },
     "services/auth-service": {
       "name": "auth-service",
@@ -279,7 +279,7 @@
         "postgres": "^3.4.8",
         "react": "^19.2.0",
         "react-dom": "^19.2.0",
-        "uuid": "^13.0.0",
+        "uuid": "^13.0.0"
       },
       "devDependencies": {
         "@types/bun": "latest",
@@ -292,11 +292,11 @@
         "drizzle-kit": "^0.31.9",
         "jest": "^30.2.0",
         "ts-jest": "^29.4.6",
-        "tsconfig-paths": "^4.2.0",
+        "tsconfig-paths": "^4.2.0"
       },
       "peerDependencies": {
-        "typescript": "^5.9.3",
-      },
+        "typescript": "^5.9.3"
+      }
     },
     "services/driver-service": {
       "name": "driver-service",
@@ -310,7 +310,7 @@
         "multer": "^1.4.5-lts.1",
         "pg": "^8.20.0",
         "postgres": "^3.4.8",
-        "uuid": "^13.0.0",
+        "uuid": "^13.0.0"
       },
       "devDependencies": {
         "@types/bun": "latest",
@@ -320,11 +320,11 @@
         "@types/node": "^25.5.0",
         "drizzle-kit": "^0.31.9",
         "jest": "^30.2.0",
-        "ts-jest": "^29.4.6",
+        "ts-jest": "^29.4.6"
       },
       "peerDependencies": {
-        "typescript": "^5",
-      },
+        "typescript": "^5"
+      }
     },
     "services/mail-service": {
       "name": "mail-service",
@@ -336,7 +336,7 @@
         "helmet": "^8.1.0",
         "nodemailer": "^7.0.5",
         "react": "^19.2.0",
-        "react-dom": "^19.2.0",
+        "react-dom": "^19.2.0"
       },
       "devDependencies": {
         "@types/bun": "latest",
@@ -347,11 +347,11 @@
         "@types/nodemailer": "^7.0.3",
         "jest": "^30.2.0",
         "ts-jest": "^29.4.6",
-        "tsconfig-paths": "^4.2.0",
+        "tsconfig-paths": "^4.2.0"
       },
       "peerDependencies": {
-        "typescript": "^5.9.3",
-      },
+        "typescript": "^5.9.3"
+      }
     },
     "services/notification-service": {
       "name": "notification-service",
@@ -364,7 +364,7 @@
         "helmet": "^8.1.0",
         "pg-boss": "^12.15.0",
         "postgres": "^3.4.8",
-        "web-push": "^3.6.7",
+        "web-push": "^3.6.7"
       },
       "devDependencies": {
         "@types/bun": "latest",
@@ -373,11 +373,11 @@
         "@types/node": "^25.5.0",
         "drizzle-kit": "^0.31.9",
         "jest": "^30.2.0",
-        "ts-jest": "^29.4.6",
+        "ts-jest": "^29.4.6"
       },
       "peerDependencies": {
-        "typescript": "^5",
-      },
+        "typescript": "^5"
+      }
     },
     "services/payment-service": {
       "name": "payment-service",
@@ -390,7 +390,7 @@
         "joi": "^18.0.2",
         "pg-boss": "^12.15.0",
         "postgres": "^3.4.8",
-        "uuid": "^11.1.0",
+        "uuid": "^11.1.0"
       },
       "devDependencies": {
         "@types/bun": "latest",
@@ -400,11 +400,11 @@
         "@types/uuid": "^10.0.0",
         "drizzle-kit": "^0.31.9",
         "jest": "^30.2.0",
-        "ts-jest": "^29.4.6",
+        "ts-jest": "^29.4.6"
       },
       "peerDependencies": {
-        "typescript": "^5",
-      },
+        "typescript": "^5"
+      }
     },
     "services/payout-service": {
       "name": "payout-service",
@@ -416,7 +416,7 @@
         "helmet": "^8.1.0",
         "joi": "^18.0.2",
         "pg-boss": "^12.15.0",
-        "postgres": "^3.4.8",
+        "postgres": "^3.4.8"
       },
       "devDependencies": {
         "@types/bun": "latest",
@@ -425,11 +425,11 @@
         "@types/node": "^25.5.0",
         "drizzle-kit": "^0.31.9",
         "jest": "^30.2.0",
-        "ts-jest": "^29.4.6",
+        "ts-jest": "^29.4.6"
       },
       "peerDependencies": {
-        "typescript": "^5",
-      },
+        "typescript": "^5"
+      }
     },
     "services/route-service": {
       "name": "route-service",
@@ -441,7 +441,7 @@
         "joi": "^18.0.2",
         "pg": "^8.20.0",
         "postgres": "^3.4.8",
-        "uuid": "^13.0.0",
+        "uuid": "^13.0.0"
       },
       "devDependencies": {
         "@types/bun": "latest",
@@ -450,11 +450,11 @@
         "@types/node": "^25.5.0",
         "drizzle-kit": "^0.31.9",
         "jest": "^30.2.0",
-        "ts-jest": "^29.4.6",
+        "ts-jest": "^29.4.6"
       },
       "peerDependencies": {
-        "typescript": "^5",
-      },
+        "typescript": "^5"
+      }
     },
     "shared": {
       "name": "shared",
@@ -467,18 +467,18 @@
         "express": "^5.2.1",
         "kafkajs": "^2.2.4",
         "prom-client": "^15.1.0",
-        "zod": "^4.4.3",
+        "zod": "^4.4.3"
       },
       "devDependencies": {
         "@types/bun": "latest",
         "@types/express": "^5.0.6",
         "drizzle-kit": "^0.31.10",
-        "typescript": "^5.9.3",
-      },
-    },
+        "typescript": "^5.9.3"
+      }
+    }
   },
   "patchedDependencies": {
-    "kafkajs@2.2.4": "patches/kafkajs@2.2.4.patch",
+    "kafkajs@2.2.4": "patches/kafkajs@2.2.4.patch"
   },
   "packages": {
     "@alloc/quick-lru": ["@alloc/quick-lru@5.2.0", "", {}, "sha512-UrcABB+4bUrFABwbluTIBErXwvbsU/V7TZWfmbgJfbkwiBuziS9gxdODUyuiecfdGQ85jglMW6juS3+z5TsKLw=="],
@@ -4953,6 +4953,6 @@
 
     "jest-runtime/glob/jackspeak/@isaacs/cliui/string-width/emoji-regex": ["emoji-regex@9.2.2", "", {}, "sha512-L18DaJsXSUk2+42pv8mLs5jJT2hqFkFE4j21wOmgbUqsZ2hL72NsUU785g9RXgo3s0ZNgVl42TiHp3ZtOv/Vyg=="],
 
-    "jest-runtime/glob/jackspeak/@isaacs/cliui/wrap-ansi/ansi-styles": ["ansi-styles@6.2.3", "", {}, "sha512-4Dj6M28JB+oAH8kFkTLUo+a2jwOFkuqb3yucU0CANcRRUbxS0cP0nZYCGjcc3BNXwRIsUVmDGgzawme7zvJHvg=="],
+    "jest-runtime/glob/jackspeak/@isaacs/cliui/wrap-ansi/ansi-styles": ["ansi-styles@6.2.3", "", {}, "sha512-4Dj6M28JB+oAH8kFkTLUo+a2jwOFkuqb3yucU0CANcRRUbxS0cP0nZYCGjcc3BNXwRIsUVmDGgzawme7zvJHvg=="]
   }
 }
