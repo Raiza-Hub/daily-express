@@ -31,8 +31,9 @@ cd "$PROJECT_ROOT"
 if [ "${1:-}" != "--db-already-running" ]; then
   echo "Starting Postgres database..."
   "${COMPOSE[@]}" up -d --remove-orphans db
-  wait_for_postgres
 fi
+
+wait_for_postgres
 
 echo "Applying observability database roles and grants..."
 "${COMPOSE[@]}" exec -T \
