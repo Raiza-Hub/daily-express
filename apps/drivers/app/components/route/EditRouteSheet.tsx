@@ -140,6 +140,9 @@ export default function EditRouteSheet({
         <form onSubmit={handleSubmit(onSubmit)} className="space-y-8 py-6 px-6">
           <RouteInformationSection control={control} ui={ui} />
           <RoutePricingSection control={control} ui={ui} />
+          <p className="rounded-lg border border-blue-100 bg-blue-50 px-3 py-2 text-sm text-blue-700">
+            New price applies only to future bookings.
+          </p>
           <RouteScheduleSection control={control} />
 
           <SheetFooter className="pt-4 pb-0">

@@ -165,7 +165,7 @@ export function transformToTripStatusItem(booking: UserBookingWithTrip): TripSta
             },
             vehicleType: route.vehicleType as "car" | "bus" | "luxury car",
             seatNumber: trip.capacity,
-            price: route.price,
+            price: booking.fareAmount,
             departureTime,
             estimatedArrivalTime,
             meetingPoint: route.meetingPoint,

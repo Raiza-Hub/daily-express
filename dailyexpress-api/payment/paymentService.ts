@@ -253,6 +253,21 @@ export class PaymentService {
     });
   }
 
+  private async getBookingFareForCheckout(bookingId: string, userId: string) {
+    const bookingRecord = await db.query.booking.findFirst({
+      where: eq(booking.id, bookingId),
+    });
+
+    if (!bookingRecord || bookingRecord.userId !== userId) {
+      throw createServiceError("Booking not found", 404);
+    }
+
+    return {
+      fareAmount: bookingRecord.fareAmount,
+      currency: bookingRecord.currency.toUpperCase(),
+    };
+  }
+
   async initializePayment(
     userId: string,
     authenticatedEmail: string,
@@ -300,8 +315,12 @@ export class PaymentService {
     const metadata = this.buildMetadata(input);
     const productName = sanitizeInput(input.productName);
     const productDescription = sanitizeInput(input.productDescription);
-    const trustedCurrency = hold.currency.toUpperCase();
-    const trustedAmount = calculateTrustedChargeAmount(hold.fareAmount);
+    const bookingFare = await this.getBookingFareForCheckout(
+      input.bookingId,
+      userId,
+    );
+    const trustedCurrency = bookingFare.currency;
+    const trustedAmount = calculateTrustedChargeAmount(bookingFare.fareAmount);
 
     if (input.currency && input.currency.toUpperCase() !== trustedCurrency) {
       throw createServiceError(
@@ -419,8 +438,12 @@ export class PaymentService {
     const metadata = this.buildMetadata(input);
     const productName = sanitizeInput(input.productName);
     const productDescription = sanitizeInput(input.productDescription);
-    const trustedCurrency = hold.currency.toUpperCase();
-    const trustedAmount = calculateTrustedChargeAmount(hold.fareAmount);
+    const bookingFare = await this.getBookingFareForCheckout(
+      input.bookingId,
+      existingPayment.userId,
+    );
+    const trustedCurrency = bookingFare.currency;
+    const trustedAmount = calculateTrustedChargeAmount(bookingFare.fareAmount);
 
     if (input.currency && input.currency.toUpperCase() !== trustedCurrency) {
       throw createServiceError(
@@ -525,8 +548,6 @@ export class PaymentService {
         bookingId: payload.bookingId,
         tripId: payload.tripId,
         userId: payload.userId,
-        fareAmount: payload.fareAmount,
-        currency: payload.currency.toUpperCase(),
         expiresAt: holdExpiresAt,
         pgBossJobId: null,
       })
@@ -535,8 +556,6 @@ export class PaymentService {
         set: {
           tripId: payload.tripId,
           userId: payload.userId,
-          fareAmount: payload.fareAmount,
-          currency: payload.currency.toUpperCase(),
           expiresAt: holdExpiresAt,
           updatedAt: new Date(),
         },
@@ -1312,7 +1331,7 @@ export class PaymentService {
       tripId: tripRecord.id,
       routeId: routeRecord.id,
       driverId: tripRecord.driverId,
-      fareAmountMinor: toFareAmountMinor(routeRecord.price),
+      fareAmountMinor: toFareAmountMinor(bookingRecord.fareAmount),
       tripDate: tripRecord.date,
       departureTime: routeRecord.departure_time,
       pickupTitle: routeRecord.pickup_location_title,

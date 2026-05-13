@@ -29,8 +29,6 @@ export interface UpsertBookingHoldInput {
   bookingId: string;
   tripId: string;
   userId: string;
-  fareAmount: number;
-  currency: string;
   expiresAt: string;
 }
 

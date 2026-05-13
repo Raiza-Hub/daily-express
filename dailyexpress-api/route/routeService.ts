@@ -859,6 +859,8 @@ export class RouteService {
         return {
           id: bookingRecord.id,
           seatNumber: bookingRecord.seatNumber ?? 0,
+          fareAmount: bookingRecord.fareAmount,
+          currency: bookingRecord.currency,
           status: bookingRecord.status,
           paymentReference: bookingRecord.paymentReference ?? null,
           paymentStatus: bookingRecord.paymentStatus,
@@ -982,13 +984,17 @@ export class RouteService {
       acc.set(record.tripId, (acc.get(record.tripId) ?? 0) + 1);
       return acc;
     }, new Map<string, number>());
+    const visibleFareTotalsByTripId = bookingRecords.reduce((acc, record) => {
+      acc.set(record.tripId, (acc.get(record.tripId) ?? 0) + record.fareAmount);
+      return acc;
+    }, new Map<string, number>());
 
     const tripsWithDetails = trips.flatMap((currentTrip) => {
       const routeData = routesById.get(currentTrip.routeId);
       const visibleBookedSeats =
         visibleBookingsByTripId.get(currentTrip.id) ?? 0;
       if (visibleBookedSeats === 0) return [];
-      const earnings = visibleBookedSeats * (routeData?.price || 0);
+      const earnings = visibleFareTotalsByTripId.get(currentTrip.id) ?? 0;
       return {
         id: currentTrip.id,
         date: currentTrip.date,
@@ -1164,12 +1170,14 @@ export class RouteService {
           bookingId: existingBooking.id,
           tripId: existingBooking.tripId,
           userId: existingBooking.userId,
-          fareAmount: routeRecord.price,
-          currency: "NGN",
           expiresAt:
             existingBooking.expiresAt?.toISOString() ?? expiresAt.toISOString(),
         });
-        return { booking: existingBooking, fareAmount: routeRecord.price };
+        return {
+          booking: existingBooking,
+          fareAmount: existingBooking.fareAmount,
+          currency: existingBooking.currency,
+        };
       }
 
       const allocatedSeat = await this.allocateLowestAvailableSeat(
@@ -1186,6 +1194,8 @@ export class RouteService {
             userId,
             seatNumber: allocatedSeat.seatNumber,
             lastName: passengerRecord.lastName,
+            fareAmount: routeRecord.price,
+            currency: "NGN",
             status: "pending",
             expiresAt,
           })
@@ -1212,13 +1222,15 @@ export class RouteService {
         bookingId: newBooking.id,
         tripId: newBooking.tripId,
         userId: newBooking.userId,
-        fareAmount: routeRecord.price,
-        currency: "NGN",
         expiresAt:
           newBooking.expiresAt?.toISOString() ?? expiresAt.toISOString(),
       });
 
-      return { booking: newBooking, fareAmount: routeRecord.price };
+      return {
+        booking: newBooking,
+        fareAmount: newBooking.fareAmount,
+        currency: newBooking.currency,
+      };
     });
 
     logger.info("booking.created", {
@@ -1241,7 +1253,7 @@ export class RouteService {
     return {
       booking: result.booking,
       fareAmount: result.fareAmount,
-      currency: "NGN",
+      currency: result.currency,
       expiresAt: result.booking.expiresAt,
     };
   }
