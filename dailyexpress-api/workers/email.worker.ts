@@ -16,6 +16,12 @@ export async function registerEmailWorker() {
 
   await boss.work<EmailJobData>(
     QUEUES.EMAIL_SEND,
+    {
+      batchSize: 1,
+      localConcurrency: 5,
+      pollingIntervalSeconds: 2,
+      heartbeatRefreshSeconds: 30,
+    },
     async ([job]) => {
       logger.info("worker.email.started", { jobId: job.id, to: job.data.to });
       try {

@@ -1,5 +1,5 @@
 import { createHash, randomUUID } from "node:crypto";
-import { and, desc, eq, gte, lt } from "drizzle-orm";
+import { and, desc, eq, gte, inArray, lt, notInArray, sql } from "drizzle-orm";
 import type {
   DriverNotification,
   DriverPayoutBalance,
@@ -10,17 +10,21 @@ import type {
   PayoutStatus,
 } from "@shared/types";
 import { createServiceError } from "@shared/utils";
+import { sentryServer } from "@shared/sentry";
 import { renderEmail, getEmailSubject } from "@repo/email";
 import { getConfig } from "../config/index";
 import { db } from "../db/connection";
 import {
+  booking,
   driver,
   earning,
   payout,
   payoutAttempt,
   payoutRecipient,
   payoutWebhook,
+  trip,
 } from "../db/index";
+import { logger } from "../utils/logger";
 import { DriverService } from "../driver/driverService";
 import { NotificationService } from "../notification/notificationService";
 import { publishNotificationCreated } from "../notification/realtime";
@@ -46,6 +50,14 @@ type DriverRecord = typeof driver.$inferSelect;
 
 type ActivePayoutDriver = DriverRecord & {
   bankVerificationStatus: "active";
+};
+type TripEarningsReconciliation = {
+  reconciles: boolean;
+  driverId: string | null;
+  bookingCount: number;
+  bookingAmountMinor: number;
+  earningCount: number;
+  earningAmountMinor: number;
 };
 
 type AttemptVerificationOutcome =
@@ -128,6 +140,35 @@ export class PayoutService {
     tx: PayoutTransaction,
     input: { tripId: string; completedAt?: Date },
   ): Promise<void> {
+    const reconciliation = await this.reconcileTripEarningsInTransaction(
+      tx,
+      input.tripId,
+    );
+    if (!reconciliation.reconciles) {
+      await tx
+        .update(earning)
+        .set({
+          status: "manual_review",
+          updatedAt: new Date(),
+        })
+        .where(
+          and(
+            eq(earning.tripId, input.tripId),
+            eq(earning.status, "pending_trip_completion"),
+          ),
+        );
+      if (reconciliation.driverId) {
+        const notificationRecord =
+          await this.createTripReconciliationFailedNotification(
+            tx,
+            input.tripId,
+            reconciliation,
+          );
+        await publishNotificationCreated(notificationRecord);
+      }
+      return;
+    }
+
     const releasedEarnings = await tx
       .update(earning)
       .set({
@@ -146,6 +187,122 @@ export class PayoutService {
     for (const entry of releasedEarnings) {
       await jobService.enqueuePayout(tx, { earningId: entry.id });
     }
+  }
+
+  private async reconcileTripEarningsInTransaction(
+    tx: PayoutTransaction,
+    tripId: string,
+  ): Promise<TripEarningsReconciliation> {
+    const tripRecord = await tx.query.trip.findFirst({
+      where: eq(trip.id, tripId),
+    });
+
+    const [bookingTotals] = await tx
+      .select({
+        count: sql<number>`count(*)::int`,
+        amountMinor: sql<number>`coalesce(sum(${booking.fareAmount} * 100), 0)::int`,
+      })
+      .from(booking)
+      .where(
+        and(
+          eq(booking.tripId, tripId),
+          inArray(booking.status, ["confirmed", "completed"]),
+          notInArray(booking.paymentStatus, ["failed", "cancelled", "expired"]),
+        ),
+      );
+
+    const [earningTotals] = await tx
+      .select({
+        count: sql<number>`count(*)::int`,
+        amountMinor: sql<number>`coalesce(sum(${earning.grossAmountMinor}), 0)::int`,
+      })
+      .from(earning)
+      .where(
+        and(
+          eq(earning.tripId, tripId),
+          notInArray(earning.status, ["cancelled", "manual_review"]),
+        ),
+      );
+
+    const bookingCount = bookingTotals?.count ?? 0;
+    const bookingAmountMinor = bookingTotals?.amountMinor ?? 0;
+    const earningCount = earningTotals?.count ?? 0;
+    const earningAmountMinor = earningTotals?.amountMinor ?? 0;
+    const reconciles =
+      bookingCount === earningCount && bookingAmountMinor === earningAmountMinor;
+
+    if (!reconciles) {
+      const amountDifferenceMinor = bookingAmountMinor - earningAmountMinor;
+      logger.warn("payout.trip_reconciliation_failed", {
+        tripId,
+        driverId: tripRecord?.driverId ?? null,
+        bookingCount,
+        bookingAmountMinor,
+        earningCount,
+        earningAmountMinor,
+        amountDifferenceMinor,
+      });
+      sentryServer.captureException(
+        new Error("Trip payout reconciliation failed"),
+        tripRecord?.driverId ?? "system",
+        {
+          action: "payout_trip_reconciliation_failed",
+          tripId,
+          driverId: tripRecord?.driverId ?? null,
+          bookingCount,
+          bookingAmountMinor,
+          earningCount,
+          earningAmountMinor,
+          amountDifferenceMinor,
+        },
+      );
+    }
+
+    return {
+      reconciles,
+      driverId: tripRecord?.driverId ?? null,
+      bookingCount,
+      bookingAmountMinor,
+      earningCount,
+      earningAmountMinor,
+    };
+  }
+
+  private async createTripReconciliationFailedNotification(
+    tx: PayoutTransaction,
+    tripId: string,
+    reconciliation: TripEarningsReconciliation,
+  ) {
+    if (!reconciliation.driverId) {
+      throw new Error("Cannot notify reconciliation failure without driverId");
+    }
+
+    return notificationService.createForDriverInTransaction(
+      tx,
+      reconciliation.driverId,
+      {
+        notificationKey: `event:trip:${tripId}:payout-reconciliation-failed`,
+        kind: "event",
+        type: "payout_reconciliation_failed",
+        title: "Trip payout needs review",
+        message:
+          "We found a mismatch between confirmed booking fares and payout earnings for this trip. Payout was paused for review.",
+        href: "/payouts",
+        tag: "Action needed",
+        tone: "critical",
+        metadata: {
+          tripId,
+          bookingCount: reconciliation.bookingCount,
+          bookingAmountMinor: reconciliation.bookingAmountMinor,
+          earningCount: reconciliation.earningCount,
+          earningAmountMinor: reconciliation.earningAmountMinor,
+          amountDifferenceMinor:
+            reconciliation.bookingAmountMinor -
+            reconciliation.earningAmountMinor,
+        },
+        occurredAt: new Date(),
+      },
+    );
   }
 
   async cancelBookingEarningInTransaction(

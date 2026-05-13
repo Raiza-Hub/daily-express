@@ -154,6 +154,12 @@ export async function registerBankVerificationWorker() {
 
   await boss.work<DriverBankVerificationJobData>(
     QUEUES.DRIVER_BANK_VERIFICATION,
+    {
+      batchSize: 1,
+      localConcurrency: 2,
+      pollingIntervalSeconds: 2,
+      heartbeatRefreshSeconds: 30,
+    },
     async ([job]) => {
       logger.info("worker.bank_verification.started", {
         jobId: job.id,

@@ -28,8 +28,6 @@ export const upsertBookingHoldSchema = Joi.object({
   bookingId: Joi.string().uuid().required(),
   tripId: Joi.string().uuid().required(),
   userId: Joi.string().uuid().required(),
-  fareAmount: Joi.number().integer().min(0).required(),
-  currency: Joi.string().uppercase().length(3).default("NGN"),
   expiresAt: Joi.date().iso().required(),
 });
 

@@ -270,6 +270,7 @@ export async function registerDriverProfileUploadWorker() {
   await boss.work<DriverProfileImageUploadJobData>(
     QUEUES.DRIVER_PROFILE_IMAGE_UPLOAD,
     {
+      batchSize: 1,
       localConcurrency: 2,
       pollingIntervalSeconds: 2,
       heartbeatRefreshSeconds: 30,
@@ -301,6 +302,7 @@ export async function registerDriverProfileUploadWorker() {
   await boss.work<DriverProfileImageUploadJobData>(
     QUEUES.DRIVER_PROFILE_IMAGE_UPLOAD_DLQ,
     {
+      batchSize: 1,
       localConcurrency: 2,
       pollingIntervalSeconds: 2,
       heartbeatRefreshSeconds: 30,
