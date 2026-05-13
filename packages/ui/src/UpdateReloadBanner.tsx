@@ -79,8 +79,13 @@ export function UpdateReloadBanner({
 
     async function fetchVersion() {
       try {
-        const response = await fetch("/api/version", {
+        const response = await fetch(`/api/version?ts=${Date.now()}`, {
           cache: "no-store",
+          credentials: "omit",
+          headers: {
+            "Cache-Control": "no-cache",
+            Pragma: "no-cache",
+          },
         });
 
         if (!response.ok) {
@@ -180,7 +185,7 @@ export function UpdateReloadBanner({
       aria-live="polite"
       aria-atomic="true"
       className={cn(
-        "fixed inset-x-0 top-0 z-9999",
+        "fixed inset-x-0 top-0 z-[9999]",
         "flex items-center justify-between gap-3 px-4 py-2.5",
         "bg-amber-400 text-sm font-medium text-amber-950 shadow-sm",
         "animate-in slide-in-from-top duration-300 ease-out"

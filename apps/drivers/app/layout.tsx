@@ -55,7 +55,7 @@ export default function RootLayout({
 }: Readonly<{
   children: React.ReactNode;
 }>) {
-  const appVersion = resolveAppVersion();
+  const appVersion = resolveAppVersion(process.env);
 
   return (
     <html lang="en">
