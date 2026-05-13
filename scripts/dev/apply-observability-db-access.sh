@@ -4,12 +4,9 @@ set -euo pipefail
 PROJECT_ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/../.." && pwd)"
 COMPOSE=(docker compose -f docker-compose.observability.yml)
 
-READONLY_PASSWORD="${DAILYEXPRESS_READONLY_DB_PASSWORD:-dailyexpress_readonly_dev}"
-METABASE_PASSWORD="${METABASE_APP_DB_PASSWORD:-metabase_app_dev}"
-
-sql_escape() {
-  printf "%s" "$1" | sed "s/'/''/g"
-}
+: "${DAILYEXPRESS_API_DB_PASSWORD:?DAILYEXPRESS_API_DB_PASSWORD is required}"
+: "${DAILYEXPRESS_READONLY_DB_PASSWORD:?DAILYEXPRESS_READONLY_DB_PASSWORD is required}"
+: "${METABASE_APP_DB_PASSWORD:?METABASE_APP_DB_PASSWORD is required}"
 
 wait_for_postgres() {
   echo "Waiting for Postgres to become healthy..."
@@ -38,19 +35,12 @@ if [ "${1:-}" != "--db-already-running" ]; then
 fi
 
 echo "Applying observability database roles and grants..."
-"${COMPOSE[@]}" exec -T db psql \
-  -v ON_ERROR_STOP=1 \
-  -U postgres \
-  -d postgres \
-  -f /docker-entrypoint-initdb.d/init-dailyexpress-api-database.sql
-
-readonly_password_sql="$(sql_escape "$READONLY_PASSWORD")"
-metabase_password_sql="$(sql_escape "$METABASE_PASSWORD")"
-
-"${COMPOSE[@]}" exec -T db psql \
-  -v ON_ERROR_STOP=1 \
-  -U postgres \
-  -d postgres \
-  -c "ALTER ROLE dailyexpress_readonly WITH PASSWORD '${readonly_password_sql}'; ALTER ROLE metabase_app WITH PASSWORD '${metabase_password_sql}';"
+"${COMPOSE[@]}" exec -T \
+  -e POSTGRES_USER="${POSTGRES_USER:-postgres}" \
+  -e POSTGRES_DB="${POSTGRES_DB:-postgres}" \
+  -e DAILYEXPRESS_API_DB_PASSWORD="$DAILYEXPRESS_API_DB_PASSWORD" \
+  -e DAILYEXPRESS_READONLY_DB_PASSWORD="$DAILYEXPRESS_READONLY_DB_PASSWORD" \
+  -e METABASE_APP_DB_PASSWORD="$METABASE_APP_DB_PASSWORD" \
+  db bash /docker-entrypoint-initdb.d/init-dailyexpress-api-database.sh
 
 echo "Observability database access is ready."

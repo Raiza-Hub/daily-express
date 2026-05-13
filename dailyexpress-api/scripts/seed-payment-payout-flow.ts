@@ -543,16 +543,19 @@ async function seed() {
   for (const payoutCase of payoutCases) {
     await db.execute(sql`
       INSERT INTO booking (
-        id, trip_id, user_id, seat_number, last_name, status, expires_at,
-        payment_reference, payment_status, created_at, updated_at
+        id, trip_id, user_id, seat_number, last_name, fare_amount, currency,
+        status, expires_at, payment_reference, payment_status, created_at,
+        updated_at
       )
       VALUES (
         ${payoutCase.bookingId}::uuid, ${ids.tripPayout}::uuid,
-        ${ids.passenger}::uuid, null, 'Passenger',
+        ${ids.passenger}::uuid, null, 'Passenger', 50, 'NGN',
         ${payoutCase.earningStatus === "cancelled" ? "cancelled" : "completed"},
         null, ${`dx-seed-booking-${payoutCase.key}`}, 'successful', now(), now()
       )
       ON CONFLICT (id) DO UPDATE SET
+        fare_amount = excluded.fare_amount,
+        currency = excluded.currency,
         status = excluded.status,
         payment_status = excluded.payment_status,
         updated_at = now()

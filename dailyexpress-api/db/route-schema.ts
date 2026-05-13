@@ -140,7 +140,7 @@ export const booking = pgTable(
     userId: uuid("user_id").notNull(),
     seatNumber: integer("seat_number"),
     lastName: text("last_name"),
-    fareAmount: integer("fare_amount").notNull(),
+    fareAmount: integer("fare_amount").default(0).notNull(),
     currency: varchar("currency", { length: 8 }).default("NGN").notNull(),
     status: tripStatusEnum("status").default("pending").notNull(),
     expiresAt: timestamp("expires_at", { mode: "date" }),

@@ -5,11 +5,13 @@ services:
     image: postgres:latest
     container_name: daily_express
     environment:
-      POSTGRES_USER: postgres
-      POSTGRES_PASSWORD: ateazy
+      POSTGRES_USER: ${POSTGRES_USER}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
+      DAILYEXPRESS_API_DB_PASSWORD: ${DAILYEXPRESS_API_DB_PASSWORD}
+      DAILYEXPRESS_READONLY_DB_PASSWORD: ${DAILYEXPRESS_READONLY_DB_PASSWORD}
+      METABASE_APP_DB_PASSWORD: ${METABASE_APP_DB_PASSWORD}
     volumes:
-      - ./init-database.sql:/docker-entrypoint-initdb.d/init-database.sql
-      - ./init-dailyexpress-api-database.sql:/docker-entrypoint-initdb.d/init-dailyexpress-api-database.sql
+      - ./init-dailyexpress-api-database.sh:/docker-entrypoint-initdb.d/init-dailyexpress-api-database.sh
       - pgdata:/var/lib/postgresql
     ports:
       - "5432:5432"
@@ -30,7 +32,7 @@ services:
     environment:
       NODE_ENV: development
       PORT: 8000
-      DATABASE_URL: postgres://olaoluwa:ateazy@db:5432/dailyexpress_api
+      DATABASE_URL: ${DAILYEXPRESS_API_DATABASE_URL}
       FRONTEND_URL: http://localhost:3000
       DRIVER_APP_URL: http://localhost:3001
       PAYMENT_PUBLIC_BASE_URL: http://localhost:8000/api/v1/payments
@@ -60,8 +62,8 @@ services:
       - "8080:80"
     environment:
       APPSMITH_CUSTOM_DOMAIN: ${APPSMITH_CUSTOM_DOMAIN:-http://localhost:8080}
-      APPSMITH_ENCRYPTION_PASSWORD: ${APPSMITH_ENCRYPTION_PASSWORD:-dailyexpress-local-appsmith-password}
-      APPSMITH_ENCRYPTION_SALT: ${APPSMITH_ENCRYPTION_SALT:-dailyexpress-local-appsmith-salt}
+      APPSMITH_ENCRYPTION_PASSWORD: ${APPSMITH_ENCRYPTION_PASSWORD}
+      APPSMITH_ENCRYPTION_SALT: ${APPSMITH_ENCRYPTION_SALT}
     volumes:
       - appsmith-stacks:/appsmith-stacks
     depends_on:
@@ -88,7 +90,7 @@ services:
       MB_DB_DBNAME: ${METABASE_APP_DB_NAME:-dailyexpress_metabase}
       MB_DB_PORT: 5432
       MB_DB_USER: ${METABASE_APP_DB_USER:-metabase_app}
-      MB_DB_PASS: ${METABASE_APP_DB_PASSWORD:-metabase_app_dev}
+      MB_DB_PASS: ${METABASE_APP_DB_PASSWORD}
       MB_DB_HOST: db
       MB_UNAGGREGATED_QUERY_ROW_LIMIT: ${MB_UNAGGREGATED_QUERY_ROW_LIMIT:-2000}
       MB_AGGREGATED_QUERY_ROW_LIMIT: ${MB_AGGREGATED_QUERY_ROW_LIMIT:-10000}

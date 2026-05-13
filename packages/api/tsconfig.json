@@ -7,7 +7,6 @@
     "declarationMap": false,
     "noEmit": true,
     "outDir": "dist",
-    "baseUrl": ".",
     "paths": {
       "@repo/ui/*": ["./src/*"],
       "@shared/*": ["../../shared/*"]

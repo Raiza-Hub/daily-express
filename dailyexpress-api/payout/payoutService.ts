@@ -139,7 +139,8 @@ export class PayoutService {
   async markTripCompletedInTransaction(
     tx: PayoutTransaction,
     input: { tripId: string; completedAt?: Date },
-  ): Promise<void> {
+  ): Promise<{ pendingNotifications: DriverNotification[] }> {
+    const pendingNotifications: DriverNotification[] = [];
     const reconciliation = await this.reconcileTripEarningsInTransaction(
       tx,
       input.tripId,
@@ -164,9 +165,9 @@ export class PayoutService {
             input.tripId,
             reconciliation,
           );
-        await publishNotificationCreated(notificationRecord);
+        pendingNotifications.push(notificationRecord);
       }
-      return;
+      return { pendingNotifications };
     }
 
     const releasedEarnings = await tx
@@ -187,6 +188,8 @@ export class PayoutService {
     for (const entry of releasedEarnings) {
       await jobService.enqueuePayout(tx, { earningId: entry.id });
     }
+
+    return { pendingNotifications };
   }
 
   private async reconcileTripEarningsInTransaction(
@@ -200,7 +203,7 @@ export class PayoutService {
     const [bookingTotals] = await tx
       .select({
         count: sql<number>`count(*)::int`,
-        amountMinor: sql<number>`coalesce(sum(${booking.fareAmount} * 100), 0)::int`,
+        amountMinor: sql<number>`coalesce(sum(${booking.fareAmount} * 100), 0)::bigint`,
       })
       .from(booking)
       .where(
@@ -214,7 +217,7 @@ export class PayoutService {
     const [earningTotals] = await tx
       .select({
         count: sql<number>`count(*)::int`,
-        amountMinor: sql<number>`coalesce(sum(${earning.grossAmountMinor}), 0)::int`,
+        amountMinor: sql<number>`coalesce(sum(${earning.grossAmountMinor}), 0)::bigint`,
       })
       .from(earning)
       .where(
