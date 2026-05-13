@@ -270,6 +270,8 @@ export interface Booking {
   tripId: string;
   userId: string;
   seatNumber: number | null;
+  fareAmount?: number;
+  currency?: string;
   status:
     | "pending"
     | "confirmed"
