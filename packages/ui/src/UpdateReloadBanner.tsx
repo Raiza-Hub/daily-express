@@ -79,8 +79,13 @@ export function UpdateReloadBanner({
 
     async function fetchVersion() {
       try {
-        const response = await fetch("/api/version", {
+        const response = await fetch(`/api/version?ts=${Date.now()}`, {
           cache: "no-store",
+          credentials: "omit",
+          headers: {
+            "Cache-Control": "no-cache",
+            Pragma: "no-cache",
+          },
         });
 
         if (!response.ok) {

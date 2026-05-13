@@ -1,4 +1,4 @@
-import rateLimit from "express-rate-limit";
+import rateLimit, { ipKeyGenerator } from "express-rate-limit";
 import { Redis } from "@upstash/redis";
 import { RedisStore, type RedisReply } from "rate-limit-redis";
 import { getConfig } from "../config/index";
@@ -33,7 +33,7 @@ const redis =
     : null;
 
 function getClientKey(req: Request): string {
-  return `ip:${req.ip}`;
+  return `ip:${ipKeyGenerator(req.ip as string)}`;
 }
 
 function createLimiter(options: {
@@ -70,7 +70,6 @@ export const publicRoutesLimiter = createLimiter({
   max: Number(process.env.RATE_LIMIT_PUBLIC_ROUTES ?? 120),
   prefix: "public",
   message: "Too many requests. Please try again shortly.",
-  keyGenerator: (req) => `ip:${req.ip}`,
   skip: (req) => !isPublicRouteSearchPath(getRequestPath(req), req.method),
 });
 
@@ -79,7 +78,6 @@ export const authLimiter = createLimiter({
   max: Number(process.env.RATE_LIMIT_PUBLIC_AUTH ?? 10),
   prefix: "auth",
   message: "Too many authentication attempts. Please try again shortly.",
-  keyGenerator: (req) => `ip:${req.ip}`,
   skip: (req) => !isPublicAuthPath(getRequestPath(req), req.method),
 });
 
@@ -103,6 +101,5 @@ export const webhookLimiter = createLimiter({
   max: Number(process.env.RATE_LIMIT_WEBHOOK ?? 300),
   prefix: "webhook",
   message: "Too many webhook requests.",
-  keyGenerator: (req) => `ip:${req.ip}`,
   skip: (req) => !isWebhookPath(getRequestPath(req), req.method),
 });
