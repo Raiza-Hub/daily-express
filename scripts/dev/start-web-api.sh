@@ -51,7 +51,7 @@ start_database() {
   fi
 
   echo "Starting Postgres database..."
-  docker compose up -d db
+  docker compose -f docker-compose.observability.yml up -d --remove-orphans db
 
   echo "Waiting for Postgres to become healthy..."
   for _ in {1..60}; do
@@ -64,7 +64,7 @@ start_database() {
   done
 
   echo "Postgres did not become healthy within 60 seconds."
-  echo "Run 'docker compose logs db' for details."
+  echo "Run 'docker compose -f docker-compose.observability.yml logs db' for details."
   exit 1
 }
 
