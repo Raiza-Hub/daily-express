@@ -410,12 +410,13 @@ async function seed() {
 
     await db.execute(sql`
       INSERT INTO booking (
-        id, trip_id, user_id, seat_number, last_name, status, expires_at,
-        payment_reference, payment_status, created_at, updated_at
+        id, trip_id, user_id, seat_number, last_name, fare_amount, currency,
+        status, expires_at, payment_reference, payment_status, created_at,
+        updated_at
       )
       VALUES (
         ${paymentCase.bookingId}::uuid, ${paymentCase.tripId}::uuid,
-        ${ids.passenger}::uuid, null, 'Passenger',
+        ${ids.passenger}::uuid, null, 'Passenger', 5000, 'NGN',
         ${bookingStatus},
         ${dbDate(paymentCase.expiresAt)}, ${paymentCase.reference},
         ${paymentCase.status}, now(), now()
@@ -423,6 +424,8 @@ async function seed() {
       ON CONFLICT (id) DO UPDATE SET
         payment_reference = excluded.payment_reference,
         payment_status = excluded.payment_status,
+        fare_amount = excluded.fare_amount,
+        currency = excluded.currency,
         status = excluded.status,
         expires_at = excluded.expires_at,
         updated_at = now()
@@ -466,12 +469,12 @@ async function seed() {
     if (paymentCase.expiresAt) {
       await db.execute(sql`
         INSERT INTO booking_hold (
-          booking_id, trip_id, user_id, fare_amount, currency,
-          expires_at, pg_boss_job_id, created_at, updated_at
+          booking_id, trip_id, user_id, expires_at, pg_boss_job_id,
+          created_at, updated_at
         )
         VALUES (
           ${paymentCase.bookingId}::uuid, ${paymentCase.tripId}::uuid,
-          ${ids.passenger}::uuid, 5000, 'NGN', ${dbDate(paymentCase.expiresAt)},
+          ${ids.passenger}::uuid, ${dbDate(paymentCase.expiresAt)},
           ${`dx-seed-expire-${paymentCase.key}`}, now(), now()
         )
         ON CONFLICT (booking_id) DO UPDATE SET
