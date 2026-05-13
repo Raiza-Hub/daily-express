@@ -9,6 +9,12 @@ export async function registerPaymentExpiryWorker() {
 
   await boss.work<PaymentExpireJobData>(
     QUEUES.PAYMENT_EXPIRE,
+    {
+      batchSize: 1,
+      localConcurrency: 3,
+      pollingIntervalSeconds: 2,
+      heartbeatRefreshSeconds: 30,
+    },
     async ([job]) => {
       logger.info("worker.payment_expiry.started", {
         jobId: job.id,
@@ -32,6 +38,12 @@ export async function registerPaymentExpiryWorker() {
 
   await boss.work<PaymentExpireJobData>(
     QUEUES.PAYMENT_EXPIRE_DLQ,
+    {
+      batchSize: 1,
+      localConcurrency: 1,
+      pollingIntervalSeconds: 5,
+      heartbeatRefreshSeconds: 30,
+    },
     async ([job]) => {
       logger.error("worker.payment_expiry.dlq", {
         jobId: job.id,

@@ -105,8 +105,6 @@ export const bookingHold = pgTable(
     bookingId: uuid("booking_id").notNull().unique(),
     tripId: uuid("trip_id").notNull(),
     userId: uuid("user_id").notNull(),
-    fareAmount: integer("fare_amount").notNull(),
-    currency: varchar("currency", { length: 8 }).default("NGN").notNull(),
     expiresAt: timestamp("expires_at", { mode: "date" }).notNull(),
     pgBossJobId: text("pg_boss_job_id"),
     createdAt: timestamp("created_at", { mode: "date" }).defaultNow().notNull(),
