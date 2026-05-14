@@ -164,8 +164,16 @@ export function UpdateReloadBanner({
       return;
     }
 
+    const root = document.documentElement;
+
     function syncBannerHeight() {
-      setBannerHeight(bannerRef.current?.offsetHeight ?? 0);
+      const nextHeight = bannerRef.current?.offsetHeight ?? 0;
+      setBannerHeight(nextHeight);
+      root.style.setProperty(
+        "--dailyexpress-update-banner-height",
+        `${nextHeight}px`
+      );
+      root.dataset.dailyexpressUpdateBanner = "visible";
     }
 
     syncBannerHeight();
@@ -184,6 +192,8 @@ export function UpdateReloadBanner({
     return () => {
       observer?.disconnect();
       window.removeEventListener("resize", syncBannerHeight);
+      root.style.removeProperty("--dailyexpress-update-banner-height");
+      delete root.dataset.dailyexpressUpdateBanner;
       setBannerHeight(0);
     };
   }, [updateAvailable]);
