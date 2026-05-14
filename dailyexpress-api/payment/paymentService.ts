@@ -17,7 +17,7 @@ import {
 } from "../db/index";
 import { DriverService } from "../driver/driverService";
 import { NotificationService } from "../notification/notificationService";
-import { publishNotificationCreated } from "../notification/realtime";
+import { publishNotificationCreatedInBackground } from "../notification/realtime";
 import { PayoutService } from "../payout/payoutService";
 import { jobService } from "../workers/jobService";
 import type { WebhookJobData } from "../workers/boss";
@@ -819,7 +819,7 @@ export class PaymentService {
     }
 
     if (result.notification) {
-      await publishNotificationCreated(result.notification);
+      publishNotificationCreatedInBackground(result.notification);
     }
 
     logger.info("payment.confirmed", {
