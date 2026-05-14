@@ -7,6 +7,7 @@ const DEFAULT_WEB_DESCRIPTION =
   "Search Daily Express routes, compare fares, and book intercity trips with confidence.";
 const DEFAULT_WEB_APP_URL = env.NEXT_PUBLIC_WEB_APP_URL;
 const DAILYEXPRESS_API_URL = env.NEXT_PUBLIC_DAILYEXPRESS_API_URL;
+const WEB_BRAND_LOGO_PREVIEW_PATH = "/opengraph-image?v=20260514-logo-card";
 
 export const webAppName = WEB_APP_NAME;
 export const webAppUrl = new URL(DEFAULT_WEB_APP_URL);
@@ -98,6 +99,10 @@ export function buildWebAbsoluteUrl(path = "/") {
   return new URL(path, webAppUrl).toString();
 }
 
+export function buildWebBrandLogoPreviewUrl() {
+  return buildWebAbsoluteUrl(WEB_BRAND_LOGO_PREVIEW_PATH);
+}
+
 export function buildWebMetadata({
   title,
   description = DEFAULT_WEB_DESCRIPTION,
@@ -128,9 +133,9 @@ export function buildWebMetadata({
       type: "website",
       images: [
         {
-          url: buildWebAbsoluteUrl("/brand-logo.png"),
-          width: 1478,
-          height: 528,
+          url: buildWebBrandLogoPreviewUrl(),
+          width: 1200,
+          height: 630,
           alt: `${WEB_APP_NAME} logo`,
         },
       ],
@@ -139,7 +144,7 @@ export function buildWebMetadata({
       card: "summary_large_image",
       title: fullTitle,
       description,
-      images: [buildWebAbsoluteUrl("/brand-logo.png")],
+      images: [buildWebBrandLogoPreviewUrl()],
     },
   };
 }
