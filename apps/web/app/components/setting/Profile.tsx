@@ -1,7 +1,12 @@
 "use client";
 
 import { zodResolver } from "@hookform/resolvers/zod";
-import { useGetMe, useGetProviders, useUpdateProfile } from "@repo/api";
+import {
+  applyApiFieldErrors,
+  useGetMe,
+  useGetProviders,
+  useUpdateProfile,
+} from "@repo/api";
 import { SignUpSchema } from "@repo/types/authSchema";
 import { Button } from "@repo/ui/components/button";
 import {
@@ -38,6 +43,7 @@ const Profile = () => {
       // toast.success("Profile updated successfully");
     },
     onError: (err) => {
+      applyApiFieldErrors<keyof TProfileSchema>(err, setError);
       posthog.captureException(new Error(err.message), {
         action: "updateProfile",
       });
@@ -48,6 +54,7 @@ const Profile = () => {
     handleSubmit,
     control,
     reset,
+    setError,
     formState: { isSubmitting, isDirty },
   } = useForm<TProfileSchema>({
     resolver: zodResolver(ProfileSchema),

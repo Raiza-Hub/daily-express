@@ -1,7 +1,12 @@
 "use client";
 
 import { zodResolver } from "@hookform/resolvers/zod";
-import { useGetDriver, useUpdateDriver } from "@repo/api";
+import {
+  applyApiFieldErrors,
+  getApiErrorMessage,
+  useGetDriver,
+  useUpdateDriver,
+} from "@repo/api";
 import { onboardingSchema } from "@repo/types/index";
 import { Button } from "@repo/ui/components/button";
 import { FieldGroup } from "@repo/ui/components/field";
@@ -47,18 +52,6 @@ const DriverInfo = () => {
   const posthog = usePostHog();
 
   const { data: driver, isLoading, refetch } = useGetDriver();
-  const { mutate: updateDriver, isPending: isUpdating } = useUpdateDriver({
-    onSuccess: () => {
-      posthog.capture(posthogEvents.driver_profile_update_succeeded);
-      refetch();
-    },
-    onError: (error: Error) => {
-      posthog.captureException(error, {
-        action: "driver_profile_update_failed",
-      });
-      setDriverInfoError(error.message);
-    },
-  });
 
   const [{ isDragging, files }, uploadActions] = useFileUpload({
     onFilesChange: (nextFiles) => {
@@ -94,6 +87,7 @@ const DriverInfo = () => {
     control,
     watch,
     setValue,
+    setError,
     reset,
     formState: { errors, isSubmitting, isDirty },
   } = useForm<TDriverInfoSchema>({
@@ -108,6 +102,24 @@ const DriverInfo = () => {
       city: driver?.city || "",
       state: driver?.state || "",
       phoneNumber: driver?.phone || "",
+    },
+  });
+  const { mutate: updateDriver, isPending: isUpdating } = useUpdateDriver({
+    onSuccess: () => {
+      posthog.capture(posthogEvents.driver_profile_update_succeeded);
+      refetch();
+    },
+    onError: (error: Error) => {
+      applyApiFieldErrors<keyof TDriverInfoSchema>(error, setError, {
+        phone: "phoneNumber",
+        profile_pic: "file",
+      });
+      posthog.captureException(error, {
+        action: "driver_profile_update_failed",
+      });
+      setDriverInfoError(
+        getApiErrorMessage(error, "Failed to update driver profile"),
+      );
     },
   });
 

@@ -64,7 +64,9 @@ function getForwardHeaders(req: Request): Record<string, string> {
 }
 
 async function readServiceResponse<T>(response: globalThis.Response) {
-  const body = (await response.json().catch(() => null)) as ApiResponse<T> | null;
+  const body = (await response
+    .json()
+    .catch(() => null)) as ApiResponse<T> | null;
   if (response.ok && body?.success && body.data !== undefined) {
     return body.data;
   }
@@ -119,7 +121,10 @@ router.post("/v1/trip", async (req: Request, res: Response) => {
 
     await readServiceResponse<null>(
       await fetch(
-        serviceUrl(config.PAYMENT_SERVICE_URL, "/v1/payments/internal/booking-holds"),
+        serviceUrl(
+          config.PAYMENT_SERVICE_URL,
+          "/v1/payments/internal/booking-holds",
+        ),
         {
           method: "POST",
           headers: {
@@ -139,7 +144,10 @@ router.post("/v1/trip", async (req: Request, res: Response) => {
     );
 
     const paymentResponse = await fetch(
-      serviceUrl(config.PAYMENT_SERVICE_URL, "/v1/payments/internal/initialize"),
+      serviceUrl(
+        config.PAYMENT_SERVICE_URL,
+        "/v1/payments/internal/initialize",
+      ),
       {
         method: "POST",
         headers: {
@@ -174,7 +182,8 @@ router.post("/v1/trip", async (req: Request, res: Response) => {
         bookingId: booking.id,
         paymentReference: payment.reference,
         checkoutUrl: payment.checkoutUrl,
-        expiresAt: payment.expiresAt ?? checkoutBooking.expiresAt ?? booking.expiresAt,
+        expiresAt:
+          payment.expiresAt ?? checkoutBooking.expiresAt ?? booking.expiresAt,
       },
       message: "Trip checkout created successfully",
     });

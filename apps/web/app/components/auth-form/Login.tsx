@@ -2,7 +2,7 @@
 
 import { zodResolver } from "@hookform/resolvers/zod";
 import { SignInSchema, TSignInSchema } from "@repo/types/authSchema";
-import { getDriverFn, useLogin } from "@repo/api";
+import { applyApiFieldErrors, getDriverFn, useLogin } from "@repo/api";
 import { Button } from "@repo/ui/components/button";
 import { Field, FieldError, FieldLabel } from "@repo/ui/components/field";
 import { Input } from "@repo/ui/components/input";
@@ -22,7 +22,7 @@ const LoginForm = ({ redirect }: { redirect?: string }) => {
   const posthog = usePostHog();
   const [isGoogleLoading, setIsGoogleLoading] = useState(false);
 
-  const { handleSubmit, control } = useForm<TSignInSchema>({
+  const { handleSubmit, control, setError } = useForm<TSignInSchema>({
     resolver: zodResolver(SignInSchema),
     defaultValues: {
       email: "",
@@ -68,6 +68,7 @@ const LoginForm = ({ redirect }: { redirect?: string }) => {
           router.push(destination);
         },
         onError: (err) => {
+          applyApiFieldErrors<keyof TSignInSchema>(err, setError);
           posthog.captureException(new Error(err.message), {
             action: "login",
             values: { email: data.email },

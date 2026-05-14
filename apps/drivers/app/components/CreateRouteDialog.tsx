@@ -8,7 +8,11 @@ import { MapPinPlusIcon } from "@phosphor-icons/react";
 import { useState } from "react";
 import { CreateRouteForm } from "./route/CreateRouteForm";
 import { ResponsiveModal } from "@repo/ui/ResponsiveModal";
-import { useCreateRoute } from "@repo/api";
+import {
+  applyApiFieldErrors,
+  getApiErrorMessage,
+  useCreateRoute,
+} from "@repo/api";
 import { useRouteFormUi } from "./route/useRouteFormUi";
 import { posthogEvents } from "~/lib/posthog-events";
 import { usePostHog } from "posthog-js/react";
@@ -22,7 +26,7 @@ const CreateRouteDialog = () => {
   const ui = useRouteFormUi();
   const posthog = usePostHog();
 
-  const { handleSubmit, control, reset } = useForm<TRoute>({
+  const { handleSubmit, control, reset, setError } = useForm<TRoute>({
     resolver: zodResolver(routeSchema),
     defaultValues: {
       departureCity: {
@@ -43,8 +47,6 @@ const CreateRouteDialog = () => {
       meetingPoint: "",
     },
   });
-
-
   const createRoute = useCreateRoute({
     onSuccess: () => {
       posthog.capture(posthogEvents.driver_route_created_succeeded);
@@ -55,8 +57,20 @@ const CreateRouteDialog = () => {
       }
     },
     onError: (error: Error) => {
+      applyApiFieldErrors<keyof TRoute>(error, setError, {
+        pickup_location_title: "departureCity",
+        pickup_location_locality: "departureCity",
+        pickup_location_label: "departureCity",
+        dropoff_location_title: "arrivalCity",
+        dropoff_location_locality: "arrivalCity",
+        dropoff_location_label: "arrivalCity",
+        meeting_point: "meetingPoint",
+        availableSeats: "seatNumber",
+        departure_time: "departureTime",
+        arrival_time: "estimatedArrivalTime",
+      });
       posthog.captureException(error, { action: "driver_route_create_failed" });
-      setCreateError(error.message);
+      setCreateError(getApiErrorMessage(error, "Failed to create route"));
     },
   });
 
