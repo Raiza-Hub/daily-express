@@ -230,7 +230,7 @@ export function UpdateReloadBanner({
         className={cn(
           "fixed inset-x-0 top-0 z-9999 border-b border-[#BFDBFE]",
           "flex items-center justify-between gap-3 px-4 py-2.5",
-          "bg-[#EFF6FF] text-sm font-medium text-[#1E40AF] shadow-sm",
+          "bg-[#F8FBFF] text-sm font-medium text-[#1E40AF]",
           "animate-in slide-in-from-top duration-300 ease-out"
         )}
       >
@@ -250,8 +250,8 @@ export function UpdateReloadBanner({
             size="sm"
             variant="ghost"
             className={cn(
-              "h-7 gap-1.5 rounded-sm px-2.5",
-              "bg-[#BFDBFE]/50 text-[#1E40AF] hover:bg-[#BFDBFE]",
+              "h-7 cursor-pointer gap-1.5 rounded-sm px-2.5",
+              "bg-[#EFF6FF] text-[#1E40AF] hover:bg-[#DBEAFE] hover:text-[#1E40AF]",
               "focus-visible:ring-[#1E40AF]"
             )}
             onClick={handleReload}
@@ -265,8 +265,8 @@ export function UpdateReloadBanner({
             size="icon"
             variant="ghost"
             className={cn(
-              "size-7 rounded-sm",
-              "text-[#1E40AF] hover:bg-[#BFDBFE]/60",
+              "size-7 cursor-pointer rounded-sm",
+              "text-[#1E40AF] hover:bg-[#DBEAFE] hover:text-[#1E40AF]",
               "focus-visible:ring-[#1E40AF]"
             )}
             onClick={handleDismiss}
