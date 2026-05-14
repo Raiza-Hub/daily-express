@@ -1,9 +1,13 @@
 import type { Request, RequestHandler, Response } from "express";
 import { asyncHandler } from "@shared/middleware";
-import { createErrorResponse, createSuccessResponse } from "@shared/utils";
+import { createSuccessResponse } from "@shared/utils";
 import { getAuthenticatedUser } from "../middleware/auth";
+import { sendErrorResponse } from "../middleware/apiResponses";
 import { PaymentService } from "./paymentService";
-import type { InitializePaymentInput, KoraWebhookPayload } from "./payment.types";
+import type {
+  InitializePaymentInput,
+  KoraWebhookPayload,
+} from "./payment.types";
 import { timeAsync } from "../utils/timing";
 
 const paymentService = new PaymentService();
@@ -12,7 +16,9 @@ export const initializePayment: RequestHandler = asyncHandler(
   async (req: Request, res: Response) => {
     const gatewayUser = getAuthenticatedUser(req);
     if (!gatewayUser) {
-      return res.status(401).json(createErrorResponse("User not authenticated"));
+      return sendErrorResponse(res, 401, "Please sign in again to continue.", {
+        code: "AUTHENTICATION_REQUIRED",
+      });
     }
 
     const input: InitializePaymentInput = req.body;
@@ -36,19 +42,16 @@ export const initializePayment: RequestHandler = asyncHandler(
 export const handleKoraWebhook: RequestHandler = asyncHandler(
   async (req: Request, res: Response) => {
     if (!isKoraWebhookPayload(req.body)) {
-      return res
-        .status(400)
-        .json(createErrorResponse("Invalid Kora webhook payload"));
+      return sendErrorResponse(res, 400, "Invalid payment webhook payload.", {
+        code: "INVALID_WEBHOOK_PAYLOAD",
+      });
     }
 
-    await timeAsync(
-      "payment.webhook.service",
-      { event: req.body.event },
-      () =>
-        paymentService.handleKoraWebhook(
-          req.body,
-          req.header("x-korapay-signature") || undefined,
-        ),
+    await timeAsync("payment.webhook.service", { event: req.body.event }, () =>
+      paymentService.handleKoraWebhook(
+        req.body,
+        req.header("x-korapay-signature") || undefined,
+      ),
     );
 
     return res.status(200).json({ received: true });
@@ -73,11 +76,7 @@ export const getPaymentReturn: RequestHandler = asyncHandler(
     const redirectUrl = await timeAsync(
       "payment.return.service",
       { hasReference: Boolean(reference), providerStatus },
-      () =>
-        paymentService.resolveReturnUrl(
-          reference,
-          providerStatus,
-        ),
+      () => paymentService.resolveReturnUrl(reference, providerStatus),
     );
     return res.redirect(redirectUrl);
   },

@@ -12,6 +12,7 @@ import { db } from "../db/connection";
 import { users } from "../db/index";
 import { eq } from "drizzle-orm";
 import { logger } from "../utils/logger";
+import { sendErrorResponse } from "./apiResponses";
 
 const ACCESS_TOKEN_MAX_AGE_MS = 15 * 60 * 1000;
 const REFRESH_TOKEN_MAX_AGE_MS = 7 * 24 * 60 * 60 * 1000;
@@ -115,9 +116,8 @@ export function authMiddleware(
 
         if (!isJwtPayload(decoded)) {
           clearAuthCookies(res, config);
-          res.status(401).json({
-            success: false,
-            message: "Invalid token payload. Please login again.",
+          sendErrorResponse(res, 401, "Please sign in again to continue.", {
+            code: "INVALID_TOKEN",
           });
           return;
         }
@@ -134,10 +134,14 @@ export function authMiddleware(
 
     if (!refreshToken) {
       clearAuthCookies(res, config);
-      res.status(401).json({
-        success: false,
-        message: "Session expired. Please login again.",
-      });
+      sendErrorResponse(
+        res,
+        401,
+        "Your session has expired. Please sign in again.",
+        {
+          code: "SESSION_EXPIRED",
+        },
+      );
       return;
     }
 
@@ -148,9 +152,8 @@ export function authMiddleware(
 
     if (!isJwtPayload(refreshed) || typeof refreshed.iat !== "number") {
       clearAuthCookies(res, config);
-      res.status(401).json({
-        success: false,
-        message: "Invalid refresh token payload. Please login again.",
+      sendErrorResponse(res, 401, "Please sign in again to continue.", {
+        code: "INVALID_TOKEN",
       });
       return;
     }
@@ -163,10 +166,14 @@ export function authMiddleware(
       refreshed.iat * 1000 < sessionInvalidBefore.getTime()
     ) {
       clearAuthCookies(res, config);
-      res.status(401).json({
-        success: false,
-        message: "Session expired. Please login again.",
-      });
+      sendErrorResponse(
+        res,
+        401,
+        "Your session has expired. Please sign in again.",
+        {
+          code: "SESSION_EXPIRED",
+        },
+      );
       return;
     }
 
@@ -176,18 +183,21 @@ export function authMiddleware(
   })().catch((error) => {
     if (error instanceof jwt.TokenExpiredError) {
       clearAuthCookies(res, config);
-      res.status(401).json({
-        success: false,
-        message: "Session expired. Please login again.",
-      });
+      sendErrorResponse(
+        res,
+        401,
+        "Your session has expired. Please sign in again.",
+        {
+          code: "SESSION_EXPIRED",
+        },
+      );
       return;
     }
 
     if (error instanceof jwt.JsonWebTokenError) {
       clearAuthCookies(res, config);
-      res.status(401).json({
-        success: false,
-        message: "Invalid token. Please login again.",
+      sendErrorResponse(res, 401, "Please sign in again to continue.", {
+        code: "INVALID_TOKEN",
       });
       return;
     }
@@ -195,9 +205,8 @@ export function authMiddleware(
     logger.error("auth.token_validation_failed", {
       error: error instanceof Error ? error.message : String(error),
     });
-    res.status(500).json({
-      success: false,
-      message: "Token validation failed",
+    sendErrorResponse(res, 500, undefined, {
+      code: "TOKEN_VALIDATION_FAILED",
     });
   });
 }

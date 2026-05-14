@@ -3,16 +3,42 @@ import type { ServiceError } from "../types/index";
 import { sentryServer } from "@shared/sentry";
 import type { JWTPayload } from "@shared/types";
 import { logger } from "../utils/logger";
+import { getDefaultErrorMessage, sendErrorResponse } from "./apiResponses";
+
+interface ExpressError extends ServiceError {
+  status?: number;
+  type?: string;
+}
+
+function getErrorStatusCode(err: ExpressError): number {
+  const statusCode = err.statusCode || err.status || 500;
+  return Number.isInteger(statusCode) && statusCode >= 400 && statusCode <= 599
+    ? statusCode
+    : 500;
+}
+
+function getUserFacingMessage(err: ExpressError, statusCode: number): string {
+  if (statusCode >= 500) {
+    return getDefaultErrorMessage(statusCode);
+  }
+
+  if (err.type === "entity.parse.failed") {
+    return "Request body must be valid JSON.";
+  }
+
+  return err.message || getDefaultErrorMessage(statusCode);
+}
 
 export function errorHandler(
-  err: ServiceError,
+  err: ExpressError,
   req: Request,
   res: Response,
   _next: NextFunction,
 ): void {
-  const statusCode = err.statusCode || 500;
-  const message = err.message || "Internal Server Error";
-  const code = err.code || "INTERNAL_ERROR";
+  const statusCode = getErrorStatusCode(err);
+  const isServerError = statusCode >= 500;
+  const message = getUserFacingMessage(err, statusCode);
+  const code = err.code;
 
   logger.error("request.error", {
     message: err.message,
@@ -20,7 +46,7 @@ export function errorHandler(
     method: req.method,
     path: req.originalUrl,
     statusCode,
-    code,
+    code: code || (isServerError ? "INTERNAL_ERROR" : "REQUEST_FAILED"),
     timestamp: new Date().toISOString(),
   });
 
@@ -31,13 +57,12 @@ export function errorHandler(
     method: req.method,
     path: req.originalUrl,
     statusCode,
-    code,
+    code: code || (isServerError ? "INTERNAL_ERROR" : "REQUEST_FAILED"),
   });
 
-  res.status(statusCode).json({
-    success: false,
-    message,
-    code,
+  sendErrorResponse(res, statusCode, message, {
+    ...(code ? { code } : {}),
+    details: !isServerError && "details" in err ? err.details : undefined,
   });
 }
 
@@ -47,9 +72,12 @@ export function notFoundHandler(req: Request, res: Response): void {
     path: req.path,
   });
 
-  res.status(404).json({
-    success: false,
-    message: `Route ${req.method} ${req.path} not found`,
-    code: "ROUTE_NOT_FOUND",
-  });
+  sendErrorResponse(
+    res,
+    404,
+    "We could not find that Daily Express endpoint.",
+    {
+      code: "ROUTE_NOT_FOUND",
+    },
+  );
 }

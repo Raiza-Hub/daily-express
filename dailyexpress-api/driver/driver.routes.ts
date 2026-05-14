@@ -1,11 +1,11 @@
 import { Router } from "express";
 import * as driverController from "./driver.controller";
-import { authenticateVerifiedGatewayRequest, validateRequest } from "@shared/middleware";
+import { authenticateVerifiedGatewayRequest } from "../middleware/gatewayAuth";
+import { validateRequest } from "../middleware/requestValidation";
 import { createDriverSchema, updateDriverSchema } from "./validation";
 import { cloudinaryMiddleware } from "./cloudinary";
 
 const router: Router = Router();
-
 
 router.get(
   "/profile",

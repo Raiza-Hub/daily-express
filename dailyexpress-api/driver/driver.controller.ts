@@ -1,8 +1,9 @@
 import type { Request, Response, RequestHandler } from "express";
 import { asyncHandler } from "@shared/middleware";
 import { DriverService } from "./driverService";
-import { createErrorResponse, createSuccessResponse } from "@shared/utils";
+import { createSuccessResponse } from "@shared/utils";
 import { getAuthenticatedUser } from "../middleware/auth";
+import { sendErrorResponse } from "../middleware/apiResponses";
 import { timeAsync } from "../utils/timing";
 import type { DriverProfileImageUploadRequest } from "./cloudinary";
 
@@ -14,20 +15,20 @@ export const getDriver: RequestHandler = asyncHandler(
     const userId = gatewayUser?.userId;
 
     if (!userId) {
-      return res
-        .status(401)
-        .json(createErrorResponse("User not authenticated"));
+      return sendErrorResponse(res, 401, "Please sign in again to continue.", {
+        code: "AUTHENTICATION_REQUIRED",
+      });
     }
 
-    const driver = await timeAsync(
-      "driver.profile.service",
-      { userId },
-      () => driverService.getProfile(userId),
+    const driver = await timeAsync("driver.profile.service", { userId }, () =>
+      driverService.getProfile(userId),
     );
 
     return res
       .status(200)
-      .json(createSuccessResponse(driver, "Driver profile retrieved successfully"));
+      .json(
+        createSuccessResponse(driver, "Driver profile retrieved successfully"),
+      );
   },
 );
 
@@ -38,26 +39,26 @@ export const createDriver: RequestHandler = asyncHandler(
     const userId = gatewayUser?.userId;
 
     if (!userId) {
-      return res
-        .status(401)
-        .json(createErrorResponse("User not authenticated"));
+      return sendErrorResponse(res, 401, "Please sign in again to continue.", {
+        code: "AUTHENTICATION_REQUIRED",
+      });
     }
 
     if (!req.profileImageUpload && !driverData.profile_pic) {
-      return res
-        .status(400)
-        .json(createErrorResponse("Profile photo is required"));
+      return sendErrorResponse(res, 400, "Profile photo is required.", {
+        code: "MISSING_PROFILE_PHOTO",
+      });
     }
 
-    const driver = await timeAsync(
-      "driver.create.service",
-      { userId },
-      () => driverService.createDriver(userId, driverData, req.profileImageUpload),
+    const driver = await timeAsync("driver.create.service", { userId }, () =>
+      driverService.createDriver(userId, driverData, req.profileImageUpload),
     );
 
     return res
       .status(201)
-      .json(createSuccessResponse(driver, "Driver profile created successfully"));
+      .json(
+        createSuccessResponse(driver, "Driver profile created successfully"),
+      );
   },
 );
 
@@ -68,20 +69,20 @@ export const updateDriver: RequestHandler = asyncHandler(
     const userId = gatewayUser?.userId;
 
     if (!userId) {
-      return res
-        .status(401)
-        .json(createErrorResponse("User not authenticated"));
+      return sendErrorResponse(res, 401, "Please sign in again to continue.", {
+        code: "AUTHENTICATION_REQUIRED",
+      });
     }
 
-    const driver = await timeAsync(
-      "driver.update.service",
-      { userId },
-      () => driverService.updateDriver(userId, driverData, req.profileImageUpload),
+    const driver = await timeAsync("driver.update.service", { userId }, () =>
+      driverService.updateDriver(userId, driverData, req.profileImageUpload),
     );
 
     return res
       .status(200)
-      .json(createSuccessResponse(driver, "Driver profile updated successfully"));
+      .json(
+        createSuccessResponse(driver, "Driver profile updated successfully"),
+      );
   },
 );
 
@@ -91,15 +92,13 @@ export const deleteDriver: RequestHandler = asyncHandler(
     const userId = gatewayUser?.userId;
 
     if (!userId) {
-      return res
-        .status(401)
-        .json(createErrorResponse("User not authenticated"));
+      return sendErrorResponse(res, 401, "Please sign in again to continue.", {
+        code: "AUTHENTICATION_REQUIRED",
+      });
     }
 
-    await timeAsync(
-      "driver.delete.service",
-      { userId },
-      () => driverService.deleteDriver(userId),
+    await timeAsync("driver.delete.service", { userId }, () =>
+      driverService.deleteDriver(userId),
     );
 
     return res
@@ -114,9 +113,9 @@ export const getDriverStats: RequestHandler = asyncHandler(
     const userId = gatewayUser?.userId;
 
     if (!userId) {
-      return res
-        .status(401)
-        .json(createErrorResponse("User not authenticated"));
+      return sendErrorResponse(res, 401, "Please sign in again to continue.", {
+        code: "AUTHENTICATION_REQUIRED",
+      });
     }
 
     const driver = await timeAsync(
@@ -125,7 +124,14 @@ export const getDriverStats: RequestHandler = asyncHandler(
       () => driverService.getProfile(userId),
     );
     if (!driver) {
-      return res.status(404).json(createErrorResponse("Driver not found"));
+      return sendErrorResponse(
+        res,
+        404,
+        "We could not find your driver profile.",
+        {
+          code: "DRIVER_NOT_FOUND",
+        },
+      );
     }
 
     const stats = await timeAsync(
@@ -136,6 +142,8 @@ export const getDriverStats: RequestHandler = asyncHandler(
 
     return res
       .status(200)
-      .json(createSuccessResponse(stats, "Driver stats retrieved successfully"));
+      .json(
+        createSuccessResponse(stats, "Driver stats retrieved successfully"),
+      );
   },
 );

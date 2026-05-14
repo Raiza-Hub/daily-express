@@ -19,6 +19,7 @@ import paymentRoutes from "./payment/payment.routes";
 import payoutRoutes from "./payout/payout.routes";
 import notificationRoutes from "./notification/notification.routes";
 import { createRequestLoggingMiddleware } from "./middleware/requestLogger";
+import { sendErrorResponse } from "./middleware/apiResponses";
 import { getBoss, stopBoss, startWorkers } from "./workers/index";
 import { initSentry, sentryServer } from "@shared/sentry";
 import { logger } from "./utils/logger";
@@ -59,7 +60,7 @@ async function createApp(): Promise<Express> {
     }),
   );
 
-app.use(cookieParser(config.JWT_SECRET));
+  app.use(cookieParser(config.JWT_SECRET));
   app.use(express.json({ limit: "10mb" }));
   app.use(express.urlencoded({ extended: true }));
   app.use(createRequestLoggingMiddleware({ ignorePaths: ["/health"] }));
@@ -91,7 +92,9 @@ app.use(cookieParser(config.JWT_SECRET));
         headerToken !== config.PROXY_IP_DEBUG_TOKEN &&
         bearerToken !== config.PROXY_IP_DEBUG_TOKEN
       ) {
-        res.status(404).json({ success: false, message: "Not found" });
+        sendErrorResponse(res, 404, "We could not find what you requested.", {
+          code: "NOT_FOUND",
+        });
         return;
       }
 
@@ -121,12 +124,7 @@ app.use(cookieParser(config.JWT_SECRET));
     protectedLimiter,
     authRoutes,
   );
-  app.use(
-    "/api/v1/driver",
-    authMiddleware,
-    protectedLimiter,
-    driverRoutes,
-  );
+  app.use("/api/v1/driver", authMiddleware, protectedLimiter, driverRoutes);
   app.use(
     "/api/v1/route",
     publicRoutesLimiter,

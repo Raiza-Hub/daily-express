@@ -10,11 +10,12 @@ import {
   isPublicRouteSearchPath,
   isWebhookPath,
 } from "./publicPaths";
+import { createErrorPayload } from "./apiResponses";
 
 const config = getConfig();
 const hasUpstashCredentials = Boolean(
   config.RATE_LIMIT_UPSTASH_REDIS_REST_URL &&
-    config.RATE_LIMIT_UPSTASH_REDIS_REST_TOKEN,
+  config.RATE_LIMIT_UPSTASH_REDIS_REST_TOKEN,
 );
 
 if (config.NODE_ENV === "production" && !hasUpstashCredentials) {
@@ -57,10 +58,9 @@ function createLimiter(options: {
         })
       : undefined,
     keyGenerator: options.keyGenerator ?? getClientKey,
-    message: {
-      success: false,
-      message: options.message,
-    },
+    message: createErrorPayload(429, options.message, {
+      code: "RATE_LIMITED",
+    }),
     skip: options.skip,
   });
 }
