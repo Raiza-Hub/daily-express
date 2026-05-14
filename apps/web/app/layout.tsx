@@ -35,10 +35,10 @@ export const metadata: Metadata = {
     type: "website",
     images: [
       {
-        url: buildWebAbsoluteUrl("/opengraph-image"),
-        width: 1200,
-        height: 630,
-        alt: `${webAppName} Open Graph image`,
+        url: buildWebAbsoluteUrl("/brand-logo.png"),
+        width: 1478,
+        height: 528,
+        alt: `${webAppName} logo`,
       },
     ],
   },
@@ -47,7 +47,7 @@ export const metadata: Metadata = {
     title: webAppName,
     description:
       "Search Daily Express routes, compare fares, and book intercity trips with confidence.",
-    images: [buildWebAbsoluteUrl("/opengraph-image")],
+    images: [buildWebAbsoluteUrl("/brand-logo.png")],
   },
 };
 

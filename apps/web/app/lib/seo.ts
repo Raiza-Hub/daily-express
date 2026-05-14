@@ -128,10 +128,10 @@ export function buildWebMetadata({
       type: "website",
       images: [
         {
-          url: buildWebAbsoluteUrl("/opengraph-image"),
-          width: 1200,
-          height: 630,
-          alt: `${WEB_APP_NAME} Open Graph image`,
+          url: buildWebAbsoluteUrl("/brand-logo.png"),
+          width: 1478,
+          height: 528,
+          alt: `${WEB_APP_NAME} logo`,
         },
       ],
     },
@@ -139,7 +139,7 @@ export function buildWebMetadata({
       card: "summary_large_image",
       title: fullTitle,
       description,
-      images: [buildWebAbsoluteUrl("/opengraph-image")],
+      images: [buildWebAbsoluteUrl("/brand-logo.png")],
     },
   };
 }
