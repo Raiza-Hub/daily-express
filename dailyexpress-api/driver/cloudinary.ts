@@ -3,6 +3,7 @@ import { Readable } from "stream";
 import type { Request, Response, NextFunction } from "express";
 import multer from "multer";
 import { logger } from "../utils/logger";
+import { sendErrorResponse } from "../middleware/apiResponses";
 
 export interface File extends Express.Multer.File {}
 
@@ -64,12 +65,14 @@ export const cloudinaryUpload = async (
       },
       (error, result) => {
         if (error) reject(error);
-        else if (!result) reject(new Error("Cloudinary upload returned no result"));
+        else if (!result)
+          reject(new Error("Cloudinary upload returned no result"));
         else {
           const uploadResult = result as CloudinaryUploadResponse;
           resolve({
             public_id: uploadResult.public_id,
-            secure_url: uploadResult.eager?.[0]?.secure_url || uploadResult.secure_url,
+            secure_url:
+              uploadResult.eager?.[0]?.secure_url || uploadResult.secure_url,
           });
         }
       },
@@ -91,7 +94,9 @@ export const extractPublicIdFromUrl = (url: string): string | null => {
     let publicIdSegments = parts.slice(uploadIndex + 1);
 
     // Skip transformation segments (they usually don't contain 'v' followed by digits at the start of the path unless it's version)
-    const versionIndex = publicIdSegments.findIndex(seg => /^v\d+$/.test(seg));
+    const versionIndex = publicIdSegments.findIndex((seg) =>
+      /^v\d+$/.test(seg),
+    );
     if (versionIndex !== -1) {
       publicIdSegments = publicIdSegments.slice(versionIndex + 1);
     }
@@ -143,9 +148,8 @@ export const cloudinaryMiddleware = (
 
   upload.single("file")(req, res, (err): void => {
     if (err) {
-      res.status(400).json({
-        success: false,
-        error: err.message || "File upload failed",
+      sendErrorResponse(res, 400, err.message || "File upload failed", {
+        code: "FILE_UPLOAD_FAILED",
       });
       return;
     }

@@ -2,7 +2,8 @@ import { asyncHandler } from "@shared/middleware";
 import { AuthService } from "./authService";
 import type { CookieOptions, Request, Response, RequestHandler } from "express";
 import { getAuthenticatedUser } from "../middleware/auth";
-import { createErrorResponse, createSuccessResponse } from "@shared/utils";
+import { createSuccessResponse } from "@shared/utils";
+import { sendErrorResponse } from "../middleware/apiResponses";
 import {
   clearGoogleOAuthCookies,
   completeGoogleOAuth as completeGoogleOAuthFlow,
@@ -97,12 +98,16 @@ export const getProfile: RequestHandler = asyncHandler(
     const gatewayUser = getAuthenticatedUser(req);
     const userId = gatewayUser?.userId;
     if (!userId) {
-      return res.status(401).json(createErrorResponse("Unauthorized"));
+      return sendErrorResponse(res, 401, "Please sign in again to continue.", {
+        code: "AUTHENTICATION_REQUIRED",
+      });
     }
 
     const profile = await authService.getUserById(userId);
     if (!profile) {
-      return res.status(404).json(createErrorResponse("User not found"));
+      return sendErrorResponse(res, 404, "We could not find your account.", {
+        code: "USER_NOT_FOUND",
+      });
     }
 
     return res
@@ -116,7 +121,9 @@ export const getUserSessionStateInternal: RequestHandler = asyncHandler(
     const userId = req.params.id;
 
     if (!userId || typeof userId !== "string") {
-      return res.status(400).json(createErrorResponse("User ID is required"));
+      return sendErrorResponse(res, 400, "User ID is required.", {
+        code: "MISSING_USER_ID",
+      });
     }
 
     const sessionState = await authService.getUserSessionState(userId);
@@ -135,7 +142,9 @@ export const deleteAccount: RequestHandler = asyncHandler(
     const userId = gatewayUser?.userId;
 
     if (!userId) {
-      return res.status(401).json(createErrorResponse("Unauthorized"));
+      return sendErrorResponse(res, 401, "Please sign in again to continue.", {
+        code: "AUTHENTICATION_REQUIRED",
+      });
     }
 
     await authService.deleteUser(userId);
@@ -150,7 +159,9 @@ export const forgotPassword: RequestHandler = asyncHandler(
   async (req: Request, res: Response) => {
     const { email } = req.body;
     if (!email) {
-      return res.status(400).json(createErrorResponse("Email is required"));
+      return sendErrorResponse(res, 400, "Email is required.", {
+        code: "MISSING_EMAIL",
+      });
     }
     await authService.forgotPassword(email);
 
@@ -182,7 +193,9 @@ export const verifyOtp: RequestHandler = asyncHandler(
     const gatewayUser = getAuthenticatedUser(req);
     const email = gatewayUser?.email;
     if (!email) {
-      return res.status(401).json(createErrorResponse("Unauthorized"));
+      return sendErrorResponse(res, 401, "Please sign in again to continue.", {
+        code: "AUTHENTICATION_REQUIRED",
+      });
     }
     const { otp } = req.body;
     const { tokens } = await authService.verifyOtp(email as string, otp);
@@ -209,14 +222,20 @@ export const resendOtp: RequestHandler = asyncHandler(
     const gatewayUser = getAuthenticatedUser(req);
     const email = gatewayUser?.email;
     if (!email) {
-      return res.status(401).json(createErrorResponse("Unauthorized"));
+      return sendErrorResponse(res, 401, "Please sign in again to continue.", {
+        code: "AUTHENTICATION_REQUIRED",
+      });
     }
     const existingUser = await authService.getUserByEmail(email);
     if (!existingUser) {
-      return res.status(404).json(createErrorResponse("User not found"));
+      return sendErrorResponse(res, 404, "We could not find your account.", {
+        code: "USER_NOT_FOUND",
+      });
     }
     if (existingUser.emailVerified) {
-      return res.status(400).json(createErrorResponse("User already verified"));
+      return sendErrorResponse(res, 400, "Your email is already verified.", {
+        code: "EMAIL_ALREADY_VERIFIED",
+      });
     }
     await authService.resendOtp(email);
 
@@ -231,7 +250,9 @@ export const updateProfile: RequestHandler = asyncHandler(
     const gatewayUser = getAuthenticatedUser(req);
     const userId = gatewayUser?.userId;
     if (!userId) {
-      return res.status(401).json(createErrorResponse("Unauthorized"));
+      return sendErrorResponse(res, 401, "Please sign in again to continue.", {
+        code: "AUTHENTICATION_REQUIRED",
+      });
     }
     const updatedUser = await authService.updateProfile(userId, req.body);
 
@@ -258,7 +279,9 @@ export const getProviders: RequestHandler = asyncHandler(
     const gatewayUser = getAuthenticatedUser(req);
     const userId = gatewayUser?.userId;
     if (!userId) {
-      return res.status(401).json(createErrorResponse("Unauthorized"));
+      return sendErrorResponse(res, 401, "Please sign in again to continue.", {
+        code: "AUTHENTICATION_REQUIRED",
+      });
     }
 
     const providers = await authService.getProviders(userId);
@@ -274,7 +297,9 @@ export const disconnectProvider: RequestHandler = asyncHandler(
     const gatewayUser = getAuthenticatedUser(req);
     const userId = gatewayUser?.userId;
     if (!userId) {
-      return res.status(401).json(createErrorResponse("Unauthorized"));
+      return sendErrorResponse(res, 401, "Please sign in again to continue.", {
+        code: "AUTHENTICATION_REQUIRED",
+      });
     }
 
     const providerParam = req.params.provider;
@@ -282,7 +307,9 @@ export const disconnectProvider: RequestHandler = asyncHandler(
       ? providerParam[0]
       : providerParam;
     if (!provider || !["google"].includes(provider)) {
-      return res.status(400).json(createErrorResponse("Invalid provider"));
+      return sendErrorResponse(res, 400, "Choose a valid provider.", {
+        code: "INVALID_PROVIDER",
+      });
     }
 
     await authService.disconnectProvider(userId, provider);
@@ -298,12 +325,16 @@ export const setPassword: RequestHandler = asyncHandler(
     const gatewayUser = getAuthenticatedUser(req);
     const userId = gatewayUser?.userId;
     if (!userId) {
-      return res.status(401).json(createErrorResponse("Unauthorized"));
+      return sendErrorResponse(res, 401, "Please sign in again to continue.", {
+        code: "AUTHENTICATION_REQUIRED",
+      });
     }
 
     const { password } = req.body;
     if (!password) {
-      return res.status(400).json(createErrorResponse("Password is required"));
+      return sendErrorResponse(res, 400, "Password is required.", {
+        code: "MISSING_PASSWORD",
+      });
     }
 
     await authService.setPassword(userId, password);

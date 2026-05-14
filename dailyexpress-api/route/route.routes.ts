@@ -1,8 +1,6 @@
 import { Router } from "express";
-import {
-  authenticateVerifiedGatewayRequest,
-  validateRequest,
-} from "@shared/middleware";
+import { authenticateVerifiedGatewayRequest } from "../middleware/gatewayAuth";
+import { validateRequest } from "../middleware/requestValidation";
 import * as routeController from "./route.controller";
 import { createRouteSchema, updateRouteSchema } from "./validation";
 

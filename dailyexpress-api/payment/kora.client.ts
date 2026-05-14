@@ -26,6 +26,13 @@ interface KoraApiEnvelope<TData> {
   data: TData;
 }
 
+function getKoraErrorMessage(
+  message: string | undefined,
+  fallback: string,
+): string {
+  return message?.trim() || fallback;
+}
+
 export class KoraClient {
   private baseUrl: string;
   private secretKey: string;
@@ -55,10 +62,13 @@ export class KoraClient {
 
     if (!response.ok) {
       const errorBody = (await response.json().catch(() => ({
-        message: `HTTP ${response.status}: ${response.statusText}`,
+        message: response.statusText,
       }))) as KoraErrorResponse;
       const error = new Error(
-        `Kora API error: ${errorBody.message || response.statusText}`,
+        getKoraErrorMessage(
+          errorBody.message || response.statusText,
+          "Payment provider request failed",
+        ),
       );
       (error as any).koraErrorCode = errorBody.error_code;
       (error as any).koraHttpStatus = response.status;
@@ -68,7 +78,12 @@ export class KoraClient {
 
     const raw = (await response.json()) as KoraApiEnvelope<T>;
     if (raw.status === false || !raw.data) {
-      const error = new Error(raw.message || raw.error || "Kora request failed");
+      const error = new Error(
+        getKoraErrorMessage(
+          raw.message || raw.error,
+          "Payment provider request failed",
+        ),
+      );
       (error as any).koraErrorCode = raw.error_code;
       (error as any).koraResponseData = raw;
       throw error;
@@ -80,13 +95,14 @@ export class KoraClient {
     };
   }
 
-  async initializeTransaction(
-    data: KoraInitializeRequest,
-  ) {
-    return this.request<KoraInitializeResponse>("/merchant/api/v1/charges/initialize", {
-      method: "POST",
-      body: JSON.stringify(data),
-    });
+  async initializeTransaction(data: KoraInitializeRequest) {
+    return this.request<KoraInitializeResponse>(
+      "/merchant/api/v1/charges/initialize",
+      {
+        method: "POST",
+        body: JSON.stringify(data),
+      },
+    );
   }
 
   async verifyTransaction(reference: string) {
@@ -96,10 +112,13 @@ export class KoraClient {
   }
 
   async initiateRefund(data: KoraRefundRequest) {
-    return this.request<KoraRefundResponse>("/merchant/api/v1/refunds/initiate", {
-      method: "POST",
-      body: JSON.stringify(data),
-    });
+    return this.request<KoraRefundResponse>(
+      "/merchant/api/v1/refunds/initiate",
+      {
+        method: "POST",
+        body: JSON.stringify(data),
+      },
+    );
   }
 
   async resolveAccountNumber(
@@ -113,12 +132,12 @@ export class KoraClient {
     const result = await this.request<KoraResolveAccountResponse>(
       "/merchant/api/v1/misc/banks/resolve",
       {
-      method: "POST",
-      body: JSON.stringify({
-        bank: bankCode,
-        account: accountNumber,
-        currency,
-      }),
+        method: "POST",
+        body: JSON.stringify({
+          bank: bankCode,
+          account: accountNumber,
+          currency,
+        }),
       },
     );
 

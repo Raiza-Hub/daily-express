@@ -1,7 +1,8 @@
 import type { Request, RequestHandler, Response } from "express";
 import { asyncHandler } from "@shared/middleware";
-import { createErrorResponse, createSuccessResponse } from "@shared/utils";
+import { createSuccessResponse } from "@shared/utils";
 import { getAuthenticatedUser } from "../middleware/auth";
+import { sendErrorResponse } from "../middleware/apiResponses";
 import { NotificationService } from "./notificationService";
 import { timeAsync } from "../utils/timing";
 
@@ -11,9 +12,9 @@ export const getNotifications: RequestHandler = asyncHandler(
   async (req: Request, res: Response) => {
     const gatewayUser = getAuthenticatedUser(req);
     if (!gatewayUser) {
-      return res
-        .status(401)
-        .json(createErrorResponse("User not authenticated"));
+      return sendErrorResponse(res, 401, "Please sign in again to continue.", {
+        code: "AUTHENTICATION_REQUIRED",
+      });
     }
 
     const result = await timeAsync(
@@ -34,7 +35,9 @@ export const getNotifications: RequestHandler = asyncHandler(
 
     return res
       .status(200)
-      .json(createSuccessResponse(result, "Notifications fetched successfully"));
+      .json(
+        createSuccessResponse(result, "Notifications fetched successfully"),
+      );
   },
 );
 
@@ -42,16 +45,16 @@ export const markNotificationRead: RequestHandler = asyncHandler(
   async (req: Request, res: Response) => {
     const gatewayUser = getAuthenticatedUser(req);
     if (!gatewayUser) {
-      return res
-        .status(401)
-        .json(createErrorResponse("User not authenticated"));
+      return sendErrorResponse(res, 401, "Please sign in again to continue.", {
+        code: "AUTHENTICATION_REQUIRED",
+      });
     }
 
     const id = Array.isArray(req.params.id) ? req.params.id[0] : req.params.id;
     if (!id) {
-      return res
-        .status(400)
-        .json(createErrorResponse("Notification ID is required"));
+      return sendErrorResponse(res, 400, "Notification ID is required.", {
+        code: "MISSING_NOTIFICATION_ID",
+      });
     }
 
     const updated = await timeAsync(
@@ -70,9 +73,9 @@ export const markAllNotificationsRead: RequestHandler = asyncHandler(
   async (req: Request, res: Response) => {
     const gatewayUser = getAuthenticatedUser(req);
     if (!gatewayUser) {
-      return res
-        .status(401)
-        .json(createErrorResponse("User not authenticated"));
+      return sendErrorResponse(res, 401, "Please sign in again to continue.", {
+        code: "AUTHENTICATION_REQUIRED",
+      });
     }
 
     await timeAsync(

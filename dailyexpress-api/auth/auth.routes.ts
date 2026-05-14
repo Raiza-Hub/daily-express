@@ -3,8 +3,8 @@ import * as authcontroller from "./auth.controller";
 import {
   authenticateGatewayRequest,
   authenticateVerifiedGatewayRequest,
-  validateRequest,
-} from "@shared/middleware";
+} from "../middleware/gatewayAuth";
+import { validateRequest } from "../middleware/requestValidation";
 import {
   loginSchema,
   registerSchema,
@@ -23,17 +23,9 @@ router.post(
   authcontroller.register,
 );
 
-router.post(
-  "/login",
-  validateRequest(loginSchema),
-  authcontroller.login
-);
+router.post("/login", validateRequest(loginSchema), authcontroller.login);
 
-router.get(
-  "/resend-otp",
-  authenticateGatewayRequest,
-  authcontroller.resendOtp
-);
+router.get("/resend-otp", authenticateGatewayRequest, authcontroller.resendOtp);
 
 // Google OAuth routes
 router.get("/google", authcontroller.startGoogleOAuth);

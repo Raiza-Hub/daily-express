@@ -4,10 +4,8 @@ import {
   handleKoraWebhook,
   getPaymentReturn,
 } from "./payment.controller";
-import {
-  authenticateVerifiedGatewayRequest,
-  validateRequest,
-} from "@shared/middleware";
+import { authenticateVerifiedGatewayRequest } from "../middleware/gatewayAuth";
+import { validateRequest } from "../middleware/requestValidation";
 import { initializePaymentSchema } from "./validation";
 
 const router = Router();
