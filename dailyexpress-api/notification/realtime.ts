@@ -111,6 +111,19 @@ export async function publishNotificationCreated(
   });
 }
 
+export function publishNotificationCreatedInBackground(
+  notification: DriverNotification,
+  timestamp = Date.now(),
+): void {
+  void publishNotificationCreated(notification, timestamp).catch((error) => {
+    logger.warn("realtime.notification_created_publish_failed", {
+      driverId: notification.driverId,
+      notificationId: notification.id,
+      error: error instanceof Error ? error.message : String(error),
+    });
+  });
+}
+
 export async function publishNotificationRead(
   driverId: string,
   notificationId: string,
@@ -124,6 +137,22 @@ export async function publishNotificationRead(
   });
 }
 
+export function publishNotificationReadInBackground(
+  driverId: string,
+  notificationId: string,
+  timestamp = Date.now(),
+): void {
+  void publishNotificationRead(driverId, notificationId, timestamp).catch(
+    (error) => {
+      logger.warn("realtime.notification_read_publish_failed", {
+        driverId,
+        notificationId,
+        error: error instanceof Error ? error.message : String(error),
+      });
+    },
+  );
+}
+
 export async function publishNotificationReadAll(
   driverId: string,
   timestamp = Date.now(),
@@ -133,5 +162,17 @@ export async function publishNotificationReadAll(
     type: "notification.read_all",
     payload: {},
     timestamp,
+  });
+}
+
+export function publishNotificationReadAllInBackground(
+  driverId: string,
+  timestamp = Date.now(),
+): void {
+  void publishNotificationReadAll(driverId, timestamp).catch((error) => {
+    logger.warn("realtime.notification_read_all_publish_failed", {
+      driverId,
+      error: error instanceof Error ? error.message : String(error),
+    });
   });
 }

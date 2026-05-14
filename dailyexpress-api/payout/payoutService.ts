@@ -27,7 +27,7 @@ import {
 import { logger } from "../utils/logger";
 import { DriverService } from "../driver/driverService";
 import { NotificationService } from "../notification/notificationService";
-import { publishNotificationCreated } from "../notification/realtime";
+import { publishNotificationCreatedInBackground } from "../notification/realtime";
 import { KoraClient } from "../payment/kora.client";
 import type {
   KoraPayoutHistoryItem,
@@ -1165,7 +1165,7 @@ export class PayoutService {
     });
 
     if (notificationRecord) {
-      await publishNotificationCreated(notificationRecord);
+      publishNotificationCreatedInBackground(notificationRecord);
     }
 
     return updatedPayout;
@@ -1324,7 +1324,7 @@ export class PayoutService {
     });
 
     if (notificationRecord) {
-      await publishNotificationCreated(notificationRecord);
+      publishNotificationCreatedInBackground(notificationRecord);
     }
   }
 

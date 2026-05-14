@@ -6,9 +6,9 @@ import { db } from "../db/connection";
 import { driver } from "../db/index";
 import { notification } from "../db/notification-schema";
 import {
-  publishNotificationCreated,
-  publishNotificationRead,
-  publishNotificationReadAll,
+  publishNotificationCreatedInBackground,
+  publishNotificationReadAllInBackground,
+  publishNotificationReadInBackground,
 } from "./realtime";
 
 const MAX_LIMIT = 50;
@@ -201,8 +201,7 @@ export class NotificationService {
 
     const updatedNotification = this.mapRecordToNotification(updated);
 
-    // Publish realtime event AFTER DB commit
-    await publishNotificationRead(driverId, id);
+    publishNotificationReadInBackground(driverId, id);
 
     return updatedNotification;
   }
@@ -211,7 +210,7 @@ export class NotificationService {
     const driverId = await this.resolveDriverId(user.userId);
     const readAt = new Date();
 
-    const updatedNotifications = await db
+    await db
       .update(notification)
       .set({
         readAt,
@@ -224,16 +223,9 @@ export class NotificationService {
           isNull(notification.readAt),
         ),
       )
-      .returning({
-        id: notification.id,
-      });
+      .execute();
 
-    if (updatedNotifications.length === 0) {
-      return;
-    }
-
-    // Publish realtime event AFTER DB commit
-    await publishNotificationReadAll(driverId);
+    publishNotificationReadAllInBackground(driverId);
   }
 
   async createNotification(
@@ -247,8 +239,7 @@ export class NotificationService {
       descriptor,
     );
 
-    // Publish realtime event AFTER DB commit
-    await publishNotificationCreated(notificationRecord);
+    publishNotificationCreatedInBackground(notificationRecord);
 
     return notificationRecord;
   }

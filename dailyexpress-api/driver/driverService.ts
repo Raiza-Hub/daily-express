@@ -8,7 +8,7 @@ import { driver, driverProfileImageUpload, driverStats } from "../db/index";
 import { eq } from "drizzle-orm";
 import { createServiceError, sanitizeInput } from "@shared/utils";
 import { NotificationService } from "../notification/notificationService";
-import { publishNotificationCreated } from "../notification/realtime";
+import { publishNotificationCreatedInBackground } from "../notification/realtime";
 import { jobService } from "../workers/jobService";
 import { timeAsync } from "../utils/timing";
 import type { DriverProfileImageUploadFile } from "./cloudinary";
@@ -96,10 +96,8 @@ export class DriverService {
       result.bankNotification.notification &&
       result.bankNotification.shouldDeliver
     ) {
-      await timeAsync(
-        "driver.create.pending_notification_publish",
-        { driverId: result.driver.id },
-        () => publishNotificationCreated(result.bankNotification.notification!),
+      publishNotificationCreatedInBackground(
+        result.bankNotification.notification,
       );
     }
 
@@ -214,7 +212,9 @@ export class DriverService {
       result.bankNotification?.notification &&
       result.bankNotification.shouldDeliver
     ) {
-      await publishNotificationCreated(result.bankNotification.notification);
+      publishNotificationCreatedInBackground(
+        result.bankNotification.notification,
+      );
     }
 
     return this.withProfilePictureUpload(result.driver, result.profilePictureUpload);
