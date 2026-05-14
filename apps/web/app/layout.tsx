@@ -5,7 +5,12 @@ import { resolveAppVersion } from "@repo/ui/lib/resolve-app-version";
 import { UpdateReloadBanner } from "@repo/ui/UpdateReloadBanner";
 
 import Providers from "./components/providers";
-import { buildWebAbsoluteUrl, webAppName, webAppUrl } from "./lib/seo";
+import {
+  buildWebAbsoluteUrl,
+  buildWebBrandLogoPreviewUrl,
+  webAppName,
+  webAppUrl,
+} from "./lib/seo";
 
 const geistSans = localFont({
   src: "./fonts/GeistVF.woff",
@@ -35,9 +40,9 @@ export const metadata: Metadata = {
     type: "website",
     images: [
       {
-        url: buildWebAbsoluteUrl("/brand-logo.png"),
-        width: 1478,
-        height: 528,
+        url: buildWebBrandLogoPreviewUrl(),
+        width: 1200,
+        height: 630,
         alt: `${webAppName} logo`,
       },
     ],
@@ -47,7 +52,7 @@ export const metadata: Metadata = {
     title: webAppName,
     description:
       "Search Daily Express routes, compare fares, and book intercity trips with confidence.",
-    images: [buildWebAbsoluteUrl("/brand-logo.png")],
+    images: [buildWebBrandLogoPreviewUrl()],
   },
 };
 
