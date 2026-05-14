@@ -2,7 +2,7 @@
 
 import { zodResolver } from "@hookform/resolvers/zod";
 import { PasswordIcon } from "@phosphor-icons/react";
-import { useResetPassword } from "@repo/api";
+import { applyApiFieldErrors, useResetPassword } from "@repo/api";
 import {
   ResetPasswordSchema,
   TresetPasswordSchema,
@@ -22,7 +22,7 @@ const ResetPasswordForm = ({ token }: { token?: string }) => {
   const posthog = usePostHog();
 
   const [tokenError, setTokenError] = useState<string | null>(null);
-  const { handleSubmit, control } = useForm<TresetPasswordSchema>({
+  const { handleSubmit, control, setError } = useForm<TresetPasswordSchema>({
     resolver: zodResolver(ResetPasswordSchema),
     defaultValues: {
       newPassword: "",
@@ -43,6 +43,9 @@ const ResetPasswordForm = ({ token }: { token?: string }) => {
           router.push("/sign-in");
         },
         onError: (err) => {
+          applyApiFieldErrors<keyof TresetPasswordSchema>(err, setError, {
+            password: "newPassword",
+          });
           posthog.captureException(new Error(err.message), {
             action: "resetPassword",
           });

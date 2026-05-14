@@ -14,7 +14,12 @@ import { onboardingSchema, TonboardingSchema } from "@repo/types";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { useRouter } from "next/navigation";
 import { useState } from "react";
-import { useCreateDriver, useGetDriver } from "@repo/api";
+import {
+  applyApiFieldErrors,
+  getApiErrorMessage,
+  useCreateDriver,
+  useGetDriver,
+} from "@repo/api";
 import { useEffect } from "react";
 import { FormProvider, useForm } from "react-hook-form";
 import { Button } from "@repo/ui/components/button";
@@ -64,19 +69,6 @@ const OnboardingForm = () => {
     }
   }, [driver, isLoading, router]);
 
-  const { mutate: createDriver, isPending } = useCreateDriver({
-    onSuccess: () => {
-      posthog.capture(posthogEvents.driver_onboarding_completed);
-      router.push("/");
-    },
-    onError: (error: Error) => {
-      posthog.captureException(error, {
-        action: "driver_onboarding_submission_failed",
-      });
-      setOnboardError(error.message);
-    },
-  });
-
   const methods = useForm<TonboardingSchema>({
     resolver: zodResolver(onboardingSchema),
     mode: "onBlur",
@@ -100,6 +92,22 @@ const OnboardingForm = () => {
   });
 
   const { handleSubmit, trigger } = methods;
+  const { mutate: createDriver, isPending } = useCreateDriver({
+    onSuccess: () => {
+      posthog.capture(posthogEvents.driver_onboarding_completed);
+      router.push("/");
+    },
+    onError: (error: Error) => {
+      applyApiFieldErrors<keyof TonboardingSchema>(error, methods.setError, {
+        phone: "phoneNumber",
+        profile_pic: "file",
+      });
+      posthog.captureException(error, {
+        action: "driver_onboarding_submission_failed",
+      });
+      setOnboardError(getApiErrorMessage(error, "Driver onboarding failed"));
+    },
+  });
   const currentStepData = STEPS[currentStep - 1];
   const CurrentStepComponent = currentStepData?.Component || (() => null);
 

@@ -4,7 +4,11 @@ import { useEffect, useMemo, useRef, useState } from "react";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { routeSchema, TRoute } from "@repo/types/index";
-import { useUpdateRoute } from "@repo/api";
+import {
+  applyApiFieldErrors,
+  getApiErrorMessage,
+  useUpdateRoute,
+} from "@repo/api";
 import {
   Sheet,
   SheetContent,
@@ -49,11 +53,7 @@ export default function EditRouteSheet({
   uiRef.current = ui;
   const [routeError, setRouteError] = useState<string | null>(null);
 
-  const {
-    handleSubmit,
-    control,
-    reset,
-  } = useForm<TRoute>({
+  const { handleSubmit, control, reset, setError } = useForm<TRoute>({
     resolver: zodResolver(routeSchema),
     defaultValues: defaultValues,
   });
@@ -64,7 +64,19 @@ export default function EditRouteSheet({
       onOpenChange?.(false);
     },
     onError: (err) => {
-      setRouteError(err.message);
+      applyApiFieldErrors<keyof TRoute>(err, setError, {
+        pickup_location_title: "departureCity",
+        pickup_location_locality: "departureCity",
+        pickup_location_label: "departureCity",
+        dropoff_location_title: "arrivalCity",
+        dropoff_location_locality: "arrivalCity",
+        dropoff_location_label: "arrivalCity",
+        meeting_point: "meetingPoint",
+        availableSeats: "seatNumber",
+        departure_time: "departureTime",
+        arrival_time: "estimatedArrivalTime",
+      });
+      setRouteError(getApiErrorMessage(err, "Failed to update route"));
       posthog.captureException(new Error(err.message), {
         action: "driver_route_update_failed",
       });

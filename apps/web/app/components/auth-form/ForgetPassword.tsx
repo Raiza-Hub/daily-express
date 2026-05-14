@@ -1,6 +1,6 @@
 "use client";
 
-import { useForgotPassword } from "@repo/api";
+import { applyApiFieldErrors, useForgotPassword } from "@repo/api";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { KeyIcon } from "@phosphor-icons/react";
 import {
@@ -20,7 +20,7 @@ const ForgetPasswordForm = () => {
   const { mutate: forgotPassword, isPending, error } = useForgotPassword();
   const posthog = usePostHog();
 
-  const { handleSubmit, control } = useForm<TForgetPasswordSchema>({
+  const { handleSubmit, control, setError } = useForm<TForgetPasswordSchema>({
     resolver: zodResolver(ForgetPasswordSchema),
     defaultValues: {
       email: "",
@@ -34,6 +34,7 @@ const ForgetPasswordForm = () => {
         toast.success("Verification link sent successfully");
       },
       onError: (err) => {
+        applyApiFieldErrors<keyof TForgetPasswordSchema>(err, setError);
         posthog.captureException(new Error(err.message), {
           action: "forgotPasswordRequest",
           values: { email: data.email },

@@ -3,7 +3,15 @@ import { env } from "~/env";
 
 const DAILYEXPRESS_API_URL = env.NEXT_PUBLIC_DAILYEXPRESS_API_URL;
 
-export const runtime = "nodejs";
+function createErrorPayload(message: string, statusCode: number, code: string) {
+  return {
+    success: false,
+    message,
+    error: message,
+    code,
+    statusCode,
+  };
+}
 
 export async function GET(request: NextRequest) {
   const token = request.cookies.get("token")?.value;
@@ -13,14 +21,22 @@ export async function GET(request: NextRequest) {
 
   if (!token && !refreshToken) {
     return NextResponse.json(
-      { success: false, message: "Authentication required" },
+      createErrorPayload(
+        "Please sign in again to continue.",
+        401,
+        "AUTHENTICATION_REQUIRED",
+      ),
       { status: 401 },
     );
   }
 
   if (!ref || !lastName) {
     return NextResponse.json(
-      { success: false, message: "Reference and last name are required" },
+      createErrorPayload(
+        "Booking reference and last name are required.",
+        400,
+        "MISSING_BOOKING_SEARCH_FIELDS",
+      ),
       { status: 400 },
     );
   }
@@ -49,7 +65,11 @@ export async function GET(request: NextRequest) {
   } catch (error) {
     console.error("Booking search failed:", error);
     return NextResponse.json(
-      { success: false, message: "Unable to search booking right now." },
+      createErrorPayload(
+        "Unable to search booking right now.",
+        500,
+        "BOOKING_SEARCH_FAILED",
+      ),
       { status: 500 },
     );
   }

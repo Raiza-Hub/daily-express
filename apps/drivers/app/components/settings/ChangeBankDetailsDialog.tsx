@@ -2,7 +2,12 @@
 
 import { zodResolver } from "@hookform/resolvers/zod";
 import { CaretDownIcon, CheckIcon } from "@phosphor-icons/react";
-import { useGetDriver, useUpdateDriver } from "@repo/api";
+import {
+  applyApiFieldErrors,
+  getApiErrorMessage,
+  useGetDriver,
+  useUpdateDriver,
+} from "@repo/api";
 import { onboardingSchema } from "@repo/types/index";
 import { ResponsiveModal } from "@repo/ui/ResponsiveModal";
 import { Button } from "@repo/ui/components/button";
@@ -53,24 +58,11 @@ export default function ChangeBankDetailsDialog() {
 
   const { data: driver, refetch } = useGetDriver();
 
-  const { mutate: updateDriver, isPending } = useUpdateDriver({
-    onSuccess: () => {
-      posthog.capture(posthogEvents.driver_bank_details_update_succeeded);
-      refetch();
-      setOpen(false);
-    },
-    onError: (error: Error) => {
-      posthog.captureException(error, {
-        action: "driver_bank_details_update_failed",
-      });
-      setBankError(error.message);
-    },
-  });
-
   const {
     control,
     handleSubmit,
     setValue,
+    setError,
     watch,
     reset,
     formState: { isSubmitting, errors },
@@ -81,6 +73,20 @@ export default function ChangeBankDetailsDialog() {
       accountNumber: driver?.accountNumber || "",
       bankName: driver?.bankName || "",
       bankCode: driver?.bankCode || "",
+    },
+  });
+  const { mutate: updateDriver, isPending } = useUpdateDriver({
+    onSuccess: () => {
+      posthog.capture(posthogEvents.driver_bank_details_update_succeeded);
+      refetch();
+      setOpen(false);
+    },
+    onError: (error: Error) => {
+      applyApiFieldErrors<keyof TBankDetailsFormValues>(error, setError);
+      posthog.captureException(error, {
+        action: "driver_bank_details_update_failed",
+      });
+      setBankError(getApiErrorMessage(error, "Failed to update bank details"));
     },
   });
 

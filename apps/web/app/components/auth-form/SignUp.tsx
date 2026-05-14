@@ -3,7 +3,11 @@
 import { zodResolver } from "@hookform/resolvers/zod";
 import { CircleNotchIcon, EyeClosedIcon, EyeIcon } from "@phosphor-icons/react";
 import { SignUpSchema, TSignUpSchema } from "@repo/types/authSchema";
-import { useRegister } from "@repo/api";
+import {
+  applyApiFieldErrors,
+  getApiErrorMessage,
+  useRegister,
+} from "@repo/api";
 import { Button } from "@repo/ui/components/button";
 import { Field, FieldError, FieldLabel } from "@repo/ui/components/field";
 import { Input } from "@repo/ui/components/input";
@@ -49,6 +53,7 @@ const SignUpForm = ({ redirect }: { redirect?: string }) => {
           posthog.capture(posthogEvents.auth_signup_succeeded);
         },
         onError: (err) => {
+          applyApiFieldErrors<keyof TSignUpSchema>(err, setError);
           posthog.captureException(new Error(err.message), {
             action: "register",
             values: {
@@ -58,7 +63,7 @@ const SignUpForm = ({ redirect }: { redirect?: string }) => {
             },
           });
           setError("root", {
-            message: err.message || "Something went wrong",
+            message: getApiErrorMessage(err, "Something went wrong"),
           });
         },
       },

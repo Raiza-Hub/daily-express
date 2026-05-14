@@ -1,7 +1,13 @@
 "use client";
 
 import { zodResolver } from "@hookform/resolvers/zod";
-import { useGetMe, useGetProviders, useUpdateProfile } from "@repo/api";
+import {
+  applyApiFieldErrors,
+  getApiErrorMessage,
+  useGetMe,
+  useGetProviders,
+  useUpdateProfile,
+} from "@repo/api";
 import { SignUpSchema } from "@repo/types/authSchema";
 import { Button } from "@repo/ui/components/button";
 import {
@@ -33,23 +39,11 @@ const Profile = () => {
 
   const isGoogleConnected = providers?.includes("google");
 
-  const { mutate: updateProfile } = useUpdateProfile({
-    onSuccess: () => {
-      posthog.capture(posthogEvents.driver_profile_update_succeeded);
-      refetchUser();
-    },
-    onError: (err) => {
-      posthog.captureException(new Error(err.message), {
-        action: "update_profile",
-      });
-      setProfileError(err.message);
-    },
-  });
-
   const {
     handleSubmit,
     control,
     reset,
+    setError,
     formState: { isSubmitting, isDirty },
   } = useForm<TProfileSchema>({
     resolver: zodResolver(ProfileSchema),
@@ -58,6 +52,19 @@ const Profile = () => {
       lastName: user?.lastName || "",
       email: user?.email || "",
       dateOfBirth: user?.dateOfBirth ? new Date(user.dateOfBirth) : new Date(),
+    },
+  });
+  const { mutate: updateProfile } = useUpdateProfile({
+    onSuccess: () => {
+      posthog.capture(posthogEvents.driver_profile_update_succeeded);
+      refetchUser();
+    },
+    onError: (err) => {
+      applyApiFieldErrors<keyof TProfileSchema>(err, setError);
+      posthog.captureException(new Error(err.message), {
+        action: "update_profile",
+      });
+      setProfileError(getApiErrorMessage(err, "Failed to update profile"));
     },
   });
 
