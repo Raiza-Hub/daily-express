@@ -16,7 +16,7 @@ const Navbar = () => {
   const isGuest = !isLoading && !user;
 
   return (
-    <div className="bg-white sticky z-60 top-0 inset-x-0 h-16">
+    <div className="bg-white h-16">
       <header className="relative bg-gray-50">
         <div className="mx-auto w-full max-w-7xl px-4 md:px-6 ">
           <div className="flex h-16 items-center">
