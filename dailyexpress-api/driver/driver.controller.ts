@@ -43,6 +43,12 @@ export const createDriver: RequestHandler = asyncHandler(
         .json(createErrorResponse("User not authenticated"));
     }
 
+    if (!req.profileImageUpload && !driverData.profile_pic) {
+      return res
+        .status(400)
+        .json(createErrorResponse("Profile photo is required"));
+    }
+
     const driver = await timeAsync(
       "driver.create.service",
       { userId },

@@ -102,7 +102,7 @@ const TripSearchBar = ({ className }: { className?: string }) => {
         <button
           type="button"
           className={cn(
-            "bg-blue-600 hover:bg-blue-700 text-white px-6 py-3 lg:py-0 rounded-2xl gap-2 font-medium",
+            "bg-blue-600 hover:bg-blue-700 text-white px-6 py-3 lg:py-0 rounded-2xl gap-2 font-medium cursor-pointer",
             !isSearchReady && "opacity-60",
           )}
           disabled={!isSearchReady}

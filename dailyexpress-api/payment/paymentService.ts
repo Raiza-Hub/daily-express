@@ -24,13 +24,23 @@ import type { WebhookJobData } from "../workers/boss";
 import { KoraClient } from "./kora.client";
 import type {
   InitializePaymentInput,
-  KoraChannel,
   KoraVerifyResponse,
   KoraWebhookPayload,
   PaymentStatus,
   UpsertBookingHoldInput,
 } from "./payment.types";
-import { assertCheckoutAmountWithinLimit, calculateTrustedChargeAmount, dedupeChannels, formatMoney, formatTripDate, formatTripTime, getPaymentReference, normalizeAmount, parseDate, toFareAmountMinor } from "../utils/payment";
+import {
+  assertCheckoutAmountWithinLimit,
+  calculateTrustedChargeAmount,
+  dedupeChannels,
+  formatMajorAmount,
+  formatTripDate,
+  formatTripTime,
+  getPaymentReference,
+  normalizeAmount,
+  parseDate,
+  toMinorAmount,
+} from "../utils/payment";
 
 type PaymentRecord = typeof payment.$inferSelect;
 type BookingHoldRecord = typeof bookingHold.$inferSelect;
@@ -43,8 +53,6 @@ const driverService = new DriverService();
 const notificationService = new NotificationService();
 const payoutService = new PayoutService();
 const KORA_METADATA_KEY_REGEX = /^[A-Za-z0-9-]{1,20}$/;
-const CHECKOUT_FEE_RATE = 0.1;
-const MAX_CHECKOUT_AMOUNT = 200_000;
 const TERMINAL_PAYMENT_STATUSES = [
   "successful",
   "failed",
@@ -54,95 +62,6 @@ const TERMINAL_PAYMENT_STATUSES = [
   "refunded",
   "refund_failed",
 ] as const;
-
-// function dedupeChannels(channels?: KoraChannel[]) {
-//   if (!channels?.length) {
-//     return null;
-//   }
-
-//   const uniqueChannels: KoraChannel[] = [];
-//   for (const channel of channels) {
-//     if (!uniqueChannels.includes(channel)) {
-//       uniqueChannels.push(channel);
-//     }
-//   }
-
-//   return uniqueChannels;
-// }
-
-// function normalizeAmount(value: number | string | null | undefined) {
-//   if (typeof value === "number") {
-//     return Math.round(value);
-//   }
-
-//   if (typeof value === "string") {
-//     const parsed = Number.parseFloat(value.trim());
-//     return Number.isFinite(parsed) ? Math.round(parsed) : null;
-//   }
-
-//   return null;
-// }
-
-// function parseDate(value?: string | Date | null) {
-//   if (!value) {
-//     return null;
-//   }
-
-//   const parsed = value instanceof Date ? value : new Date(value);
-//   return Number.isNaN(parsed.getTime()) ? null : parsed;
-// }
-
-// function calculateTrustedChargeAmount(fareAmount: number) {
-//   return Math.round(fareAmount * (1 + CHECKOUT_FEE_RATE));
-// }
-
-// function assertCheckoutAmountWithinLimit(amount: number) {
-//   if (amount > MAX_CHECKOUT_AMOUNT) {
-//     throw createServiceError("Checkout amount exceeds NGN 200,000 limit", 400);
-//   }
-// }
-
-// function toFareAmountMinor(price: number) {
-//   return Math.round(price * 100);
-// }
-
-// function formatMoney(amount: number, currency: string) {
-//   return new Intl.NumberFormat("en-NG", {
-//     style: "currency",
-//     currency,
-//   }).format(amount / 100);
-// }
-
-// function formatTripDate(value: Date) {
-//   return new Intl.DateTimeFormat("en-NG", {
-//     month: "short",
-//     day: "numeric",
-//     year: "numeric",
-//   }).format(value);
-// }
-
-// function formatTripTime(value: Date) {
-//   return new Intl.DateTimeFormat("en-NG", {
-//     hour: "2-digit",
-//     minute: "2-digit",
-//   }).format(value);
-// }
-
-// function getPaymentReference(job: WebhookJobData) {
-//   if (job.event.startsWith("refund.")) {
-//     return (
-//       (job.data.payment_reference as string | undefined) ||
-//       (job.data.reference as string | undefined) ||
-//       null
-//     );
-//   }
-
-//   return (
-//     (job.data.reference as string | undefined) ||
-//     (job.data.payment_reference as string | undefined) ||
-//     null
-//   );
-// }
 
 export class PaymentService {
   private readonly config = getConfig();
@@ -1311,7 +1230,7 @@ export class PaymentService {
       frontendUrl: this.config.FRONTEND_URL,
       passengerName,
       paymentReference: paymentRecord.reference,
-      pricePaid: formatMoney(paymentRecord.amount, paymentRecord.currency),
+      pricePaid: formatMajorAmount(paymentRecord.amount, paymentRecord.currency),
       pickupTitle: routeRecord.pickup_location_title,
       dropoffTitle: routeRecord.dropoff_location_title,
       tripDate: formatTripDate(tripRecord.date),
@@ -1331,7 +1250,7 @@ export class PaymentService {
       tripId: tripRecord.id,
       routeId: routeRecord.id,
       driverId: tripRecord.driverId,
-      fareAmountMinor: toFareAmountMinor(bookingRecord.fareAmount),
+      fareAmountMinor: toMinorAmount(bookingRecord.fareAmount),
       tripDate: tripRecord.date,
       departureTime: routeRecord.departure_time,
       pickupTitle: routeRecord.pickup_location_title,
@@ -1378,7 +1297,7 @@ export class PaymentService {
       customerEmail: paymentRecord.customerEmail,
       paymentReference: paymentRecord.reference,
       bookingId: paymentRecord.bookingId,
-      amountMinor: paymentRecord.amount,
+      amountMinor: toMinorAmount(paymentRecord.amount),
       currency: paymentRecord.currency,
       productName: paymentRecord.productName,
       failureReason,

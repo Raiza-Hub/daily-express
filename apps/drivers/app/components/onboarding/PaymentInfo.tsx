@@ -133,7 +133,7 @@ const PaymentInfo = () => {
                           )}
                           {selectedBankName || "Select your bank"}
                         </div>
-                        <CaretDownIcon className="ml-2 h-4 w-4 shrink-0" />
+                        <CaretDownIcon className="ml-2 size-4 shrink-0" />
                       </Button>
                     </PopoverTrigger>
                     <PopoverContent className="w-full min-w-(--radix-popper-anchor-width) border-input p-0">
@@ -147,7 +147,13 @@ const PaymentInfo = () => {
                                 key={bank.code}
                                 value={bank.name}
                                 onSelect={(value) => {
+                                  const selected = (BankList as Bank[]).find(
+                                    (entry) => entry.name === value,
+                                  );
                                   setValue("bankName", value, {
+                                    shouldValidate: true,
+                                  });
+                                  setValue("bankCode", selected?.code || "", {
                                     shouldValidate: true,
                                   });
                                   setOpenBank(false);
@@ -166,7 +172,7 @@ const PaymentInfo = () => {
                                 </span>
                                 <span>{bank.name}</span>
                                 {selectedBankName === bank.name && (
-                                  <CheckIcon className="ml-auto h-4 w-4" />
+                                  <CheckIcon className="ml-auto size-4" />
                                 )}
                               </CommandItem>
                             ))}

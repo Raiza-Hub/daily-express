@@ -31,6 +31,12 @@ const TripSearchSection = () => {
 
   const hasSearchParams = Boolean(query.from && query.to);
   const urlDate = query.date || dayjs().format("YYYY-MM-DD");
+  const routeSearchParams = {
+    from: query.from ?? "",
+    to: query.to ?? "",
+    date: urlDate,
+    vehicleType: query.vehicleType ?? undefined,
+  };
 
   const {
     data,
@@ -41,14 +47,7 @@ const TripSearchSection = () => {
     isFetchingNextPage,
     refetch,
   } = useSearchRoutes({
-    params: hasSearchParams
-      ? {
-          from: query.from ?? undefined,
-          to: query.to ?? undefined,
-          date: urlDate,
-          vehicleType: query.vehicleType ?? undefined,
-        }
-      : {},
+    params: routeSearchParams,
     enabled: hasSearchParams,
   });
 
@@ -81,7 +80,7 @@ const TripSearchSection = () => {
     return (
       <TripState
         routes={undefined}
-        icon={<MagnifyingGlassIcon className="w-6 h-6 text-neutral-500" />}
+        icon={<MagnifyingGlassIcon className="size-6 text-neutral-500" />}
         title="Where are you headed?"
         description="Pick your starting point, destination, and date to find the perfect trip."
       />
@@ -92,7 +91,7 @@ const TripSearchSection = () => {
     return (
       <TripState
         routes={[]}
-        icon={<BinocularsIcon className="w-6 h-6 text-neutral-500" />}
+        icon={<BinocularsIcon className="size-6 text-neutral-500" />}
         title="Searching routes"
         description="Finding available rides for your route."
       />
@@ -103,7 +102,7 @@ const TripSearchSection = () => {
     return (
       <TripState
         routes={[]}
-        icon={<WarningCircleIcon className="w-6 h-6 text-neutral-500" />}
+        icon={<WarningCircleIcon className="size-6 text-neutral-500" />}
         title="Routes temporarily unavailable"
         description="We’re unable to load available rides right now. Please try again shortly."
       />
@@ -116,7 +115,7 @@ const TripSearchSection = () => {
     return (
       <TripState
         routes={routes}
-        icon={<CalendarXIcon className="w-6 h-6 text-neutral-500" />}
+        icon={<CalendarXIcon className="size-6 text-neutral-500" />}
         title="No rides available"
         description="We couldn’t find any rides for your selected route and time. Try adjusting your trip details."
       />
@@ -148,7 +147,7 @@ const TripSearchSection = () => {
 
           {isFetchingNextPage && (
             <div className="flex justify-center py-4">
-              <CircleNotchIcon className="w-6 h-6 animate-spin text-neutral-500" />
+              <CircleNotchIcon className="size-6 animate-spin text-neutral-500" />
             </div>
           )}
 

@@ -88,7 +88,7 @@ const TripFilter = ({ routes, onApplyFilters }: TripFilterProps) => {
     const counts: Record<string, number> = {};
     if (routes) {
       routes.forEach((route) => {
-        const vt = route.vehicleType?.toLowerCase();
+        const vt = route.vehicleType.toLowerCase();
         counts[vt] = (counts[vt] || 0) + 1;
       });
     }
@@ -173,7 +173,7 @@ const TripFilter = ({ routes, onApplyFilters }: TripFilterProps) => {
                     aria-label="Close"
                     className="p-1 rounded-md text-muted-foreground hover:text-foreground hover:bg-muted transition-colors cursor-pointer"
                   >
-                    <XIcon className="h-5 w-5" />
+                    <XIcon className="size-5" />
                   </button>
                 </div>
 
