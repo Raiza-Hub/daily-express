@@ -11,6 +11,7 @@ import type {
   Trip,
   ApiResponse,
   CreateRoute,
+  SearchRoutesRequest,
   updateRouteRequest,
 } from "@shared/types";
 import type { DriverStats } from "./driver";
@@ -249,12 +250,7 @@ export const updateTripStatusFn = async ({
 };
 
 export const searchRoutesFn = async (
-  params: {
-    from?: string;
-    to?: string;
-    date?: string;
-    vehicleType?: string[];
-  },
+  params: SearchRoutesRequest,
   offset: number = 0,
   limit: number = 20,
 ): Promise<Route[]> => {
@@ -287,12 +283,7 @@ export const useSearchRoutes = ({
   params,
   enabled,
 }: {
-  params: {
-    from?: string;
-    to?: string;
-    date?: string;
-    vehicleType?: string[];
-  };
+  params: SearchRoutesRequest;
   enabled: boolean;
 }) => {
   return useInfiniteQuery({

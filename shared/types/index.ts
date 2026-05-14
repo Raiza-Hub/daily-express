@@ -27,6 +27,23 @@ export interface UpdateUserRequest {
   dateOfBirth?: Date;
 }
 
+export interface CreateDriverRequest {
+  firstName: string;
+  lastName: string;
+  email: string;
+  profile_pic: string;
+  phone: string;
+  country: string;
+  currency: string;
+  state: string;
+  city: string;
+  address: string;
+  bankName: string;
+  bankCode: string;
+  accountNumber: string;
+  accountName: string;
+}
+
 export interface Driver {
   id: string;
   userId: string;
@@ -199,6 +216,13 @@ export interface CreateRoute {
   departure_time: Date;
   arrival_time: Date;
   status: "inactive" | "pending" | "active";
+}
+
+export interface SearchRoutesRequest {
+  from: string;
+  to: string;
+  date: string;
+  vehicleType?: string[];
 }
 
 export interface updateRouteRequest {

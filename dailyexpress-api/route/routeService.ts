@@ -516,16 +516,16 @@ export class RouteService {
   }
 
   async searchRoutes(params: {
-    from?: string;
-    to?: string;
-    date?: string;
+    from: string;
+    to: string;
+    date: string;
     vehicleType?: string[];
     limit?: number;
     offset?: number;
   }): Promise<Route[]> {
     const { from, to, date, vehicleType, limit = 20, offset = 0 } = params;
-    const parsedFrom = from?.trim();
-    const parsedTo = to?.trim();
+    const parsedFrom = from.trim();
+    const parsedTo = to.trim();
     const normalizedFrom = parsedFrom ? normalizeSearchText(parsedFrom) : "";
     const normalizedTo = parsedTo ? normalizeSearchText(parsedTo) : "";
     const parsedVehicleType = vehicleType?.filter(
@@ -537,7 +537,7 @@ export class RouteService {
       throw createServiceError("from and to are required", 400);
     }
 
-    if (!date) {
+    if (!date.trim()) {
       throw createServiceError("date is required", 400);
     }
 

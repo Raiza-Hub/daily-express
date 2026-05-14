@@ -51,15 +51,15 @@ export function assertCheckoutAmountWithinLimit(amount: number) {
   }
 }
 
-export function toFareAmountMinor(price: number) {
-  return Math.round(price * 100);
+export function toMinorAmount(amount: number) {
+  return Math.round(amount * 100);
 }
 
-export function formatMoney(amount: number, currency: string) {
+export function formatMajorAmount(amount: number, currency: string) {
   return new Intl.NumberFormat("en-NG", {
     style: "currency",
     currency,
-  }).format(amount / 100);
+  }).format(amount);
 }
 
 export function formatTripDate(value: Date) {

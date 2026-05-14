@@ -1,23 +1,12 @@
 import { useMutation, useQuery } from "@tanstack/react-query";
 import { driverApi } from "../api";
-import type { Driver, ApiResponse, UpdateProfileRequest } from "@shared/types";
+import type {
+  Driver,
+  ApiResponse,
+  CreateDriverRequest,
+  UpdateProfileRequest,
+} from "@shared/types";
 import { handleApiError } from "../utils";
-
-interface CreateDriverPayload {
-  firstName: string;
-  lastName: string;
-  email: string;
-  phone: string;
-  country: string;
-  state: string;
-  city: string;
-  address: string;
-  bankName: string;
-  bankCode: string;
-  accountNumber: string;
-  accountName: string;
-  profile_pic: string;
-}
 
 export const getDriverFn = async (): Promise<Driver> => {
   try {
@@ -32,7 +21,7 @@ export const getDriverFn = async (): Promise<Driver> => {
 };
 
 export const createDriverFn = async (
-  data: CreateDriverPayload | FormData,
+  data: CreateDriverRequest | FormData,
 ): Promise<Driver> => {
   const isFormData = data instanceof FormData;
   try {

@@ -51,7 +51,10 @@ start_database() {
   fi
 
   echo "Starting Postgres database..."
-  docker compose -f docker-compose.observability.yml up -d --remove-orphans db
+  docker compose \
+    --env-file "$PROJECT_ROOT/.env" \
+    -f "$PROJECT_ROOT/docker-compose.observability.yml" \
+    up -d --remove-orphans db
 
   echo "Waiting for Postgres to become healthy..."
   for _ in {1..60}; do

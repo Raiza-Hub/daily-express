@@ -35,7 +35,7 @@ export const onboardingSchema = z.object({
 
   bankName: z.string().min(1, { error: "Bank name is required" }),
 
-  bankCode: z.string().optional(),
+  bankCode: z.string().min(1, { error: "Bank code is required" }),
 
   accountNumber: z
     .string()

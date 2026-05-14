@@ -13,6 +13,7 @@ import { buildAuthHref, buildDriverSignUpUrl } from "~/lib/app-routing";
 
 const Navbar = () => {
   const { data: user, isLoading } = useGetMe();
+  const isGuest = !isLoading && !user;
 
   return (
     <div className="bg-white sticky z-60 top-0 inset-x-0 h-16">
@@ -35,7 +36,7 @@ const Navbar = () => {
 
             <div className="ml-auto flex items-center">
               <div className="lg:flex lg:flex-1 lg:items-center lg:justify-end lg:space-x-6">
-                {user ? null : (
+                {isGuest ? (
                   <div className="hidden lg:block">
                     <Link
                       href={buildAuthHref("/sign-up", buildDriverSignUpUrl())}
@@ -46,14 +47,14 @@ const Navbar = () => {
                       Become a driver
                     </Link>
                   </div>
-                )}
+                ) : null}
 
-                {user ? null : (
+                {isGuest ? (
                   <span
                     className="hidden lg:block h-6 w-px bg-gray-200"
                     aria-hidden="true"
                   />
-                )}
+                ) : null}
 
                 {user ? (
                   <UserAccountNav user={user} />

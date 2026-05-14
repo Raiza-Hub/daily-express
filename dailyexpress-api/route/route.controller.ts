@@ -212,6 +212,9 @@ export const searchRoutes: RequestHandler = asyncHandler(
     if (!parsedFrom || !parsedTo) {
       return res.status(400).json(createErrorResponse("from and to are required"));
     }
+    if (!parsedDate) {
+      return res.status(400).json(createErrorResponse("date is required"));
+    }
     if (
       parsedVehicleType &&
       parsedVehicleType.some((value) => !ALLOWED_VEHICLE_TYPES.has(value))
