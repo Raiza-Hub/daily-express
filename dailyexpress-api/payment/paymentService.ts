@@ -37,7 +37,6 @@ import {
   formatTripDate,
   formatTripTime,
   getPaymentReference,
-  normalizeAmount,
   parseDate,
   toMinorAmount,
 } from "../utils/payment";
@@ -694,35 +693,6 @@ export class PaymentService {
       return this.withExpiry(existingPayment);
     }
 
-    const verifiedAmount = normalizeAmount(
-      verification.amount_paid ?? verification.amount,
-    );
-    if (verifiedAmount === null || verifiedAmount !== existingPayment.amount) {
-      return this.failPendingPayment(
-        reference,
-        "failed",
-        "Verified payment amount does not match the booking total",
-        {
-          failureCode: "AMOUNT_MISMATCH",
-          providerStatus: verification.status,
-          rawVerificationResponse,
-        },
-      );
-    }
-
-    if (verification.currency.toUpperCase() !== existingPayment.currency) {
-      return this.failPendingPayment(
-        reference,
-        "failed",
-        "Verified payment currency does not match the booking currency",
-        {
-          failureCode: "CURRENCY_MISMATCH",
-          providerStatus: verification.status,
-          rawVerificationResponse,
-        },
-      );
-    }
-
     const paidAt =
       parseDate(verification.paid_at) ||
       parseDate(verification.transaction_date) ||
@@ -920,23 +890,6 @@ export class PaymentService {
       existingPayment.status === "refund_failed"
     ) {
       return this.withExpiry(existingPayment);
-    }
-
-    const verifiedAmount = normalizeAmount(verification.amount);
-    if (verifiedAmount === null || verifiedAmount !== existingPayment.amount) {
-      return this.failPendingPayment(reference, "failed", reason, {
-        failureCode: "AMOUNT_MISMATCH",
-        providerStatus: verification.status,
-        rawVerificationResponse,
-      });
-    }
-
-    if (verification.currency.toUpperCase() !== existingPayment.currency) {
-      return this.failPendingPayment(reference, "failed", reason, {
-        failureCode: "CURRENCY_MISMATCH",
-        providerStatus: verification.status,
-        rawVerificationResponse,
-      });
     }
 
     const [updatedPayment] = await db.transaction(async (tx) => {
