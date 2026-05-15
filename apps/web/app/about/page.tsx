@@ -43,7 +43,7 @@ const differentiators = [
 export default function AboutPage() {
   return (
     <div className="w-full min-h-screen flex flex-col">
-      <div className="dailyexpress-update-offset-top bg-white sticky top-0 z-50">
+      <div className="bg-white">
         <Navbar />
       </div>
 
