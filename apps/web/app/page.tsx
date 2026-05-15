@@ -1,11 +1,12 @@
 import type { Metadata } from "next";
 import Navbar from "~/components/Navbar";
-import SettingNavTabs from "~/components/NavTabs";
+// import SettingNavTabs from "~/components/NavTabs";
 import TripSearchSection from "./components/trip/TripSearchSection";
 import Footer from "@repo/ui/Footer";
 import { buildHomeMetadataFromSearchParams } from "./lib/seo";
 import TripSearchBar from "./components/trip/TripSearchBar";
 import { Suspense } from "react";
+import NavTabs from "./components/NavTabs";
 
 type HomePageProps = {
   searchParams: Promise<{
@@ -25,10 +26,10 @@ export async function generateMetadata({
 export default function Home() {
   return (
     <div className="w-full min-h-screen flex flex-col">
-      <div className="dailyexpress-update-offset-top bg-white sticky top-0 z-50">
+      <div className="bg-white">
         <Navbar />
         <div className="bg-gray-50 border-b border-neutral-200 flex flex-col">
-          <SettingNavTabs />
+          <NavTabs />
         </div>
       </div>
 
