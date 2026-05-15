@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useLayoutEffect, useRef, useState } from "react";
+import { useEffect, useState } from "react";
 import { RefreshCwIcon, XIcon, ZapIcon } from "lucide-react";
 
 import { Button } from "./components/button";
@@ -40,8 +40,6 @@ export function UpdateReloadBanner({
   initialVersion,
   appName = "web",
 }: UpdateReloadBannerProps) {
-  const bannerRef = useRef<HTMLDivElement | null>(null);
-  const [bannerHeight, setBannerHeight] = useState(0);
   const [latestVersion, setLatestVersion] = useState<string | null>(null);
   const [dismissedVersion, setDismissedVersion] = useState<string | null>(null);
   const isDevelopment = initialVersion === "development";
@@ -159,45 +157,6 @@ export function UpdateReloadBanner({
     };
   }, [initialVersion, isDevelopment]);
 
-  useLayoutEffect(() => {
-    if (!updateAvailable) {
-      return;
-    }
-
-    const root = document.documentElement;
-
-    function syncBannerHeight() {
-      const nextHeight = bannerRef.current?.offsetHeight ?? 0;
-      setBannerHeight(nextHeight);
-      root.style.setProperty(
-        "--dailyexpress-update-banner-height",
-        `${nextHeight}px`
-      );
-      root.dataset.dailyexpressUpdateBanner = "visible";
-    }
-
-    syncBannerHeight();
-
-    const observer =
-      typeof ResizeObserver !== "undefined" && bannerRef.current
-        ? new ResizeObserver(syncBannerHeight)
-        : null;
-
-    if (bannerRef.current) {
-      observer?.observe(bannerRef.current);
-    }
-
-    window.addEventListener("resize", syncBannerHeight);
-
-    return () => {
-      observer?.disconnect();
-      window.removeEventListener("resize", syncBannerHeight);
-      root.style.removeProperty("--dailyexpress-update-banner-height");
-      delete root.dataset.dailyexpressUpdateBanner;
-      setBannerHeight(0);
-    };
-  }, [updateAvailable]);
-
   function handleDismiss() {
     if (!latestVersion) {
       return;
@@ -221,62 +180,58 @@ export function UpdateReloadBanner({
       : "A new version of Daily Express is available.";
 
   return (
-    <>
-      <div
-        ref={bannerRef}
-        role="status"
-        aria-live="polite"
-        aria-atomic="true"
-        className={cn(
-          "fixed inset-x-0 top-0 z-9999 border-b border-[#BFDBFE]",
-          "flex items-center justify-between gap-3 px-4 py-2.5",
-          "bg-[#F8FBFF] text-sm font-medium text-[#1E40AF]",
-          "animate-in slide-in-from-top duration-300 ease-out"
-        )}
-      >
-        <span className="flex min-w-0 items-center gap-2">
-          <ZapIcon className="size-4 shrink-0" aria-hidden="true" />
-          <span className="leading-snug">
-            {label}{" "}
-            <span className="hidden sm:inline">
-              Reload to get the latest updates.
-            </span>
+    <div
+      role="status"
+      aria-live="polite"
+      aria-atomic="true"
+      className={cn(
+        "border-b border-[#BFDBFE]",
+        "flex items-center justify-between gap-3 px-4 py-2.5",
+        "bg-[#F8FBFF] text-sm font-medium text-[#1E40AF]",
+        "animate-in slide-in-from-top duration-300 ease-out"
+      )}
+    >
+      <span className="flex min-w-0 items-center gap-2">
+        <ZapIcon className="size-4 shrink-0" aria-hidden="true" />
+        <span className="leading-snug">
+          {label}{" "}
+          <span className="hidden sm:inline">
+            Reload to get the latest updates.
           </span>
         </span>
+      </span>
 
-        <span className="flex shrink-0 items-center gap-1.5">
-          <Button
-            type="button"
-            size="sm"
-            variant="ghost"
-            className={cn(
-              "h-7 cursor-pointer gap-1.5 rounded-sm px-2.5",
-              "bg-[#EFF6FF] text-[#1E40AF] hover:bg-[#DBEAFE] hover:text-[#1E40AF]",
-              "focus-visible:ring-[#1E40AF]"
-            )}
-            onClick={handleReload}
-          >
-            <RefreshCwIcon className="size-3.5" aria-hidden="true" />
-            Reload
-          </Button>
+      <span className="flex shrink-0 items-center gap-1.5">
+        <Button
+          type="button"
+          size="sm"
+          variant="ghost"
+          className={cn(
+            "h-7 cursor-pointer gap-1.5 rounded-sm px-2.5",
+            "bg-[#EFF6FF] text-[#1E40AF] hover:bg-[#DBEAFE] hover:text-[#1E40AF]",
+            "focus-visible:ring-[#1E40AF]"
+          )}
+          onClick={handleReload}
+        >
+          <RefreshCwIcon className="size-3.5" aria-hidden="true" />
+          Reload
+        </Button>
 
-          <Button
-            type="button"
-            size="icon"
-            variant="ghost"
-            className={cn(
-              "size-7 cursor-pointer rounded-sm",
-              "text-[#1E40AF] hover:bg-[#DBEAFE] hover:text-[#1E40AF]",
-              "focus-visible:ring-[#1E40AF]"
-            )}
-            onClick={handleDismiss}
-            aria-label="Dismiss update notification"
-          >
-            <XIcon className="size-3.5" aria-hidden="true" />
-          </Button>
-        </span>
-      </div>
-      <div aria-hidden="true" style={{ height: bannerHeight }} />
-    </>
+        <Button
+          type="button"
+          size="icon"
+          variant="ghost"
+          className={cn(
+            "size-7 cursor-pointer rounded-sm",
+            "text-[#1E40AF] hover:bg-[#DBEAFE] hover:text-[#1E40AF]",
+            "focus-visible:ring-[#1E40AF]"
+          )}
+          onClick={handleDismiss}
+          aria-label="Dismiss update notification"
+        >
+          <XIcon className="size-3.5" aria-hidden="true" />
+        </Button>
+      </span>
+    </div>
   );
 }
