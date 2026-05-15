@@ -23,12 +23,11 @@ const Navbar = () => {
             <div className="flex items-center gap-2">
               <Link href="/" className="flex items-center gap-2">
                 <Image
-                  src="/logo.png"
-                  alt="Logo"
-                  width={520}
-                  height={530}
-                  className="object-contain object-center"
-                  style={{ width: "28px", height: "auto" }}
+                  src="/nav-logo.png"
+                  alt="Daily Express logo"
+                  width={28}
+                  height={29}
+                  className="h-auto w-7 object-contain object-center"
                 />
                 <h1 className="text-xl font-semibold leading-none">Daily Express</h1>
               </Link>
