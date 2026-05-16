@@ -229,6 +229,32 @@ export const updateTripStatus: RequestHandler = asyncHandler(
   },
 );
 
+export const completeTrip: RequestHandler = asyncHandler(
+  async (req: Request, res: Response) => {
+    const user = getAuthenticatedUser(req);
+    if (!user) {
+      return sendErrorResponse(res, 401, "Please sign in again to continue.", {
+        code: "AUTHENTICATION_REQUIRED",
+      });
+    }
+    const tripId = getParam(req.params.id);
+    if (!tripId) {
+      return sendErrorResponse(res, 400, "Trip ID is required.", {
+        code: "MISSING_TRIP_ID",
+      });
+    }
+
+    const trip = await timeAsync(
+      "route.complete_trip.service",
+      { userId: user.userId, tripId },
+      () => routeService.completeTrip(user, tripId),
+    );
+    return res
+      .status(200)
+      .json(createSuccessResponse(trip, "Trip completed successfully"));
+  },
+);
+
 export const searchRoutes: RequestHandler = asyncHandler(
   async (req: Request, res: Response) => {
     const { from, to, date, vehicleType, limit, offset } = req.query;

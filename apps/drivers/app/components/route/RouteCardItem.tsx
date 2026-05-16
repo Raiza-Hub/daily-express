@@ -1,12 +1,11 @@
 "use client";
 
-import { ProhibitIcon } from "@phosphor-icons/react";
-import { useUpdateTripStatus } from "@repo/api";
+import { CheckCircleIcon, ProhibitIcon } from "@phosphor-icons/react";
+import { useCompleteTrip, useUpdateTripStatus } from "@repo/api";
 import { Button } from "@repo/ui/components/button";
 import { toast } from "@repo/ui/components/sonner";
 import { PlaneDots } from "@repo/ui/PlaneDots";
-import dayjs from "dayjs";
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import PassengersSheet from "./PassengersSheet";
 import PassengerStatusBar from "./PassengerStatusBar";
 import RouteCardActionMenu from "./RouteCardActionMenu";
@@ -14,15 +13,38 @@ import { RouteWithTrips } from "~/lib/type";
 
 const RouteCardItem = ({ route }: { route: RouteWithTrips }) => {
   const [passengersOpen, setPassengersOpen] = useState(false);
+  const [nowMs, setNowMs] = useState(() => Date.now());
   const isBookingClosed = route.status === "booking_closed";
+  const isCompleted = route.status === "completed";
   const isTripFull = route.bookedSeats >= route.capacity;
-  const hasTripDayPassed = dayjs(route.tripDate).isBefore(dayjs(), "day");
+  const arrivalAtMs = new Date(route.arrivalAt).getTime();
+  const hasTripArrived = Number.isFinite(arrivalAtMs) && nowMs >= arrivalAtMs;
 
   const handlePassengers = () => {
     setPassengersOpen(true);
   };
 
+  useEffect(() => {
+    if (!Number.isFinite(arrivalAtMs) || hasTripArrived) {
+      return;
+    }
+
+    const maxTimeoutMs = 2_147_483_647;
+    const timeout = window.setTimeout(
+      () => setNowMs(Date.now()),
+      Math.min(Math.max(arrivalAtMs - Date.now(), 0), maxTimeoutMs),
+    );
+
+    return () => window.clearTimeout(timeout);
+  }, [arrivalAtMs, hasTripArrived]);
+
   const updateTripStatus = useUpdateTripStatus({
+    onError: (error) => {
+      toast.error(error.message);
+    },
+  });
+
+  const completeTrip = useCompleteTrip({
     onError: (error) => {
       toast.error(error.message);
     },
@@ -31,8 +53,8 @@ const RouteCardItem = ({ route }: { route: RouteWithTrips }) => {
   const handleStopBooking = () => {
     if (
       isBookingClosed ||
+      isCompleted ||
       isTripFull ||
-      hasTripDayPassed ||
       updateTripStatus.isPending
     ) {
       return;
@@ -41,23 +63,42 @@ const RouteCardItem = ({ route }: { route: RouteWithTrips }) => {
     updateTripStatus.mutate({ id: route.tripId, status: "booking_closed" });
   };
 
-  const stopBookingDisabled =
-    isBookingClosed ||
-    isTripFull ||
-    hasTripDayPassed ||
-    updateTripStatus.isPending;
-  const stopBookingLabel = isBookingClosed
-    ? "Booking Stopped"
-    : hasTripDayPassed
-      ? "Day Passed"
+  const handleCompleteTrip = () => {
+    if (!hasTripArrived || isCompleted || isMutating) {
+      return;
+    }
+
+    completeTrip.mutate({ id: route.tripId });
+  };
+
+  const isMutating = updateTripStatus.isPending || completeTrip.isPending;
+  const isCompletionAction = hasTripArrived || isCompleted;
+  const tripActionDisabled = isCompletionAction
+    ? isCompleted || isMutating
+    : isBookingClosed || isTripFull || isMutating;
+  const tripActionLabel = isCompletionAction
+    ? isCompleted
+      ? "Trip Completed"
+      : completeTrip.isPending
+        ? "Completing..."
+        : "Mark Completed"
+    : isBookingClosed
+      ? "Booking Stopped"
       : isTripFull
         ? "Trip Full"
         : updateTripStatus.isPending
           ? "Stopping..."
           : "Stop Booking";
+  const handleTripAction = isCompletionAction
+    ? handleCompleteTrip
+    : handleStopBooking;
+  const TripActionIcon = isCompletionAction ? CheckCircleIcon : ProhibitIcon;
+  const tripActionClassName = isCompletionAction
+    ? "hidden md:inline-flex rounded-lg border-emerald-200 text-emerald-600 hover:bg-emerald-50 hover:border-emerald-300 hover:text-emerald-700 gap-2 font-medium disabled:border-emerald-100 disabled:text-emerald-400 disabled:opacity-60"
+    : "hidden md:inline-flex rounded-lg border-red-200 text-red-500 hover:bg-red-50 hover:border-red-300 hover:text-red-600 gap-2 font-medium disabled:border-red-100 disabled:text-red-400 disabled:opacity-60";
 
   return (
-    <div className="group relative flex flex-col rounded-xl bg-white border border-slate-200 transition-all duration-200">
+    <div className="group relative flex flex-col rounded-xl bg-white border border-neutral-200 transition-all duration-200">
       <div className="flex flex-col lg:flex-row lg:items-center lg:justify-between gap-6 p-6">
         <div className="flex flex-col gap-0.5 md:w-min">
           <div className="flex items-center gap-2">
@@ -86,27 +127,30 @@ const RouteCardItem = ({ route }: { route: RouteWithTrips }) => {
           <div className="flex items-center gap-4">
             <Button
               variant="outline"
-              className="hidden md:inline-flex rounded-lg border-red-200 text-red-500 hover:bg-red-50 hover:border-red-300 hover:text-red-600 gap-2 font-medium disabled:border-red-100 disabled:text-red-400 disabled:opacity-60"
-              disabled={stopBookingDisabled}
-              onClick={handleStopBooking}
+              className={tripActionClassName}
+              disabled={tripActionDisabled}
+              onClick={handleTripAction}
             >
-              <ProhibitIcon size={18} />
-              {stopBookingLabel}
+              <TripActionIcon size={18} />
+              {tripActionLabel}
             </Button>
 
             <div className="md:hidden shrink-0">
               <RouteCardActionMenu
                 onPassengers={handlePassengers}
-                onStopBooking={handleStopBooking}
-                stopBookingDisabled={stopBookingDisabled}
-                stopBookingLabel={stopBookingLabel}
+                onTripAction={handleTripAction}
+                tripActionDisabled={tripActionDisabled}
+                tripActionLabel={tripActionLabel}
+                tripActionMode={
+                  isCompletionAction ? "complete" : "stop_booking"
+                }
               />
             </div>
           </div>
         </div>
       </div>
 
-      <div className="hidden md:block border-t border-slate-100" />
+      <div className="hidden md:block border-t border-neutral-100" />
 
       <div className="hidden md:flex justify-end px-6 py-1.5 opacity-80 group-hover:opacity-100 transition-opacity">
         <button
