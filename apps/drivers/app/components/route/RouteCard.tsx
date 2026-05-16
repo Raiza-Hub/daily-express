@@ -14,7 +14,6 @@ interface RouteCardProps {
   isLoading?: boolean;
 }
 
-
 export default function RouteCard({
   selectedDate,
   tripsSummaryRange,
@@ -56,6 +55,7 @@ export default function RouteCard({
         id: trip.id,
         tripId: trip.id,
         status: trip.status,
+        tripDate: dayjs(tripDate).format("YYYY-MM-DD"),
         departureTime: dayjs(departureDateTime).format("h:mma"),
         departureCode: trip.route.pickup_location_title,
         arrivalTime: dayjs(arrivalDateTime).format("h:mma"),
@@ -87,7 +87,9 @@ export default function RouteCard({
     return (
       <div className="flex flex-col items-center gap-2 py-12">
         <CalendarSlashIcon className="w-6 h-6 text-neutral-500" />
-        <p className="text-muted-foreground">No trips available for this date</p>
+        <p className="text-muted-foreground">
+          No trips available for this date
+        </p>
       </div>
     );
   }
