@@ -16,6 +16,7 @@ export interface RouteWithTrips {
   departureTime: string;
   departureCode: string;
   arrivalTime: string;
+  arrivalAt: string;
   arrivalCode: string;
   bookedSeats: number;
   capacity: number;

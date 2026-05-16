@@ -1,4 +1,5 @@
 import {
+  CheckCircleIcon,
   DotsThreeVerticalIcon,
   ProhibitIcon,
   UsersThreeIcon,
@@ -17,19 +18,23 @@ import { useState } from "react";
 
 interface RouteCardActionMenuProps {
   onPassengers: () => void;
-  onStopBooking: () => void;
-  stopBookingDisabled?: boolean;
-  stopBookingLabel?: string;
+  onTripAction: () => void;
+  tripActionDisabled?: boolean;
+  tripActionLabel?: string;
+  tripActionMode?: "stop_booking" | "complete";
 }
 
 export default function RouteCardActionMenu({
   onPassengers,
-  onStopBooking,
-  stopBookingDisabled = false,
-  stopBookingLabel = "Stop Booking",
+  onTripAction,
+  tripActionDisabled = false,
+  tripActionLabel = "Stop Booking",
+  tripActionMode = "stop_booking",
 }: RouteCardActionMenuProps) {
   const [open, setOpen] = useState(false);
   useBodyScrollLock(open);
+  const isCompletionAction = tripActionMode === "complete";
+  const TripActionIcon = isCompletionAction ? CheckCircleIcon : ProhibitIcon;
 
   return (
     <DropdownMenu open={open} onOpenChange={setOpen} modal={false}>
@@ -46,13 +51,17 @@ export default function RouteCardActionMenu({
           </DropdownMenuItem>
           <DropdownMenuSeparator />
           <DropdownMenuItem
-            variant="destructive"
-            className="cursor-pointer text-red-600 focus:text-red-600 hover:text-red-600 data-[disabled]:text-red-400"
-            disabled={stopBookingDisabled}
-            onSelect={onStopBooking}
+            variant={isCompletionAction ? "default" : "destructive"}
+            className={
+              isCompletionAction
+                ? "cursor-pointer text-emerald-700 focus:text-emerald-700 hover:text-emerald-700 data-[disabled]:text-emerald-400"
+                : "cursor-pointer text-red-600 focus:text-red-600 hover:text-red-600 data-[disabled]:text-red-400"
+            }
+            disabled={tripActionDisabled}
+            onSelect={onTripAction}
           >
-            <ProhibitIcon aria-hidden="true" size={16} />
-            {stopBookingLabel}
+            <TripActionIcon aria-hidden="true" size={16} />
+            {tripActionLabel}
           </DropdownMenuItem>
         </DropdownMenuGroup>
       </DropdownMenuContent>

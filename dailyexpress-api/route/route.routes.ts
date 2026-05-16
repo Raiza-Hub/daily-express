@@ -28,6 +28,11 @@ router.patch(
   authenticateVerifiedGatewayRequest,
   routeController.updateTripStatus,
 );
+router.patch(
+  "/driver/trip/:id/complete",
+  authenticateVerifiedGatewayRequest,
+  routeController.completeTrip,
+);
 router.get(
   "/driver/trips-summary-range",
   authenticateVerifiedGatewayRequest,

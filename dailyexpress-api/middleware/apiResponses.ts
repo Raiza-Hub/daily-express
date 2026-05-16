@@ -30,7 +30,7 @@ const DEFAULT_MESSAGES: Record<number, string> = {
   415: "That file type is not supported.",
   422: "Some information needs your attention before we can continue.",
   429: "Too many requests. Please try again shortly.",
-  500: "Something went wrong on our side. Please try again in a moment.",
+  500: "Something went wrong. Please try again in a moment.",
   502: "A connected service is temporarily unavailable. Please try again shortly.",
   503: "Daily Express is temporarily unavailable. Please try again shortly.",
   504: "The request took too long. Please try again shortly.",

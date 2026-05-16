@@ -25,6 +25,8 @@ import { db } from "../db/connection";
 import { booking, driver, route, trip, users } from "../db/index";
 import { DriverService } from "../driver/driverService";
 import { PaymentService } from "../payment/paymentService";
+import { PayoutService } from "../payout/payoutService";
+import { publishNotificationCreatedInBackground } from "../notification/realtime";
 import { timeAsync } from "../utils/timing";
 import {
   addDaysToDateKey,
@@ -60,6 +62,25 @@ type CreateBookingInput = {
 
 const driverService = new DriverService();
 const paymentService = new PaymentService();
+const payoutService = new PayoutService();
+
+function getTripArrivalAt(tripRecord: TripRecord, routeRecord: RouteRecord) {
+  const dateKey = formatBusinessDate(tripRecord.date);
+  const departureAt = getScheduledDepartureTime(
+    dateKey,
+    routeRecord.departure_time,
+  );
+  const arrivalAt = getScheduledDepartureTime(
+    dateKey,
+    routeRecord.arrival_time,
+  );
+
+  if (arrivalAt <= departureAt) {
+    return new Date(arrivalAt.getTime() + 24 * 60 * 60 * 1000);
+  }
+
+  return arrivalAt;
+}
 
 export class RouteService {
   private async allocateLowestAvailableSeat(
@@ -569,6 +590,80 @@ export class RouteService {
       .returning();
 
     return updatedTrip;
+  }
+
+  async completeTrip(user: JWTPayload, tripId: string) {
+    const driverId = await this.resolveDriverId(user);
+    const tripExists = await db.query.trip.findFirst({
+      where: eq(trip.id, tripId),
+    });
+    if (!tripExists) {
+      throw createServiceError("Trip not found", 404);
+    }
+    if (tripExists.driverId !== driverId) {
+      throw createServiceError(
+        "You are not authorized to complete this trip",
+        403,
+      );
+    }
+    if (tripExists.status === "cancelled") {
+      throw createServiceError("Cancelled trips cannot be completed", 400);
+    }
+    if (tripExists.status === "completed") {
+      throw createServiceError("Trip is already completed", 400);
+    }
+
+    const routeRecord = await db.query.route.findFirst({
+      where: eq(route.id, tripExists.routeId),
+    });
+    if (!routeRecord) {
+      throw createServiceError("Route not found", 404);
+    }
+
+    const arrivalAt = getTripArrivalAt(tripExists, routeRecord);
+    if (arrivalAt.getTime() > Date.now()) {
+      throw createServiceError(
+        "Trip cannot be completed before the scheduled arrival time",
+        400,
+      );
+    }
+
+    const result = await db.transaction(async (tx) => {
+      const [updatedTrip] = await tx
+        .update(trip)
+        .set({ status: "completed", updatedAt: new Date() })
+        .where(eq(trip.id, tripId))
+        .returning();
+      if (!updatedTrip) {
+        throw createServiceError("Trip not found", 404);
+      }
+
+      await tx
+        .update(booking)
+        .set({ status: "completed", updatedAt: new Date() })
+        .where(
+          and(eq(booking.tripId, tripId), eq(booking.status, "confirmed")),
+        );
+
+      const payoutResult = await payoutService.markTripCompletedInTransaction(
+        tx,
+        {
+          tripId,
+          completedAt: new Date(),
+        },
+      );
+
+      return {
+        updatedTrip,
+        pendingNotifications: payoutResult.pendingNotifications,
+      };
+    });
+
+    for (const notification of result.pendingNotifications) {
+      publishNotificationCreatedInBackground(notification);
+    }
+
+    return result.updatedTrip;
   }
 
   async getUserBookings(userId: string, limit = 20, offset = 0) {

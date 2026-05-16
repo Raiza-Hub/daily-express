@@ -1,8 +1,6 @@
 import type { Route } from "@shared/types";
 import { SearchTrip, TripStatusItem } from "./type";
-import {
-  type UserBookingWithTrip,
-} from "@repo/api";
+import { type UserBookingWithTrip } from "@repo/api";
 import { DriverInfoProps } from "~/components/DriverInfo";
 import dayjs from "dayjs";
 
@@ -45,12 +43,12 @@ export function formatDateTime(value: string | Date) {
 }
 
 export function formatCurrency(amountMajor: number, currency: string) {
-    return new Intl.NumberFormat("en-NG", {
-        style: "currency",
-        currency,
-        minimumFractionDigits: 0,
-        maximumFractionDigits: 0,
-    }).format(amountMajor);
+  return new Intl.NumberFormat("en-NG", {
+    style: "currency",
+    currency,
+    minimumFractionDigits: 0,
+    maximumFractionDigits: 0,
+  }).format(amountMajor);
 }
 
 export function parseLocalDate(date: string): Date {
@@ -69,7 +67,6 @@ export function parseLocalDate(date: string): Date {
 
   return new Date(year, month - 1, day);
 }
-
 
 export function toSearchTrip(item: Route): SearchTrip {
   const capacity = item.availableSeats;
@@ -115,76 +112,82 @@ export function combineTripDateAndTime(tripDate: Date, timeSource: Date): Date {
   return combined;
 }
 
-export function transformToTripStatusItem(booking: UserBookingWithTrip): TripStatusItem | null {
-    if (!booking.trip?.route) {
-        return null;
-    }
+export function transformToTripStatusItem(
+  booking: UserBookingWithTrip,
+): TripStatusItem | null {
+  if (!booking.trip?.route) {
+    return null;
+  }
 
-    const trip = booking.trip;
-    const route = trip.route;
-    const tripDate = new Date(trip.date);
-    const departureTime = combineTripDateAndTime(
-        tripDate,
-        new Date(route.departureTime),
-    );
-    let estimatedArrivalTime = combineTripDateAndTime(
-        tripDate,
-        new Date(route.arrivalTime),
-    );
+  const trip = booking.trip;
+  const route = trip.route;
+  const tripDate = new Date(trip.date);
+  const departureTime = combineTripDateAndTime(
+    tripDate,
+    new Date(route.departureTime),
+  );
+  let estimatedArrivalTime = combineTripDateAndTime(
+    tripDate,
+    new Date(route.arrivalTime),
+  );
 
-    if (estimatedArrivalTime <= departureTime) {
-        estimatedArrivalTime = dayjs(estimatedArrivalTime).add(1, "day").toDate();
-    }
+  if (estimatedArrivalTime <= departureTime) {
+    estimatedArrivalTime = dayjs(estimatedArrivalTime).add(1, "day").toDate();
+  }
 
-    const driverInfo: DriverInfoProps | undefined = route.driver ? {
+  const driverInfo: DriverInfoProps | undefined = route.driver
+    ? {
         firstName: route.driver.firstName,
         lastName: route.driver.lastName,
         phoneNumber: route.driver.phoneNumber,
         country: route.driver.country,
         state: route.driver.state,
         profilePictureUrl: route.driver.profilePictureUrl || "",
-    } : undefined;
+      }
+    : undefined;
 
-    return {
-        id: booking.id,
-        createdAt: booking.createdAt,
-        driver: driverInfo,
-        routeId: route.id,
-        tripDate: formatLocalDate(tripDate),
-        remainingSeats: trip.availableSeats,
-        trip: {
-            departureCity: {
-                title: route.pickupLocationTitle,
-                locality: route.pickupLocationLocality,
-                label: route.pickupLocationLabel,
-            },
-            arrivalCity: {
-                title: route.dropoffLocationTitle,
-                locality: route.dropoffLocationLocality,
-                label: route.dropoffLocationLabel,
-            },
-            vehicleType: route.vehicleType as "car" | "bus" | "luxury car",
-            seatNumber: trip.capacity,
-            price: booking.fareAmount,
-            departureTime,
-            estimatedArrivalTime,
-            meetingPoint: route.meetingPoint,
-        },
-    };
+  return {
+    id: booking.id,
+    createdAt: booking.createdAt,
+    driver: driverInfo,
+    routeId: route.id,
+    tripDate: formatLocalDate(tripDate),
+    remainingSeats: trip.availableSeats,
+    trip: {
+      departureCity: {
+        title: route.pickupLocationTitle,
+        locality: route.pickupLocationLocality,
+        label: route.pickupLocationLabel,
+      },
+      arrivalCity: {
+        title: route.dropoffLocationTitle,
+        locality: route.dropoffLocationLocality,
+        label: route.dropoffLocationLabel,
+      },
+      vehicleType: route.vehicleType as "car" | "bus" | "luxury car",
+      seatNumber: trip.capacity,
+      price: booking.fareAmount,
+      departureTime,
+      estimatedArrivalTime,
+      meetingPoint: route.meetingPoint,
+    },
+  };
 }
 
-export function groupByDate(items: TripStatusItem[]): Map<string, TripStatusItem[]> {
-    const map = new Map<string, TripStatusItem[]>();
+export function groupByDate(
+  items: TripStatusItem[],
+): Map<string, TripStatusItem[]> {
+  const map = new Map<string, TripStatusItem[]>();
 
-    const sorted = [...items].sort((a, b) => {
-        return dayjs(b.createdAt).valueOf() - dayjs(a.createdAt).valueOf();
-    });
+  const sorted = [...items].sort((a, b) => {
+    return dayjs(b.createdAt).valueOf() - dayjs(a.createdAt).valueOf();
+  });
 
-    for (const item of sorted) {
-        const key = dayjs(item.trip.departureTime).format("MMM D, YYYY");
-        if (!map.has(key)) map.set(key, []);
-        map.get(key)!.push(item);
-    }
+  for (const item of sorted) {
+    const key = dayjs(item.trip.departureTime).format("MMM D, YYYY");
+    if (!map.has(key)) map.set(key, []);
+    map.get(key)!.push(item);
+  }
 
-    return map;
+  return map;
 }

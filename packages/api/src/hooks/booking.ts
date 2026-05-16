@@ -48,8 +48,9 @@ function syncCachedRoutes(
   queryClient: ReturnType<typeof useQueryClient>,
   updater: (routes: Route[]) => Route[],
 ) {
-  const previousRoutes =
-    queryClient.getQueryData<Route[]>(DRIVER_ROUTES_QUERY_KEY);
+  const previousRoutes = queryClient.getQueryData<Route[]>(
+    DRIVER_ROUTES_QUERY_KEY,
+  );
 
   if (!previousRoutes) {
     return;
@@ -120,9 +121,7 @@ export interface UserBookingsPage {
 
 export const getAllDriverRoutesFn = async (): Promise<Route[]> => {
   try {
-    const response = await routeApi.get<ApiResponse<Route[]>>(
-      "/driver/routes",
-    );
+    const response = await routeApi.get<ApiResponse<Route[]>>("/driver/routes");
     if (!response.data.success || !response.data.data) {
       throw new Error(response.data.error || "Failed to get driver routes");
     }
@@ -246,6 +245,20 @@ export const updateTripStatusFn = async ({
     return response.data.data;
   } catch (err) {
     return handleApiError(err, "Failed to update trip status") as never;
+  }
+};
+
+export const completeTripFn = async ({ id }: { id: string }): Promise<Trip> => {
+  try {
+    const response = await routeApi.patch<ApiResponse<Trip>>(
+      `/driver/trip/${id}/complete`,
+    );
+    if (!response.data.success || !response.data.data) {
+      throw new Error(response.data.error || "Failed to complete trip");
+    }
+    return response.data.data;
+  } catch (err) {
+    return handleApiError(err, "Failed to complete trip") as never;
   }
 };
 
@@ -416,10 +429,12 @@ export const useDeleteRoute = (options?: {
         queryClient.cancelQueries({ queryKey: DRIVER_STATS_QUERY_KEY }),
       ]);
 
-      const previousRoutes =
-        queryClient.getQueryData<Route[]>(DRIVER_ROUTES_QUERY_KEY);
-      const previousStats =
-        queryClient.getQueryData<DriverStats>(DRIVER_STATS_QUERY_KEY);
+      const previousRoutes = queryClient.getQueryData<Route[]>(
+        DRIVER_ROUTES_QUERY_KEY,
+      );
+      const previousStats = queryClient.getQueryData<DriverStats>(
+        DRIVER_STATS_QUERY_KEY,
+      );
 
       syncCachedRoutes(queryClient, (routes) =>
         routes.filter((route) => route.id !== id),
@@ -466,6 +481,35 @@ export const useUpdateTripStatus = (options?: {
       void queryClient.invalidateQueries({ queryKey: ["tripsSummaryRange"] });
       void queryClient.invalidateQueries({
         queryKey: ["tripBookings", variables.id],
+      });
+      options?.onSuccess?.(data);
+    },
+    onError: options?.onError,
+  });
+};
+
+export const useCompleteTrip = (options?: {
+  onSuccess?: (data: Trip) => void;
+  onError?: (error: Error) => void;
+}) => {
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: completeTripFn,
+    onSuccess: (data, variables) => {
+      void queryClient.invalidateQueries({ queryKey: ["driverRoutes"] });
+      void queryClient.invalidateQueries({ queryKey: ["tripsSummaryRange"] });
+      void queryClient.invalidateQueries({
+        queryKey: ["tripBookings", variables.id],
+      });
+      void queryClient.invalidateQueries({
+        queryKey: ["driver-payout-balance"],
+      });
+      void queryClient.invalidateQueries({
+        queryKey: ["driver-payout-history"],
+      });
+      void queryClient.invalidateQueries({
+        queryKey: ["driver-payout-summary"],
       });
       options?.onSuccess?.(data);
     },

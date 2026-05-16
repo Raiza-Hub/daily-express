@@ -59,6 +59,7 @@ export default function RouteCard({
         departureTime: dayjs(departureDateTime).format("h:mma"),
         departureCode: trip.route.pickup_location_title,
         arrivalTime: dayjs(arrivalDateTime).format("h:mma"),
+        arrivalAt: arrivalDateTime.toISOString(),
         arrivalCode: trip.route.dropoff_location_title,
         bookedSeats: trip.bookedSeats,
         capacity: trip.capacity,
@@ -77,8 +78,8 @@ export default function RouteCard({
   if (isLoading) {
     return (
       <div className="flex flex-col gap-4">
-        <div className="animate-pulse h-32 bg-gray-200 rounded-xl" />
-        <div className="animate-pulse h-32 bg-gray-200 rounded-xl" />
+        <div className="animate-pulse h-32 bg-neutral-200 rounded-xl" />
+        <div className="animate-pulse h-32 bg-neutral-200 rounded-xl" />
       </div>
     );
   }
@@ -86,7 +87,7 @@ export default function RouteCard({
   if (routes.length === 0) {
     return (
       <div className="flex flex-col items-center gap-2 py-12">
-        <CalendarSlashIcon className="w-6 h-6 text-neutral-500" />
+        <CalendarSlashIcon className="size-6 text-neutral-500" />
         <p className="text-muted-foreground">
           No trips available for this date
         </p>
