@@ -42,7 +42,10 @@ const envSchema = z.object({
     }, z.boolean())
     .default(false),
   PROXY_IP_DEBUG_TOKEN: z
-    .preprocess((value) => (value === "" ? undefined : value), z.string().min(1))
+    .preprocess(
+      (value) => (value === "" ? undefined : value),
+      z.string().min(1),
+    )
     .optional(),
   RATE_LIMIT_PUBLIC_AUTH: z.coerce.number().int().positive().default(20),
   RATE_LIMIT_PUBLIC_ROUTES: z.coerce.number().int().positive().default(60),
@@ -56,16 +59,18 @@ const envSchema = z.object({
   KORA_WEBHOOK_SECRET: z.string().min(1),
   KORA_WEBHOOK_URL: z.string().url().optional(),
   FRONTEND_URL: z.string().url().default("http://localhost:3000"),
-  PAYOUT_RETRY_DELAYS_MS: z
-    .string()
-    .default("60000,300000,900000"),
+  PAYOUT_RETRY_DELAYS_MS: z.string().default("60000,300000,900000"),
   INSUFFICIENT_BALANCE_RETRY_DELAY_MS: z.coerce
     .number()
     .int()
     .positive()
     .default(30 * 60 * 1000),
   PAYOUT_JOB_EXPIRE_MINUTES: z.coerce.number().int().positive().default(15),
-  MINIMUM_PAYOUT_BUFFER_MINOR: z.coerce.number().int().nonnegative().default(50000),
+  MINIMUM_PAYOUT_BUFFER_MINOR: z.coerce
+    .number()
+    .int()
+    .nonnegative()
+    .default(50000),
 
   // Database
   DATABASE_URL: z.string().min(1),
@@ -93,7 +98,7 @@ const envSchema = z.object({
   RATE_LIMIT_WEBHOOK: z.coerce.number().int().positive().default(300),
 
   // Route
-  ROUTE_SERVICE_TIMEZONE: z.string().default("Africa/Lagos"),
+  ROUTE_SERVICE_TIMEZONE: z.string().min(1),
 
   // Logging
   DAILYEXPRESS_API_LOG_CONSOLE: z
@@ -114,7 +119,8 @@ export function loadConfig(): EnvConfig {
   const result = envSchema.safeParse(process.env);
 
   if (!result.success) {
-    const errorMessage = result.error.message || "Invalid environment configuration";
+    const errorMessage =
+      result.error.message || "Invalid environment configuration";
     throw new Error(`Invalid environment configuration:\n${errorMessage}`);
   }
 

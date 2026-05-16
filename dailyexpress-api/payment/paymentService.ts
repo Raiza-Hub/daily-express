@@ -315,7 +315,9 @@ export class PaymentService {
     input: InitializePaymentInput,
     hold: BookingHoldRecord,
   ) {
-    const verification = await koraClient.verifyTransaction(existingPayment.reference);
+    const verification = await koraClient.verifyTransaction(
+      existingPayment.reference,
+    );
     const providerStatus = verification.data.status.toLowerCase();
 
     if (providerStatus === "success") {
@@ -331,7 +333,9 @@ export class PaymentService {
       return this.withExpiry(existingPayment, hold);
     }
 
-    if (["abandoned", "cancelled", "closed", "failed"].includes(providerStatus)) {
+    if (
+      ["abandoned", "cancelled", "closed", "failed"].includes(providerStatus)
+    ) {
       return this.refreshPendingCheckout(
         existingPayment,
         authenticatedEmail,
@@ -427,7 +431,12 @@ export class PaymentService {
           failureReason: null,
           updatedAt: new Date(),
         })
-        .where(and(eq(payment.id, existingPayment.id), eq(payment.status, "pending")))
+        .where(
+          and(
+            eq(payment.id, existingPayment.id),
+            eq(payment.status, "pending"),
+          ),
+        )
         .returning();
 
       if (record) {
@@ -529,7 +538,8 @@ export class PaymentService {
     if (!signatureValid) {
       logger.warn("payment.webhook_invalid_signature_ignored", {
         event: webhook.event,
-        paymentReference: webhook.data.payment_reference || webhook.data.reference || null,
+        paymentReference:
+          webhook.data.payment_reference || webhook.data.reference || null,
       });
       return;
     }
@@ -589,12 +599,20 @@ export class PaymentService {
       : null;
 
     if (!hold) {
-      await this.initiateAutoRefund(reference, verification.data, verification.raw);
+      await this.initiateAutoRefund(
+        reference,
+        verification.data,
+        verification.raw,
+      );
       return;
     }
 
     if (hold.expiresAt.getTime() <= Date.now()) {
-      await this.initiateAutoRefund(reference, verification.data, verification.raw);
+      await this.initiateAutoRefund(
+        reference,
+        verification.data,
+        verification.raw,
+      );
       return;
     }
 
@@ -721,18 +739,23 @@ export class PaymentService {
           failureReason: null,
           updatedAt: new Date(),
         })
-        .where(and(eq(payment.reference, reference), eq(payment.status, "pending")))
+        .where(
+          and(eq(payment.reference, reference), eq(payment.status, "pending")),
+        )
         .returning();
 
       if (!updatedPayment) {
         return null;
       }
 
-      const bookingResult = await this.syncBookingPaymentStatusInTransaction(tx, {
-        bookingId: updatedPayment.bookingId,
-        paymentReference: reference,
-        paymentStatus: "successful",
-      });
+      const bookingResult = await this.syncBookingPaymentStatusInTransaction(
+        tx,
+        {
+          bookingId: updatedPayment.bookingId,
+          paymentReference: reference,
+          paymentStatus: "successful",
+        },
+      );
 
       if (bookingResult.confirmed && sideEffects) {
         await driverService.recordConfirmedBooking(tx, {
@@ -755,11 +778,12 @@ export class PaymentService {
           sourceEventId: `payment:${reference}:booking-confirmed`,
         });
 
-        const notification = await notificationService.createForDriverInTransaction(
-          tx,
-          sideEffects.driverId,
-          sideEffects.notification,
-        );
+        const notification =
+          await notificationService.createForDriverInTransaction(
+            tx,
+            sideEffects.driverId,
+            sideEffects.notification,
+          );
 
         if (sideEffects.email.to) {
           await jobService.enqueueEmail(tx, "email.booking_confirmed", {
@@ -827,16 +851,20 @@ export class PaymentService {
         .update(payment)
         .set({
           status: nextStatus,
-          providerStatus: options?.providerStatus || existingPayment.providerStatus,
+          providerStatus:
+            options?.providerStatus || existingPayment.providerStatus,
           rawVerificationResponse:
-            options?.rawVerificationResponse ?? existingPayment.rawVerificationResponse,
+            options?.rawVerificationResponse ??
+            existingPayment.rawVerificationResponse,
           lastStatusCheckAt: new Date(),
           failedAt: options?.failedAt ?? existingPayment.failedAt ?? new Date(),
           failureCode: options?.failureCode || existingPayment.failureCode,
           failureReason: reason,
           updatedAt: new Date(),
         })
-        .where(and(eq(payment.reference, reference), eq(payment.status, "pending")))
+        .where(
+          and(eq(payment.reference, reference), eq(payment.status, "pending")),
+        )
         .returning();
 
       if (!record) {
@@ -850,7 +878,9 @@ export class PaymentService {
       });
 
       if (cleanupProjection && record.bookingId) {
-        await tx.delete(bookingHold).where(eq(bookingHold.bookingId, record.bookingId));
+        await tx
+          .delete(bookingHold)
+          .where(eq(bookingHold.bookingId, record.bookingId));
       }
 
       return [record];
@@ -867,14 +897,22 @@ export class PaymentService {
       status: nextStatus,
     });
 
-    return this.withExpiry(updatedPayment, cleanupProjection ? null : undefined);
+    return this.withExpiry(
+      updatedPayment,
+      cleanupProjection ? null : undefined,
+    );
   }
 
   async initiateAutoRefund(
     reference: string,
     verification: Pick<
       KoraVerifyResponse,
-      "amount" | "currency" | "paid_at" | "payment_reference" | "reference" | "status"
+      | "amount"
+      | "currency"
+      | "paid_at"
+      | "payment_reference"
+      | "reference"
+      | "status"
     >,
     rawVerificationResponse: unknown,
     reason = "Seat reservation expired before payment was completed",
@@ -904,7 +942,10 @@ export class PaymentService {
             existingPayment.providerTransactionId,
           rawVerificationResponse,
           lastStatusCheckAt: new Date(),
-          paidAt: parseDate(verification.paid_at) || existingPayment.paidAt || new Date(),
+          paidAt:
+            parseDate(verification.paid_at) ||
+            existingPayment.paidAt ||
+            new Date(),
           failureCode: "AUTO_REFUND_INITIATED",
           failureReason: reason,
           updatedAt: new Date(),
@@ -928,7 +969,9 @@ export class PaymentService {
       });
 
       if (record.bookingId) {
-        await tx.delete(bookingHold).where(eq(bookingHold.bookingId, record.bookingId));
+        await tx
+          .delete(bookingHold)
+          .where(eq(bookingHold.bookingId, record.bookingId));
       }
 
       return [record];
@@ -966,7 +1009,10 @@ export class PaymentService {
     return this.withExpiry(updatedPayment, null);
   }
 
-  async resolveReturnUrl(reference?: string | null, providerReturnStatus?: string | null) {
+  async resolveReturnUrl(
+    reference?: string | null,
+    providerReturnStatus?: string | null,
+  ) {
     const tripStatusUrl = `${this.config.FRONTEND_URL}/trip-status`;
     if (!reference) {
       return tripStatusUrl;
@@ -990,7 +1036,9 @@ export class PaymentService {
         return tripStatusUrl;
       }
 
-      if (["failed", "cancelled", "abandoned", "closed"].includes(providerStatus)) {
+      if (
+        ["failed", "cancelled", "abandoned", "closed"].includes(providerStatus)
+      ) {
         await this.failPendingPayment(
           reference,
           providerStatus === "failed" ? "failed" : "cancelled",
@@ -1008,7 +1056,9 @@ export class PaymentService {
       const normalizedReturnStatus = providerReturnStatus?.trim().toLowerCase();
       if (
         normalizedReturnStatus &&
-        ["failed", "cancelled", "abandoned", "closed"].includes(normalizedReturnStatus)
+        ["failed", "cancelled", "abandoned", "closed"].includes(
+          normalizedReturnStatus,
+        )
       ) {
         logger.info("payment.return_status_ignored_after_verification", {
           reference,
@@ -1089,7 +1139,8 @@ export class PaymentService {
           ? "cancelled"
           : "pending";
     const isCancellingTransition =
-      nextBookingStatus === "cancelled" && existingBooking.status !== "cancelled";
+      nextBookingStatus === "cancelled" &&
+      existingBooking.status !== "cancelled";
     const shouldConfirm =
       input.paymentStatus === "successful" &&
       nextBookingStatus === "confirmed" &&
@@ -1111,7 +1162,8 @@ export class PaymentService {
       !(
         (existingBooking.status === "confirmed" &&
           nextBookingStatus !== "confirmed") ||
-        (existingBooking.status === "cancelled" && nextBookingStatus === "pending")
+        (existingBooking.status === "cancelled" &&
+          nextBookingStatus === "pending")
       )
     ) {
       updatePayload.status = nextBookingStatus;
@@ -1179,15 +1231,21 @@ export class PaymentService {
     const passengerName = passenger
       ? `${passenger.firstName} ${passenger.lastName}`.trim()
       : null;
+    const tripDateLabel = formatTripDate(tripRecord.date);
+    const departureTimeLabel = formatTripTime(routeRecord.departure_time);
     const propsJson = JSON.stringify({
       frontendUrl: this.config.FRONTEND_URL,
       passengerName,
       paymentReference: paymentRecord.reference,
-      pricePaid: formatMajorAmount(paymentRecord.amount, paymentRecord.currency),
+      pricePaid: formatMajorAmount(
+        paymentRecord.amount,
+        paymentRecord.currency,
+      ),
       pickupTitle: routeRecord.pickup_location_title,
       dropoffTitle: routeRecord.dropoff_location_title,
-      tripDate: formatTripDate(tripRecord.date),
-      departureTime: formatTripTime(routeRecord.departure_time),
+      tripDate: tripDateLabel,
+      departureTime: departureTimeLabel,
+      timeZone: this.config.ROUTE_SERVICE_TIMEZONE,
       vehicleType: routeRecord.vehicleType,
       seatNumber: bookingRecord.seatNumber ?? 0,
       meetingPoint: routeRecord.meeting_point,
@@ -1214,8 +1272,8 @@ export class PaymentService {
         type: "booking_confirmed",
         title: "New booking confirmed",
         message: passengerName
-          ? `This trip was booked by ${passengerName} for ${formatTripDate(tripRecord.date)}.`
-          : `This trip was booked for ${formatTripDate(tripRecord.date)}.`,
+          ? `This trip was booked by ${passengerName} for ${tripDateLabel} at ${departureTimeLabel}.`
+          : `This trip was booked for ${tripDateLabel} at ${departureTimeLabel}.`,
         href: "/routes",
         tag: "Booking",
         tone: "positive" as const,

@@ -1,6 +1,7 @@
 import { createServiceError } from "@shared/utils";
 import { KoraChannel } from "../payment/payment.types";
 import type { WebhookJobData } from "../workers/boss";
+import { formatRouteDate, formatRouteTime } from "./timezone";
 const CHECKOUT_FEE_RATE = 0.1;
 const MAX_CHECKOUT_AMOUNT = 200_000;
 
@@ -63,18 +64,11 @@ export function formatMajorAmount(amount: number, currency: string) {
 }
 
 export function formatTripDate(value: Date) {
-  return new Intl.DateTimeFormat("en-NG", {
-    month: "short",
-    day: "numeric",
-    year: "numeric",
-  }).format(value);
+  return formatRouteDate(value);
 }
 
 export function formatTripTime(value: Date) {
-  return new Intl.DateTimeFormat("en-NG", {
-    hour: "2-digit",
-    minute: "2-digit",
-  }).format(value);
+  return formatRouteTime(value);
 }
 
 export function getPaymentReference(job: WebhookJobData) {
