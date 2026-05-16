@@ -257,9 +257,11 @@ export default function ChangeBankDetailsDialog() {
                                   );
                                   setValue("bankName", value, {
                                     shouldValidate: true,
+                                    shouldDirty: true,
                                   });
                                   setValue("bankCode", selected?.code || "", {
                                     shouldValidate: true,
+                                    shouldDirty: true,
                                   });
                                   setOpenBank(false);
                                 }}

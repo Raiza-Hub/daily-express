@@ -60,6 +60,7 @@ export const DriverInfoSchema = onboardingSchema
     bankCode: true,
     accountNumber: true,
     accountName: true,
+    currency: true,
   });
 
 
@@ -111,6 +112,7 @@ export function ProfileImageField({
   errors,
   uploadActions,
   setValue,
+  canRemoveSelectedImage,
 }: {
   control: Control<TDriverInfoSchema>;
   currentFile: UploadedFile;
@@ -128,6 +130,7 @@ export function ProfileImageField({
     | "handleDrop"
   >;
   setValue: UseFormSetValue<TDriverInfoSchema>;
+  canRemoveSelectedImage: boolean;
 }) {
   const {
     removeFile,
@@ -179,7 +182,7 @@ export function ProfileImageField({
                   )}
                 </button>
 
-                {currentFile ? (
+                {currentFile && canRemoveSelectedImage ? (
                   <Button
                     type="button"
                     onClick={() => {
@@ -337,8 +340,11 @@ export function CountryField({
                           onSelect={(value) => {
                             setValue("country", value, {
                               shouldValidate: true,
+                              shouldDirty: true,
                             });
-                            setValue("state", "");
+                            setValue("state", "", {
+                              shouldDirty: true,
+                            });
                             onOpenChange(false);
                           }}
                         >
@@ -416,6 +422,7 @@ export function StateField({
                           onSelect={(value) => {
                             setValue("state", value, {
                               shouldValidate: true,
+                              shouldDirty: true,
                             });
                             onOpenChange(false);
                           }}
@@ -478,4 +485,3 @@ export function PhoneField({
     </SettingsRow>
   );
 }
-
