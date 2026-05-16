@@ -4,8 +4,15 @@ import type {
   UpdateProfileRequest,
 } from "@shared/types";
 import { db } from "../db/connection";
-import { driver, driverProfileImageUpload, driverStats } from "../db/index";
-import { eq } from "drizzle-orm";
+import {
+  driver,
+  driverProfileImageUpload,
+  driverStats,
+  earning,
+  payout,
+  route,
+} from "../db/index";
+import { and, eq, inArray, sql } from "drizzle-orm";
 import { createServiceError, sanitizeInput } from "@shared/utils";
 import { NotificationService } from "../notification/notificationService";
 import { publishNotificationCreatedInBackground } from "../notification/realtime";
@@ -244,7 +251,62 @@ export class DriverService {
       throw createServiceError("Driver stats not found", 404);
     }
 
-    return stats;
+    const [payoutTotals] = await db
+      .select({
+        totalEarnings: sql<number>`coalesce(sum(${payout.amountMinor}), 0)::int`,
+      })
+      .from(payout)
+      .where(and(eq(payout.driverId, driverId), eq(payout.status, "success")));
+
+    const [earningTotals] = await db
+      .select({
+        totalPassengers: sql<number>`count(*)::int`,
+      })
+      .from(earning)
+      .where(
+        and(
+          eq(earning.driverId, driverId),
+          inArray(earning.status, [
+            "pending_trip_completion",
+            "available",
+            "reserved",
+            "processing",
+            "paid",
+          ]),
+        ),
+      );
+
+    const [pendingEarningTotals] = await db
+      .select({
+        pendingPayments: sql<number>`coalesce(sum(${earning.netAmountMinor}), 0)::int`,
+      })
+      .from(earning)
+      .where(
+        and(
+          eq(earning.driverId, driverId),
+          inArray(earning.status, [
+            "pending_trip_completion",
+            "available",
+            "reserved",
+            "processing",
+          ]),
+        ),
+      );
+
+    const [routeTotals] = await db
+      .select({
+        activeRoutes: sql<number>`count(*)::int`,
+      })
+      .from(route)
+      .where(and(eq(route.driverId, driverId), eq(route.status, "active")));
+
+    return {
+      ...stats,
+      totalEarnings: payoutTotals?.totalEarnings ?? 0,
+      pendingPayments: pendingEarningTotals?.pendingPayments ?? 0,
+      totalPassengers: earningTotals?.totalPassengers ?? 0,
+      activeRoutes: routeTotals?.activeRoutes ?? 0,
+    };
   }
 
   async deleteDriverForUser(
