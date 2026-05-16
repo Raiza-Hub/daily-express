@@ -41,6 +41,8 @@ import {
   parseDelayString,
   parseMajorCurrencyToMinor,
 } from "../utils/payout";
+import { addDaysToDateKey, getBusinessDayWindow } from "../utils/route";
+import { formatDateKey } from "../utils/timezone";
 
 type PayoutTransaction = Parameters<Parameters<typeof db.transaction>[0]>[0];
 type EarningRecord = typeof earning.$inferSelect;
@@ -203,7 +205,10 @@ export class PayoutService {
     const [bookingTotals] = await tx
       .select({
         count: sql<number>`count(*)::int`,
-        amountMinor: sql<number>`coalesce(sum(${booking.fareAmount} * 100), 0)::bigint`,
+        amountMinor:
+          sql<number>`coalesce(sum(${booking.fareAmount} * 100), 0)::bigint`.mapWith(
+            Number,
+          ),
       })
       .from(booking)
       .where(
@@ -217,7 +222,10 @@ export class PayoutService {
     const [earningTotals] = await tx
       .select({
         count: sql<number>`count(*)::int`,
-        amountMinor: sql<number>`coalesce(sum(${earning.grossAmountMinor}), 0)::bigint`,
+        amountMinor:
+          sql<number>`coalesce(sum(${earning.grossAmountMinor}), 0)::bigint`.mapWith(
+            Number,
+          ),
       })
       .from(earning)
       .where(
@@ -232,7 +240,8 @@ export class PayoutService {
     const earningCount = earningTotals?.count ?? 0;
     const earningAmountMinor = earningTotals?.amountMinor ?? 0;
     const reconciles =
-      bookingCount === earningCount && bookingAmountMinor === earningAmountMinor;
+      bookingCount === earningCount &&
+      bookingAmountMinor === earningAmountMinor;
 
     if (!reconciles) {
       const amountDifferenceMinor = bookingAmountMinor - earningAmountMinor;
@@ -438,18 +447,21 @@ export class PayoutService {
     week: string,
   ): Promise<DriverPayoutSummary> {
     const currentDriver = await this.getCurrentDriver(user);
-    const weekStart = new Date(week);
-    if (Number.isNaN(weekStart.getTime())) {
+    let weekWindow: ReturnType<typeof getBusinessDayWindow>;
+    let weekEndWindow: ReturnType<typeof getBusinessDayWindow>;
+    try {
+      weekWindow = getBusinessDayWindow(week);
+      weekEndWindow = getBusinessDayWindow(
+        addDaysToDateKey(weekWindow.dateKey, 7),
+      );
+    } catch {
       throw createServiceError("week must be a valid ISO date", 400);
     }
-
-    const weekEnd = new Date(weekStart);
-    weekEnd.setDate(weekEnd.getDate() + 7);
-    const days = this.emptySummaryDays(weekStart);
+    const days = this.emptySummaryDays(weekWindow.dateKey);
 
     if (!currentDriver || !currentDriver.isActive) {
       return {
-        weekStart: weekStart.toISOString().slice(0, 10),
+        weekStart: weekWindow.dateKey,
         currency: "NGN",
         days,
       };
@@ -459,15 +471,15 @@ export class PayoutService {
       where: and(
         eq(payout.driverId, currentDriver.id),
         eq(payout.status, "success"),
-        gte(payout.settledAt, weekStart),
-        lt(payout.settledAt, weekEnd),
+        gte(payout.settledAt, weekWindow.start),
+        lt(payout.settledAt, weekEndWindow.start),
       ),
       orderBy: [desc(payout.settledAt)],
     });
 
     const byDate = new Map(days.map((day) => [day.date, day]));
     for (const row of rows) {
-      const key = (row.settledAt || row.createdAt).toISOString().slice(0, 10);
+      const key = formatDateKey(row.settledAt || row.createdAt);
       const current = byDate.get(key);
       if (!current) continue;
       current.totalPaidAmountMinor += row.amountMinor;
@@ -475,7 +487,7 @@ export class PayoutService {
     }
 
     return {
-      weekStart: weekStart.toISOString().slice(0, 10),
+      weekStart: weekWindow.dateKey,
       currency: currentDriver.currency,
       days: Array.from(byDate.values()),
     };
@@ -660,12 +672,10 @@ export class PayoutService {
     return { processed: false, signatureValid };
   }
 
-  private emptySummaryDays(weekStart: Date): DriverPayoutSummaryDay[] {
+  private emptySummaryDays(weekStartDateKey: string): DriverPayoutSummaryDay[] {
     return Array.from({ length: 7 }, (_, index) => {
-      const date = new Date(weekStart);
-      date.setDate(weekStart.getDate() + index);
       return {
-        date: date.toISOString().slice(0, 10),
+        date: addDaysToDateKey(weekStartDateKey, index),
         totalPaidAmountMinor: 0,
         payoutsCount: 0,
       };

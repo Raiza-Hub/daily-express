@@ -21,6 +21,10 @@ function getRequiredEnv(name: string): string {
   return value;
 }
 
+function getOptionalEnv(name: string, fallback: string): string {
+  return process.env[name]?.trim() || fallback;
+}
+
 function encodeHeader(value: string): string {
   return `=?UTF-8?B?${Buffer.from(value, "utf8").toString("base64")}?=`;
 }
@@ -80,9 +84,14 @@ function createRawEmail(input: {
 export class MailService {
   private sesClient: SESv2Client;
   private fromAddress: string;
+  private fromHeader: string;
 
   constructor() {
     this.fromAddress = getRequiredEnv("EMAIL_FROM");
+    this.fromHeader = encodeAddress(
+      getOptionalEnv("EMAIL_BRAND_NAME", "Daily Express"),
+      this.fromAddress,
+    );
     this.sesClient = new SESv2Client({
       region: getRequiredEnv("AWS_REGION"),
       credentials: {
@@ -96,7 +105,7 @@ export class MailService {
     try {
       const info: SendEmailCommandOutput = await this.sesClient.send(
         new SendEmailCommand({
-          FromEmailAddress: this.fromAddress,
+          FromEmailAddress: this.fromHeader,
           Destination: {
             ToAddresses: [to],
           },

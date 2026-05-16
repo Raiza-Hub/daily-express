@@ -1,8 +1,4 @@
-import type {
-  Driver,
-  DriverStats,
-  UpdateProfileRequest,
-} from "@shared/types";
+import type { Driver, DriverStats, UpdateProfileRequest } from "@shared/types";
 import { db } from "../db/connection";
 import {
   driver,
@@ -18,6 +14,8 @@ import { NotificationService } from "../notification/notificationService";
 import { publishNotificationCreatedInBackground } from "../notification/realtime";
 import { jobService } from "../workers/jobService";
 import { timeAsync } from "../utils/timing";
+import { addDaysToDateKey } from "../utils/route";
+import { formatDateKey } from "../utils/timezone";
 import type { DriverProfileImageUploadFile } from "./cloudinary";
 
 type DriverTransaction = Parameters<Parameters<typeof db.transaction>[0]>[0];
@@ -51,52 +49,59 @@ export class DriverService {
       delete sanitizeData.profile_pic;
     }
 
-    const result = await timeAsync("driver.create.transaction", { userId }, () =>
-      db.transaction(async (tx) => {
-        const [createdDriver] = await tx
-          .insert(driver)
-          .values({
-            ...sanitizeData,
-            userId,
-            bankVerificationStatus: "pending",
-            bankVerificationFailureReason: null,
-            bankVerificationRequestedAt: new Date(),
-            bankVerifiedAt: null,
-          } as any)
-          .returning();
+    const result = await timeAsync(
+      "driver.create.transaction",
+      { userId },
+      () =>
+        db.transaction(async (tx) => {
+          const [createdDriver] = await tx
+            .insert(driver)
+            .values({
+              ...sanitizeData,
+              userId,
+              bankVerificationStatus: "pending",
+              bankVerificationFailureReason: null,
+              bankVerificationRequestedAt: new Date(),
+              bankVerifiedAt: null,
+            } as any)
+            .returning();
 
-        await tx.insert(driverStats).values({
-          driverId: createdDriver.id,
-        });
+          await tx.insert(driverStats).values({
+            driverId: createdDriver.id,
+          });
 
-        const bankNotification =
-          await notificationService.createBankVerificationStateInTransaction(
-            tx,
-            createdDriver.id,
-            this.getBankVerificationPendingNotification(),
+          const bankNotification =
+            await notificationService.createBankVerificationStateInTransaction(
+              tx,
+              createdDriver.id,
+              this.getBankVerificationPendingNotification(),
+            );
+
+          await timeAsync(
+            "driver.create.bank_verification_enqueue",
+            { driverId: createdDriver.id },
+            () =>
+              jobService.enqueueDriverBankVerification(
+                tx,
+                this.getBankVerificationJobData(createdDriver),
+              ),
           );
 
-        await timeAsync(
-          "driver.create.bank_verification_enqueue",
-          { driverId: createdDriver.id },
-          () =>
-            jobService.enqueueDriverBankVerification(
-              tx,
-              this.getBankVerificationJobData(createdDriver),
-            ),
-        );
+          const profilePictureUpload = profileImageUpload
+            ? await this.enqueueProfileImageUpload(tx, {
+                driverId: createdDriver.id,
+                userId,
+                oldProfilePictureUrl: null,
+                file: profileImageUpload,
+              })
+            : null;
 
-        const profilePictureUpload = profileImageUpload
-          ? await this.enqueueProfileImageUpload(tx, {
-              driverId: createdDriver.id,
-              userId,
-              oldProfilePictureUrl: null,
-              file: profileImageUpload,
-            })
-          : null;
-
-        return { driver: createdDriver, bankNotification, profilePictureUpload };
-      }),
+          return {
+            driver: createdDriver,
+            bankNotification,
+            profilePictureUpload,
+          };
+        }),
     );
 
     if (
@@ -108,7 +113,10 @@ export class DriverService {
       );
     }
 
-    return this.withProfilePictureUpload(result.driver, result.profilePictureUpload);
+    return this.withProfilePictureUpload(
+      result.driver,
+      result.profilePictureUpload,
+    );
   }
 
   async getProfile(userId: string): Promise<Driver | null> {
@@ -224,7 +232,10 @@ export class DriverService {
       );
     }
 
-    return this.withProfilePictureUpload(result.driver, result.profilePictureUpload);
+    return this.withProfilePictureUpload(
+      result.driver,
+      result.profilePictureUpload,
+    );
   }
 
   async deleteDriver(userId: string): Promise<void> {
@@ -253,7 +264,10 @@ export class DriverService {
 
     const [payoutTotals] = await db
       .select({
-        totalEarnings: sql<number>`coalesce(sum(${payout.amountMinor}), 0)::int`,
+        totalEarnings:
+          sql<number>`coalesce(sum(${payout.amountMinor}), 0)::bigint`.mapWith(
+            Number,
+          ),
       })
       .from(payout)
       .where(and(eq(payout.driverId, driverId), eq(payout.status, "success")));
@@ -278,7 +292,10 @@ export class DriverService {
 
     const [pendingEarningTotals] = await db
       .select({
-        pendingPayments: sql<number>`coalesce(sum(${earning.netAmountMinor}), 0)::int`,
+        pendingPayments:
+          sql<number>`coalesce(sum(${earning.netAmountMinor}), 0)::bigint`.mapWith(
+            Number,
+          ),
       })
       .from(earning)
       .where(
@@ -342,13 +359,12 @@ export class DriverService {
     const tripDateTime = new Date(input.tripDate);
     const departureDateTime = new Date(input.departureTime);
     const now = new Date();
-    const today = new Date();
-    today.setHours(0, 0, 0, 0);
-    const tomorrow = new Date(today);
-    tomorrow.setDate(tomorrow.getDate() + 1);
+    const tripDateKey = formatDateKey(tripDateTime);
+    const todayKey = formatDateKey(now);
+    const tomorrowKey = addDaysToDateKey(todayKey, 1);
 
-    const isFutureTrip = tripDateTime >= tomorrow;
-    const isSameDayTrip = tripDateTime >= today && tripDateTime < tomorrow;
+    const isFutureTrip = tripDateKey >= tomorrowKey;
+    const isSameDayTrip = tripDateKey === todayKey;
     const hasNotDeparted = isSameDayTrip && departureDateTime > now;
 
     await tx

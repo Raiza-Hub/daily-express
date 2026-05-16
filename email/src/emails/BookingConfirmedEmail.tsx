@@ -21,8 +21,9 @@ export interface BookingConfirmedEmailProps {
   pricePaid: string;
   pickupTitle: string;
   dropoffTitle: string;
-  tripDate: string;
-  departureTime: string;
+  tripDate: string | Date;
+  departureTime: string | Date;
+  timeZone: string;
   vehicleType: string;
   seatNumber: number;
   meetingPoint: string;
@@ -38,6 +39,7 @@ const BookingConfirmedEmail = ({
   dropoffTitle,
   tripDate,
   departureTime,
+  timeZone,
   vehicleType,
   seatNumber,
   meetingPoint,
@@ -45,6 +47,8 @@ const BookingConfirmedEmail = ({
   driverPhone,
 }: BookingConfirmedEmailProps) => {
   const previewText = `Your booking to ${dropoffTitle} is confirmed!`;
+  const formattedTripDate = formatTripDate(tripDate, timeZone);
+  const formattedDepartureTime = formatTripTime(departureTime, timeZone);
 
   return (
     <Html>
@@ -69,16 +73,19 @@ const BookingConfirmedEmail = ({
 
             <Text style={summary}>
               Great news! Your payment of{" "}
-              <strong style={strong}>{pricePaid}</strong> has been received and your
-              seat on the <strong style={strong}>{pickupTitle} to {dropoffTitle}</strong>{" "}
+              <strong style={strong}>{pricePaid}</strong> has been received and
+              your seat on the{" "}
+              <strong style={strong}>
+                {pickupTitle} to {dropoffTitle}
+              </strong>{" "}
               trip is now confirmed.
             </Text>
 
             <Text style={summary}>
-              Please review your booking details below and keep this email as your
-              travel reference. We recommend arriving at the meeting point at least{" "}
-              <strong style={strong}>15 minutes</strong> before your scheduled
-              departure time.
+              Please review your booking details below and keep this email as
+              your travel reference. We recommend arriving at the meeting point
+              at least <strong style={strong}>15 minutes</strong> before your
+              scheduled departure time.
             </Text>
 
             <Hr style={divider} />
@@ -109,7 +116,7 @@ const BookingConfirmedEmail = ({
                   <Text style={label}>Trip Date:</Text>
                 </Column>
                 <Column style={valueCol}>
-                  <Text style={value}>{tripDate}</Text>
+                  <Text style={value}>{formattedTripDate}</Text>
                 </Column>
               </Row>
               <Row style={row}>
@@ -117,7 +124,7 @@ const BookingConfirmedEmail = ({
                   <Text style={label}>Departure Time:</Text>
                 </Column>
                 <Column style={valueCol}>
-                  <Text style={value}>{departureTime}</Text>
+                  <Text style={value}>{formattedDepartureTime}</Text>
                 </Column>
               </Row>
               <Row style={row}>
@@ -179,17 +186,16 @@ const BookingConfirmedEmail = ({
             </Text>
             <Text style={supportText}>
               Email:{" "}
-              <Link
-                href="mailto:support@dailyexpress.com"
-                style={supportLink}
-              >
+              <Link href="mailto:support@dailyexpress.com" style={supportLink}>
                 support@dailyexpress.com
               </Link>
             </Text>
 
             <Hr style={divider} />
 
-            <Text style={footerText}>Thank you for choosing Daily Express.</Text>
+            <Text style={footerText}>
+              Thank you for choosing Daily Express.
+            </Text>
             <Text style={footerText}>The Daily Express Team</Text>
           </Container>
         </Container>
@@ -197,6 +203,38 @@ const BookingConfirmedEmail = ({
     </Html>
   );
 };
+
+function parseDateInput(value: string | Date) {
+  if (value instanceof Date) {
+    return Number.isNaN(value.getTime()) ? null : value;
+  }
+
+  const parsed = new Date(value);
+  return Number.isNaN(parsed.getTime()) ? null : parsed;
+}
+
+function formatTripDate(value: string | Date, timeZone: string) {
+  const parsed = parseDateInput(value);
+  if (!parsed) return String(value);
+
+  return new Intl.DateTimeFormat("en-NG", {
+    timeZone,
+    month: "short",
+    day: "numeric",
+    year: "numeric",
+  }).format(parsed);
+}
+
+function formatTripTime(value: string | Date, timeZone: string) {
+  const parsed = parseDateInput(value);
+  if (!parsed) return String(value);
+
+  return new Intl.DateTimeFormat("en-NG", {
+    timeZone,
+    hour: "2-digit",
+    minute: "2-digit",
+  }).format(parsed);
+}
 
 const main = {
   backgroundColor: "#ffffff",

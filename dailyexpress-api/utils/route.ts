@@ -3,10 +3,13 @@ import { sql } from "drizzle-orm";
 
 import { createServiceError } from "@shared/utils";
 import { booking, driver, users } from "../db/index";
+import {
+  formatDateKey,
+  getDateTimeParts,
+  getRouteServiceTimeZone,
+} from "./timezone";
 
 const DATE_ONLY_REGEX = /^\d{4}-\d{2}-\d{2}$/;
-const ROUTE_SERVICE_TIMEZONE =
-  process.env.ROUTE_SERVICE_TIMEZONE || "Africa/Lagos";
 const VISIBLE_BOOKING_STATUSES = ["confirmed", "completed"] as const;
 const HIDDEN_BOOKING_PAYMENT_STATUSES = ["failed", "cancelled", "expired"];
 
@@ -82,34 +85,6 @@ export function addDaysToDateKey(dateKey: string, days: number): string {
   return `${nextYear}-${nextMonth}-${nextDay}`;
 }
 
-export function getDateTimeParts(date: Date, timeZone: string) {
-  const parts = new Intl.DateTimeFormat("en-CA", {
-    timeZone,
-    year: "numeric",
-    month: "2-digit",
-    day: "2-digit",
-    hour: "2-digit",
-    minute: "2-digit",
-    second: "2-digit",
-    hourCycle: "h23",
-  }).formatToParts(date);
-
-  const values = Object.fromEntries(
-    parts
-      .filter((part) => part.type !== "literal")
-      .map((part) => [part.type, part.value]),
-  );
-
-  return {
-    year: Number(values.year),
-    month: Number(values.month),
-    day: Number(values.day),
-    hour: Number(values.hour),
-    minute: Number(values.minute),
-    second: Number(values.second),
-  };
-}
-
 export function getTimeZoneOffsetMilliseconds(date: Date, timeZone: string) {
   const parts = getDateTimeParts(date, timeZone);
   const asUtc = Date.UTC(
@@ -144,16 +119,8 @@ export function zonedDateTimeToUtc(
 export function getBusinessDayWindow(dateInput: string) {
   const dateKey = parseDateKey(dateInput);
   const [year, month, day] = dateKey.split("-").map(Number);
-  const start = zonedDateTimeToUtc(
-    year,
-    month,
-    day,
-    0,
-    0,
-    0,
-    0,
-    ROUTE_SERVICE_TIMEZONE,
-  );
+  const timeZone = getRouteServiceTimeZone();
+  const start = zonedDateTimeToUtc(year, month, day, 0, 0, 0, 0, timeZone);
   const nextDateKey = addDaysToDateKey(dateKey, 1);
   const [nextYear, nextMonth, nextDay] = nextDateKey.split("-").map(Number);
   const end = zonedDateTimeToUtc(
@@ -164,7 +131,7 @@ export function getBusinessDayWindow(dateInput: string) {
     0,
     0,
     0,
-    ROUTE_SERVICE_TIMEZONE,
+    timeZone,
   );
 
   return { dateKey, start, end };
@@ -176,7 +143,8 @@ export function getScheduledDepartureTime(
 ) {
   const dateKey = parseDateKey(tripDate);
   const [year, month, day] = dateKey.split("-").map(Number);
-  const timeParts = getDateTimeParts(departureTime, ROUTE_SERVICE_TIMEZONE);
+  const timeZone = getRouteServiceTimeZone();
+  const timeParts = getDateTimeParts(departureTime, timeZone);
 
   return zonedDateTimeToUtc(
     year,
@@ -186,25 +154,12 @@ export function getScheduledDepartureTime(
     timeParts.minute,
     timeParts.second,
     departureTime.getMilliseconds(),
-    ROUTE_SERVICE_TIMEZONE,
+    timeZone,
   );
 }
 
 export function formatBusinessDate(date: Date): string {
-  const parts = new Intl.DateTimeFormat("en-CA", {
-    timeZone: ROUTE_SERVICE_TIMEZONE,
-    year: "numeric",
-    month: "2-digit",
-    day: "2-digit",
-  }).formatToParts(date);
-
-  const values = Object.fromEntries(
-    parts
-      .filter((part) => part.type !== "literal")
-      .map((part) => [part.type, part.value]),
-  );
-
-  return `${values.year}-${values.month}-${values.day}`;
+  return formatDateKey(date);
 }
 
 export function mapDriverToRouteDriver(
