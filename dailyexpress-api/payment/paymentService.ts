@@ -573,6 +573,32 @@ export class PaymentService {
   private async handleChargeSuccess(job: WebhookJobData, reference: string) {
     const existingPayment = await this.getPaymentRecord(reference);
     if (existingPayment && existingPayment.status !== "pending") {
+      if (
+        existingPayment.status === "failed" ||
+        existingPayment.status === "expired"
+      ) {
+        logger.info("payment.webhook_post_expiry_success", {
+          reference,
+          currentStatus: existingPayment.status,
+        });
+
+        const verification = await koraClient.verifyTransaction(reference);
+        if (verification.data.status.toLowerCase() === "success") {
+          await this.initiateAutoRefund(
+            reference,
+            verification.data,
+            verification.raw,
+            "Payment completed after booking hold expired",
+          );
+          return;
+        }
+
+        logger.warn("payment.webhook_success_mismatch", {
+          koraStatus: verification.data.status,
+          reference,
+        });
+      }
+
       logger.info("payment.webhook_duplicate_terminal", {
         event: job.event,
         reference,
@@ -953,7 +979,12 @@ export class PaymentService {
         .where(
           and(
             eq(payment.reference, reference),
-            inArray(payment.status, ["pending", "successful"]),
+            inArray(payment.status, [
+              "pending",
+              "successful",
+              "failed",
+              "expired",
+            ]),
           ),
         )
         .returning();
@@ -1110,12 +1141,12 @@ export class PaymentService {
       bookingId?: string | null;
       paymentReference: string;
       paymentStatus:
-        | "initialized"
-        | "pending"
-        | "successful"
-        | "failed"
-        | "cancelled"
-        | "expired";
+      | "initialized"
+      | "pending"
+      | "successful"
+      | "failed"
+      | "cancelled"
+      | "expired";
     },
   ) {
     if (!input.bookingId) {
