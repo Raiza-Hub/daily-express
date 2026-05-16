@@ -12,6 +12,7 @@ export interface RouteWithTrips {
   id: string;
   tripId: string;
   status: string;
+  tripDate: string;
   departureTime: string;
   departureCode: string;
   arrivalTime: string;
