@@ -1,4 +1,5 @@
 import {
+  bigint,
   boolean,
   index,
   integer,
@@ -48,9 +49,11 @@ export const earning = pgTable(
     tripDate: timestamp("trip_date", { mode: "date" }).notNull(),
     pickupTitle: text("pickup_title").notNull(),
     dropoffTitle: text("dropoff_title").notNull(),
-    grossAmountMinor: integer("gross_amount_minor").notNull(),
-    feeAmountMinor: integer("fee_amount_minor").notNull(),
-    netAmountMinor: integer("net_amount_minor").notNull(),
+    grossAmountMinor: bigint("gross_amount_minor", {
+      mode: "number",
+    }).notNull(),
+    feeAmountMinor: bigint("fee_amount_minor", { mode: "number" }).notNull(),
+    netAmountMinor: bigint("net_amount_minor", { mode: "number" }).notNull(),
     currency: varchar("currency", { length: 8 }).default("NGN").notNull(),
     status: earningStatusEnum("status")
       .default("pending_trip_completion")
@@ -73,29 +76,26 @@ export const earning = pgTable(
   ],
 );
 
-export const payoutRecipient = pgTable(
-  "payout_recipient",
-  {
-    id: uuid("id").defaultRandom().primaryKey(),
-    driverId: uuid("driver_id").notNull().unique(),
-    provider: payoutProviderEnum("provider").default("kora").notNull(),
-    recipientCode: varchar("recipient_code", { length: 128 }).notNull(),
-    providerRecipientId: varchar("provider_recipient_id", { length: 128 }),
-    bankCode: varchar("bank_code", { length: 32 }).notNull(),
-    bankName: text("bank_name").notNull(),
-    accountName: text("account_name").notNull(),
-    accountNumberLast4: varchar("account_number_last4", {
-      length: 4,
-    }).notNull(),
-    detailsFingerprint: varchar("details_fingerprint", {
-      length: 128,
-    }).notNull(),
-    status: payoutRecipientStatusEnum("status").default("active").notNull(),
-    rawResponse: jsonb("raw_response"),
-    createdAt: timestamp("created_at", { mode: "date" }).defaultNow().notNull(),
-    updatedAt: timestamp("updated_at", { mode: "date" }).defaultNow().notNull(),
-  },
-);
+export const payoutRecipient = pgTable("payout_recipient", {
+  id: uuid("id").defaultRandom().primaryKey(),
+  driverId: uuid("driver_id").notNull().unique(),
+  provider: payoutProviderEnum("provider").default("kora").notNull(),
+  recipientCode: varchar("recipient_code", { length: 128 }).notNull(),
+  providerRecipientId: varchar("provider_recipient_id", { length: 128 }),
+  bankCode: varchar("bank_code", { length: 32 }).notNull(),
+  bankName: text("bank_name").notNull(),
+  accountName: text("account_name").notNull(),
+  accountNumberLast4: varchar("account_number_last4", {
+    length: 4,
+  }).notNull(),
+  detailsFingerprint: varchar("details_fingerprint", {
+    length: 128,
+  }).notNull(),
+  status: payoutRecipientStatusEnum("status").default("active").notNull(),
+  rawResponse: jsonb("raw_response"),
+  createdAt: timestamp("created_at", { mode: "date" }).defaultNow().notNull(),
+  updatedAt: timestamp("updated_at", { mode: "date" }).defaultNow().notNull(),
+});
 
 export const payout = pgTable(
   "payout",
@@ -108,8 +108,8 @@ export const payout = pgTable(
     provider: payoutProviderEnum("provider").default("kora").notNull(),
     providerTransferCode: varchar("provider_transfer_code", { length: 128 }),
     providerTransferId: varchar("provider_transfer_id", { length: 128 }),
-    amountMinor: integer("amount_minor").notNull(),
-    koraFeeAmount: integer("kora_fee_amount"),
+    amountMinor: bigint("amount_minor", { mode: "number" }).notNull(),
+    koraFeeAmount: bigint("kora_fee_amount", { mode: "number" }),
     currency: varchar("currency", { length: 8 }).default("NGN").notNull(),
     earningsCount: integer("earnings_count").notNull(),
     status: payoutStatusEnum("status").default("processing").notNull(),
@@ -176,7 +176,7 @@ export const payoutAttempt = pgTable(
       .unique(),
     status: varchar("status", { length: 32 }).default("pending").notNull(),
     failureReason: text("failure_reason"),
-    koraFeeAmount: integer("kora_fee_amount"),
+    koraFeeAmount: bigint("kora_fee_amount", { mode: "number" }),
     initiatedAt: timestamp("initiated_at", { mode: "date" })
       .defaultNow()
       .notNull(),

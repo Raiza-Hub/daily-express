@@ -1,9 +1,6 @@
+import { lte, relations, sql } from "drizzle-orm";
 import {
-  lte,
-  relations,
-  sql,
-} from "drizzle-orm";
-import {
+  bigint,
   check,
   index,
   integer,
@@ -15,7 +12,6 @@ import {
   uuid,
   varchar,
 } from "drizzle-orm/pg-core";
-
 
 export const statusEnum = pgEnum("status", ["inactive", "pending", "active"]);
 export const vehicleTypeEnum = pgEnum("vehicle_type", [
@@ -55,7 +51,7 @@ export const route = pgTable(
     vehicleType: vehicleTypeEnum("vehicle_type").notNull(),
     meeting_point: text("meeting_point").notNull(),
     availableSeats: integer("available_seats").notNull(),
-    price: integer("price").notNull(),
+    price: bigint("price", { mode: "number" }).notNull(),
     departure_time: timestamp("departure_time", { mode: "date" }).notNull(),
     arrival_time: timestamp("arrival_time", { mode: "date" }).notNull(),
     status: statusEnum("status").default("active").notNull(),
@@ -140,7 +136,7 @@ export const booking = pgTable(
     userId: uuid("user_id").notNull(),
     seatNumber: integer("seat_number"),
     lastName: text("last_name"),
-    fareAmount: integer("fare_amount").default(0).notNull(),
+    fareAmount: bigint("fare_amount", { mode: "number" }).default(0).notNull(),
     currency: varchar("currency", { length: 8 }).default("NGN").notNull(),
     status: tripStatusEnum("status").default("pending").notNull(),
     expiresAt: timestamp("expires_at", { mode: "date" }),
