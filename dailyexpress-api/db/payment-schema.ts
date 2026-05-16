@@ -1,7 +1,7 @@
 import {
+  bigint,
   boolean,
   index,
-  integer,
   jsonb,
   pgEnum,
   pgTable,
@@ -34,7 +34,7 @@ export const payment = pgTable(
     provider: paymentProviderEnum("provider").default("kora").notNull(),
     reference: varchar("reference", { length: 128 }).notNull().unique(),
     providerTransactionId: varchar("provider_transaction_id", { length: 128 }),
-    amount: integer("amount").notNull(),
+    amount: bigint("amount", { mode: "number" }).notNull(),
     currency: varchar("currency", { length: 8 }).default("NGN").notNull(),
     productName: text("product_name").notNull(),
     productDescription: text("product_description").notNull(),
@@ -110,9 +110,7 @@ export const bookingHold = pgTable(
     createdAt: timestamp("created_at", { mode: "date" }).defaultNow().notNull(),
     updatedAt: timestamp("updated_at", { mode: "date" }).defaultNow().notNull(),
   },
-  (table) => [
-    index("booking_hold_expires_at_idx").on(table.expiresAt),
-  ],
+  (table) => [index("booking_hold_expires_at_idx").on(table.expiresAt)],
 );
 
 export const paymentSchema = {

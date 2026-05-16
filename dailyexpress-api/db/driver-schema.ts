@@ -1,5 +1,6 @@
 import { relations } from "drizzle-orm";
 import {
+  bigint,
   boolean,
   index,
   integer,
@@ -59,8 +60,12 @@ export const driverStats = pgTable("driver_stats", {
     .references(() => driver.id, { onDelete: "cascade" })
     .notNull()
     .unique(),
-  totalEarnings: integer("total_earnings").default(0).notNull(),
-  pendingPayments: integer("pending_payments").default(0).notNull(),
+  totalEarnings: bigint("total_earnings", { mode: "number" })
+    .default(0)
+    .notNull(),
+  pendingPayments: bigint("pending_payments", { mode: "number" })
+    .default(0)
+    .notNull(),
   totalPassengers: integer("total_passengers").default(0).notNull(),
   activeRoutes: integer("active_routes").default(0).notNull(),
   createdAt: timestamp("created_at", { mode: "date" }).defaultNow().notNull(),
