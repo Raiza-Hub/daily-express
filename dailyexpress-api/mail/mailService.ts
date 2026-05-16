@@ -1,4 +1,9 @@
-import nodemailer, { type Transporter } from "nodemailer";
+import { readFileSync } from "node:fs";
+import {
+  SESv2Client,
+  SendEmailCommand,
+  type SendEmailCommandOutput,
+} from "@aws-sdk/client-sesv2";
 import { createServiceError } from "@shared/utils";
 import { sentryServer } from "@shared/sentry";
 import {
@@ -16,41 +21,99 @@ function getRequiredEnv(name: string): string {
   return value;
 }
 
+function encodeHeader(value: string): string {
+  return `=?UTF-8?B?${Buffer.from(value, "utf8").toString("base64")}?=`;
+}
+
+function encodeAddress(label: string, email: string): string {
+  return `${encodeHeader(label)} <${email}>`;
+}
+
+function createBoundary(label: string): string {
+  return `dailyexpress-${label}-${Date.now()}-${Math.random().toString(16).slice(2)}`;
+}
+
+function createRawEmail(input: {
+  from: string;
+  to: string;
+  subject: string;
+  html: string;
+}) {
+  const mixedBoundary = createBoundary("mixed");
+  const relatedBoundary = createBoundary("related");
+  const logoBase64 = readFileSync(getEmailLogoAttachmentPath()).toString("base64");
+  const htmlBase64 = Buffer.from(input.html, "utf8").toString("base64");
+
+  const lines = [
+    `From: ${encodeAddress("Daily Express", input.from)}`,
+    `To: ${input.to}`,
+    `Subject: ${encodeHeader(input.subject)}`,
+    "MIME-Version: 1.0",
+    `Content-Type: multipart/mixed; boundary="${mixedBoundary}"`,
+    "",
+    `--${mixedBoundary}`,
+    `Content-Type: multipart/related; boundary="${relatedBoundary}"`,
+    "",
+    `--${relatedBoundary}`,
+    'Content-Type: text/html; charset="UTF-8"',
+    "Content-Transfer-Encoding: base64",
+    "",
+    htmlBase64,
+    "",
+    `--${relatedBoundary}`,
+    'Content-Type: image/png; name="email-logo.png"',
+    "Content-Transfer-Encoding: base64",
+    `Content-ID: <${EMAIL_LOGO_CONTENT_ID}>`,
+    'Content-Disposition: inline; filename="email-logo.png"',
+    "",
+    logoBase64,
+    "",
+    `--${relatedBoundary}--`,
+    "",
+    `--${mixedBoundary}--`,
+    "",
+  ];
+
+  return Buffer.from(lines.join("\r\n"));
+}
+
 export class MailService {
-  private transporter: Transporter;
+  private sesClient: SESv2Client;
   private fromAddress: string;
 
   constructor() {
     this.fromAddress = getRequiredEnv("EMAIL_FROM");
-    this.transporter = nodemailer.createTransport({
-      host: getRequiredEnv("SMTP_HOST"),
-      port: Number(getRequiredEnv("SMTP_PORT")),
-      secure: false,
-      requireTLS: true,
-      auth: {
-        user: getRequiredEnv("SMTP_USERNAME"),
-        pass: getRequiredEnv("SMTP_PASSWORD"),
+    this.sesClient = new SESv2Client({
+      region: getRequiredEnv("AWS_REGION"),
+      credentials: {
+        accessKeyId: getRequiredEnv("AWS_ACCESS_KEY_ID"),
+        secretAccessKey: getRequiredEnv("AWS_SECRET_ACCESS_KEY"),
       },
     });
   }
 
   async sendMail(to: string, subject: string, html: string) {
     try {
-      const info = await this.transporter.sendMail({
-        from: `Daily Express <${this.fromAddress}>`,
-        to,
-        subject,
-        html,
-        attachments: [
-          {
-            filename: "email-logo.png",
-            path: getEmailLogoAttachmentPath(),
-            cid: EMAIL_LOGO_CONTENT_ID,
+      const info: SendEmailCommandOutput = await this.sesClient.send(
+        new SendEmailCommand({
+          FromEmailAddress: this.fromAddress,
+          Destination: {
+            ToAddresses: [to],
           },
-        ],
-      });
+          Content: {
+            Raw: {
+              Data: createRawEmail({
+                from: this.fromAddress,
+                to,
+                subject,
+                html,
+              }),
+            },
+          },
+        }),
+      );
 
-      return { id: info.messageId };
+      return { id: info.MessageId };
     } catch (error: any) {
       sentryServer.captureException(error, "system", {
         action: "send_mail",

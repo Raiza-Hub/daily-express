@@ -75,11 +75,10 @@ const envSchema = z.object({
   CLOUDINARY_API_KEY: z.string().min(1),
   CLOUDINARY_API_SECRET: z.string().min(1),
 
-  // SMTP
-  SMTP_HOST: z.string().min(1),
-  SMTP_PORT: z.coerce.number().int().positive().default(587),
-  SMTP_USERNAME: z.string().min(1),
-  SMTP_PASSWORD: z.string().min(1),
+  // Email (Amazon SES API)
+  AWS_REGION: z.string().min(1),
+  AWS_ACCESS_KEY_ID: z.string().min(1),
+  AWS_SECRET_ACCESS_KEY: z.string().min(1),
   EMAIL_FROM: z.string().min(1),
   EMAIL_BRAND_NAME: z.string().default("Daily Express"),
   SUPPORT_EMAIL: z.string().default("support@dailyexpress.com"),
