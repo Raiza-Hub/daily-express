@@ -30,7 +30,7 @@ export const createDriverFn = async (
       data,
       {
         headers: isFormData
-          ? { "Content-Type": "multipart/form-data" }
+          ? { "Content-Type": undefined }
           : undefined,
       },
     );
@@ -53,7 +53,7 @@ export const updateDriverFn = async (
       data,
       {
         headers: isFormData
-          ? { "Content-Type": "multipart/form-data" }
+          ? { "Content-Type": undefined }
           : undefined,
       },
     );

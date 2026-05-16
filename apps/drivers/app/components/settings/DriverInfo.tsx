@@ -41,6 +41,7 @@ const DriverInfoSchema = onboardingSchema
     bankCode: true,
     accountNumber: true,
     accountName: true,
+    currency: true,
   });
 
 type TDriverInfoSchema = z.infer<typeof DriverInfoSchema>;
@@ -49,6 +50,7 @@ const DriverInfo = () => {
   const [openCountry, setOpenCountry] = useState(false);
   const [openState, setOpenState] = useState(false);
   const [driverInfoError, setDriverInfoError] = useState<string | null>(null);
+  const [canRemoveSelectedImage, setCanRemoveSelectedImage] = useState(false);
   const posthog = usePostHog();
 
   const { data: driver, isLoading, refetch } = useGetDriver();
@@ -58,6 +60,7 @@ const DriverInfo = () => {
       const file = nextFiles?.[0]?.file;
 
       if (file instanceof File) {
+        setCanRemoveSelectedImage(true);
         setValue("file", file, {
           shouldValidate: true,
           shouldDirty: true,
@@ -66,6 +69,7 @@ const DriverInfo = () => {
       }
 
       if (file) {
+        setCanRemoveSelectedImage(true);
         setValue("file", file.url, {
           shouldValidate: true,
           shouldDirty: true,
@@ -73,6 +77,7 @@ const DriverInfo = () => {
         return;
       }
 
+      setCanRemoveSelectedImage(false);
       setValue("file", driver?.profile_pic || null, {
         shouldValidate: true,
         shouldDirty: true,
@@ -104,9 +109,21 @@ const DriverInfo = () => {
       phoneNumber: driver?.phone || "",
     },
   });
-  const { mutate: updateDriver, isPending: isUpdating } = useUpdateDriver({
-    onSuccess: () => {
+  const { mutateAsync: updateDriver, isPending: isUpdating } = useUpdateDriver({
+    onSuccess: (updatedDriver) => {
       posthog.capture(posthogEvents.driver_profile_update_succeeded);
+      setCanRemoveSelectedImage(false);
+      reset({
+        firstName: updatedDriver.firstName,
+        lastName: updatedDriver.lastName,
+        file: updatedDriver.profile_pic,
+        email: updatedDriver.email,
+        country: updatedDriver.country,
+        address: updatedDriver.address,
+        city: updatedDriver.city,
+        state: updatedDriver.state,
+        phoneNumber: updatedDriver.phone,
+      });
       refetch();
     },
     onError: (error: Error) => {
@@ -154,7 +171,8 @@ const DriverInfo = () => {
     countries.find((country) => country.name === selectedCountry)?.states || [];
   const currentFile = files[0] || null;
 
-  const onSubmit = (data: TDriverInfoSchema) => {
+  const onSubmit = async (data: TDriverInfoSchema) => {
+    setDriverInfoError(null);
     const formData = new FormData();
 
     if (data.file instanceof File) {
@@ -170,7 +188,7 @@ const DriverInfo = () => {
     formData.append("state", data.state);
     formData.append("city", data.city);
 
-    updateDriver(formData);
+    await updateDriver(formData);
   };
 
   return (
@@ -192,6 +210,7 @@ const DriverInfo = () => {
             errors={errors}
             uploadActions={uploadActions}
             setValue={setValue}
+            canRemoveSelectedImage={canRemoveSelectedImage}
           />
           <FullNameFields control={control} />
           <TextFieldRow
