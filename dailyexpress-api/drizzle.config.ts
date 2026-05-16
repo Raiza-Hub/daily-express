@@ -5,6 +5,7 @@ export default defineConfig({
   dialect: "postgresql",
   schema: "./db/index.ts",
   out: "./db/migrations",
+  tablesFilter: ["!pg_stat_statements*"],
   verbose: true,
   strict: true,
   dbCredentials: {
