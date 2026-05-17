@@ -3,6 +3,7 @@ import { KoraChannel } from "../payment/payment.types";
 import type { WebhookJobData } from "../workers/boss";
 import { formatRouteDate, formatRouteTime } from "./timezone";
 const CHECKOUT_FEE_RATE = 0.1;
+const MAX_CHECKOUT_FEE = 1000;
 const MAX_CHECKOUT_AMOUNT = 200_000;
 
 export function dedupeChannels(channels?: KoraChannel[]) {
@@ -43,7 +44,11 @@ export function parseDate(value?: string | Date | null) {
 }
 
 export function calculateTrustedChargeAmount(fareAmount: number) {
-  return Math.round(fareAmount * (1 + CHECKOUT_FEE_RATE));
+  const fee = Math.min(
+    Math.round(fareAmount * CHECKOUT_FEE_RATE),
+    MAX_CHECKOUT_FEE,
+  );
+  return fareAmount + fee;
 }
 
 export function assertCheckoutAmountWithinLimit(amount: number) {
