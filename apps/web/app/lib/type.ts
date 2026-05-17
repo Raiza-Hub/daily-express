@@ -40,6 +40,7 @@ export interface TripStatusItem {
   routeId: string;
   tripDate: string;
   remainingSeats: number;
+  paymentStatus: string;
 }
 
 

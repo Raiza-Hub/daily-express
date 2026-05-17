@@ -1003,6 +1003,14 @@ export class PaymentService {
         await tx
           .delete(bookingHold)
           .where(eq(bookingHold.bookingId, record.bookingId));
+
+        await tx
+          .update(booking)
+          .set({
+            paymentStatus: "refund_pending",
+            updatedAt: new Date(),
+          })
+          .where(eq(booking.id, record.bookingId));
       }
 
       return [record];
@@ -1020,13 +1028,25 @@ export class PaymentService {
         reason,
       });
     } catch (error) {
-      await db
-        .update(payment)
-        .set({
-          status: "refund_failed",
-          updatedAt: new Date(),
-        })
-        .where(eq(payment.id, updatedPayment.id));
+      await db.transaction(async (tx) => {
+        await tx
+          .update(payment)
+          .set({
+            status: "refund_failed",
+            updatedAt: new Date(),
+          })
+          .where(eq(payment.id, updatedPayment.id));
+
+        if (updatedPayment.bookingId) {
+          await tx
+            .update(booking)
+            .set({
+              paymentStatus: "refund_failed",
+              updatedAt: new Date(),
+            })
+            .where(eq(booking.id, updatedPayment.bookingId));
+        }
+      });
 
       await this.enqueueRefundFailureEmail(updatedPayment, reason);
       throw error;
@@ -1361,13 +1381,23 @@ export class PaymentService {
     reference: string,
     status: "refunded" | "refund_failed",
   ) {
-    await db
-      .update(payment)
-      .set({
-        status,
-        updatedAt: new Date(),
-      })
-      .where(eq(payment.reference, reference));
+    await db.transaction(async (tx) => {
+      await tx
+        .update(payment)
+        .set({
+          status,
+          updatedAt: new Date(),
+        })
+        .where(eq(payment.reference, reference));
+
+      await tx
+        .update(booking)
+        .set({
+          paymentStatus: status,
+          updatedAt: new Date(),
+        })
+        .where(eq(booking.paymentReference, reference));
+    });
   }
 
   isTerminalStatus(status: PaymentStatus) {

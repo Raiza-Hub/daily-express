@@ -37,6 +37,7 @@ interface TripDetailsSheetProps {
   bookingContext?: BookingContext;
   allowBooking?: boolean;
   analyticsContext?: "search_results" | "trip_status";
+  paymentStatus?: string;
 }
 
 const TripDetailsSheet = ({
@@ -45,6 +46,7 @@ const TripDetailsSheet = ({
   onOpenChange,
   bookingContext,
   allowBooking = true,
+  paymentStatus,
 }: TripDetailsSheetProps) => {
   const router = useRouter();
   const posthog = usePostHog();
@@ -308,17 +310,55 @@ const TripDetailsSheet = ({
           </div>
 
           <div className="px-6 pb-3">
-            <div className="flex items-start gap-2.5 bg-amber-50 border border-amber-200 rounded-xl px-4 py-3">
-              <InfoIcon
-                weight="fill"
-                size={16}
-                className="text-amber-600 shrink-0 mt-0.5"
-              />
-              <p className="text-xs text-amber-800 leading-relaxed">
-                If you intend to travel with luggage, please contact the driver
-                in advance to confirm availability.
-              </p>
-            </div>
+            {paymentStatus === "refund_pending" ? (
+              <div className="flex items-start gap-2.5 bg-red-50 border border-red-200 rounded-xl px-4 py-3">
+                <InfoIcon
+                  weight="fill"
+                  size={16}
+                  className="text-red-600 shrink-0 mt-0.5"
+                />
+                <p className="text-xs text-red-800 leading-relaxed">
+                  Your 10 minute booking hold for this seat has expired, and a
+                  refund has been initiated.
+                </p>
+              </div>
+            ) : paymentStatus === "refunded" ? (
+              <div className="flex items-start gap-2.5 bg-green-50 border border-green-200 rounded-xl px-4 py-3">
+                <InfoIcon
+                  weight="fill"
+                  size={16}
+                  className="text-green-600 shrink-0 mt-0.5"
+                />
+                <p className="text-xs text-green-800 leading-relaxed">
+                  Your refund has been processed successfully. The amount has
+                  been returned to your original payment method.
+                </p>
+              </div>
+            ) : paymentStatus === "refund_failed" ? (
+              <div className="flex items-start gap-2.5 bg-red-50 border border-red-200 rounded-xl px-4 py-3">
+                <InfoIcon
+                  weight="fill"
+                  size={16}
+                  className="text-red-600 shrink-0 mt-0.5"
+                />
+                <p className="text-xs text-red-800 leading-relaxed">
+                  We were unable to process your refund automatically. Please
+                  contact customer support for assistance.
+                </p>
+              </div>
+            ) : (
+              <div className="flex items-start gap-2.5 bg-amber-50 border border-amber-200 rounded-xl px-4 py-3">
+                <InfoIcon
+                  weight="fill"
+                  size={16}
+                  className="text-amber-600 shrink-0 mt-0.5"
+                />
+                <p className="text-xs text-amber-800 leading-relaxed">
+                  If you intend to travel with luggage, please contact the driver
+                  in advance to confirm availability.
+                </p>
+              </div>
+            )}
           </div>
 
           {allowBooking && (

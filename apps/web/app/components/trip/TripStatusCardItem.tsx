@@ -80,8 +80,14 @@ const TripStatusCardItem = ({ item }: { item: TripStatusItem }) => {
 
                 <div className="border-t border-gray-200" />
 
-                <div className={`flex justify-end px-6 py-1.5 ${isPast ? "bg-red-700 text-white" : ""}`}>
-                    {isPast ? (
+                <div className={`flex justify-end px-6 py-1.5 ${item.paymentStatus === "refund_failed" ? "bg-red-700 text-white" : item.paymentStatus === "refund_pending" || item.paymentStatus === "refunded" ? "bg-green-700 text-white" : isPast ? "bg-red-700 text-white" : ""}`}>
+                    {item.paymentStatus === "refund_failed" ? (
+                        <span className="text-sm font-medium text-white">Refund failed</span>
+                    ) : item.paymentStatus === "refund_pending" ? (
+                        <span className="text-sm font-medium text-white">Refunding</span>
+                    ) : item.paymentStatus === "refunded" ? (
+                        <span className="text-sm font-medium text-white">Refunded</span>
+                    ) : isPast ? (
                         <span className="text-sm font-medium text-white">Expired</span>
                     ) : (
                         <button
@@ -122,6 +128,7 @@ const TripStatusCardItem = ({ item }: { item: TripStatusItem }) => {
                     remainingSeats: item.remainingSeats,
                 }}
                 allowBooking={false}
+                paymentStatus={item.paymentStatus}
             />
         </>
     );
