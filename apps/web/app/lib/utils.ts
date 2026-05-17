@@ -153,6 +153,7 @@ export function transformToTripStatusItem(
     routeId: route.id,
     tripDate: formatLocalDate(tripDate),
     remainingSeats: trip.availableSeats,
+    paymentStatus: booking.paymentStatus,
     trip: {
       departureCity: {
         title: route.pickupLocationTitle,
