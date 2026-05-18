@@ -28,6 +28,7 @@ import { logger } from "../utils/logger";
 import { DriverService } from "../driver/driverService";
 import { NotificationService } from "../notification/notificationService";
 import { publishNotificationCreatedInBackground } from "../notification/realtime";
+import { HIDDEN_BOOKING_PAYMENT_STATUSES } from "../utils/route";
 import { KoraClient } from "../payment/kora.client";
 import type {
   KoraPayoutHistoryItem,
@@ -215,7 +216,7 @@ export class PayoutService {
         and(
           eq(booking.tripId, tripId),
           inArray(booking.status, ["confirmed", "completed"]),
-          notInArray(booking.paymentStatus, ["failed", "cancelled", "expired"]),
+          notInArray(booking.paymentStatus, HIDDEN_BOOKING_PAYMENT_STATUSES),
         ),
       );
 

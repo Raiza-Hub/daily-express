@@ -11,7 +11,14 @@ import {
 
 const DATE_ONLY_REGEX = /^\d{4}-\d{2}-\d{2}$/;
 const VISIBLE_BOOKING_STATUSES = ["confirmed", "completed"] as const;
-const HIDDEN_BOOKING_PAYMENT_STATUSES = ["failed", "cancelled", "expired"];
+export const HIDDEN_BOOKING_PAYMENT_STATUSES = [
+  "failed",
+  "cancelled",
+  "expired",
+  "refund_pending",
+  "refunded",
+  "refund_failed",
+];
 
 type BookingRecord = typeof booking.$inferSelect;
 

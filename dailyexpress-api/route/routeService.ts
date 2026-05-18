@@ -34,6 +34,7 @@ import {
   formatBusinessDate,
   getBusinessDayWindow,
   getScheduledDepartureTime,
+  HIDDEN_BOOKING_PAYMENT_STATUSES,
   isConstraintError,
   isVisibleBooking,
   mapDriverToRouteDriver,
@@ -48,7 +49,6 @@ const ACTIVE_BOOKING_CONSTRAINT = "booking_trip_id_user_id_active_idx";
 const ROUTE_SEARCH_SCORE_THRESHOLD = 0.15;
 const BOOKABLE_TRIP_STATUSES = new Set(["pending", "confirmed"]);
 const VISIBLE_BOOKING_STATUSES = ["confirmed", "completed"] as const;
-const HIDDEN_BOOKING_PAYMENT_STATUSES = ["failed", "cancelled", "expired"];
 
 type VehicleType = (typeof ALLOWED_VEHICLE_TYPES)[number];
 type RouteRecord = typeof route.$inferSelect;
@@ -642,7 +642,11 @@ export class RouteService {
         .update(booking)
         .set({ status: "completed", updatedAt: new Date() })
         .where(
-          and(eq(booking.tripId, tripId), eq(booking.status, "confirmed")),
+          and(
+            eq(booking.tripId, tripId),
+            eq(booking.status, "confirmed"),
+            notInArray(booking.paymentStatus, HIDDEN_BOOKING_PAYMENT_STATUSES),
+          ),
         );
 
       const payoutResult = await payoutService.markTripCompletedInTransaction(
@@ -670,7 +674,11 @@ export class RouteService {
     const visibleBookingConditions = and(
       eq(booking.userId, userId),
       inArray(booking.status, [...VISIBLE_BOOKING_STATUSES]),
-      notInArray(booking.paymentStatus, HIDDEN_BOOKING_PAYMENT_STATUSES),
+      notInArray(
+        booking.paymentStatus,
+        // Intentionally omit refund statuses so users see refunded bookings
+        ["failed", "cancelled", "expired"],
+      ),
     );
     const parsedLimit = Number(limit) || 20;
     const parsedOffset = Number(offset) || 0;
@@ -942,7 +950,11 @@ export class RouteService {
     }
 
     const bookings = await db.query.booking.findMany({
-      where: and(eq(booking.tripId, tripId), eq(booking.status, "confirmed")),
+      where: and(
+        eq(booking.tripId, tripId),
+        eq(booking.status, "confirmed"),
+        notInArray(booking.paymentStatus, HIDDEN_BOOKING_PAYMENT_STATUSES),
+      ),
     });
     const passengerMap = await this.getPassengersByUserIds(
       bookings.map((record) => record.userId),
@@ -1028,6 +1040,7 @@ export class RouteService {
           eq(booking.tripId, tripRecord.id),
           eq(booking.userId, userId),
           inArray(booking.status, ["pending", "confirmed"]),
+          notInArray(booking.paymentStatus, HIDDEN_BOOKING_PAYMENT_STATUSES),
         ),
         orderBy: [desc(booking.createdAt)],
       });
