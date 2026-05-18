@@ -9,6 +9,7 @@ import {
   booking,
   bookingHold,
   driver,
+  earning,
   payment,
   paymentWebhook,
   route,
@@ -692,6 +693,15 @@ export class PaymentService {
     }
 
     const verification = await koraClient.verifyTransaction(payload.reference);
+
+    const recheckPayment = await this.getPaymentRecord(payload.reference);
+    if (!recheckPayment || recheckPayment.status !== "pending") {
+      logger.info("payment.expire_skipped_concurrent", {
+        ...payload,
+        status: recheckPayment?.status ?? "missing",
+      });
+      return;
+    }
     if (verification.data.status.toLowerCase() === "success") {
       const hold = await this.getBookingHoldRecord(payload.bookingId);
       if (!hold || hold.expiresAt.getTime() <= Date.now()) {
@@ -1011,6 +1021,14 @@ export class PaymentService {
             updatedAt: new Date(),
           })
           .where(eq(booking.id, record.bookingId));
+
+        await tx
+          .update(earning)
+          .set({
+            status: "cancelled",
+            updatedAt: new Date(),
+          })
+          .where(eq(earning.bookingId, record.bookingId));
       }
 
       return [record];
@@ -1384,19 +1402,36 @@ export class PaymentService {
     await db.transaction(async (tx) => {
       await tx
         .update(payment)
-        .set({
-          status,
-          updatedAt: new Date(),
-        })
+        .set({ status, updatedAt: new Date() })
         .where(eq(payment.reference, reference));
 
-      await tx
+      const [bookingRecord] = await tx
         .update(booking)
-        .set({
-          paymentStatus: status,
-          updatedAt: new Date(),
-        })
-        .where(eq(booking.paymentReference, reference));
+        .set({ paymentStatus: status, updatedAt: new Date() })
+        .where(eq(booking.paymentReference, reference))
+        .returning();
+
+      if (
+        bookingRecord &&
+        bookingRecord.status === "confirmed" &&
+        bookingRecord.seatNumber !== null
+      ) {
+        await tx
+          .update(earning)
+          .set({ status: "cancelled", updatedAt: new Date() })
+          .where(eq(earning.bookingId, bookingRecord.id));
+
+        await tx
+          .update(trip)
+          .set({ bookedSeats: sql`GREATEST(${trip.bookedSeats} - 1, 0)` })
+          .where(
+            and(eq(trip.id, bookingRecord.tripId), gt(trip.bookedSeats, 0)),
+          );
+
+        await tx
+          .delete(bookingHold)
+          .where(eq(bookingHold.bookingId, bookingRecord.id));
+      }
     });
   }
 

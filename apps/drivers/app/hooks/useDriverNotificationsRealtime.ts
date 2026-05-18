@@ -15,7 +15,18 @@ const DRIVER_QUERY_KEY = ["driver"] as const;
 const DRIVER_STATS_QUERY_KEY = ["driverStats"] as const;
 const DRIVER_ROUTES_QUERY_KEY = ["driverRoutes"] as const;
 const TRIPS_SUMMARY_RANGE_QUERY_KEY = ["tripsSummaryRange"] as const;
-const BOOKING_CONFIRMED_NOTIFICATION_TYPE = "booking_confirmed";
+const DASHBOARD_AFFECTING_TYPES = new Set([
+  "booking_confirmed",
+  "trip_completed",
+  "trip_cancelled",
+]);
+
+const STATS_AFFECTING_TYPES = new Set([
+  "payout_completed",
+  "payout_failed",
+  "payout_reconciliation_failed",
+]);
+
 const PROFILE_PICTURE_UPLOAD_SUCCEEDED_NOTIFICATION_TYPE =
   "profile_picture_upload_succeeded";
 
@@ -102,14 +113,21 @@ export function useDriverNotificationsRealtime() {
       }
 
       if (event === "notification.created") {
-        if (realtimeData.payload.type === BOOKING_CONFIRMED_NOTIFICATION_TYPE) {
+        const type = realtimeData.payload.type;
+
+        if (DASHBOARD_AFFECTING_TYPES.has(type)) {
           void invalidateDriverDashboardQueries(queryClient);
         }
 
-        if (
-          realtimeData.payload.type ===
-          PROFILE_PICTURE_UPLOAD_SUCCEEDED_NOTIFICATION_TYPE
-        ) {
+        if (STATS_AFFECTING_TYPES.has(type)) {
+          void queryClient.invalidateQueries({
+            queryKey: DRIVER_STATS_QUERY_KEY,
+            exact: true,
+            refetchType: "active",
+          });
+        }
+
+        if (type === PROFILE_PICTURE_UPLOAD_SUCCEEDED_NOTIFICATION_TYPE) {
           void queryClient.invalidateQueries({
             queryKey: DRIVER_QUERY_KEY,
             exact: true,
