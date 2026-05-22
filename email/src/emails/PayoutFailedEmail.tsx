@@ -164,10 +164,10 @@ const PayoutFailedEmail = ({
             <Text style={supportText}>
               Email:{" "}
               <Link
-                href="mailto:support@dailyexpress.com"
+                href="mailto:support@dailyexpress.app"
                 style={supportLink}
               >
-                support@dailyexpress.com
+                support@dailyexpress.app
               </Link>
             </Text>
 

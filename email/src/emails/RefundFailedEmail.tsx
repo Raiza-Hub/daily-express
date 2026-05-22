@@ -43,8 +43,8 @@ const RefundFailedEmail = ({
   currency = "NGN",
   productName,
   failureReason,
-  supportEmail = "support@dailyexpress.com",
-  supportPhone = "07008888328",
+  supportEmail = "support@dailyexpress.app",
+  supportPhone = "+234 9063611541",
 }: RefundFailedEmailProps) => {
   const greetingName = customerName || customerEmail;
   const previewText = "We could not complete your refund automatically";

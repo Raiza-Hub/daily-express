@@ -186,8 +186,8 @@ const BookingConfirmedEmail = ({
             </Text>
             <Text style={supportText}>
               Email:{" "}
-              <Link href="mailto:support@dailyexpress.com" style={supportLink}>
-                support@dailyexpress.com
+              <Link href="mailto:support@dailyexpress.app" style={supportLink}>
+                support@dailyexpress.app
               </Link>
             </Text>
 

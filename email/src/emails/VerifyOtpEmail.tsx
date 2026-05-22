@@ -24,7 +24,7 @@ const VerifyOtpEmail = ({
   otp,
   expiresInMinutes,
   brandName = "Daily Express",
-  supportEmail = "support@dailyexpress.com",
+  supportEmail = "support@dailyexpress.app",
   year = new Date().getFullYear(),
 }: VerifyOtpEmailProps) => {
   const previewText = `${otp} is your ${brandName} verification code`;
