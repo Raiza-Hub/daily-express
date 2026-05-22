@@ -22,7 +22,7 @@ export interface ResetPasswordEmailProps {
 const ResetPasswordEmail = ({
   resetUrl,
   brandName = "Daily Express",
-  supportEmail = "support@dailyexpress.com",
+  supportEmail = "support@dailyexpress.app",
   year = new Date().getFullYear(),
 }: ResetPasswordEmailProps) => {
   const previewText = `Reset your ${brandName} password`;
