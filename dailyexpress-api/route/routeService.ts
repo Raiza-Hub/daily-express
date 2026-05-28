@@ -1,15 +1,16 @@
 import {
   and,
   asc,
-  count,
   desc,
   eq,
   getTableColumns,
+  gt,
   gte,
   inArray,
   lt,
   ne,
   notInArray,
+  or,
   sql,
 } from "drizzle-orm";
 import type {
@@ -49,6 +50,8 @@ const ACTIVE_BOOKING_CONSTRAINT = "booking_trip_id_user_id_active_idx";
 const ROUTE_SEARCH_SCORE_THRESHOLD = 0.15;
 const BOOKABLE_TRIP_STATUSES = new Set(["pending", "confirmed"]);
 const VISIBLE_BOOKING_STATUSES = ["confirmed", "completed"] as const;
+const DEFAULT_PAGE_LIMIT = 20;
+const MAX_PAGE_LIMIT = 50;
 
 type VehicleType = (typeof ALLOWED_VEHICLE_TYPES)[number];
 type RouteRecord = typeof route.$inferSelect;
@@ -59,10 +62,82 @@ type CreateBookingInput = {
   routeId: string;
   tripDate: string;
 };
+type RouteSearchCursor = {
+  combinedScore: number;
+  pickupScore: number;
+  dropoffScore: number;
+  createdAt: string;
+  id: string;
+};
+type UserBookingsCursor = {
+  createdAt: string;
+  id: string;
+};
 
 const driverService = new DriverService();
 const paymentService = new PaymentService();
 const payoutService = new PayoutService();
+
+function clampPageLimit(limit?: number): number {
+  if (!limit || !Number.isFinite(limit)) {
+    return DEFAULT_PAGE_LIMIT;
+  }
+
+  return Math.max(1, Math.min(MAX_PAGE_LIMIT, Math.floor(limit)));
+}
+
+function encodeCursor(value: RouteSearchCursor | UserBookingsCursor): string {
+  return Buffer.from(JSON.stringify(value)).toString("base64url");
+}
+
+function decodeCursor<T extends object>(
+  cursor: string | undefined,
+  isValid: (value: unknown) => value is T,
+): T | null {
+  if (!cursor) {
+    return null;
+  }
+
+  try {
+    const value = JSON.parse(Buffer.from(cursor, "base64url").toString("utf8"));
+    if (value && typeof value === "object" && isValid(value)) {
+      return value;
+    }
+  } catch {
+    // Fall through to the shared INVALID_CURSOR error below.
+  }
+
+  throw createServiceError("Invalid cursor", 400, "INVALID_CURSOR");
+}
+
+function isRouteSearchCursor(value: unknown): value is RouteSearchCursor {
+  if (!value || typeof value !== "object") {
+    return false;
+  }
+  const cursor = value as Record<string, unknown>;
+
+  return (
+    typeof cursor.combinedScore === "number" &&
+    typeof cursor.pickupScore === "number" &&
+    typeof cursor.dropoffScore === "number" &&
+    typeof cursor.createdAt === "string" &&
+    !Number.isNaN(new Date(cursor.createdAt).getTime()) &&
+    typeof cursor.id === "string"
+  );
+}
+
+function isUserBookingsCursor(value: unknown): value is UserBookingsCursor {
+  if (!value || typeof value !== "object") {
+    return false;
+  }
+  const cursor = value as Record<string, unknown>;
+
+  return (
+    typeof cursor.createdAt === "string" &&
+    !Number.isNaN(new Date(cursor.createdAt).getTime()) &&
+    typeof cursor.id === "string"
+  );
+}
 
 function getTripArrivalAt(tripRecord: TripRecord, routeRecord: RouteRecord) {
   const dateKey = formatBusinessDate(tripRecord.date);
@@ -329,13 +404,15 @@ export class RouteService {
     date: string;
     vehicleType?: string[];
     limit?: number;
-    offset?: number;
-  }): Promise<Route[]> {
-    const { from, to, date, vehicleType, limit = 20, offset = 0 } = params;
+    cursor?: string;
+  }): Promise<{ routes: Route[]; nextCursor: string | null }> {
+    const { from, to, date, vehicleType, cursor } = params;
+    const limit = clampPageLimit(params.limit);
     const parsedFrom = from.trim();
     const parsedTo = to.trim();
     const normalizedFrom = parsedFrom ? normalizeSearchText(parsedFrom) : "";
     const normalizedTo = parsedTo ? normalizeSearchText(parsedTo) : "";
+    const decodedCursor = decodeCursor(cursor, isRouteSearchCursor);
     const parsedVehicleType = vehicleType?.filter(
       (value): value is VehicleType =>
         ALLOWED_VEHICLE_TYPES.includes(value as VehicleType),
@@ -396,6 +473,38 @@ export class RouteService {
     if (parsedVehicleType && parsedVehicleType.length > 0) {
       conditions.push(inArray(route.vehicleType, parsedVehicleType));
     }
+    if (decodedCursor) {
+      const cursorCreatedAt = new Date(decodedCursor.createdAt);
+      const cursorCondition = or(
+        lt(combinedScore, decodedCursor.combinedScore),
+        and(
+          eq(combinedScore, decodedCursor.combinedScore),
+          lt(pickupScore, decodedCursor.pickupScore),
+        ),
+        and(
+          eq(combinedScore, decodedCursor.combinedScore),
+          eq(pickupScore, decodedCursor.pickupScore),
+          lt(dropoffScore, decodedCursor.dropoffScore),
+        ),
+        and(
+          eq(combinedScore, decodedCursor.combinedScore),
+          eq(pickupScore, decodedCursor.pickupScore),
+          eq(dropoffScore, decodedCursor.dropoffScore),
+          lt(route.createdAt, cursorCreatedAt),
+        ),
+        and(
+          eq(combinedScore, decodedCursor.combinedScore),
+          eq(pickupScore, decodedCursor.pickupScore),
+          eq(dropoffScore, decodedCursor.dropoffScore),
+          eq(route.createdAt, cursorCreatedAt),
+          gt(route.id, decodedCursor.id),
+        ),
+      );
+
+      if (cursorCondition) {
+        conditions.push(cursorCondition);
+      }
+    }
 
     const routesResult = await db
       .select({
@@ -419,11 +528,10 @@ export class RouteService {
         desc(route.createdAt),
         asc(route.id),
       )
-      .limit(limit)
-      .offset(offset);
+      .limit(limit + 1);
 
     if (routesResult.length === 0) {
-      return [];
+      return { routes: [], nextCursor: null };
     }
 
     const routeIds = routesResult.map((record) => record.id);
@@ -447,14 +555,14 @@ export class RouteService {
       );
     }
 
-    return routesResult
+    const visibleRoutes = routesResult
       .map((record) => {
         const routeDriver = driverMap.get(record.driverId);
         if (!routeDriver) return null;
         const {
-          pickupScore: _pickupScore,
-          dropoffScore: _dropoffScore,
-          combinedScore: _combinedScore,
+          pickupScore: cursorPickupScore,
+          dropoffScore: cursorDropoffScore,
+          combinedScore: cursorCombinedScore,
           ...routeRecord
         } = record;
         const remainingSeats = Math.max(
@@ -464,12 +572,34 @@ export class RouteService {
         );
         if (remainingSeats === 0) return null;
         return {
-          ...routeRecord,
-          remainingSeats,
-          driver: routeDriver,
+          route: {
+            ...routeRecord,
+            remainingSeats,
+            driver: routeDriver,
+          },
+          cursor: {
+            combinedScore: cursorCombinedScore,
+            pickupScore: cursorPickupScore,
+            dropoffScore: cursorDropoffScore,
+            createdAt: routeRecord.createdAt.toISOString(),
+            id: routeRecord.id,
+          },
         };
       })
-      .filter((record): record is Route => record !== null);
+      .filter(
+        (record): record is { route: Route; cursor: RouteSearchCursor } =>
+          record !== null,
+      );
+
+    const pageRoutes = visibleRoutes.slice(0, limit);
+    const nextVisibleRoute = visibleRoutes[limit];
+    const lastRoute = pageRoutes[pageRoutes.length - 1];
+
+    return {
+      routes: pageRoutes.map((record) => record.route),
+      nextCursor:
+        nextVisibleRoute && lastRoute ? encodeCursor(lastRoute.cursor) : null,
+    };
   }
 
   async updateRoute(
@@ -670,7 +800,9 @@ export class RouteService {
     return result.updatedTrip;
   }
 
-  async getUserBookings(userId: string, limit = 20, offset = 0) {
+  async getUserBookings(userId: string, limit = 20, cursor?: string) {
+    const parsedLimit = clampPageLimit(limit);
+    const decodedCursor = decodeCursor(cursor, isUserBookingsCursor);
     const visibleBookingConditions = and(
       eq(booking.userId, userId),
       inArray(booking.status, [...VISIBLE_BOOKING_STATUSES]),
@@ -680,31 +812,40 @@ export class RouteService {
         ["failed", "cancelled", "expired"],
       ),
     );
-    const parsedLimit = Number(limit) || 20;
-    const parsedOffset = Number(offset) || 0;
+    const cursorCondition = decodedCursor
+      ? or(
+          lt(booking.createdAt, new Date(decodedCursor.createdAt)),
+          and(
+            eq(booking.createdAt, new Date(decodedCursor.createdAt)),
+            lt(booking.id, decodedCursor.id),
+          ),
+        )
+      : undefined;
     const bookingRecords = await timeAsync(
       "route.get_user_bookings.query_bookings",
-      { userId, limit: parsedLimit, offset: parsedOffset },
-      () =>
-        db.query.booking.findMany({
-          where: visibleBookingConditions,
-          limit: parsedLimit,
-          offset: parsedOffset,
-          orderBy: [desc(booking.createdAt)],
-        }),
-    );
-    const countResult = await timeAsync(
-      "route.get_user_bookings.count",
-      { userId },
+      { userId, limit: parsedLimit, hasCursor: Boolean(cursor) },
       () =>
         db
-          .select({ count: count() })
+          .select({ ...getTableColumns(booking) })
           .from(booking)
-          .where(visibleBookingConditions),
+          .innerJoin(trip, eq(booking.tripId, trip.id))
+          .where(
+            and(
+              visibleBookingConditions,
+              ne(trip.status, "cancelled"),
+              cursorCondition,
+            ),
+          )
+          .orderBy(desc(booking.createdAt), desc(booking.id))
+          .limit(parsedLimit + 1),
     );
-    const total = Number(countResult[0]?.count ?? 0);
+    const pageBookingRecords = bookingRecords.slice(0, parsedLimit);
+    const nextBookingRecord = bookingRecords[parsedLimit];
+    const lastBookingRecord = pageBookingRecords[pageBookingRecords.length - 1];
     const tripIds = [
-      ...new Set(bookingRecords.map((record) => record.tripId).filter(Boolean)),
+      ...new Set(
+        pageBookingRecords.map((record) => record.tripId).filter(Boolean),
+      ),
     ];
     const tripRecords =
       tripIds.length > 0
@@ -735,73 +876,79 @@ export class RouteService {
       ...new Set(routeRecords.map((record) => record.driverId)),
     ]);
 
-    const bookings = bookingRecords
-      .filter((record) => tripsById.has(record.tripId))
-      .map((bookingRecord) => {
-        const tripRecord = tripsById.get(bookingRecord.tripId);
-        const routeRecord = tripRecord
-          ? routesById.get(tripRecord.routeId)
-          : null;
-        const routeDriver = routeRecord
-          ? (driverMap.get(routeRecord.driverId) ?? null)
-          : null;
+    const bookings = pageBookingRecords.map((bookingRecord) => {
+      const tripRecord = tripsById.get(bookingRecord.tripId);
+      const routeRecord = tripRecord
+        ? routesById.get(tripRecord.routeId)
+        : null;
+      const routeDriver = routeRecord
+        ? (driverMap.get(routeRecord.driverId) ?? null)
+        : null;
 
-        return {
-          id: bookingRecord.id,
-          seatNumber: bookingRecord.seatNumber ?? 0,
-          fareAmount: bookingRecord.fareAmount,
-          currency: bookingRecord.currency,
-          status: bookingRecord.status,
-          paymentReference: bookingRecord.paymentReference ?? null,
-          paymentStatus: bookingRecord.paymentStatus,
-          createdAt: bookingRecord.createdAt,
-          updatedAt: bookingRecord.updatedAt,
-          tripId: bookingRecord.tripId,
-          trip:
-            tripRecord && routeRecord
-              ? {
-                  id: tripRecord.id,
-                  date: tripRecord.date,
-                  status: tripRecord.status,
-                  bookedSeats: tripRecord.bookedSeats,
-                  capacity: tripRecord.capacity,
-                  availableSeats: Math.max(
-                    tripRecord.capacity - tripRecord.bookedSeats,
-                    0,
-                  ),
-                  route: {
-                    id: routeRecord.id,
-                    pickupLocationTitle: routeRecord.pickup_location_title,
-                    pickupLocationLocality:
-                      routeRecord.pickup_location_locality,
-                    pickupLocationLabel: routeRecord.pickup_location_label,
-                    dropoffLocationTitle: routeRecord.dropoff_location_title,
-                    dropoffLocationLocality:
-                      routeRecord.dropoff_location_locality,
-                    dropoffLocationLabel: routeRecord.dropoff_location_label,
-                    price: routeRecord.price,
-                    vehicleType: routeRecord.vehicleType,
-                    meetingPoint: routeRecord.meeting_point,
-                    departureTime: routeRecord.departure_time,
-                    arrivalTime: routeRecord.arrival_time,
-                    driver: routeDriver
-                      ? {
-                          id: routeDriver.id,
-                          firstName: routeDriver.firstName,
-                          lastName: routeDriver.lastName,
-                          phoneNumber: routeDriver.phone,
-                          profilePictureUrl: routeDriver.profile_pic ?? null,
-                          country: routeDriver.country,
-                          state: routeDriver.state,
-                        }
-                      : null,
-                  },
-                }
-              : null,
-        };
-      });
+      return {
+        id: bookingRecord.id,
+        seatNumber: bookingRecord.seatNumber ?? 0,
+        fareAmount: bookingRecord.fareAmount,
+        currency: bookingRecord.currency,
+        status: bookingRecord.status,
+        paymentReference: bookingRecord.paymentReference ?? null,
+        paymentStatus: bookingRecord.paymentStatus,
+        createdAt: bookingRecord.createdAt,
+        updatedAt: bookingRecord.updatedAt,
+        tripId: bookingRecord.tripId,
+        trip:
+          tripRecord && routeRecord
+            ? {
+                id: tripRecord.id,
+                date: tripRecord.date,
+                status: tripRecord.status,
+                bookedSeats: tripRecord.bookedSeats,
+                capacity: tripRecord.capacity,
+                availableSeats: Math.max(
+                  tripRecord.capacity - tripRecord.bookedSeats,
+                  0,
+                ),
+                route: {
+                  id: routeRecord.id,
+                  pickupLocationTitle: routeRecord.pickup_location_title,
+                  pickupLocationLocality: routeRecord.pickup_location_locality,
+                  pickupLocationLabel: routeRecord.pickup_location_label,
+                  dropoffLocationTitle: routeRecord.dropoff_location_title,
+                  dropoffLocationLocality:
+                    routeRecord.dropoff_location_locality,
+                  dropoffLocationLabel: routeRecord.dropoff_location_label,
+                  price: routeRecord.price,
+                  vehicleType: routeRecord.vehicleType,
+                  meetingPoint: routeRecord.meeting_point,
+                  departureTime: routeRecord.departure_time,
+                  arrivalTime: routeRecord.arrival_time,
+                  driver: routeDriver
+                    ? {
+                        id: routeDriver.id,
+                        firstName: routeDriver.firstName,
+                        lastName: routeDriver.lastName,
+                        phoneNumber: routeDriver.phone,
+                        profilePictureUrl: routeDriver.profile_pic ?? null,
+                        country: routeDriver.country,
+                        state: routeDriver.state,
+                      }
+                    : null,
+                },
+              }
+            : null,
+      };
+    });
 
-    return { bookings, total };
+    return {
+      bookings,
+      nextCursor:
+        nextBookingRecord && lastBookingRecord
+          ? encodeCursor({
+              createdAt: lastBookingRecord.createdAt.toISOString(),
+              id: lastBookingRecord.id,
+            })
+          : null,
+    };
   }
 
   async searchBookingByRef(
