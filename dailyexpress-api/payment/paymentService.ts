@@ -1179,12 +1179,12 @@ export class PaymentService {
       bookingId?: string | null;
       paymentReference: string;
       paymentStatus:
-      | "initialized"
-      | "pending"
-      | "successful"
-      | "failed"
-      | "cancelled"
-      | "expired";
+        | "initialized"
+        | "pending"
+        | "successful"
+        | "failed"
+        | "cancelled"
+        | "expired";
     },
   ) {
     if (!input.bookingId) {
@@ -1270,33 +1270,30 @@ export class PaymentService {
       return null;
     }
 
-    const bookingRecord = await db.query.booking.findFirst({
-      where: eq(booking.id, paymentRecord.bookingId),
-    });
-    if (!bookingRecord) {
+    const [bookingDetails] = await db
+      .select({
+        booking: booking,
+        trip: trip,
+        route: route,
+        passenger: users,
+        driver: driver,
+      })
+      .from(booking)
+      .innerJoin(trip, eq(trip.id, booking.tripId))
+      .innerJoin(route, eq(route.id, trip.routeId))
+      .leftJoin(users, eq(users.id, booking.userId))
+      .leftJoin(driver, eq(driver.id, trip.driverId))
+      .where(eq(booking.id, paymentRecord.bookingId));
+
+    if (!bookingDetails) {
       return null;
     }
 
-    const tripRecord = await db.query.trip.findFirst({
-      where: eq(trip.id, bookingRecord.tripId),
-    });
-    if (!tripRecord) {
-      return null;
-    }
-
-    const routeRecord = await db.query.route.findFirst({
-      where: eq(route.id, tripRecord.routeId),
-    });
-    if (!routeRecord) {
-      return null;
-    }
-
-    const passenger = await db.query.users.findFirst({
-      where: eq(users.id, bookingRecord.userId),
-    });
-    const driverRecord = await db.query.driver.findFirst({
-      where: eq(driver.id, tripRecord.driverId),
-    });
+    const bookingRecord = bookingDetails.booking;
+    const tripRecord = bookingDetails.trip;
+    const routeRecord = bookingDetails.route;
+    const passenger = bookingDetails.passenger;
+    const driverRecord = bookingDetails.driver;
     const passengerName = passenger
       ? `${passenger.firstName} ${passenger.lastName}`.trim()
       : null;
