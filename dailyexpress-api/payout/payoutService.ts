@@ -419,7 +419,7 @@ export class PayoutService {
     const rows = await db.query.payout.findMany({
       where: and(...clauses),
       orderBy: [desc(payout.createdAt)],
-      limit: Math.min(query.limit || 20, 100),
+      limit: Math.max(1, Math.min(query.limit || 20, 100)),
     });
 
     return rows.map((row) => ({

@@ -257,7 +257,7 @@ export const completeTrip: RequestHandler = asyncHandler(
 
 export const searchRoutes: RequestHandler = asyncHandler(
   async (req: Request, res: Response) => {
-    const { from, to, date, vehicleType, limit, offset } = req.query;
+    const { from, to, date, vehicleType, limit, cursor } = req.query;
     const parsedFrom = typeof from === "string" ? from.trim() : "";
     const parsedTo = typeof to === "string" ? to.trim() : "";
     const parsedDate = typeof date === "string" ? date.trim() : undefined;
@@ -269,7 +269,7 @@ export const searchRoutes: RequestHandler = asyncHandler(
             .filter((value) => value.length > 0)
         : undefined;
     const parsedLimit = typeof limit === "string" ? parseInt(limit, 10) : 20;
-    const parsedOffset = typeof offset === "string" ? parseInt(offset, 10) : 0;
+    const parsedCursor = typeof cursor === "string" ? cursor : undefined;
 
     if (!parsedFrom || !parsedTo) {
       return sendErrorResponse(res, 400, "From and to are required.", {
@@ -301,7 +301,7 @@ export const searchRoutes: RequestHandler = asyncHandler(
         hasDate: Boolean(parsedDate),
         vehicleTypeCount: parsedVehicleType?.length ?? 0,
         limit: parsedLimit,
-        offset: parsedOffset,
+        hasCursor: Boolean(parsedCursor),
       },
       () =>
         routeService.searchRoutes({
@@ -310,7 +310,7 @@ export const searchRoutes: RequestHandler = asyncHandler(
           date: parsedDate,
           vehicleType: parsedVehicleType,
           limit: parsedLimit,
-          offset: parsedOffset,
+          cursor: parsedCursor,
         }),
     );
     return res
@@ -330,13 +330,12 @@ export const getUserBookings: RequestHandler = asyncHandler(
     const limit = req.query.limit
       ? parseInt(req.query.limit as string, 10)
       : 20;
-    const offset = req.query.offset
-      ? parseInt(req.query.offset as string, 10)
-      : 0;
+    const cursor =
+      typeof req.query.cursor === "string" ? req.query.cursor : undefined;
     const result = await timeAsync(
       "route.get_user_bookings.service",
-      { userId, limit, offset },
-      () => routeService.getUserBookings(userId, limit, offset),
+      { userId, limit, hasCursor: Boolean(cursor) },
+      () => routeService.getUserBookings(userId, limit, cursor),
     );
     return res
       .status(200)

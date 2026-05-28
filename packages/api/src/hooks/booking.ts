@@ -116,7 +116,12 @@ export interface UserBookingWithTrip {
 
 export interface UserBookingsPage {
   bookings: UserBookingWithTrip[];
-  total: number;
+  nextCursor: string | null;
+}
+
+export interface SearchRoutesPage {
+  routes: Route[];
+  nextCursor: string | null;
 }
 
 export const getAllDriverRoutesFn = async (): Promise<Route[]> => {
@@ -264,9 +269,9 @@ export const completeTripFn = async ({ id }: { id: string }): Promise<Trip> => {
 
 export const searchRoutesFn = async (
   params: SearchRoutesRequest,
-  offset: number = 0,
+  cursor?: string | null,
   limit: number = 20,
-): Promise<Route[]> => {
+): Promise<SearchRoutesPage> => {
   try {
     const searchParams = new URLSearchParams();
     if (params.from) searchParams.set("from", params.from);
@@ -276,9 +281,11 @@ export const searchRoutesFn = async (
       searchParams.set("vehicleType", params.vehicleType.join(","));
     }
     searchParams.set("limit", String(limit));
-    searchParams.set("offset", String(offset));
+    if (cursor) {
+      searchParams.set("cursor", cursor);
+    }
 
-    const response = await routeApi.get<ApiResponse<Route[]>>(
+    const response = await routeApi.get<ApiResponse<SearchRoutesPage>>(
       `/search?${searchParams.toString()}`,
     );
     if (!response.data.success || !response.data.data) {
@@ -301,29 +308,26 @@ export const useSearchRoutes = ({
 }) => {
   return useInfiniteQuery({
     queryKey: ["search-routes", params],
-    queryFn: ({ pageParam = 0 }: { pageParam?: number }) =>
-      searchRoutesFn(params, pageParam ?? 0, ROUTES_PAGE_SIZE),
-    getNextPageParam: (lastPage: Route[], _allPages, lastPageParam) => {
-      if (lastPage.length === ROUTES_PAGE_SIZE) {
-        return (lastPageParam ?? 0) + ROUTES_PAGE_SIZE;
-      }
-      return undefined;
-    },
-    initialPageParam: 0,
+    queryFn: ({ pageParam }: { pageParam: string | null }) =>
+      searchRoutesFn(params, pageParam, ROUTES_PAGE_SIZE),
+    getNextPageParam: (lastPage) => lastPage.nextCursor,
+    initialPageParam: null as string | null,
     retry: false,
     enabled,
   });
 };
 
 export const getUserBookingsFn = async (
-  offset: number = 0,
+  cursor?: string | null,
   limit: number = 20,
 ): Promise<UserBookingsPage> => {
   try {
     const searchParams = new URLSearchParams({
       limit: String(limit),
-      offset: String(offset),
     });
+    if (cursor) {
+      searchParams.set("cursor", cursor);
+    }
 
     const response = await routeApi.get<ApiResponse<UserBookingsPage>>(
       `/user/bookings?${searchParams.toString()}`,
@@ -347,21 +351,10 @@ export const useGetUserBookingsInfinite = (options?: {
 
   return useInfiniteQuery({
     queryKey: ["userBookings", limit],
-    queryFn: ({ pageParam = 0 }: { pageParam?: number }) =>
-      getUserBookingsFn(pageParam ?? 0, limit),
-    getNextPageParam: (lastPage, allPages, lastPageParam) => {
-      const loadedCount = allPages.reduce(
-        (total, page) => total + page.bookings.length,
-        0,
-      );
-
-      if (loadedCount >= lastPage.total || lastPage.bookings.length < limit) {
-        return undefined;
-      }
-
-      return lastPageParam + limit;
-    },
-    initialPageParam: 0,
+    queryFn: ({ pageParam }: { pageParam: string | null }) =>
+      getUserBookingsFn(pageParam, limit),
+    getNextPageParam: (lastPage) => lastPage.nextCursor,
+    initialPageParam: null as string | null,
     retry: false,
     enabled: options?.enabled ?? true,
   });
@@ -520,7 +513,7 @@ export const useCompleteTrip = (options?: {
 export const useGetUserBookings = (options?: { enabled?: boolean }) => {
   return useQuery({
     queryKey: ["userBookings"],
-    queryFn: () => getUserBookingsFn(),
+    queryFn: () => getUserBookingsFn(null),
     retry: false,
     enabled: options?.enabled ?? true,
   });

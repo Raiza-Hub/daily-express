@@ -159,7 +159,6 @@ async function fetchSearchRoutePreview(params: {
     from: params.from,
     to: params.to,
     limit: "3",
-    offset: "0",
   });
 
   if (params.date) {
@@ -182,9 +181,12 @@ async function fetchSearchRoutePreview(params: {
       return [];
     }
 
-    const payload = (await response.json()) as ApiResponse<Route[]>;
+    const payload = (await response.json()) as ApiResponse<{
+      routes: Route[];
+      nextCursor: string | null;
+    }>;
 
-    return payload.success && payload.data ? payload.data : [];
+    return payload.success && payload.data ? payload.data.routes : [];
   } catch {
     return [];
   }
@@ -210,7 +212,12 @@ export async function buildHomeMetadataFromSearchParams(searchParams: {
     });
   }
 
-  const results = await fetchSearchRoutePreview({ from, to, date, vehicleType });
+  const results = await fetchSearchRoutePreview({
+    from,
+    to,
+    date,
+    vehicleType,
+  });
   const formattedDate = formatTravelDate(date);
   const formattedVehicleType = joinVehicleTypes(vehicleType);
   const routeLabel = `${from} to ${to}`;
@@ -254,7 +261,9 @@ export async function buildHomeMetadataFromSearchParams(searchParams: {
   ];
 
   if (departureTime) {
-    descriptionParts.push(`The earliest listed departure starts at ${departureTime}.`);
+    descriptionParts.push(
+      `The earliest listed departure starts at ${departureTime}.`,
+    );
   }
 
   return buildWebMetadata({

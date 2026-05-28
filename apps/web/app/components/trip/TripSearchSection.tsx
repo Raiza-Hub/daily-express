@@ -52,7 +52,7 @@ const TripSearchSection = () => {
   });
 
   const routes: Route[] = useMemo(
-    () => data?.pages?.flatMap((page) => page) ?? [],
+    () => data?.pages?.flatMap((page) => page.routes) ?? [],
     [data],
   );
 
