@@ -37,7 +37,6 @@ import {
   getScheduledDepartureTime,
   HIDDEN_BOOKING_PAYMENT_STATUSES,
   isConstraintError,
-  isVisibleBooking,
   mapDriverToRouteDriver,
   mapPassenger,
   normalizeSearchText,
@@ -233,42 +232,11 @@ export class RouteService {
     );
   }
 
-  private async getPassengersByUserIds(userIds: string[]) {
-    if (userIds.length === 0) {
-      return new Map<string, ReturnType<typeof mapPassenger>>();
-    }
-
-    const passengerRecords = await db.query.users.findMany({
-      where: inArray(users.id, userIds),
-    });
-
-    return new Map(
-      passengerRecords.map((record) => [record.id, mapPassenger(record)]),
-    );
-  }
-
   private async getDriverByDriverId(driverId: string) {
     return (
       (await db.query.driver.findFirst({
         where: eq(driver.id, driverId),
       })) ?? null
-    );
-  }
-
-  private async getDriverViewsByDriverIds(driverIds: string[]) {
-    if (driverIds.length === 0) {
-      return new Map<string, Route["driver"]>();
-    }
-
-    const driverRecords = await db.query.driver.findMany({
-      where: inArray(driver.id, driverIds),
-    });
-
-    return new Map(
-      driverRecords.map((record) => [
-        record.id,
-        mapDriverToRouteDriver(record),
-      ]),
     );
   }
 

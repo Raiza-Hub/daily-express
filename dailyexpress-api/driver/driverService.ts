@@ -8,7 +8,7 @@ import {
   payout,
   route,
 } from "../db/index";
-import { and, eq, inArray, sql } from "drizzle-orm";
+import { and, eq, sql } from "drizzle-orm";
 import { createServiceError, sanitizeInput } from "@shared/utils";
 import { NotificationService } from "../notification/notificationService";
 import { publishNotificationCreatedInBackground } from "../notification/realtime";

@@ -89,13 +89,6 @@ export const protectedLimiter = createLimiter({
   skip: (req) => isPublicPath(getRequestPath(req), req.method),
 });
 
-// export const bookingLimiter = createLimiter({
-//   windowMs: 60 * 1000,
-//   max: Number(process.env.RATE_LIMIT_BOOKING ?? 10),
-//   prefix: "booking",
-//   message: "Too many booking attempts. Please try again shortly.",
-// });
-
 export const webhookLimiter = createLimiter({
   windowMs: 60 * 1000,
   max: Number(process.env.RATE_LIMIT_WEBHOOK ?? 300),
