@@ -506,19 +506,37 @@ export class RouteService {
       }
     }
 
+    const tripBookedSeats = db
+      .select({
+        routeId: trip.routeId,
+        bookedSeats: sql<number>`coalesce(sum(${trip.bookedSeats}), 0)::int`.as(
+          "booked_seats",
+        ),
+      })
+      .from(trip)
+      .where(and(gte(trip.date, start), lt(trip.date, end)))
+      .groupBy(trip.routeId)
+      .as("trip_booked_seats");
+    const remainingSeats = sql<number>`greatest(${route.availableSeats} - coalesce(${tripBookedSeats.bookedSeats}, 0), 0)`;
+
     const routesResult = await db
       .select({
-        ...getTableColumns(route),
+        route: getTableColumns(route),
+        driver: getTableColumns(driver),
         pickupScore,
         dropoffScore,
         combinedScore,
+        remainingSeats,
       })
       .from(route)
+      .innerJoin(driver, eq(driver.id, route.driverId))
+      .leftJoin(tripBookedSeats, eq(tripBookedSeats.routeId, route.id))
       .where(
         and(
           ...conditions,
           gte(pickupScore, ROUTE_SEARCH_SCORE_THRESHOLD),
           gte(dropoffScore, ROUTE_SEARCH_SCORE_THRESHOLD),
+          sql`${remainingSeats} > 0`,
         ),
       )
       .orderBy(
@@ -534,62 +552,20 @@ export class RouteService {
       return { routes: [], nextCursor: null };
     }
 
-    const routeIds = routesResult.map((record) => record.id);
-    const driverIds = [
-      ...new Set(routesResult.map((record) => record.driverId)),
-    ];
-    const driverMap = await this.getDriverViewsByDriverIds(driverIds);
-    const tripsForDay = await db.query.trip.findMany({
-      where: and(
-        inArray(trip.routeId, routeIds),
-        gte(trip.date, start),
-        lt(trip.date, end),
-      ),
-    });
-    const bookedSeatsByRouteId = new Map<string, number>();
-    for (const tripRecord of tripsForDay) {
-      bookedSeatsByRouteId.set(
-        tripRecord.routeId,
-        (bookedSeatsByRouteId.get(tripRecord.routeId) ?? 0) +
-          (tripRecord.bookedSeats ?? 0),
-      );
-    }
-
-    const visibleRoutes = routesResult
-      .map((record) => {
-        const routeDriver = driverMap.get(record.driverId);
-        if (!routeDriver) return null;
-        const {
-          pickupScore: cursorPickupScore,
-          dropoffScore: cursorDropoffScore,
-          combinedScore: cursorCombinedScore,
-          ...routeRecord
-        } = record;
-        const remainingSeats = Math.max(
-          routeRecord.availableSeats -
-            (bookedSeatsByRouteId.get(routeRecord.id) ?? 0),
-          0,
-        );
-        if (remainingSeats === 0) return null;
-        return {
-          route: {
-            ...routeRecord,
-            remainingSeats,
-            driver: routeDriver,
-          },
-          cursor: {
-            combinedScore: cursorCombinedScore,
-            pickupScore: cursorPickupScore,
-            dropoffScore: cursorDropoffScore,
-            createdAt: routeRecord.createdAt.toISOString(),
-            id: routeRecord.id,
-          },
-        };
-      })
-      .filter(
-        (record): record is { route: Route; cursor: RouteSearchCursor } =>
-          record !== null,
-      );
+    const visibleRoutes = routesResult.map((record) => ({
+      route: {
+        ...record.route,
+        remainingSeats: record.remainingSeats,
+        driver: mapDriverToRouteDriver(record.driver),
+      },
+      cursor: {
+        combinedScore: record.combinedScore,
+        pickupScore: record.pickupScore,
+        dropoffScore: record.dropoffScore,
+        createdAt: record.route.createdAt.toISOString(),
+        id: record.route.id,
+      },
+    }));
 
     const pageRoutes = visibleRoutes.slice(0, limit);
     const nextVisibleRoute = visibleRoutes[limit];
@@ -821,14 +797,21 @@ export class RouteService {
           ),
         )
       : undefined;
-    const bookingRecords = await timeAsync(
+    const bookingRows = await timeAsync(
       "route.get_user_bookings.query_bookings",
       { userId, limit: parsedLimit, hasCursor: Boolean(cursor) },
       () =>
         db
-          .select({ ...getTableColumns(booking) })
+          .select({
+            booking: getTableColumns(booking),
+            trip: getTableColumns(trip),
+            route: getTableColumns(route),
+            driver: getTableColumns(driver),
+          })
           .from(booking)
           .innerJoin(trip, eq(booking.tripId, trip.id))
+          .innerJoin(route, eq(trip.routeId, route.id))
+          .innerJoin(driver, eq(route.driverId, driver.id))
           .where(
             and(
               visibleBookingConditions,
@@ -839,113 +822,63 @@ export class RouteService {
           .orderBy(desc(booking.createdAt), desc(booking.id))
           .limit(parsedLimit + 1),
     );
-    const pageBookingRecords = bookingRecords.slice(0, parsedLimit);
-    const nextBookingRecord = bookingRecords[parsedLimit];
-    const lastBookingRecord = pageBookingRecords[pageBookingRecords.length - 1];
-    const tripIds = [
-      ...new Set(
-        pageBookingRecords.map((record) => record.tripId).filter(Boolean),
-      ),
-    ];
-    const tripRecords =
-      tripIds.length > 0
-        ? (
-            await timeAsync(
-              "route.get_user_bookings.query_trips",
-              { userId, tripCount: tripIds.length },
-              () =>
-                db.query.trip.findMany({ where: inArray(trip.id, tripIds) }),
-            )
-          ).filter((tripRecord) => tripRecord.status !== "cancelled")
-        : [];
-    const tripsById = new Map(tripRecords.map((record) => [record.id, record]));
-    const routeIds = [...new Set(tripRecords.map((record) => record.routeId))];
-    const routeRecords =
-      routeIds.length > 0
-        ? await timeAsync(
-            "route.get_user_bookings.query_routes",
-            { userId, routeCount: routeIds.length },
-            () =>
-              db.query.route.findMany({ where: inArray(route.id, routeIds) }),
-          )
-        : [];
-    const routesById = new Map(
-      routeRecords.map((record) => [record.id, record]),
-    );
-    const driverMap = await this.getDriverViewsByDriverIds([
-      ...new Set(routeRecords.map((record) => record.driverId)),
-    ]);
+    const pageBookingRows = bookingRows.slice(0, parsedLimit);
+    const nextBookingRow = bookingRows[parsedLimit];
+    const lastBookingRow = pageBookingRows[pageBookingRows.length - 1];
 
-    const bookings = pageBookingRecords.map((bookingRecord) => {
-      const tripRecord = tripsById.get(bookingRecord.tripId);
-      const routeRecord = tripRecord
-        ? routesById.get(tripRecord.routeId)
-        : null;
-      const routeDriver = routeRecord
-        ? (driverMap.get(routeRecord.driverId) ?? null)
-        : null;
-
+    const bookings = pageBookingRows.map((row) => {
       return {
-        id: bookingRecord.id,
-        seatNumber: bookingRecord.seatNumber ?? 0,
-        fareAmount: bookingRecord.fareAmount,
-        currency: bookingRecord.currency,
-        status: bookingRecord.status,
-        paymentReference: bookingRecord.paymentReference ?? null,
-        paymentStatus: bookingRecord.paymentStatus,
-        createdAt: bookingRecord.createdAt,
-        updatedAt: bookingRecord.updatedAt,
-        tripId: bookingRecord.tripId,
-        trip:
-          tripRecord && routeRecord
-            ? {
-                id: tripRecord.id,
-                date: tripRecord.date,
-                status: tripRecord.status,
-                bookedSeats: tripRecord.bookedSeats,
-                capacity: tripRecord.capacity,
-                availableSeats: Math.max(
-                  tripRecord.capacity - tripRecord.bookedSeats,
-                  0,
-                ),
-                route: {
-                  id: routeRecord.id,
-                  pickupLocationTitle: routeRecord.pickup_location_title,
-                  pickupLocationLocality: routeRecord.pickup_location_locality,
-                  pickupLocationLabel: routeRecord.pickup_location_label,
-                  dropoffLocationTitle: routeRecord.dropoff_location_title,
-                  dropoffLocationLocality:
-                    routeRecord.dropoff_location_locality,
-                  dropoffLocationLabel: routeRecord.dropoff_location_label,
-                  price: routeRecord.price,
-                  vehicleType: routeRecord.vehicleType,
-                  meetingPoint: routeRecord.meeting_point,
-                  departureTime: routeRecord.departure_time,
-                  arrivalTime: routeRecord.arrival_time,
-                  driver: routeDriver
-                    ? {
-                        id: routeDriver.id,
-                        firstName: routeDriver.firstName,
-                        lastName: routeDriver.lastName,
-                        phoneNumber: routeDriver.phone,
-                        profilePictureUrl: routeDriver.profile_pic ?? null,
-                        country: routeDriver.country,
-                        state: routeDriver.state,
-                      }
-                    : null,
-                },
-              }
-            : null,
+        id: row.booking.id,
+        seatNumber: row.booking.seatNumber ?? 0,
+        fareAmount: row.booking.fareAmount,
+        currency: row.booking.currency,
+        status: row.booking.status,
+        paymentReference: row.booking.paymentReference ?? null,
+        paymentStatus: row.booking.paymentStatus,
+        createdAt: row.booking.createdAt,
+        updatedAt: row.booking.updatedAt,
+        tripId: row.booking.tripId,
+        trip: {
+          id: row.trip.id,
+          date: row.trip.date,
+          status: row.trip.status,
+          bookedSeats: row.trip.bookedSeats,
+          capacity: row.trip.capacity,
+          availableSeats: Math.max(row.trip.capacity - row.trip.bookedSeats, 0),
+          route: {
+            id: row.route.id,
+            pickupLocationTitle: row.route.pickup_location_title,
+            pickupLocationLocality: row.route.pickup_location_locality,
+            pickupLocationLabel: row.route.pickup_location_label,
+            dropoffLocationTitle: row.route.dropoff_location_title,
+            dropoffLocationLocality: row.route.dropoff_location_locality,
+            dropoffLocationLabel: row.route.dropoff_location_label,
+            price: row.route.price,
+            vehicleType: row.route.vehicleType,
+            meetingPoint: row.route.meeting_point,
+            departureTime: row.route.departure_time,
+            arrivalTime: row.route.arrival_time,
+            driver: {
+              id: row.driver.id,
+              firstName: row.driver.firstName,
+              lastName: row.driver.lastName,
+              phoneNumber: row.driver.phone,
+              profilePictureUrl: row.driver.profile_pic ?? null,
+              country: row.driver.country,
+              state: row.driver.state,
+            },
+          },
+        },
       };
     });
 
     return {
       bookings,
       nextCursor:
-        nextBookingRecord && lastBookingRecord
+        nextBookingRow && lastBookingRow
           ? encodeCursor({
-              createdAt: lastBookingRecord.createdAt.toISOString(),
-              id: lastBookingRecord.id,
+              createdAt: lastBookingRow.booking.createdAt.toISOString(),
+              id: lastBookingRow.booking.id,
             })
           : null,
     };
@@ -979,76 +912,65 @@ export class RouteService {
     const { start: rangeEnd } = getBusinessDayWindow(
       addDaysToDateKey(endDate, 1),
     );
-    const trips = await db.query.trip.findMany({
-      where: and(
-        eq(trip.driverId, driverId),
-        gte(trip.date, start),
-        lt(trip.date, rangeEnd),
-        ne(trip.status, "cancelled"),
-      ),
-      orderBy: [asc(trip.date)],
-    });
-    const routeRecords =
-      trips.length > 0
-        ? await db.query.route.findMany({
-            where: inArray(route.id, [
-              ...new Set(trips.map((currentTrip) => currentTrip.routeId)),
-            ]),
-          })
-        : [];
-    const routesById = new Map(
-      routeRecords.map((record) => [record.id, record]),
-    );
-    const bookingRecords =
-      trips.length > 0
-        ? (
-            await db.query.booking.findMany({
-              where: and(
-                inArray(
-                  booking.tripId,
-                  trips.map((currentTrip) => currentTrip.id),
-                ),
-                inArray(booking.status, [...VISIBLE_BOOKING_STATUSES]),
-                notInArray(
-                  booking.paymentStatus,
-                  HIDDEN_BOOKING_PAYMENT_STATUSES,
-                ),
-              ),
-            })
-          ).filter(isVisibleBooking)
-        : [];
-    const visibleBookingsByTripId = bookingRecords.reduce((acc, record) => {
-      acc.set(record.tripId, (acc.get(record.tripId) ?? 0) + 1);
-      return acc;
-    }, new Map<string, number>());
-    const visibleFareTotalsByTripId = bookingRecords.reduce((acc, record) => {
-      acc.set(record.tripId, (acc.get(record.tripId) ?? 0) + record.fareAmount);
-      return acc;
-    }, new Map<string, number>());
 
-    const tripsWithDetails = trips.flatMap((currentTrip) => {
-      const routeData = routesById.get(currentTrip.routeId);
-      const visibleBookedSeats =
-        visibleBookingsByTripId.get(currentTrip.id) ?? 0;
-      if (visibleBookedSeats === 0) return [];
-      const earnings = visibleFareTotalsByTripId.get(currentTrip.id) ?? 0;
+    const bookingTotals = db
+      .select({
+        tripId: booking.tripId,
+        visibleBookedSeats: sql<number>`count(*)::int`.as(
+          "visible_booked_seats",
+        ),
+        earnings: sql<number>`coalesce(sum(${booking.fareAmount}), 0)::bigint`
+          .mapWith(Number)
+          .as("earnings"),
+      })
+      .from(booking)
+      .where(
+        and(
+          inArray(booking.status, [...VISIBLE_BOOKING_STATUSES]),
+          notInArray(booking.paymentStatus, HIDDEN_BOOKING_PAYMENT_STATUSES),
+        ),
+      )
+      .groupBy(booking.tripId)
+      .as("booking_totals");
+
+    const tripRows = await db
+      .select({
+        trip: getTableColumns(trip),
+        route: getTableColumns(route),
+        visibleBookedSeats: bookingTotals.visibleBookedSeats,
+        earnings: bookingTotals.earnings,
+      })
+      .from(trip)
+      .innerJoin(route, eq(trip.routeId, route.id))
+      .innerJoin(bookingTotals, eq(bookingTotals.tripId, trip.id))
+      .where(
+        and(
+          eq(trip.driverId, driverId),
+          gte(trip.date, start),
+          lt(trip.date, rangeEnd),
+          ne(trip.status, "cancelled"),
+        ),
+      )
+      .orderBy(asc(trip.date));
+
+    const tripsWithDetails = tripRows.map((row) => {
       return {
-        id: currentTrip.id,
-        date: currentTrip.date,
-        bookedSeats: visibleBookedSeats,
-        capacity: currentTrip.capacity,
-        status: currentTrip.status,
+        id: row.trip.id,
+        date: row.trip.date,
+        bookedSeats: row.visibleBookedSeats,
+        capacity: row.trip.capacity,
+        status: row.trip.status,
         route: {
-          id: routeData?.id || "",
-          pickup_location_title: routeData?.pickup_location_title || "",
-          pickup_location_locality: routeData?.pickup_location_locality || "",
-          dropoff_location_title: routeData?.dropoff_location_title || "",
-          dropoff_location_locality: routeData?.dropoff_location_locality || "",
-          price: routeData?.price || 0,
-          departure_time: routeData?.departure_time || currentTrip.date,
-          arrival_time: routeData?.arrival_time || currentTrip.date,
+          id: row.route.id,
+          pickup_location_title: row.route.pickup_location_title,
+          pickup_location_locality: row.route.pickup_location_locality,
+          dropoff_location_title: row.route.dropoff_location_title,
+          dropoff_location_locality: row.route.dropoff_location_locality,
+          price: row.route.price,
+          departure_time: row.route.departure_time,
+          arrival_time: row.route.arrival_time,
         },
-        earnings,
+        earnings: row.earnings,
       };
     });
 
@@ -1089,32 +1011,42 @@ export class RouteService {
 
   async getTripBookings(user: JWTPayload, tripId: string) {
     const driverId = await this.resolveDriverId(user);
-    const tripData = await db.query.trip.findFirst({
-      where: eq(trip.id, tripId),
-    });
-    if (!tripData || tripData.driverId !== driverId) {
+    const bookingRows = await db
+      .select({
+        tripId: trip.id,
+        booking: getTableColumns(booking),
+        user: getTableColumns(users),
+      })
+      .from(trip)
+      .leftJoin(
+        booking,
+        and(
+          eq(booking.tripId, trip.id),
+          eq(booking.status, "confirmed"),
+          notInArray(booking.paymentStatus, HIDDEN_BOOKING_PAYMENT_STATUSES),
+        ),
+      )
+      .leftJoin(users, eq(users.id, booking.userId))
+      .where(and(eq(trip.id, tripId), eq(trip.driverId, driverId)));
+
+    if (bookingRows.length === 0) {
       throw createServiceError("Trip not found", 404);
     }
 
-    const bookings = await db.query.booking.findMany({
-      where: and(
-        eq(booking.tripId, tripId),
-        eq(booking.status, "confirmed"),
-        notInArray(booking.paymentStatus, HIDDEN_BOOKING_PAYMENT_STATUSES),
-      ),
-    });
-    const passengerMap = await this.getPassengersByUserIds(
-      bookings.map((record) => record.userId),
+    return bookingRows.flatMap((row) =>
+      row.booking
+        ? [
+            {
+              id: row.booking.id,
+              seatNumber: row.booking.seatNumber ?? 0,
+              status: row.booking.status,
+              paymentStatus: row.booking.paymentStatus,
+              createdAt: row.booking.createdAt,
+              user: row.user ? mapPassenger(row.user) : null,
+            },
+          ]
+        : [],
     );
-
-    return bookings.map((bookingRecord) => ({
-      id: bookingRecord.id,
-      seatNumber: bookingRecord.seatNumber ?? 0,
-      status: bookingRecord.status,
-      paymentStatus: bookingRecord.paymentStatus,
-      createdAt: bookingRecord.createdAt,
-      user: passengerMap.get(bookingRecord.userId) ?? null,
-    }));
   }
 
   private async createBookingResult(userId: string, input: CreateBookingInput) {

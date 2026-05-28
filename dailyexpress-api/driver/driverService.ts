@@ -262,67 +262,74 @@ export class DriverService {
       throw createServiceError("Driver stats not found", 404);
     }
 
-    const [payoutTotals] = await db
+    const payoutTotals = db
       .select({
-        totalEarnings:
-          sql<number>`coalesce(sum(${payout.amountMinor}), 0)::bigint`.mapWith(
-            Number,
-          ),
+        driverId: payout.driverId,
+        totalEarnings: sql<number>`sum(${payout.amountMinor})::bigint`
+          .mapWith(Number)
+          .as("total_earnings"),
       })
       .from(payout)
-      .where(and(eq(payout.driverId, driverId), eq(payout.status, "success")));
+      .where(and(eq(payout.driverId, driverId), eq(payout.status, "success")))
+      .groupBy(payout.driverId)
+      .as("payout_totals");
 
-    const [earningTotals] = await db
+    const earningTotals = db
       .select({
-        totalPassengers: sql<number>`count(*)::int`,
-      })
-      .from(earning)
-      .where(
-        and(
-          eq(earning.driverId, driverId),
-          inArray(earning.status, [
-            "pending_trip_completion",
-            "available",
-            "reserved",
-            "processing",
-            "paid",
-          ]),
-        ),
-      );
-
-    const [pendingEarningTotals] = await db
-      .select({
-        pendingPayments:
-          sql<number>`coalesce(sum(${earning.netAmountMinor}), 0)::bigint`.mapWith(
-            Number,
+        driverId: earning.driverId,
+        totalPassengers:
+          sql<number>`count(*) filter (where ${earning.status} in ('pending_trip_completion', 'available', 'reserved', 'processing', 'paid'))::int`.as(
+            "total_passengers",
           ),
+        pendingPayments:
+          sql<number>`sum(${earning.netAmountMinor}) filter (where ${earning.status} in ('pending_trip_completion', 'available', 'reserved', 'processing'))::bigint`
+            .mapWith(Number)
+            .as("pending_payments"),
       })
       .from(earning)
-      .where(
-        and(
-          eq(earning.driverId, driverId),
-          inArray(earning.status, [
-            "pending_trip_completion",
-            "available",
-            "reserved",
-            "processing",
-          ]),
-        ),
-      );
+      .where(eq(earning.driverId, driverId))
+      .groupBy(earning.driverId)
+      .as("earning_totals");
 
-    const [routeTotals] = await db
+    const routeTotals = db
       .select({
-        activeRoutes: sql<number>`count(*)::int`,
+        driverId: route.driverId,
+        activeRoutes: sql<number>`count(*)::int`.as("active_routes"),
       })
       .from(route)
-      .where(and(eq(route.driverId, driverId), eq(route.status, "active")));
+      .where(and(eq(route.driverId, driverId), eq(route.status, "active")))
+      .groupBy(route.driverId)
+      .as("route_totals");
+
+    const [totals] = await db
+      .select({
+        totalEarnings:
+          sql<number>`coalesce(${payoutTotals.totalEarnings}, 0)`.mapWith(
+            Number,
+          ),
+        pendingPayments:
+          sql<number>`coalesce(${earningTotals.pendingPayments}, 0)`.mapWith(
+            Number,
+          ),
+        totalPassengers:
+          sql<number>`coalesce(${earningTotals.totalPassengers}, 0)`.mapWith(
+            Number,
+          ),
+        activeRoutes:
+          sql<number>`coalesce(${routeTotals.activeRoutes}, 0)`.mapWith(Number),
+      })
+      .from(driverStats)
+      .leftJoin(payoutTotals, eq(payoutTotals.driverId, driverStats.driverId))
+      .leftJoin(earningTotals, eq(earningTotals.driverId, driverStats.driverId))
+      .leftJoin(routeTotals, eq(routeTotals.driverId, driverStats.driverId))
+      .where(eq(driverStats.driverId, driverId));
 
     return {
       ...stats,
-      totalEarnings: payoutTotals?.totalEarnings ?? 0,
-      pendingPayments: pendingEarningTotals?.pendingPayments ?? 0,
-      totalPassengers: earningTotals?.totalPassengers ?? 0,
-      activeRoutes: routeTotals?.activeRoutes ?? 0,
+      totalEarnings: totals?.totalEarnings ?? 0,
+      pendingPayments: totals?.pendingPayments ?? 0,
+      totalPassengers: totals?.totalPassengers ?? 0,
+      activeRoutes: totals?.activeRoutes ?? 0,
     };
   }
 
