@@ -12,11 +12,12 @@ import {
   uuid,
   varchar,
 } from "drizzle-orm/pg-core";
+import { driver } from "./driver-schema";
+import { booking, trip, route } from "./route-schema";
 
 export const earningStatusEnum = pgEnum("earning_status", [
   "pending_trip_completion",
   "available",
-  "reserved",
   "processing",
   "paid",
   "cancelled",
@@ -42,10 +43,10 @@ export const earning = pgTable(
   "earning",
   {
     id: uuid("id").defaultRandom().primaryKey(),
-    driverId: uuid("driver_id").notNull(),
-    bookingId: uuid("booking_id").notNull().unique(),
-    tripId: uuid("trip_id").notNull(),
-    routeId: uuid("route_id").notNull(),
+    driverId: uuid("driver_id").references(() => driver.id, { onDelete: "restrict" }).notNull(),
+    bookingId: uuid("booking_id").references(() => booking.id, { onDelete: "restrict" }).notNull().unique(),
+    tripId: uuid("trip_id").references(() => trip.id, { onDelete: "restrict" }).notNull(),
+    routeId: uuid("route_id").references(() => route.id, { onDelete: "restrict" }).notNull(),
     tripDate: timestamp("trip_date", { mode: "date" }).notNull(),
     pickupTitle: text("pickup_title").notNull(),
     dropoffTitle: text("dropoff_title").notNull(),
@@ -78,7 +79,7 @@ export const earning = pgTable(
 
 export const payoutRecipient = pgTable("payout_recipient", {
   id: uuid("id").defaultRandom().primaryKey(),
-  driverId: uuid("driver_id").notNull().unique(),
+  driverId: uuid("driver_id").references(() => driver.id, { onDelete: "restrict" }).notNull().unique(),
   provider: payoutProviderEnum("provider").default("kora").notNull(),
   recipientCode: varchar("recipient_code", { length: 128 }).notNull(),
   providerRecipientId: varchar("provider_recipient_id", { length: 128 }),
@@ -101,9 +102,9 @@ export const payout = pgTable(
   "payout",
   {
     id: uuid("id").defaultRandom().primaryKey(),
-    driverId: uuid("driver_id").notNull(),
-    earningId: uuid("earning_id"),
-    recipientId: uuid("recipient_id").notNull(),
+    driverId: uuid("driver_id").references(() => driver.id, { onDelete: "restrict" }).notNull(),
+    earningId: uuid("earning_id").references(() => earning.id, { onDelete: "restrict" }).notNull(),
+    recipientId: uuid("recipient_id").references(() => payoutRecipient.id, { onDelete: "restrict" }).notNull(),
     reference: varchar("reference", { length: 128 }).notNull().unique(),
     provider: payoutProviderEnum("provider").default("kora").notNull(),
     providerTransferCode: varchar("provider_transfer_code", { length: 128 }),
@@ -169,7 +170,7 @@ export const payoutAttempt = pgTable(
   "payout_attempt",
   {
     id: uuid("id").defaultRandom().primaryKey(),
-    payoutId: uuid("payout_id").notNull(),
+    payoutId: uuid("payout_id").references(() => payout.id, { onDelete: "restrict" }).notNull(),
     attemptNumber: integer("attempt_number").notNull(),
     koraReference: varchar("kora_reference", { length: 128 })
       .notNull()
