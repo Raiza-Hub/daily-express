@@ -86,7 +86,7 @@ export const updateDriver: RequestHandler = asyncHandler(
   },
 );
 
-export const deleteDriver: RequestHandler = asyncHandler(
+export const deactivateDriver: RequestHandler = asyncHandler(
   async (req: Request, res: Response) => {
     const gatewayUser = getAuthenticatedUser(req);
     const userId = gatewayUser?.userId;
@@ -97,13 +97,13 @@ export const deleteDriver: RequestHandler = asyncHandler(
       });
     }
 
-    await timeAsync("driver.delete.service", { userId }, () =>
-      driverService.deleteDriver(userId),
+    await timeAsync("driver.deactivate.service", { userId }, () =>
+      driverService.deactivateDriver(userId),
     );
 
     return res
       .status(200)
-      .json(createSuccessResponse(null, "Driver profile deleted successfully"));
+      .json(createSuccessResponse(null, "Driver profile deactivated successfully"));
   },
 );
 

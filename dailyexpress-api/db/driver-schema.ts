@@ -50,6 +50,7 @@ export const driver = pgTable("driver", {
   }),
   bankVerifiedAt: timestamp("bank_verified_at", { mode: "date" }),
   isActive: boolean("is_active").default(true).notNull(),
+  deletedAt: timestamp("deleted_at", { mode: "date" }),
   createdAt: timestamp("created_at", { mode: "date" }).defaultNow().notNull(),
   updatedAt: timestamp("updated_at", { mode: "date" }).defaultNow().notNull(),
 });
