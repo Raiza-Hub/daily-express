@@ -48,8 +48,8 @@ const envSchema = z.object({
     )
     .optional(),
   RATE_LIMIT_PUBLIC_AUTH: z.coerce.number().int().positive().default(20),
-  RATE_LIMIT_PUBLIC_ROUTES: z.coerce.number().int().positive().default(60),
-  RATE_LIMIT_PROTECTED: z.coerce.number().int().positive().default(100),
+  RATE_LIMIT_PUBLIC_ROUTES: z.coerce.number().int().positive().default(120),
+  RATE_LIMIT_PROTECTED: z.coerce.number().int().positive().default(180),
   RATE_LIMIT_UPSTASH_REDIS_REST_URL: optionalUrl(),
   RATE_LIMIT_UPSTASH_REDIS_REST_TOKEN: optionalString(),
   NOTIFICATION_UPSTASH_REDIS_REST_URL: optionalUrl(),
