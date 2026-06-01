@@ -1,11 +1,12 @@
-import { type Request, type RequestHandler, type Response } from "express";
+import type { Request, RequestHandler, Response } from "express";
 import { asyncHandler } from "@shared/middleware";
-import { createSuccessResponse } from "@shared/utils";
-import { getAuthenticatedUser } from "../middleware/auth";
-import { sendErrorResponse } from "../middleware/apiResponses";
 import { PayoutService } from "./payoutService";
-import type { KoraPayoutWebhookPayload } from "../payment/payment.types";
+import { createSuccessResponse } from "@shared/utils";
+import { sendErrorResponse } from "../middleware/apiResponses";
+import { getAuthenticatedUser } from "../middleware/auth";
 import { timeAsync } from "../utils/timing";
+import type { PayoutStatus } from "@shared/types";
+import type { KoraPayoutWebhookPayload } from "../payment/payment.types";
 
 const payoutService = new PayoutService();
 
@@ -56,7 +57,7 @@ export const getHistory: RequestHandler = asyncHandler(
             typeof req.query.cursor === "string" ? req.query.cursor : undefined,
           status:
             typeof req.query.status === "string"
-              ? (req.query.status as any)
+              ? (req.query.status as PayoutStatus)
               : undefined,
         }),
     );

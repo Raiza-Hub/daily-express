@@ -2,32 +2,30 @@
 
 import { Card, CardContent } from "@repo/ui/components/card";
 import { cn } from "@repo/ui/lib/utils";
-import { useGetAllDriverRoutes, useGetDriverStats } from "@repo/api";
+import { useGetDriverStats } from "@repo/api";
 import { formatCurrency } from "~/lib/utils";
 
 export default function StatsCard() {
   const { data: stats, isLoading } = useGetDriverStats();
-  const { data: routes, isLoading: isLoadingRoutes } = useGetAllDriverRoutes();
-  const activeRoutes = routes
-    ? routes.filter((route) => route.status === "active").length
-    : stats?.activeRoutes;
 
   const statsData = [
     {
       name: "Total Earnings",
-      value: isLoading ? "..." : formatCurrency(stats?.totalEarnings || 0),
+      value: isLoading
+        ? "..."
+        : formatCurrency(stats?.totalEarnings || 0),
     },
     {
       name: "Pending Payments",
       value: isLoading ? "..." : formatCurrency(stats?.pendingPayments || 0),
     },
     {
-      name: "Total Passengers",
+      name: "Passengers",
       value: isLoading ? "..." : String(stats?.totalPassengers || 0),
     },
     {
-      name: "Active Routes",
-      value: isLoading && isLoadingRoutes ? "..." : String(activeRoutes || 0),
+      name: "In Review",
+      value: isLoading ? "..." : formatCurrency(stats?.inReviewPayments || 0),
     },
   ];
 

@@ -142,7 +142,7 @@ export class PayoutService {
       input.tripId,
     );
     if (!reconciliation.reconciles) {
-      await tx
+      const manualReviewEarnings = await tx
         .update(earning)
         .set({
           status: "manual_review",
@@ -153,7 +153,19 @@ export class PayoutService {
             eq(earning.tripId, input.tripId),
             eq(earning.status, "pending_trip_completion"),
           ),
-        );
+        )
+        .returning({
+          driverId: earning.driverId,
+          netAmountMinor: earning.netAmountMinor,
+        });
+      for (const entry of manualReviewEarnings) {
+        await driverService.recordEarningStatusChanged(tx, {
+          driverId: entry.driverId,
+          amountMinor: entry.netAmountMinor,
+          previousStatus: "pending_trip_completion",
+          nextStatus: "manual_review",
+        });
+      }
       if (reconciliation.driverId) {
         const notificationRecord =
           await this.createTripReconciliationFailedNotification(
@@ -311,52 +323,13 @@ export class PayoutService {
     );
   }
 
-  async cancelBookingEarningInTransaction(
-    tx: PayoutTransaction,
-    bookingId: string,
-  ): Promise<void> {
-    const existing = await tx.query.earning.findFirst({
-      where: eq(earning.bookingId, bookingId),
-    });
-    if (!existing) return;
 
-    const nextStatus =
-      existing.status === "paid" ? "manual_review" : "cancelled";
-    await tx
-      .update(earning)
-      .set({
-        status: nextStatus,
-        payoutId: nextStatus === "cancelled" ? null : existing.payoutId,
-        updatedAt: new Date(),
-      })
-      .where(eq(earning.id, existing.id));
-  }
 
-  async cancelTripEarningsInTransaction(
-    tx: PayoutTransaction,
-    tripId: string,
-  ): Promise<void> {
-    const tripEarnings = await tx.query.earning.findMany({
-      where: eq(earning.tripId, tripId),
-    });
 
-    for (const entry of tripEarnings) {
-      const nextStatus =
-        entry.status === "paid" ? "manual_review" : "cancelled";
-      await tx
-        .update(earning)
-        .set({
-          status: nextStatus,
-          payoutId: nextStatus === "cancelled" ? null : entry.payoutId,
-          updatedAt: new Date(),
-        })
-        .where(eq(earning.id, entry.id));
-    }
-  }
 
   async getBalance(user: JWTPayload): Promise<DriverPayoutBalance> {
     const currentDriver = await this.getCurrentDriver(user);
-    if (!currentDriver || !currentDriver.isActive) {
+    if (!currentDriver) {
       return {
         pendingAmountMinor: 0,
         availableAmountMinor: 0,
@@ -379,7 +352,7 @@ export class PayoutService {
           acc.availableAmountMinor += item.netAmountMinor;
         } else if (item.status === "paid") {
           acc.paidAmountMinor += item.netAmountMinor;
-        } else if (item.status === "reserved" || item.status === "processing") {
+        } else if (item.status === "processing") {
           acc.processingAmountMinor += item.netAmountMinor;
         }
         return acc;
@@ -400,7 +373,7 @@ export class PayoutService {
     query: { limit?: number; cursor?: string; status?: PayoutStatus },
   ): Promise<DriverPayoutHistoryItem[]> {
     const currentDriver = await this.getCurrentDriver(user);
-    if (!currentDriver || !currentDriver.isActive) {
+    if (!currentDriver) {
       return [];
     }
 
@@ -453,7 +426,7 @@ export class PayoutService {
     }
     const days = this.emptySummaryDays(weekWindow.dateKey);
 
-    if (!currentDriver || !currentDriver.isActive) {
+    if (!currentDriver) {
       return {
         weekStart: weekWindow.dateKey,
         currency: "NGN",
@@ -1088,18 +1061,18 @@ export class PayoutService {
     rawPayload: unknown,
     shouldNotify = false,
   ): Promise<PayoutRecord> {
-    const [recipientRecord, driverRecord] = await Promise.all([
-      payoutRecord.driverEmail
-        ? db.query.payoutRecipient.findFirst({
-            where: eq(payoutRecipient.id, payoutRecord.recipientId),
+    const [failureEmailDetails] = payoutRecord.driverEmail
+      ? await db
+          .select({
+            recipient: payoutRecipient,
+            driver,
           })
-        : null,
-      payoutRecord.driverEmail
-        ? db.query.driver.findFirst({
-            where: eq(driver.id, payoutRecord.driverId),
-          })
-        : null,
-    ]);
+          .from(payoutRecipient)
+          .leftJoin(driver, eq(driver.id, payoutRecord.driverId))
+          .where(eq(payoutRecipient.id, payoutRecord.recipientId))
+      : [];
+    const recipientRecord = failureEmailDetails?.recipient ?? null;
+    const driverRecord = failureEmailDetails?.driver ?? null;
 
     const driverName = driverRecord
       ? `${driverRecord.firstName} ${driverRecord.lastName}`.trim()
@@ -1139,6 +1112,12 @@ export class PayoutService {
         .where(eq(payout.id, payoutRecord.id))
         .returning();
 
+      const earningRecord = payoutRecord.earningId
+        ? await tx.query.earning.findFirst({
+            where: eq(earning.id, payoutRecord.earningId),
+          })
+        : null;
+
       if (payoutRecord.earningId) {
         await tx
           .update(earning)
@@ -1148,6 +1127,14 @@ export class PayoutService {
             updatedAt: new Date(),
           })
           .where(eq(earning.id, payoutRecord.earningId));
+        if (earningRecord) {
+          await driverService.recordEarningStatusChanged(tx, {
+            driverId: earningRecord.driverId,
+            amountMinor: earningRecord.netAmountMinor,
+            previousStatus: earningRecord.status,
+            nextStatus: "manual_review",
+          });
+        }
       }
 
       if (emailHtml && emailSubject && payoutRecord.driverEmail) {
@@ -1305,6 +1292,12 @@ export class PayoutService {
         .where(eq(payout.id, payoutRecord.id))
         .returning();
 
+      const earningRecord = payoutRecord.earningId
+        ? await tx.query.earning.findFirst({
+            where: eq(earning.id, payoutRecord.earningId),
+          })
+        : null;
+
       if (payoutRecord.earningId) {
         await tx
           .update(earning)
@@ -1314,6 +1307,15 @@ export class PayoutService {
             updatedAt: new Date(),
           })
           .where(eq(earning.id, payoutRecord.earningId));
+      }
+
+      if (earningRecord) {
+        await driverService.recordEarningStatusChanged(tx, {
+          driverId: payoutRecord.driverId,
+          amountMinor: earningRecord.netAmountMinor,
+          previousStatus: earningRecord.status,
+          nextStatus: "paid",
+        });
       }
 
       await driverService.recordPayoutCompleted(tx, {
