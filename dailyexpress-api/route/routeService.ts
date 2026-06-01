@@ -38,7 +38,6 @@ import {
   HIDDEN_BOOKING_PAYMENT_STATUSES,
   isConstraintError,
   mapDriverToRouteDriver,
-  mapPassenger,
   normalizeSearchText,
 } from "../utils/route";
 
@@ -70,7 +69,6 @@ type RouteSearchCursor = {
 };
 type UserBookingsCursor = {
   createdAt: string;
-  id: string;
 };
 
 const driverService = new DriverService();
@@ -133,8 +131,7 @@ function isUserBookingsCursor(value: unknown): value is UserBookingsCursor {
 
   return (
     typeof cursor.createdAt === "string" &&
-    !Number.isNaN(new Date(cursor.createdAt).getTime()) &&
-    typeof cursor.id === "string"
+    !Number.isNaN(new Date(cursor.createdAt).getTime())
   );
 }
 
@@ -335,7 +332,11 @@ export class RouteService {
           .values({ ...routeData, driverId: driverRecord.id })
           .returning();
 
-        await driverService.recordRouteCreated(tx, driverRecord.id);
+        await driverService.recordRouteStatusChanged(tx, {
+          driverId: driverRecord.id,
+          previousStatus: null,
+          nextStatus: record.status,
+        });
         return record;
       });
     } catch (error) {
@@ -598,11 +599,21 @@ export class RouteService {
 
     let updatedRoute: RouteRecord;
     try {
-      [updatedRoute] = await db
-        .update(route)
-        .set({ ...routeData, updatedAt: new Date() })
-        .where(eq(route.id, routeId))
-        .returning();
+      updatedRoute = await db.transaction(async (tx) => {
+        const [record] = await tx
+          .update(route)
+          .set({ ...routeData, updatedAt: new Date() })
+          .where(eq(route.id, routeId))
+          .returning();
+
+        await driverService.recordRouteStatusChanged(tx, {
+          driverId,
+          previousStatus: existingRoute.status,
+          nextStatus: record.status,
+        });
+
+        return record;
+      });
     } catch (error) {
       if (isConstraintError(error, ROUTE_DUPLICATE_CONSTRAINT)) {
         throw createServiceError("Route already exists", 400);
@@ -629,9 +640,24 @@ export class RouteService {
       );
     }
 
+    const existingTrip = await db.query.trip.findFirst({
+      where: eq(trip.routeId, routeId),
+    });
+
+    if (existingTrip) {
+      throw createServiceError(
+        "Cannot delete route that has trips. Delete all trips first.",
+        400,
+      );
+    }
+
     await db.transaction(async (tx) => {
       await tx.delete(route).where(eq(route.id, routeId));
-      await driverService.recordRouteDeleted(tx, existingRoute.driverId);
+      await driverService.recordRouteStatusChanged(tx, {
+        driverId: existingRoute.driverId,
+        previousStatus: existingRoute.status,
+        nextStatus: null,
+      });
     });
   }
 
@@ -668,33 +694,32 @@ export class RouteService {
 
   async completeTrip(user: JWTPayload, tripId: string) {
     const driverId = await this.resolveDriverId(user);
-    const tripExists = await db.query.trip.findFirst({
-      where: eq(trip.id, tripId),
-    });
-    if (!tripExists) {
+    const [tripWithRoute] = await db
+      .select({
+        trip: getTableColumns(trip),
+        route: getTableColumns(route),
+      })
+      .from(trip)
+      .innerJoin(route, eq(route.id, trip.routeId))
+      .where(eq(trip.id, tripId));
+
+    if (!tripWithRoute) {
       throw createServiceError("Trip not found", 404);
     }
-    if (tripExists.driverId !== driverId) {
+    if (tripWithRoute.trip.driverId !== driverId) {
       throw createServiceError(
         "You are not authorized to complete this trip",
         403,
       );
     }
-    if (tripExists.status === "cancelled") {
+    if (tripWithRoute.trip.status === "cancelled") {
       throw createServiceError("Cancelled trips cannot be completed", 400);
     }
-    if (tripExists.status === "completed") {
+    if (tripWithRoute.trip.status === "completed") {
       throw createServiceError("Trip is already completed", 400);
     }
 
-    const routeRecord = await db.query.route.findFirst({
-      where: eq(route.id, tripExists.routeId),
-    });
-    if (!routeRecord) {
-      throw createServiceError("Route not found", 404);
-    }
-
-    const arrivalAt = getTripArrivalAt(tripExists, routeRecord);
+    const arrivalAt = getTripArrivalAt(tripWithRoute.trip, tripWithRoute.route);
     if (arrivalAt.getTime() > Date.now()) {
       throw createServiceError(
         "Trip cannot be completed before the scheduled arrival time",
@@ -757,13 +782,7 @@ export class RouteService {
       ),
     );
     const cursorCondition = decodedCursor
-      ? or(
-          lt(booking.createdAt, new Date(decodedCursor.createdAt)),
-          and(
-            eq(booking.createdAt, new Date(decodedCursor.createdAt)),
-            lt(booking.id, decodedCursor.id),
-          ),
-        )
+      ? lt(booking.createdAt, new Date(decodedCursor.createdAt))
       : undefined;
     const bookingRows = await timeAsync(
       "route.get_user_bookings.query_bookings",
@@ -787,7 +806,7 @@ export class RouteService {
               cursorCondition,
             ),
           )
-          .orderBy(desc(booking.createdAt), desc(booking.id))
+          .orderBy(desc(booking.createdAt))
           .limit(parsedLimit + 1),
     );
     const pageBookingRows = bookingRows.slice(0, parsedLimit);
@@ -846,7 +865,6 @@ export class RouteService {
         nextBookingRow && lastBookingRow
           ? encodeCursor({
               createdAt: lastBookingRow.booking.createdAt.toISOString(),
-              id: lastBookingRow.booking.id,
             })
           : null,
     };
@@ -983,7 +1001,7 @@ export class RouteService {
       .select({
         tripId: trip.id,
         booking: getTableColumns(booking),
-        user: getTableColumns(users),
+        userProfilePicture: users.profilePictureUrl,
       })
       .from(trip)
       .leftJoin(
@@ -1010,7 +1028,11 @@ export class RouteService {
               status: row.booking.status,
               paymentStatus: row.booking.paymentStatus,
               createdAt: row.booking.createdAt,
-              user: row.user ? mapPassenger(row.user) : null,
+              user: {
+                firstName: row.booking.firstName ?? "Passenger",
+                lastName: row.booking.lastName ?? "",
+                profilePictureUrl: row.userProfilePicture,
+              },
             },
           ]
         : [],
@@ -1078,9 +1100,20 @@ export class RouteService {
       }
 
       if (!tripRecord) throw createServiceError("Trip not found", 404);
-      if (!BOOKABLE_TRIP_STATUSES.has(tripRecord.status)) {
+
+      // Lock the trip row to prevent TOCTOU race with concurrent bookings
+      const [lockedTrip] = await tx
+        .select()
+        .from(trip)
+        .where(eq(trip.id, tripRecord.id))
+        .for("update")
+        .limit(1);
+
+      if (!lockedTrip || !BOOKABLE_TRIP_STATUSES.has(lockedTrip.status)) {
         throw createServiceError("Trip is not open for booking", 400);
       }
+      // Use lockedTrip for all subsequent operations
+      tripRecord = lockedTrip;
 
       const existingBooking = await tx.query.booking.findFirst({
         where: and(
@@ -1135,6 +1168,7 @@ export class RouteService {
             tripId: tripRecord.id,
             userId,
             seatNumber: allocatedSeat.seatNumber,
+            firstName: passengerRecord.firstName,
             lastName: passengerRecord.lastName,
             fareAmount: routeRecord.price,
             currency: "NGN",
