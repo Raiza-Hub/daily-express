@@ -13,8 +13,7 @@
     "db:pull": "bun x drizzle-kit pull",
     "db:migrate": "bun x drizzle-kit migrate",
     "db:studio": "bun x drizzle-kit studio",
-    "db:clear": "bun run scripts/clear-db.ts --yes",
-    "db:seed:payment-payout": "bun run scripts/seed-payment-payout-flow.ts"
+    "db:clear": "bun run scripts/clear-db.ts --yes"
   },
   "dependencies": {
     "@aws-sdk/client-sesv2": "^3.1048.0",
