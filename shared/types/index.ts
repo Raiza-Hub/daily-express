@@ -403,7 +403,6 @@ export interface TripCheckout {
 export type EarningStatus =
   | "pending_trip_completion"
   | "available"
-  | "reserved"
   | "processing"
   | "paid"
   | "cancelled"

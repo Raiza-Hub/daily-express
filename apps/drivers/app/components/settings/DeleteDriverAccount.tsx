@@ -1,7 +1,7 @@
 "use client";
 
 import { TrashIcon } from "@phosphor-icons/react";
-import { useDeleteDriver, useLogout } from "@repo/api";
+import { useDeactivateDriver, useLogout } from "@repo/api";
 import { Button } from "@repo/ui/components/button";
 import { toast } from "@repo/ui/components/sonner";
 import { usePostHog } from "posthog-js/react";
@@ -10,13 +10,13 @@ import { posthogEvents } from "~/lib/posthog-events";
 
 const DeleteDriverAccount = () => {
   const { mutate: signOut } = useLogout();
-  const { mutate: deleteDriver, isPending } = useDeleteDriver();
+  const { mutate: deactivateDriver, isPending } = useDeactivateDriver();
   const posthog = usePostHog();
 
   const handleDelete = () => {
-    deleteDriver(undefined, {
+    deactivateDriver(undefined, {
       onSuccess: () => {
-        posthog.capture(posthogEvents.driver_account_delete_succeeded);
+        posthog.capture(posthogEvents.driver_account_deactivate_succeeded);
         signOut(undefined, {
           onSuccess: () => {
             posthog.capture(posthogEvents.driver_logout_succeeded);
@@ -27,7 +27,7 @@ const DeleteDriverAccount = () => {
       },
       onError: (err) => {
         posthog.captureException(new Error(err.message), {
-          action: "driver_account_delete_failed",
+          action: posthogEvents.driver_account_deactivate_failed,
         });
         toast.error(err.message);
       },
@@ -38,20 +38,19 @@ const DeleteDriverAccount = () => {
     <div className="mt-10 pt-6 border-t border-red-100">
       <div className="mb-6 py-4 border-b border-gray-100">
         <h2 className="text-xl font-semibold mb-1 text-red-600">
-          Delete Account
+          Deactivate Account
         </h2>
         <p className="text-sm text-muted-foreground">
-          Permanently delete your driver account. All upcoming trips will be
-          canceled, and you will lose access to the platform. This action cannot
-          be undone.
+          Deactivate your driver account. All upcoming trips will be canceled,
+          and you will lose access to the platform. Your data will be retained
+          for record-keeping purposes.
         </p>
       </div>
       <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
         <div>
-          <p className="text-sm font-medium">Delete my driver account</p>
+          <p className="text-sm font-medium">Deactivate my driver account</p>
           <p className="text-xs text-muted-foreground mt-0.5">
-            Once deleted, your account and all related information will no
-            longer be accessible.
+            Once deactivated, your account will no longer be accessible.
           </p>
         </div>
         <Button
@@ -62,7 +61,7 @@ const DeleteDriverAccount = () => {
           onClick={handleDelete}
         >
           <TrashIcon className="size-4" />
-          <span>Delete Account</span>
+          <span>Deactivate Account</span>
         </Button>
       </div>
     </div>

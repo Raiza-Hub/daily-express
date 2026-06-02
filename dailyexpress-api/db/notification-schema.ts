@@ -10,6 +10,7 @@ import {
   varchar,
 } from "drizzle-orm/pg-core";
 import { and, isNull } from "drizzle-orm";
+import { driver } from "./driver-schema";
 
 export const notificationToneEnum = pgEnum("notification_tone", [
   "critical",
@@ -27,7 +28,9 @@ export const notification = pgTable(
   "notification",
   {
     id: uuid("id").defaultRandom().primaryKey(),
-    driverId: uuid("driver_id").notNull(),
+    driverId: uuid("driver_id")
+      .references(() => driver.id, { onDelete: "cascade" })
+      .notNull(),
     notificationKey: varchar("notification_key", { length: 191 }).notNull(),
     kind: notificationKindEnum("kind").default("event").notNull(),
     type: varchar("type", { length: 96 }).notNull(),
