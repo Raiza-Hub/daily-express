@@ -30,9 +30,9 @@ router.put(
 );
 
 router.delete(
-  "/delete",
+  "/deactivate",
   authenticateVerifiedGatewayRequest,
-  driverController.deleteDriver,
+  driverController.deactivateDriver,
 );
 
 router.get(

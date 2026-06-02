@@ -87,8 +87,8 @@ export interface DriverStats {
   driverId: string;
   totalEarnings: number;
   pendingPayments: number;
+  inReviewPayments: number;
   totalPassengers: number;
-  activeRoutes: number;
   createdAt: Date;
   updatedAt: Date;
 }
@@ -403,7 +403,6 @@ export interface TripCheckout {
 export type EarningStatus =
   | "pending_trip_completion"
   | "available"
-  | "reserved"
   | "processing"
   | "paid"
   | "cancelled"

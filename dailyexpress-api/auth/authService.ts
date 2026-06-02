@@ -1,15 +1,15 @@
-import { createHash, randomBytes } from "node:crypto";
+import { createHash, randomBytes, randomInt } from "node:crypto";
+import { type EnvConfig } from "../config/index";
 import { db } from "../db/connection";
 import {
   driver,
-  driverStats,
   users,
   otp,
   passwordResetTokens,
   userProviders,
 } from "../db/index";
 import type { User } from "../db/index";
-import { eq, and, isNull } from "drizzle-orm";
+import { eq, and, count, isNull } from "drizzle-orm";
 import bcrypt from "bcryptjs";
 import { createServiceError } from "@shared/utils";
 import jwt, { type Secret, type SignOptions } from "jsonwebtoken";
@@ -85,18 +85,12 @@ export class AuthService {
   private readonly jwtRefreshExpiresIn: string;
   private readonly bcryptRounds: number;
 
-  constructor() {
-    this.jwtSecret = process.env.JWT_SECRET!;
-    this.jwtRefreshSecret = process.env.JWT_REFRESH_SECRET!;
-    this.jwtExpiresIn = process.env.JWT_EXPIRES_IN!;
-    this.jwtRefreshExpiresIn = process.env.JWT_REFRESH_EXPIRES_IN!;
-    this.bcryptRounds = parseInt(process.env.BCRYPT_ROUNDS!, 10)!;
-
-    if (!this.jwtSecret || !this.jwtRefreshSecret) {
-      throw new Error(
-        "JWT secrets are not defined in the envirnoment variable",
-      );
-    }
+  constructor(config: EnvConfig) {
+    this.jwtSecret = config.JWT_SECRET;
+    this.jwtRefreshSecret = config.JWT_REFRESH_SECRET;
+    this.jwtExpiresIn = config.JWT_EXPIRES_IN;
+    this.jwtRefreshExpiresIn = config.JWT_REFRESH_EXPIRES_IN;
+    this.bcryptRounds = config.BCRYPT_ROUNDS;
   }
 
   async register(
@@ -199,8 +193,8 @@ export class AuthService {
     const payload = { userId, email, emailVerified };
 
     const accessTokenOptions: SignOptions = {
-      expiresIn: this.jwtExpiresIn as any,
-    };
+      expiresIn: this.jwtExpiresIn,
+    } as SignOptions;
 
     const accessToken = jwt.sign(
       payload,
@@ -209,8 +203,8 @@ export class AuthService {
     ) as string;
 
     const refreshTokenOptions: SignOptions = {
-      expiresIn: this.jwtRefreshExpiresIn as any,
-    };
+      expiresIn: this.jwtRefreshExpiresIn,
+    } as SignOptions;
 
     const refreshToken = jwt.sign(
       payload,
@@ -230,9 +224,7 @@ export class AuthService {
   }
 
   private generateOtp() {
-    //generate 6 digit otp
-    const otp = Math.floor(100000 + Math.random() * 900000).toString();
-    return otp;
+    return randomInt(100000, 1000000).toString();
   }
 
   private hashPasswordResetToken(token: string) {
@@ -327,14 +319,6 @@ export class AuthService {
           updatedAt: now,
         })
         .where(eq(users.id, user.id));
-
-      await tx
-        .update(passwordResetTokens)
-        .set({
-          usedAt: now,
-          updatedAt: now,
-        })
-        .where(eq(passwordResetTokens.id, resetToken.id));
 
       await tx
         .update(passwordResetTokens)
@@ -503,12 +487,37 @@ export class AuthService {
 
       if (existingDriver) {
         await tx
-          .delete(driverStats)
-          .where(eq(driverStats.driverId, existingDriver.id));
-        await tx.delete(driver).where(eq(driver.userId, userId));
+          .update(driver)
+          .set({
+            isActive: false,
+            deletedAt: new Date(),
+            updatedAt: new Date(),
+          })
+          .where(eq(driver.id, existingDriver.id));
       }
 
-      await tx.delete(users).where(eq(users.id, userId));
+      await tx
+        .delete(passwordResetTokens)
+        .where(eq(passwordResetTokens.userId, userId));
+      await tx
+        .delete(userProviders)
+        .where(eq(userProviders.userId, userId));
+
+      await tx
+        .update(users)
+        .set({
+          firstName: "[deleted]",
+          lastName: "[deleted]",
+          email: `deleted-${userId}@dailyexpress.com`,
+          password: null,
+          dateOfBirth: new Date(0),
+          profilePictureUrl: null,
+          sessionInvalidBefore: new Date(),
+          deletedAt: new Date(),
+          anonymizedAt: new Date(),
+          updatedAt: new Date(),
+        })
+        .where(eq(users.id, userId));
     });
   }
 
@@ -530,22 +539,21 @@ export class AuthService {
   }
 
   async disconnectProvider(userId: string, provider: string) {
-    const user = await db.query.users.findFirst({
-      where: eq(users.id, userId),
-      columns: {
-        password: true,
-      },
-    });
+    const [userLoginSummary] = await db
+      .select({
+        password: users.password,
+        providerCount: count(userProviders.id),
+      })
+      .from(users)
+      .leftJoin(userProviders, eq(userProviders.userId, users.id))
+      .where(eq(users.id, userId))
+      .groupBy(users.id);
 
-    if (!user) {
+    if (!userLoginSummary) {
       throw createServiceError("User not found", 404);
     }
 
-    const connectedProviders = await db.query.userProviders.findMany({
-      where: eq(userProviders.userId, userId),
-    });
-
-    if (!user.password && connectedProviders.length <= 1) {
+    if (!userLoginSummary.password && userLoginSummary.providerCount <= 1) {
       throw createServiceError(
         "Cannot disconnect your only login method. Please set a password first.",
         400,

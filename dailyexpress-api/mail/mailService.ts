@@ -102,6 +102,10 @@ export class MailService {
   }
 
   async sendMail(to: string, subject: string, html: string) {
+    if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(to)) {
+      throw createServiceError("Invalid recipient email address", 400);
+    }
+
     try {
       const info: SendEmailCommandOutput = await this.sesClient.send(
         new SendEmailCommand({
