@@ -487,12 +487,37 @@ export class AuthService {
 
       if (existingDriver) {
         await tx
-          .delete(driverStats)
-          .where(eq(driverStats.driverId, existingDriver.id));
-        await tx.delete(driver).where(eq(driver.userId, userId));
+          .update(driver)
+          .set({
+            isActive: false,
+            deletedAt: new Date(),
+            updatedAt: new Date(),
+          })
+          .where(eq(driver.id, existingDriver.id));
       }
 
-      await tx.delete(users).where(eq(users.id, userId));
+      await tx
+        .delete(passwordResetTokens)
+        .where(eq(passwordResetTokens.userId, userId));
+      await tx
+        .delete(userProviders)
+        .where(eq(userProviders.userId, userId));
+
+      await tx
+        .update(users)
+        .set({
+          firstName: "[deleted]",
+          lastName: "[deleted]",
+          email: `deleted-${userId}@dailyexpress.com`,
+          password: null,
+          dateOfBirth: new Date(0),
+          profilePictureUrl: null,
+          sessionInvalidBefore: new Date(),
+          deletedAt: new Date(),
+          anonymizedAt: new Date(),
+          updatedAt: new Date(),
+        })
+        .where(eq(users.id, userId));
     });
   }
 
