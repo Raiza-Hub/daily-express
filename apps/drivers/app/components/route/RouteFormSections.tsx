@@ -239,9 +239,6 @@ export function RoutePricingSection({
                 <Field data-invalid={fieldState.invalid}>
                   <FieldLabel htmlFor="price">Price</FieldLabel>
                   <div className="relative flex rounded-md shadow-xs">
-                    <span className="pointer-events-none absolute inset-y-0 start-0 flex items-center justify-center ps-3 text-sm text-muted-foreground">
-                      ₦
-                    </span>
                     <Input
                       id="price"
                       type="text"
@@ -249,7 +246,7 @@ export function RoutePricingSection({
                       aria-invalid={fieldState.invalid}
                       placeholder="0.00"
                       autoComplete="off"
-                      className="ps-7"
+                      className="rounded-l-md rounded-r-none border-r-0"
                       value={ui.price.display}
                       onFocus={() => ui.price.handleFocus(field.value)}
                       onChange={(event) =>
@@ -260,7 +257,7 @@ export function RoutePricingSection({
                       }
                       onBlur={() => ui.price.handleBlur(field.onBlur)}
                     />
-                    <span className="-z-10 inline-flex items-center rounded-e-md border border-input bg-background px-3 text-sm text-muted-foreground">
+                    <span className="-z-10 inline-flex items-center rounded-e-md border border-input border-l-0 bg-background px-3 text-sm text-muted-foreground">
                       NGN
                     </span>
                   </div>

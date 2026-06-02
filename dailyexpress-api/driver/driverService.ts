@@ -239,7 +239,6 @@ export class DriverService {
   }
 
   async deleteDriver(userId: string): Promise<void> {
-    // Check if user exists
     const existingDriver = await db.query.driver.findFirst({
       where: eq(driver.userId, userId),
     });
