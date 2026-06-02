@@ -67,7 +67,7 @@ function createLimiter(options: {
 
 export const publicRoutesLimiter = createLimiter({
   windowMs: 60 * 1000,
-  max: Number(process.env.RATE_LIMIT_PUBLIC_ROUTES ?? 120),
+  max: config.RATE_LIMIT_PUBLIC_ROUTES,
   prefix: "public",
   message: "Too many requests. Please try again shortly.",
   skip: (req) => !isPublicRouteSearchPath(getRequestPath(req), req.method),
@@ -75,7 +75,7 @@ export const publicRoutesLimiter = createLimiter({
 
 export const authLimiter = createLimiter({
   windowMs: 60 * 1000,
-  max: Number(process.env.RATE_LIMIT_PUBLIC_AUTH ?? 10),
+  max: config.RATE_LIMIT_PUBLIC_AUTH,
   prefix: "auth",
   message: "Too many authentication attempts. Please try again shortly.",
   skip: (req) => !isPublicAuthPath(getRequestPath(req), req.method),
@@ -83,7 +83,7 @@ export const authLimiter = createLimiter({
 
 export const protectedLimiter = createLimiter({
   windowMs: 60 * 1000,
-  max: Number(process.env.RATE_LIMIT_PROTECTED ?? 180),
+  max: config.RATE_LIMIT_PROTECTED,
   prefix: "protected",
   message: "Too many requests. Please slow down.",
   skip: (req) => isPublicPath(getRequestPath(req), req.method),
@@ -91,7 +91,7 @@ export const protectedLimiter = createLimiter({
 
 export const webhookLimiter = createLimiter({
   windowMs: 60 * 1000,
-  max: Number(process.env.RATE_LIMIT_WEBHOOK ?? 300),
+  max: config.RATE_LIMIT_WEBHOOK,
   prefix: "webhook",
   message: "Too many webhook requests.",
   skip: (req) => !isWebhookPath(getRequestPath(req), req.method),
