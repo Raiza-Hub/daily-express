@@ -87,8 +87,8 @@ export interface DriverStats {
   driverId: string;
   totalEarnings: number;
   pendingPayments: number;
+  inReviewPayments: number;
   totalPassengers: number;
-  activeRoutes: number;
   createdAt: Date;
   updatedAt: Date;
 }

@@ -43,6 +43,7 @@ import {
 } from "../utils/payment";
 
 type PaymentRecord = typeof payment.$inferSelect;
+type BookingRecord = typeof booking.$inferSelect;
 type BookingHoldRecord = typeof bookingHold.$inferSelect;
 type PaymentTransaction = Parameters<Parameters<typeof db.transaction>[0]>[0];
 type FailureStatus = Extract<PaymentStatus, "failed" | "cancelled" | "expired">;
@@ -285,7 +286,6 @@ export class PaymentService {
           providerStatus: "pending",
           checkoutUrl: initializeResponse.data.checkout_url,
           checkoutToken: initializeResponse.data.reference,
-          redirectUrl: this.getReturnUrl(reference),
           cancelUrl: `${this.config.FRONTEND_URL}/trip-status`,
           channels,
           rawInitializeResponse: initializeResponse.raw,
@@ -420,7 +420,6 @@ export class PaymentService {
           providerTransactionId: null,
           checkoutUrl: initializeResponse.data.checkout_url,
           checkoutToken: initializeResponse.data.reference,
-          redirectUrl: this.getReturnUrl(reference),
           cancelUrl: `${this.config.FRONTEND_URL}/trip-status`,
           channels,
           rawInitializeResponse: initializeResponse.raw,
@@ -454,14 +453,6 @@ export class PaymentService {
     return updatedPayment
       ? this.withExpiry(updatedPayment, hold)
       : this.withExpiry(existingPayment, hold);
-  }
-
-  async upsertBookingHold(payload: UpsertBookingHoldInput) {
-    const hold = await db.transaction(async (tx) => {
-      return this.upsertBookingHoldInTransaction(tx, payload);
-    });
-
-    return hold;
   }
 
   async upsertBookingHoldInTransaction(
@@ -678,59 +669,32 @@ export class PaymentService {
   }
 
   async handlePaymentExpiry(payload: { bookingId: string; reference: string }) {
-    const existingPayment = await this.getPaymentRecord(payload.reference);
-    if (!existingPayment) {
-      logger.warn("payment.expire_missing_payment", payload);
-      return;
-    }
+    // Atomically claim this payment for expiry processing — prevents race with concurrent webhook
+    const [claimed] = await db
+      .update(payment)
+      .set({ lastStatusCheckAt: new Date() })
+      .where(and(
+        eq(payment.reference, payload.reference),
+        eq(payment.status, "pending"),
+      ))
+      .returning();
 
-    if (existingPayment.status !== "pending") {
-      logger.info("payment.expire_skipped_terminal", {
-        ...payload,
-        status: existingPayment.status,
-      });
+    if (!claimed) {
+      logger.info("payment.expire_skipped_concurrent", payload);
       return;
     }
 
     const verification = await koraClient.verifyTransaction(payload.reference);
 
-    const recheckPayment = await this.getPaymentRecord(payload.reference);
-    if (!recheckPayment || recheckPayment.status !== "pending") {
-      logger.info("payment.expire_skipped_concurrent", {
-        ...payload,
-        status: recheckPayment?.status ?? "missing",
-      });
-      return;
-    }
     if (verification.data.status.toLowerCase() === "success") {
       const hold = await this.getBookingHoldRecord(payload.bookingId);
       if (!hold || hold.expiresAt.getTime() <= Date.now()) {
-        await this.initiateAutoRefund(
-          payload.reference,
-          verification.data,
-          verification.raw,
-        );
-        return;
+        await this.handleChargeSuccess(payload.reference);
       }
-
-      await this.confirmPendingPaymentSuccess(
-        payload.reference,
-        verification.data,
-        verification.raw,
-      );
       return;
     }
 
-    await this.failPendingPayment(
-      payload.reference,
-      "expired",
-      "Seat reservation expired before payment was completed",
-      {
-        failureCode: "PAYMENT_EXPIRED",
-        providerStatus: verification.data.status,
-        rawVerificationResponse: verification.raw,
-      },
-    );
+    return this.cancelBookingPayment(payload.bookingId, payload.reference);
   }
 
   async confirmPendingPaymentSuccess(
@@ -794,11 +758,9 @@ export class PaymentService {
       );
 
       if (bookingResult.confirmed && sideEffects) {
-        await driverService.recordConfirmedBooking(tx, {
+        await driverService.recordBookingConfirmed(tx, {
           driverId: sideEffects.driverId,
           fareAmountMinor: sideEffects.fareAmountMinor,
-          tripDate: sideEffects.tripDate,
-          departureTime: sideEffects.departureTime,
         });
 
         await payoutService.createEarningForConfirmedBookingInTransaction(tx, {
@@ -954,73 +916,84 @@ export class PaymentService {
     reason = "Seat reservation expired before payment was completed",
   ): Promise<PaymentWithExpiry | null> {
     const existingPayment = await this.getPaymentRecord(reference);
-    if (!existingPayment) {
-      return null;
+    if (!existingPayment || existingPayment.status !== "expired") {
+      return existingPayment
+        ? this.withExpiry(existingPayment)
+        : null;
     }
 
-    if (
-      existingPayment.status === "refund_pending" ||
-      existingPayment.status === "refunded" ||
-      existingPayment.status === "refund_failed"
-    ) {
-      return this.withExpiry(existingPayment);
+    // Call Kora API FIRST — if this fails, DB state is unchanged (no stuck refund_pending)
+    let refundResult: Awaited<ReturnType<typeof koraClient.initiateRefund>>;
+    try {
+      refundResult = await koraClient.initiateRefund({
+        reference: `RFD-${existingPayment.reference}`,
+        payment_reference: existingPayment.reference,
+        reason,
+      });
+    } catch (error) {
+      await db.transaction(async (tx) => {
+        await tx
+          .update(payment)
+          .set({ status: "refund_failed", updatedAt: new Date() })
+          .where(and(
+            eq(payment.id, existingPayment.id),
+            inArray(payment.status, ["pending", "successful", "failed", "expired"]),
+          ));
+
+        if (existingPayment.bookingId) {
+          await tx
+            .update(booking)
+            .set({ paymentStatus: "refund_failed", updatedAt: new Date() })
+            .where(eq(booking.id, existingPayment.bookingId));
+        }
+      });
+
+      await this.enqueueRefundFailureEmail(existingPayment, reason);
+      throw error;
     }
 
+    // THEN update DB state inside transaction
     const [updatedPayment] = await db.transaction(async (tx) => {
       const [record] = await tx
         .update(payment)
         .set({
           status: "refund_pending",
-          providerStatus: verification.status,
-          providerTransactionId:
-            verification.payment_reference ||
-            verification.reference ||
-            existingPayment.providerTransactionId,
-          rawVerificationResponse,
-          lastStatusCheckAt: new Date(),
-          paidAt:
-            parseDate(verification.paid_at) ||
-            existingPayment.paidAt ||
-            new Date(),
           failureCode: "AUTO_REFUND_INITIATED",
           failureReason: reason,
           updatedAt: new Date(),
+          metadata: sql`COALESCE(${payment.metadata},'{}'::jsonb)||${JSON.stringify({
+            refundReference: refundResult.data.reference,
+            refundStatus: refundResult.data.status,
+            refundInitiatedAt: new Date().toISOString(),
+            rawRefundResponse: refundResult.raw,
+          })}::jsonb`,
         })
         .where(
           and(
             eq(payment.reference, reference),
-            inArray(payment.status, [
-              "pending",
-              "successful",
-              "failed",
-              "expired",
-            ]),
+            eq(payment.status, "expired"),
           ),
         )
         .returning();
 
-      if (!record) {
+      if (!record || !record.bookingId) {
         return [];
       }
 
-      await this.syncBookingPaymentStatusInTransaction(tx, {
+      const bookingResult = await this.syncBookingPaymentStatusInTransaction(tx, {
         bookingId: record.bookingId,
         paymentReference: reference,
         paymentStatus: "expired",
       });
 
       if (record.bookingId) {
+        const earningRecord = await tx.query.earning.findFirst({
+          where: eq(earning.bookingId, record.bookingId),
+        });
+
         await tx
           .delete(bookingHold)
           .where(eq(bookingHold.bookingId, record.bookingId));
-
-        await tx
-          .update(booking)
-          .set({
-            paymentStatus: "refund_pending",
-            updatedAt: new Date(),
-          })
-          .where(eq(booking.id, record.bookingId));
 
         await tx
           .update(earning)
@@ -1029,53 +1002,69 @@ export class PaymentService {
             updatedAt: new Date(),
           })
           .where(eq(earning.bookingId, record.bookingId));
+
+        if (bookingResult.cancelledConfirmed && bookingResult.booking) {
+          await this.recordConfirmedBookingCancelledStats(
+            tx,
+            bookingResult.booking,
+            earningRecord,
+          );
+        } else if (earningRecord) {
+          await driverService.recordEarningStatusChanged(tx, {
+            driverId: earningRecord.driverId,
+            amountMinor: earningRecord.netAmountMinor,
+            previousStatus: earningRecord.status,
+            nextStatus: "cancelled",
+          });
+        }
       }
 
       return [record];
     });
 
     if (!updatedPayment) {
-      const latest = await this.getPaymentRecord(reference);
-      return latest ? this.withExpiry(latest) : null;
-    }
-
-    try {
-      await koraClient.initiateRefund({
-        reference: `RFD-${updatedPayment.reference}`,
-        payment_reference: updatedPayment.reference,
-        reason,
-      });
-    } catch (error) {
-      await db.transaction(async (tx) => {
-        await tx
-          .update(payment)
-          .set({
-            status: "refund_failed",
-            updatedAt: new Date(),
-          })
-          .where(eq(payment.id, updatedPayment.id));
-
-        if (updatedPayment.bookingId) {
-          await tx
-            .update(booking)
-            .set({
-              paymentStatus: "refund_failed",
-              updatedAt: new Date(),
-            })
-            .where(eq(booking.id, updatedPayment.bookingId));
-        }
-      });
-
-      await this.enqueueRefundFailureEmail(updatedPayment, reason);
-      throw error;
+      // Refund was initiated at provider but DB update failed — log for reconciliation
+      logger.error("payment.auto_refund_db_failed_after_api", { reference });
+      return null;
     }
 
     logger.info("payment.auto_refund_initiated", {
-      bookingId: updatedPayment.bookingId,
       reference,
+      amount: existingPayment.amount,
     });
 
-    return this.withExpiry(updatedPayment, null);
+    return this.withExpiry(updatedPayment);
+  }
+
+  private async recordConfirmedBookingCancelledStats(
+    tx: PaymentTransaction,
+    bookingRecord: BookingRecord,
+    existingEarning?: typeof earning.$inferSelect | null,
+  ) {
+    const earningRecord =
+      existingEarning ??
+      (await tx.query.earning.findFirst({
+        where: eq(earning.bookingId, bookingRecord.id),
+      }));
+    const driverId =
+      earningRecord?.driverId ??
+      (
+        await tx.query.trip.findFirst({
+          where: eq(trip.id, bookingRecord.tripId),
+          columns: { driverId: true },
+        })
+      )?.driverId;
+
+    if (!driverId) {
+      return;
+    }
+
+    await driverService.recordConfirmedBookingCancelled(tx, {
+      driverId,
+      amountMinor:
+        earningRecord?.netAmountMinor ?? toMinorAmount(bookingRecord.fareAmount),
+      previousEarningStatus: earningRecord?.status ?? null,
+    });
   }
 
   async resolveReturnUrl(
@@ -1188,7 +1177,12 @@ export class PaymentService {
     },
   ) {
     if (!input.bookingId) {
-      return { booking: null, confirmed: false, cancelled: false };
+      return {
+        booking: null,
+        confirmed: false,
+        cancelled: false,
+        cancelledConfirmed: false,
+      };
     }
 
     const existingBooking = await tx.query.booking.findFirst({
@@ -1196,7 +1190,12 @@ export class PaymentService {
     });
 
     if (!existingBooking) {
-      return { booking: null, confirmed: false, cancelled: false };
+      return {
+        booking: null,
+        confirmed: false,
+        cancelled: false,
+        cancelledConfirmed: false,
+      };
     }
 
     const nextBookingStatus =
@@ -1210,6 +1209,8 @@ export class PaymentService {
     const isCancellingTransition =
       nextBookingStatus === "cancelled" &&
       existingBooking.status !== "cancelled";
+    const isCancellingConfirmedBooking =
+      isCancellingTransition && existingBooking.status === "confirmed";
     const shouldConfirm =
       input.paymentStatus === "successful" &&
       nextBookingStatus === "confirmed" &&
@@ -1258,6 +1259,7 @@ export class PaymentService {
       booking: updatedBooking,
       confirmed: shouldConfirm,
       cancelled: isCancellingTransition,
+      cancelledConfirmed: isCancellingConfirmedBooking,
     };
   }
 
@@ -1399,7 +1401,14 @@ export class PaymentService {
     await db.transaction(async (tx) => {
       await tx
         .update(payment)
-        .set({ status, updatedAt: new Date() })
+        .set({
+          status,
+          updatedAt: new Date(),
+          metadata: sql`COALESCE(${payment.metadata},'{}'::jsonb)||${JSON.stringify({
+            refundCompletedAt: new Date().toISOString(),
+            refundFinalStatus: status,
+          })}::jsonb`,
+        })
         .where(eq(payment.reference, reference));
 
       const [bookingRecord] = await tx
@@ -1413,21 +1422,34 @@ export class PaymentService {
         bookingRecord.status === "confirmed" &&
         bookingRecord.seatNumber !== null
       ) {
+        const earningRecord = await tx.query.earning.findFirst({
+          where: eq(earning.bookingId, bookingRecord.id),
+        });
+
         await tx
           .update(earning)
           .set({ status: "cancelled", updatedAt: new Date() })
           .where(eq(earning.bookingId, bookingRecord.id));
 
+        if (status === "refunded") {
+          await this.recordConfirmedBookingCancelledStats(
+            tx,
+            bookingRecord,
+            earningRecord,
+          );
+        } else if (earningRecord) {
+          await driverService.recordEarningStatusChanged(tx, {
+            driverId: earningRecord.driverId,
+            amountMinor: earningRecord.netAmountMinor,
+            previousStatus: earningRecord.status,
+            nextStatus: "cancelled",
+          });
+        }
+
         await tx
           .update(trip)
           .set({ bookedSeats: sql`GREATEST(${trip.bookedSeats} - 1, 0)` })
-          .where(
-            and(eq(trip.id, bookingRecord.tripId), gt(trip.bookedSeats, 0)),
-          );
-
-        await tx
-          .delete(bookingHold)
-          .where(eq(bookingHold.bookingId, bookingRecord.id));
+          .where(eq(trip.id, bookingRecord.tripId));
       }
     });
   }

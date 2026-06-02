@@ -6,7 +6,6 @@ import { db } from "../db/connection";
 import { driver } from "../db/index";
 import { notification } from "../db/notification-schema";
 import {
-  publishNotificationCreatedInBackground,
   publishNotificationReadAllInBackground,
   publishNotificationReadInBackground,
 } from "./realtime";
@@ -226,22 +225,6 @@ export class NotificationService {
       .execute();
 
     publishNotificationReadAllInBackground(driverId);
-  }
-
-  async createNotification(
-    userId: string,
-    descriptor: NotificationDescriptor,
-  ): Promise<DriverNotification> {
-    const driverId = await this.resolveDriverId(userId);
-    const notificationRecord = await this.createForDriverInTransaction(
-      db,
-      driverId,
-      descriptor,
-    );
-
-    publishNotificationCreatedInBackground(notificationRecord);
-
-    return notificationRecord;
   }
 
   async createForDriverInTransaction(
