@@ -5,6 +5,7 @@ import dayjs from "dayjs";
 import {
   CalendarDotsIcon,
   ClockIcon,
+  MoneyIcon,
   NotePencilIcon,
   SeatIcon,
   TrashIcon,
@@ -158,7 +159,10 @@ const DriverRouteDetailsCard = ({
         </div>
 
         <div className="rounded-lg border border-slate-200 bg-slate-50/70 p-4">
-          <div className="mb-2 text-sm text-muted-foreground">Fare</div>
+          <div className="mb-2 flex items-center gap-2 text-sm text-muted-foreground">
+            <MoneyIcon size={16} />
+            Fare
+          </div>
           <p className="font-medium text-slate-900">
             {formatPrice(route.price)}
           </p>
