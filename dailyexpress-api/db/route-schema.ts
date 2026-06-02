@@ -12,6 +12,8 @@ import {
   uuid,
   varchar,
 } from "drizzle-orm/pg-core";
+import { driver } from "./driver-schema";
+import { users } from "./auth-schema";
 
 export const statusEnum = pgEnum("status", ["inactive", "pending", "active"]);
 export const vehicleTypeEnum = pgEnum("vehicle_type", [
@@ -38,7 +40,7 @@ export const route = pgTable(
   "route",
   {
     id: uuid("id").defaultRandom().primaryKey(),
-    driverId: uuid("driver_id").notNull(),
+    driverId: uuid("driver_id").references(() => driver.id, { onDelete: "restrict" }).notNull(),
     pickup_location_title: text("pickup_location_title").notNull(),
     pickup_location_locality: text("pickup_location_locality").notNull(),
     pickup_location_label: text("pickup_location_label").notNull(),
@@ -105,10 +107,8 @@ export const trip = pgTable(
   {
     id: uuid("id").defaultRandom().primaryKey(),
 
-    routeId: uuid("route_id").notNull(),
-
-    driverId: uuid("driver_id").notNull(),
-
+    routeId: uuid("route_id").references(() => route.id, { onDelete: "restrict" }).notNull(),
+    driverId: uuid("driver_id").references(() => driver.id, { onDelete: "restrict" }).notNull(),
     date: timestamp("date", { mode: "date" }).notNull(),
 
     capacity: integer("capacity").notNull(),
@@ -132,9 +132,10 @@ export const booking = pgTable(
   "booking",
   {
     id: uuid("id").defaultRandom().primaryKey(),
-    tripId: uuid("trip_id").notNull(),
-    userId: uuid("user_id").notNull(),
+    tripId: uuid("trip_id").references(() => trip.id, { onDelete: "restrict" }).notNull(),
+    userId: uuid("user_id").references(() => users.id, { onDelete: "cascade" }).notNull(),
     seatNumber: integer("seat_number"),
+    firstName: text("first_name"),
     lastName: text("last_name"),
     fareAmount: bigint("fare_amount", { mode: "number" }).default(0).notNull(),
     currency: varchar("currency", { length: 8 }).default("NGN").notNull(),
