@@ -234,7 +234,6 @@ export class PaymentService {
     const channels = dedupeChannels(input.channels);
     const metadata = this.buildMetadata(input);
     const productName = sanitizeInput(input.productName);
-    const productDescription = sanitizeInput(input.productDescription);
     const bookingFare = await this.getBookingFareForCheckout(
       input.bookingId,
       userId,
@@ -256,12 +255,12 @@ export class PaymentService {
         email: authenticatedEmail.trim(),
         name: input.customerName,
       },
+      // Kora checkout pay-ins expect the major currency amount, not kobo/minor units.
       amount: trustedAmount,
       reference,
       currency: trustedCurrency,
       redirect_url: this.getReturnUrl(reference),
       notification_url: this.getWebhookUrl(),
-      narration: productDescription,
       merchant_bears_cost: false,
       ...(channels ? { channels } : {}),
       metadata,
@@ -278,15 +277,12 @@ export class PaymentService {
           amount: trustedAmount,
           currency: trustedCurrency,
           productName,
-          productDescription,
           customerName: this.sanitizeOptional(input.customerName),
           customerEmail: authenticatedEmail.trim(),
-          customerMobile: this.sanitizeOptional(input.customerMobile),
           status: "pending",
           providerStatus: "pending",
           checkoutUrl: initializeResponse.data.checkout_url,
           checkoutToken: initializeResponse.data.reference,
-          cancelUrl: `${this.config.FRONTEND_URL}/trip-status`,
           channels,
           rawInitializeResponse: initializeResponse.raw,
           metadata,
@@ -360,7 +356,6 @@ export class PaymentService {
     const channels = dedupeChannels(input.channels);
     const metadata = this.buildMetadata(input);
     const productName = sanitizeInput(input.productName);
-    const productDescription = sanitizeInput(input.productDescription);
     const bookingFare = await this.getBookingFareForCheckout(
       input.bookingId,
       existingPayment.userId,
@@ -388,12 +383,12 @@ export class PaymentService {
         email: authenticatedEmail.trim(),
         name: input.customerName || existingPayment.customerName || undefined,
       },
+      // Kora checkout pay-ins expect the major currency amount, not kobo/minor units.
       amount: trustedAmount,
       reference,
       currency: trustedCurrency,
       redirect_url: this.getReturnUrl(reference),
       notification_url: this.getWebhookUrl(),
-      narration: productDescription,
       merchant_bears_cost: false,
       ...(channels ? { channels } : {}),
       metadata,
@@ -407,20 +402,15 @@ export class PaymentService {
           amount: trustedAmount,
           currency: trustedCurrency,
           productName,
-          productDescription,
           customerName: this.sanitizeOptional(
             input.customerName || existingPayment.customerName,
           ),
           customerEmail: authenticatedEmail.trim(),
-          customerMobile: this.sanitizeOptional(
-            input.customerMobile || existingPayment.customerMobile,
-          ),
           status: "pending",
           providerStatus: "pending",
           providerTransactionId: null,
           checkoutUrl: initializeResponse.data.checkout_url,
           checkoutToken: initializeResponse.data.reference,
-          cancelUrl: `${this.config.FRONTEND_URL}/trip-status`,
           channels,
           rawInitializeResponse: initializeResponse.raw,
           rawVerificationResponse: null,
@@ -688,13 +678,44 @@ export class PaymentService {
 
     if (verification.data.status.toLowerCase() === "success") {
       const hold = await this.getBookingHoldRecord(payload.bookingId);
-      if (!hold || hold.expiresAt.getTime() <= Date.now()) {
-        await this.handleChargeSuccess(payload.reference);
+      if (hold && hold.expiresAt.getTime() > Date.now()) {
+        await this.confirmPendingPaymentSuccess(
+          payload.reference,
+          verification.data,
+          verification.raw,
+        );
+        return;
       }
+
+      await this.failPendingPayment(
+        payload.reference,
+        "expired",
+        "Payment completed after booking hold expired",
+        {
+          failureCode: "PAYMENT_EXPIRED",
+          providerStatus: verification.data.status,
+          rawVerificationResponse: verification.raw,
+        },
+      );
+      await this.initiateAutoRefund(
+        payload.reference,
+        verification.data,
+        verification.raw,
+        "Payment completed after booking hold expired",
+      );
       return;
     }
 
-    return this.cancelBookingPayment(payload.bookingId, payload.reference);
+    await this.failPendingPayment(
+      payload.reference,
+      "expired",
+      "Seat reservation expired before payment was completed",
+      {
+        failureCode: "PAYMENT_EXPIRED",
+        providerStatus: verification.data.status,
+        rawVerificationResponse: verification.raw,
+      },
+    );
   }
 
   async confirmPendingPaymentSuccess(
@@ -758,7 +779,7 @@ export class PaymentService {
       );
 
       if (bookingResult.confirmed && sideEffects) {
-        await driverService.recordBookingConfirmed(tx, {
+        await driverService.recordConfirmedBooking(tx, {
           driverId: sideEffects.driverId,
           fareAmountMinor: sideEffects.fareAmountMinor,
         });
@@ -1380,8 +1401,8 @@ export class PaymentService {
       currency: paymentRecord.currency,
       productName: paymentRecord.productName,
       failureReason,
-      supportEmail: "support@dailyexpress.com",
-      supportPhone: "07008888328",
+      supportEmail: "support@dailyexpress.app",
+      supportPhone: "+234 9063611541",
     });
     const html = await renderEmail("RefundFailedEmail", propsJson);
 

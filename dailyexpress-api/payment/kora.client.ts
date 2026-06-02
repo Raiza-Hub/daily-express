@@ -16,6 +16,7 @@ interface KoraErrorResponse {
   message: string;
   errors?: unknown;
   error_code?: string;
+  data?: Record<string, { message?: string }>;
 }
 
 interface KoraApiEnvelope<TData> {
@@ -64,12 +65,16 @@ export class KoraClient {
       const errorBody = (await response.json().catch(() => ({
         message: response.statusText,
       }))) as KoraErrorResponse;
-      const error = new Error(
-        getKoraErrorMessage(
-          errorBody.message || response.statusText,
-          "Payment provider request failed",
-        ),
+      const baseMessage = getKoraErrorMessage(
+        errorBody.message || response.statusText,
+        "Payment provider request failed",
       );
+      const detailMessage = errorBody.data
+        ? ` (${Object.entries(errorBody.data)
+            .map(([field, err]) => `${field}: ${err?.message || "invalid"}`)
+            .join("; ")})`
+        : "";
+      const error = new Error(`${baseMessage}${detailMessage}`);
       (error as any).koraErrorCode = errorBody.error_code;
       (error as any).koraHttpStatus = response.status;
       (error as any).koraResponseData = errorBody;
