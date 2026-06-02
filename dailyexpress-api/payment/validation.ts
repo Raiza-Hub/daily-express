@@ -14,9 +14,7 @@ export const initializePaymentSchema = Joi.object({
   currency: Joi.string().uppercase().length(3).default("NGN"),
   channels: Joi.array().items(koraChannelSchema).optional(),
   productName: Joi.string().min(2).max(120).required(),
-  productDescription: Joi.string().min(2).max(500).required(),
   customerName: Joi.string().max(120).optional(),
-  customerMobile: Joi.string().max(32).optional(),
   metadata: Joi.object()
     .pattern(/^[A-Za-z0-9-]{1,20}$/, metadataValueSchema)
     .min(1)

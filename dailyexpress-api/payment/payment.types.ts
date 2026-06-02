@@ -19,9 +19,7 @@ export interface InitializePaymentInput {
   currency?: string;
   channels?: KoraChannel[];
   productName: string;
-  productDescription: string;
   customerName?: string;
-  customerMobile?: string;
   metadata?: Record<string, unknown>;
 }
 
@@ -42,7 +40,7 @@ export interface KoraInitializeRequest {
   currency: string;
   redirect_url: string;
   notification_url?: string;
-  narration: string;
+  narration?: string;
   merchant_bears_cost?: boolean;
   channels?: KoraChannel[];
   metadata?: Record<string, unknown>;
