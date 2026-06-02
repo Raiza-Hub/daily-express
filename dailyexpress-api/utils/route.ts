@@ -2,7 +2,7 @@ import type { Route } from "@shared/types";
 import { sql } from "drizzle-orm";
 
 import { createServiceError } from "@shared/utils";
-import { booking, driver, users } from "../db/index";
+import { booking, driver } from "../db/index";
 import {
   formatDateKey,
   getDateTimeParts,
@@ -183,12 +183,3 @@ export function mapDriverToRouteDriver(
   };
 }
 
-export function mapPassenger(record: typeof users.$inferSelect) {
-  return {
-    id: record.id,
-    firstName: record.firstName,
-    lastName: record.lastName,
-    email: record.email,
-    profilePictureUrl: record.profilePictureUrl,
-  };
-}

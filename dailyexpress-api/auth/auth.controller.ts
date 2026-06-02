@@ -4,30 +4,33 @@ import type { CookieOptions, Request, Response, RequestHandler } from "express";
 import { getAuthenticatedUser } from "../middleware/auth";
 import { createSuccessResponse } from "@shared/utils";
 import { sendErrorResponse } from "../middleware/apiResponses";
+import { getConfig } from "../config/index";
 import {
   clearGoogleOAuthCookies,
   completeGoogleOAuth as completeGoogleOAuthFlow,
   startGoogleOAuth as startGoogleOAuthFlow,
 } from "./googleOAuth";
 
-const authService = new AuthService();
+const authService = new AuthService(getConfig());
 const ACCESS_TOKEN_MAX_AGE = 15 * 60 * 1000;
 const REFRESH_TOKEN_MAX_AGE = 7 * 24 * 60 * 60 * 1000;
 
 function getCookieDomain() {
-  if (process.env.NODE_ENV !== "production") {
+  const config = getConfig();
+  if (config.NODE_ENV !== "production") {
     return undefined;
   }
 
-  return process.env.COOKIE_DOMAIN || ".dailyexpress.app";
+  return config.COOKIE_DOMAIN || ".dailyexpress.app";
 }
 
 function getCookieOptions(maxAge: number): CookieOptions {
+  const config = getConfig();
   const cookieDomain = getCookieDomain();
 
   return {
     httpOnly: true,
-    secure: process.env.NODE_ENV === "production",
+    secure: config.NODE_ENV === "production",
     sameSite: "lax",
     maxAge,
     ...(cookieDomain ? { domain: cookieDomain } : {}),
