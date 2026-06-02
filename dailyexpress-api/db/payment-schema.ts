@@ -12,7 +12,7 @@ import {
   varchar,
 } from "drizzle-orm/pg-core";
 import { users } from "./auth-schema";
-import { booking } from "./route-schema";
+import { booking, trip } from "./route-schema";
 
 export const paymentProviderEnum = pgEnum("payment_provider", ["kora"]);
 export const paymentStatusEnum = pgEnum("payment_status", [
@@ -104,9 +104,9 @@ export const bookingHold = pgTable(
   "booking_hold",
   {
     id: uuid("id").defaultRandom().primaryKey(),
-    bookingId: uuid("booking_id").notNull().unique(),
-    tripId: uuid("trip_id").notNull(),
-    userId: uuid("user_id").notNull(),
+    bookingId: uuid("booking_id").references(() => booking.id, { onDelete: "cascade" }).notNull().unique(),
+    tripId: uuid("trip_id").references(() => trip.id, { onDelete: "restrict" }).notNull(),
+    userId: uuid("user_id").references(() => users.id, { onDelete: "cascade" }).notNull(),
     expiresAt: timestamp("expires_at", { mode: "date" }).notNull(),
     pgBossJobId: text("pg_boss_job_id"),
     createdAt: timestamp("created_at", { mode: "date" }).defaultNow().notNull(),
