@@ -1,4 +1,5 @@
 import Joi from "joi";
+import { KORA_SUPPORTED_COUNTRIES } from "@shared/constants";
 
 const phoneRegex = /^\+?[1-9]\d{1,14}$/;
 
@@ -22,7 +23,8 @@ export const createDriverSchema = Joi.object({
     "string.pattern.base": "Phone number must be a valid international format",
     "string.empty": "Phone number is required",
   }),
-  country: Joi.string().min(2).max(100).required().messages({
+  country: Joi.string().valid(...KORA_SUPPORTED_COUNTRIES).required().messages({
+    "any.only": "This country is not supported at the moment",
     "string.empty": "Country is required",
   }),
   currency: Joi.string().min(2).max(3).required().messages({
@@ -70,7 +72,9 @@ export const updateDriverSchema = Joi.object({
     "string.pattern.base": "Phone number must be a valid international format",
   }),
   profile_pic: Joi.string(),
-  country: Joi.string().min(2).max(100).optional(),
+  country: Joi.string().valid(...KORA_SUPPORTED_COUNTRIES).optional().messages({
+    "any.only": "This country is not supported at the moment",
+  }),
   currency: Joi.string().min(2).max(3).optional(),
   state: Joi.string().min(2).max(100).optional(),
   city: Joi.string().min(2).max(100).optional(),

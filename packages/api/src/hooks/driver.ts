@@ -66,14 +66,14 @@ export const updateDriverFn = async (
   }
 };
 
-export const deleteDriverFn = async (): Promise<void> => {
+export const deactivateDriverFn = async (): Promise<void> => {
   try {
-    const response = await driverApi.delete<ApiResponse<null>>("/delete");
+    const response = await driverApi.delete<ApiResponse<null>>("/deactivate");
     if (!response.data.success) {
-      throw new Error(response.data.error || "Failed to delete driver profile");
+      throw new Error(response.data.error || "Failed to deactivate driver profile");
     }
   } catch (err) {
-    return handleApiError(err, "Failed to delete driver profile") as never;
+    return handleApiError(err, "Failed to deactivate driver profile") as never;
   }
 };
 
@@ -110,12 +110,12 @@ export const useUpdateDriver = (options?: {
   });
 };
 
-export const useDeleteDriver = (options?: {
+export const useDeactivateDriver = (options?: {
   onSuccess?: () => void;
   onError?: (error: Error) => void;
 }) => {
   return useMutation({
-    mutationFn: deleteDriverFn,
+    mutationFn: deactivateDriverFn,
     ...options,
   });
 };
@@ -125,8 +125,8 @@ export interface DriverStats {
   driverId: string;
   totalEarnings: number;
   pendingPayments: number;
+  inReviewPayments: number;
   totalPassengers: number;
-  activeRoutes: number;
   createdAt: string;
   updatedAt: string;
 }

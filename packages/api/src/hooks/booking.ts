@@ -14,7 +14,6 @@ import type {
   SearchRoutesRequest,
   updateRouteRequest,
 } from "@shared/types";
-import type { DriverStats } from "./driver";
 import { handleApiError } from "../utils";
 
 const DRIVER_ROUTES_QUERY_KEY = ["driverRoutes"] as const;
@@ -22,27 +21,7 @@ const DRIVER_STATS_QUERY_KEY = ["driverStats"] as const;
 
 type RouteMutationContext = {
   previousRoutes?: Route[];
-  previousStats?: DriverStats;
 };
-
-function getActiveRouteCount(routes: Route[]) {
-  return routes.filter((route) => route.status === "active").length;
-}
-
-function syncCachedActiveRoutes(
-  queryClient: ReturnType<typeof useQueryClient>,
-  routes: Route[],
-) {
-  queryClient.setQueryData<DriverStats>(DRIVER_STATS_QUERY_KEY, (stats) =>
-    stats
-      ? {
-          ...stats,
-          activeRoutes: getActiveRouteCount(routes),
-          updatedAt: new Date().toISOString(),
-        }
-      : stats,
-  );
-}
 
 function syncCachedRoutes(
   queryClient: ReturnType<typeof useQueryClient>,
@@ -58,7 +37,6 @@ function syncCachedRoutes(
 
   const nextRoutes = updater(previousRoutes);
   queryClient.setQueryData<Route[]>(DRIVER_ROUTES_QUERY_KEY, nextRoutes);
-  syncCachedActiveRoutes(queryClient, nextRoutes);
 }
 
 async function invalidateDriverRouteState(
@@ -425,15 +403,12 @@ export const useDeleteRoute = (options?: {
       const previousRoutes = queryClient.getQueryData<Route[]>(
         DRIVER_ROUTES_QUERY_KEY,
       );
-      const previousStats = queryClient.getQueryData<DriverStats>(
-        DRIVER_STATS_QUERY_KEY,
-      );
 
       syncCachedRoutes(queryClient, (routes) =>
         routes.filter((route) => route.id !== id),
       );
 
-      return { previousRoutes, previousStats };
+      return { previousRoutes };
     },
     onSuccess: () => {
       options?.onSuccess?.();
@@ -443,13 +418,6 @@ export const useDeleteRoute = (options?: {
         queryClient.setQueryData<Route[]>(
           DRIVER_ROUTES_QUERY_KEY,
           context.previousRoutes,
-        );
-      }
-
-      if (context?.previousStats) {
-        queryClient.setQueryData<DriverStats>(
-          DRIVER_STATS_QUERY_KEY,
-          context.previousStats,
         );
       }
 
@@ -540,10 +508,8 @@ interface TripBooking {
   paymentStatus: string;
   createdAt: Date;
   user: {
-    id: string;
     firstName: string;
     lastName: string;
-    email: string;
     profilePictureUrl?: string | null;
   };
 }

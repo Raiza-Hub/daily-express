@@ -15,8 +15,8 @@ export const posthogEvents = {
   driver_google_disconnect_failed: "driver:google_disconnect_failed",
   driver_password_set_succeeded: "driver:password_set_succeeded",
   driver_password_set_failed: "driver:password_set_failed",
-  driver_account_delete_succeeded: "driver:account_delete_succeeded",
-  driver_account_delete_failed: "driver:account_delete_failed",
+  driver_account_deactivate_succeeded: "driver:account_deactivate_succeeded",
+  driver_account_deactivate_failed: "driver:account_deactivate_failed",
 
   driver_route_created_succeeded: "driver:route_created_succeeded",
   driver_route_create_failed: "driver:route_create_failed",

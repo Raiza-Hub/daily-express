@@ -17,6 +17,7 @@ import { useState } from "react";
 import { Controller, useForm } from "react-hook-form";
 import GoogleSignInButton from "./GoogleSignInButton";
 import { buildVerifyEmailHref } from "~/lib/app-routing";
+import { isValidDateString } from "~/lib/utils";
 import { posthogEvents } from "~/lib/posthog-events";
 import { usePostHog } from "posthog-js/react";
 
@@ -150,20 +151,25 @@ const SignUpForm = ({ redirect }: { redirect?: string }) => {
                 <Field data-invalid={fieldState.invalid}>
                   <FieldLabel htmlFor="dateOfBirth">Date of Birth</FieldLabel>
                   <Input
-                    {...field}
                     id="dateOfBirth"
                     type="date"
                     aria-invalid={fieldState.invalid}
-                    value={
-                      field.value ? dayjs(field.value).format("YYYY-MM-DD") : ""
+                    defaultValue={
+                      field.value
+                        ? dayjs(field.value).format("YYYY-MM-DD")
+                        : ""
                     }
-                    onChange={(e) =>
-                      field.onChange(
-                        e.target.value
-                          ? dayjs(e.target.value).toDate()
-                          : undefined,
-                      )
-                    }
+                    onChange={(e) => {
+                      const val = e.target.value;
+                      if (val && isValidDateString(val)) {
+                        field.onChange(dayjs(val).toDate());
+                      } else if (!val) {
+                        field.onChange(undefined);
+                      }
+                    }}
+                    onBlur={field.onBlur}
+                    name={field.name}
+                    ref={field.ref}
                   />
                   {fieldState.invalid && (
                     <FieldError errors={[fieldState.error]} />

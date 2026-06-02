@@ -50,6 +50,7 @@ export const driver = pgTable("driver", {
   }),
   bankVerifiedAt: timestamp("bank_verified_at", { mode: "date" }),
   isActive: boolean("is_active").default(true).notNull(),
+  deletedAt: timestamp("deleted_at", { mode: "date" }),
   createdAt: timestamp("created_at", { mode: "date" }).defaultNow().notNull(),
   updatedAt: timestamp("updated_at", { mode: "date" }).defaultNow().notNull(),
 });
@@ -64,6 +65,9 @@ export const driverStats = pgTable("driver_stats", {
     .default(0)
     .notNull(),
   pendingPayments: bigint("pending_payments", { mode: "number" })
+    .default(0)
+    .notNull(),
+  inReviewPayments: bigint("in_review_payments", { mode: "number" })
     .default(0)
     .notNull(),
   totalPassengers: integer("total_passengers").default(0).notNull(),

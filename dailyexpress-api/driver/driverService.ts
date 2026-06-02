@@ -4,18 +4,14 @@ import {
   driver,
   driverProfileImageUpload,
   driverStats,
-  earning,
-  payout,
-  route,
 } from "../db/index";
-import { and, eq, sql } from "drizzle-orm";
+import { eq, sql, type SQL } from "drizzle-orm";
 import { createServiceError, sanitizeInput } from "@shared/utils";
 import { NotificationService } from "../notification/notificationService";
 import { publishNotificationCreatedInBackground } from "../notification/realtime";
 import { jobService } from "../workers/jobService";
 import { timeAsync } from "../utils/timing";
-import { addDaysToDateKey } from "../utils/route";
-import { formatDateKey } from "../utils/timezone";
+
 import type { DriverProfileImageUploadFile } from "./cloudinary";
 
 type DriverTransaction = Parameters<Parameters<typeof db.transaction>[0]>[0];
@@ -25,6 +21,22 @@ type DriverMutationResult = Driver & {
     status: "pending";
   };
 };
+
+type EarningStatus =
+  | "pending_trip_completion"
+  | "available"
+  | "processing"
+  | "paid"
+  | "cancelled"
+  | "manual_review";
+
+type RouteStatus = "inactive" | "pending" | "active";
+
+const PENDING_PAYMENT_STATUSES = new Set<EarningStatus>([
+  "pending_trip_completion",
+  "available",
+  "processing",
+]);
 
 const notificationService = new NotificationService();
 
@@ -63,7 +75,7 @@ export class DriverService {
               bankVerificationFailureReason: null,
               bankVerificationRequestedAt: new Date(),
               bankVerifiedAt: null,
-            } as any)
+            } as typeof driver.$inferInsert)
             .returning();
 
           await tx.insert(driverStats).values({
@@ -123,18 +135,6 @@ export class DriverService {
     // Check if user exists
     const existingDriver = await db.query.driver.findFirst({
       where: eq(driver.userId, userId),
-    });
-
-    if (!existingDriver) {
-      return null;
-    }
-
-    return existingDriver;
-  }
-
-  async getProfileById(id: string): Promise<Driver | null> {
-    const existingDriver = await db.query.driver.findFirst({
-      where: eq(driver.id, id),
     });
 
     if (!existingDriver) {
@@ -238,7 +238,7 @@ export class DriverService {
     );
   }
 
-  async deleteDriver(userId: string): Promise<void> {
+  async deactivateDriver(userId: string): Promise<void> {
     const existingDriver = await db.query.driver.findFirst({
       where: eq(driver.userId, userId),
     });
@@ -247,9 +247,14 @@ export class DriverService {
       throw createServiceError("Driver not found", 404);
     }
 
-    await db.transaction(async (tx) => {
-      await this.deleteDriverRecords(tx, existingDriver);
-    });
+    await db
+      .update(driver)
+      .set({
+        isActive: false,
+        deletedAt: new Date(),
+        updatedAt: new Date(),
+      })
+      .where(eq(driver.id, existingDriver.id));
   }
 
   async getDriverStats(driverId: string): Promise<DriverStats> {
@@ -261,88 +266,7 @@ export class DriverService {
       throw createServiceError("Driver stats not found", 404);
     }
 
-    const payoutTotals = db
-      .select({
-        driverId: payout.driverId,
-        totalEarnings: sql<number>`sum(${payout.amountMinor})::bigint`
-          .mapWith(Number)
-          .as("total_earnings"),
-      })
-      .from(payout)
-      .where(and(eq(payout.driverId, driverId), eq(payout.status, "success")))
-      .groupBy(payout.driverId)
-      .as("payout_totals");
-
-    const earningTotals = db
-      .select({
-        driverId: earning.driverId,
-        totalPassengers:
-          sql<number>`count(*) filter (where ${earning.status} in ('pending_trip_completion', 'available', 'reserved', 'processing', 'paid'))::int`.as(
-            "total_passengers",
-          ),
-        pendingPayments:
-          sql<number>`sum(${earning.netAmountMinor}) filter (where ${earning.status} in ('pending_trip_completion', 'available', 'reserved', 'processing'))::bigint`
-            .mapWith(Number)
-            .as("pending_payments"),
-      })
-      .from(earning)
-      .where(eq(earning.driverId, driverId))
-      .groupBy(earning.driverId)
-      .as("earning_totals");
-
-    const routeTotals = db
-      .select({
-        driverId: route.driverId,
-        activeRoutes: sql<number>`count(*)::int`.as("active_routes"),
-      })
-      .from(route)
-      .where(and(eq(route.driverId, driverId), eq(route.status, "active")))
-      .groupBy(route.driverId)
-      .as("route_totals");
-
-    const [totals] = await db
-      .select({
-        totalEarnings:
-          sql<number>`coalesce(${payoutTotals.totalEarnings}, 0)`.mapWith(
-            Number,
-          ),
-        pendingPayments:
-          sql<number>`coalesce(${earningTotals.pendingPayments}, 0)`.mapWith(
-            Number,
-          ),
-        totalPassengers:
-          sql<number>`coalesce(${earningTotals.totalPassengers}, 0)`.mapWith(
-            Number,
-          ),
-        activeRoutes:
-          sql<number>`coalesce(${routeTotals.activeRoutes}, 0)`.mapWith(Number),
-      })
-      .from(driverStats)
-      .leftJoin(payoutTotals, eq(payoutTotals.driverId, driverStats.driverId))
-      .leftJoin(earningTotals, eq(earningTotals.driverId, driverStats.driverId))
-      .leftJoin(routeTotals, eq(routeTotals.driverId, driverStats.driverId))
-      .where(eq(driverStats.driverId, driverId));
-
-    return {
-      ...stats,
-      totalEarnings: totals?.totalEarnings ?? 0,
-      pendingPayments: totals?.pendingPayments ?? 0,
-      totalPassengers: totals?.totalPassengers ?? 0,
-      activeRoutes: totals?.activeRoutes ?? 0,
-    };
-  }
-
-  async deleteDriverForUser(
-    tx: DriverTransaction,
-    userId: string,
-  ): Promise<void> {
-    const existingDriver = await tx.query.driver.findFirst({
-      where: eq(driver.userId, userId),
-    });
-
-    if (existingDriver) {
-      await this.deleteDriverRecords(tx, existingDriver);
-    }
+    return stats;
   }
 
   async recordConfirmedBooking(
@@ -350,37 +274,37 @@ export class DriverService {
     input: {
       driverId: string;
       fareAmountMinor: number;
-      tripDate: Date | string;
-      departureTime: Date | string;
     },
   ): Promise<void> {
-    const stats = await tx.query.driverStats.findFirst({
-      where: eq(driverStats.driverId, input.driverId),
-    });
+    await tx
+      .update(driverStats)
+      .set({
+        pendingPayments: sql`${driverStats.pendingPayments} + ${input.fareAmountMinor}`,
+        totalPassengers: sql`${driverStats.totalPassengers} + 1`,
+        updatedAt: new Date(),
+      })
+      .where(eq(driverStats.driverId, input.driverId));
+  }
 
-    if (!stats) {
-      return;
-    }
-
-    const tripDateTime = new Date(input.tripDate);
-    const departureDateTime = new Date(input.departureTime);
-    const now = new Date();
-    const tripDateKey = formatDateKey(tripDateTime);
-    const todayKey = formatDateKey(now);
-    const tomorrowKey = addDaysToDateKey(todayKey, 1);
-
-    const isFutureTrip = tripDateKey >= tomorrowKey;
-    const isSameDayTrip = tripDateKey === todayKey;
-    const hasNotDeparted = isSameDayTrip && departureDateTime > now;
+  async recordConfirmedBookingCancelled(
+    tx: DriverTransaction,
+    input: {
+      driverId: string;
+      amountMinor: number;
+      previousEarningStatus?: EarningStatus | null;
+    },
+  ): Promise<void> {
+    const pendingDelta =
+      input.previousEarningStatus &&
+      PENDING_PAYMENT_STATUSES.has(input.previousEarningStatus)
+        ? input.amountMinor
+        : 0;
 
     await tx
       .update(driverStats)
       .set({
-        pendingPayments:
-          isFutureTrip || hasNotDeparted
-            ? stats.pendingPayments + input.fareAmountMinor
-            : stats.pendingPayments,
-        totalPassengers: stats.totalPassengers + 1,
+        totalPassengers: sql`GREATEST(${driverStats.totalPassengers} - 1, 0)`,
+        pendingPayments: sql`GREATEST(${driverStats.pendingPayments} - ${pendingDelta}, 0)`,
         updatedAt: new Date(),
       })
       .where(eq(driverStats.driverId, input.driverId));
@@ -393,74 +317,76 @@ export class DriverService {
       amountMinor: number;
     },
   ): Promise<void> {
-    const stats = await tx.query.driverStats.findFirst({
-      where: eq(driverStats.driverId, input.driverId),
-    });
-
-    if (!stats) {
-      return;
-    }
-
     await tx
       .update(driverStats)
       .set({
-        totalEarnings: stats.totalEarnings + input.amountMinor,
-        pendingPayments: Math.max(0, stats.pendingPayments - input.amountMinor),
+        totalEarnings: sql`${driverStats.totalEarnings} + ${input.amountMinor}`,
         updatedAt: new Date(),
       })
       .where(eq(driverStats.driverId, input.driverId));
   }
 
-  async recordRouteCreated(
+  async recordEarningStatusChanged(
     tx: DriverTransaction,
-    driverId: string,
+    input: {
+      driverId: string;
+      amountMinor: number;
+      previousStatus: EarningStatus;
+      nextStatus: EarningStatus;
+    },
   ): Promise<void> {
-    const stats = await tx.query.driverStats.findFirst({
-      where: eq(driverStats.driverId, driverId),
-    });
+    const wasPendingPayment = PENDING_PAYMENT_STATUSES.has(input.previousStatus);
+    const isPendingPayment = PENDING_PAYMENT_STATUSES.has(input.nextStatus);
+    const wasInReview = input.previousStatus === "manual_review";
+    const isInReview = input.nextStatus === "manual_review";
 
-    if (!stats) {
+    if (wasPendingPayment === isPendingPayment && wasInReview === isInReview) {
+      return;
+    }
+
+    const updates: Record<string, SQL | Date> = { updatedAt: new Date() };
+
+    if (wasPendingPayment !== isPendingPayment) {
+      updates.pendingPayments = wasPendingPayment
+        ? sql`GREATEST(${driverStats.pendingPayments} - ${input.amountMinor}, 0)`
+        : sql`${driverStats.pendingPayments} + ${input.amountMinor}`;
+    }
+
+    if (wasInReview !== isInReview) {
+      updates.inReviewPayments = wasInReview
+        ? sql`GREATEST(${driverStats.inReviewPayments} - ${input.amountMinor}, 0)`
+        : sql`${driverStats.inReviewPayments} + ${input.amountMinor}`;
+    }
+
+    await tx
+      .update(driverStats)
+      .set(updates)
+      .where(eq(driverStats.driverId, input.driverId));
+  }
+
+  async recordRouteStatusChanged(
+    tx: DriverTransaction,
+    input: {
+      driverId: string;
+      previousStatus?: RouteStatus | null;
+      nextStatus?: RouteStatus | null;
+    },
+  ): Promise<void> {
+    const wasActive = input.previousStatus === "active";
+    const isActive = input.nextStatus === "active";
+    if (wasActive === isActive) {
       return;
     }
 
     await tx
       .update(driverStats)
       .set({
-        activeRoutes: stats.activeRoutes + 1,
+        activeRoutes: isActive
+          ? sql`${driverStats.activeRoutes} + 1`
+          : sql`GREATEST(${driverStats.activeRoutes} - 1, 0)`,
         updatedAt: new Date(),
       })
-      .where(eq(driverStats.driverId, driverId));
-  }
-
-  async recordRouteDeleted(
-    tx: DriverTransaction,
-    driverId: string,
-  ): Promise<void> {
-    const stats = await tx.query.driverStats.findFirst({
-      where: eq(driverStats.driverId, driverId),
-    });
-
-    if (!stats) {
-      return;
-    }
-
-    await tx
-      .update(driverStats)
-      .set({
-        activeRoutes: Math.max(0, stats.activeRoutes - 1),
-        updatedAt: new Date(),
-      })
-      .where(eq(driverStats.driverId, driverId));
-  }
-
-  private async deleteDriverRecords(
-    tx: DriverTransaction,
-    existingDriver: Driver,
-  ) {
-    await tx
-      .delete(driverStats)
-      .where(eq(driverStats.driverId, existingDriver.id));
-    await tx.delete(driver).where(eq(driver.userId, existingDriver.userId));
+      .where(eq(driverStats.driverId, input.driverId));
   }
 
   private getBankVerificationPendingNotification() {
@@ -541,7 +467,7 @@ export class DriverService {
   private sanitizeProfileData(
     data: Partial<UpdateProfileRequest>,
   ): Partial<UpdateProfileRequest> {
-    const sanitized: any = {};
+    const sanitized: Record<string, string | null> = {};
 
     if (data.firstName !== undefined) {
       sanitized.firstName = data.firstName
