@@ -26,6 +26,7 @@ import { isValidDateString } from "~/lib/utils";
 import DeleteAccount from "./DeleteAccount";
 import DisconnectGoogleDialog from "./DisconnectGoogleDialog";
 import { usePostHog } from "posthog-js/react";
+import { posthogEvents } from "~/lib/posthog-events";
 import Loader from "../Loader";
 
 const ProfileSchema = SignUpSchema.omit({ password: true }).partial();
