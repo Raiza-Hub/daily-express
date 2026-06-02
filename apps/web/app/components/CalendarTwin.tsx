@@ -84,9 +84,9 @@ export function CalendarTwin({
                                 key={day.toISOString()}
                                 onClick={() => handleSelect(day)}
                                 className={cn(
-                                    "h-9 w-9 m-0.5 flex items-center justify-center rounded-md text-sm transition-colors",
+                                    "h-9 w-9 m-0.5 flex items-center justify-center rounded-md text-sm transition-colors cursor-pointer",
                                     isSelected
-                                        ? "bg-primary text-primary-foreground"
+                                        ? "bg-blue-600 text-white hover:bg-blue-700"
                                         : "hover:bg-accent hover:text-foreground"
                                 )}
                             >
@@ -120,9 +120,9 @@ export function CalendarTwin({
                                 setView("month")
                             }}
                             className={cn(
-                                "h-10 rounded-md text-sm font-medium transition-colors",
+                                "h-10 rounded-md text-sm font-medium transition-colors cursor-pointer",
                                 year === currentYear
-                                    ? "bg-primary text-primary-foreground"
+                                    ? "bg-blue-600 text-white hover:bg-blue-700"
                                     : "hover:bg-accent hover:text-foreground"
                             )}
                         >
