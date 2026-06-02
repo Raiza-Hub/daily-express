@@ -174,6 +174,10 @@ const DriverInfo = () => {
   const onSubmit = async (data: TDriverInfoSchema) => {
     setDriverInfoError(null);
     const formData = new FormData();
+    const selectedCountryCurrency =
+      countries.find((country) => country.name === data.country)?.currency ||
+      driver?.currency ||
+      "";
 
     if (data.file instanceof File) {
       formData.append("file", data.file);
@@ -185,6 +189,7 @@ const DriverInfo = () => {
     formData.append("phone", data.phoneNumber);
     formData.append("address", data.address || "");
     formData.append("country", data.country);
+    formData.append("currency", selectedCountryCurrency);
     formData.append("state", data.state);
     formData.append("city", data.city);
 
