@@ -28,6 +28,7 @@ import { posthogEvents } from "~/lib/posthog-events";
 import { usePostHog } from "posthog-js/react";
 
 const TRANSACTION_FEE_RATE = 0.1;
+const MAX_TRANSACTION_FEE = 1000;
 const WEB_PAYMENT_CHANNELS = ["bank_transfer"] as const;
 
 interface TripDetailsSheetProps {
@@ -51,7 +52,10 @@ const TripDetailsSheet = ({
   const router = useRouter();
   const posthog = usePostHog();
   const duration = getDuration(trip.departureTime, trip.estimatedArrivalTime);
-  const transactionFee = trip.price * TRANSACTION_FEE_RATE;
+  const transactionFee = Math.min(
+    Math.round(trip.price * TRANSACTION_FEE_RATE),
+    MAX_TRANSACTION_FEE,
+  );
   const selectedTripDate = bookingContext
     ? parseLocalDate(bookingContext.tripDate)
     : trip.departureTime;
