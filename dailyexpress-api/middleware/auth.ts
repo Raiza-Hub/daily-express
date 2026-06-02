@@ -208,6 +208,7 @@ export function authMiddleware(
     sendErrorResponse(res, 500, undefined, {
       code: "TOKEN_VALIDATION_FAILED",
     });
+    return;
   });
 }
 

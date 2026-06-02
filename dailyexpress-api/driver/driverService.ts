@@ -238,8 +238,7 @@ export class DriverService {
     );
   }
 
-  async deleteDriver(userId: string): Promise<void> {
-    // Check if user exists
+  async deactivateDriver(userId: string): Promise<void> {
     const existingDriver = await db.query.driver.findFirst({
       where: eq(driver.userId, userId),
     });
@@ -248,9 +247,14 @@ export class DriverService {
       throw createServiceError("Driver not found", 404);
     }
 
-    await db.transaction(async (tx) => {
-      await this.deleteDriverRecords(tx, existingDriver);
-    });
+    await db
+      .update(driver)
+      .set({
+        isActive: false,
+        deletedAt: new Date(),
+        updatedAt: new Date(),
+      })
+      .where(eq(driver.id, existingDriver.id));
   }
 
   async getDriverStats(driverId: string): Promise<DriverStats> {
@@ -265,20 +269,7 @@ export class DriverService {
     return stats;
   }
 
-  async deleteDriverForUser(
-    tx: DriverTransaction,
-    userId: string,
-  ): Promise<void> {
-    const existingDriver = await tx.query.driver.findFirst({
-      where: eq(driver.userId, userId),
-    });
-
-    if (existingDriver) {
-      await this.deleteDriverRecords(tx, existingDriver);
-    }
-  }
-
-  async recordBookingConfirmed(
+  async recordConfirmedBooking(
     tx: DriverTransaction,
     input: {
       driverId: string;
@@ -396,16 +387,6 @@ export class DriverService {
         updatedAt: new Date(),
       })
       .where(eq(driverStats.driverId, input.driverId));
-  }
-
-  private async deleteDriverRecords(
-    tx: DriverTransaction,
-    existingDriver: Driver,
-  ) {
-    await tx
-      .delete(driverStats)
-      .where(eq(driverStats.driverId, existingDriver.id));
-    await tx.delete(driver).where(eq(driver.userId, existingDriver.userId));
   }
 
   private getBankVerificationPendingNotification() {

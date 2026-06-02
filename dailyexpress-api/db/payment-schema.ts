@@ -11,6 +11,8 @@ import {
   uuid,
   varchar,
 } from "drizzle-orm/pg-core";
+import { users } from "./auth-schema";
+import { booking } from "./route-schema";
 
 export const paymentProviderEnum = pgEnum("payment_provider", ["kora"]);
 export const paymentStatusEnum = pgEnum("payment_status", [
@@ -29,8 +31,8 @@ export const payment = pgTable(
   "payment",
   {
     id: uuid("id").defaultRandom().primaryKey(),
-    userId: uuid("user_id").notNull(),
-    bookingId: uuid("booking_id"),
+    userId: uuid("user_id").references(() => users.id, { onDelete: "restrict" }).notNull(),
+    bookingId: uuid("booking_id").references(() => booking.id, { onDelete: "set null" }),
     provider: paymentProviderEnum("provider").default("kora").notNull(),
     reference: varchar("reference", { length: 128 }).notNull().unique(),
     providerTransactionId: varchar("provider_transaction_id", { length: 128 }),
