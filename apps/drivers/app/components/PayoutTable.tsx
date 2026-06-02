@@ -15,12 +15,9 @@ const PayoutTable = () => {
     data: payouts = [],
     isLoading,
     isError,
-    error
   } = useDriverPayoutHistory({
     limit: 20,
   });
-
-  console.log(error);
   
 
   if (isLoading) {
@@ -68,7 +65,7 @@ const PayoutTable = () => {
               {payouts.length === 0 && (
                 <tr>
                   <td
-                    className="py-10 text-sm text-muted-foreground"
+                    className="py-12 text-sm text-muted-foreground"
                     colSpan={5}
                   >
                     No payouts yet.

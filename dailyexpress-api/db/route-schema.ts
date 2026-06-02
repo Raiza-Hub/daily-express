@@ -104,19 +104,12 @@ export const trip = pgTable(
   "trip",
   {
     id: uuid("id").defaultRandom().primaryKey(),
-
     routeId: uuid("route_id").notNull(),
-
     driverId: uuid("driver_id").notNull(),
-
     date: timestamp("date", { mode: "date" }).notNull(),
-
     capacity: integer("capacity").notNull(),
-
     bookedSeats: integer("booked_seats").default(0).notNull(),
-
     status: tripStatusEnum("status").default("pending").notNull(),
-
     createdAt: timestamp("created_at", { mode: "date" }).defaultNow().notNull(),
     updatedAt: timestamp("updated_at", { mode: "date" }).defaultNow().notNull(),
   },
