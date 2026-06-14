@@ -42,8 +42,7 @@ const DeleteDriverAccount = () => {
         </h2>
         <p className="text-sm text-muted-foreground">
           Deactivate your driver account. All upcoming trips will be canceled,
-          and you will lose access to the platform. Your data will be retained
-          for record-keeping purposes.
+          and you will lose access to the platform.
         </p>
       </div>
       <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
