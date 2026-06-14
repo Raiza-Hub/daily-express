@@ -10,3 +10,5 @@ export { default as VerifyOtpEmail } from "./emails/VerifyOtpEmail";
 export type { VerifyOtpEmailProps } from "./emails/VerifyOtpEmail";
 export { default as PayoutFailedEmail } from "./emails/PayoutFailedEmail";
 export type { PayoutFailedEmailProps } from "./emails/PayoutFailedEmail";
+export { default as TripCancelledEmail } from "./emails/TripCancelledEmail";
+export type { TripCancelledEmailProps } from "./emails/TripCancelledEmail";
