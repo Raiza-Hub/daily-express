@@ -22,13 +22,6 @@ export const initializePaymentSchema = Joi.object({
     .optional(),
 });
 
-export const upsertBookingHoldSchema = Joi.object({
-  bookingId: Joi.string().uuid().required(),
-  tripId: Joi.string().uuid().required(),
-  userId: Joi.string().uuid().required(),
-  expiresAt: Joi.date().iso().required(),
-});
-
 export const koraWebhookSchema = Joi.object({
   event: Joi.string().required(),
   data: Joi.object({

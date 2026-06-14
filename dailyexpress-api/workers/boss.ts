@@ -12,8 +12,10 @@ export const QUEUES = {
   DRIVER_PROFILE_IMAGE_UPLOAD_DLQ: "driver.profile_image.upload.dlq",
   PAYMENT_EXPIRE: "payment.expire",
   PAYMENT_EXPIRE_DLQ: "payment.expire.dlq",
-  PROCESS_WEBHOOK: "process.webhook",
-  PROCESS_WEBHOOK_DLQ: "process.webhook.dlq",
+  WEBHOOK_PROCESS: "webhook.process",
+  WEBHOOK_PROCESS_DLQ: "webhook.process.dlq",
+  DRIVER_DEACTIVATION_REFUND: "driver.deactivation_refund",
+  DRIVER_DEACTIVATION_REFUND_DLQ: "driver.deactivation_refund.dlq",
 } as const;
 
 export interface PaymentExpireJobData {
@@ -42,6 +44,10 @@ export interface DriverProfileImageUploadJobData {
 
 export interface PayoutProcessJobData {
   earningId: string;
+}
+
+export interface DriverDeactivationRefundJobData {
+  driverId: string;
 }
 
 let boss: PgBoss | null = null;
@@ -85,7 +91,10 @@ async function createQueues(instance: PgBoss) {
     retryLimit: 0,
   });
   await instance.createQueue(QUEUES.PAYMENT_EXPIRE_DLQ, { retryLimit: 0 });
-  await instance.createQueue(QUEUES.PROCESS_WEBHOOK_DLQ, { retryLimit: 0 });
+  await instance.createQueue(QUEUES.WEBHOOK_PROCESS_DLQ, { retryLimit: 0 });
+  await instance.createQueue(QUEUES.DRIVER_DEACTIVATION_REFUND_DLQ, {
+    retryLimit: 0,
+  });
 
   // Create primary queues
   await instance.createQueue(QUEUES.EMAIL_SEND, {
@@ -134,13 +143,22 @@ async function createQueues(instance: PgBoss) {
     deadLetter: QUEUES.PAYMENT_EXPIRE_DLQ,
   });
 
-  await instance.createQueue(QUEUES.PROCESS_WEBHOOK, {
+  await instance.createQueue(QUEUES.WEBHOOK_PROCESS, {
     retryLimit: 3,
     retryDelay: 15,
     retryBackoff: true,
     retryDelayMax: 60,
     deleteAfterSeconds: 86400,
-    deadLetter: QUEUES.PROCESS_WEBHOOK_DLQ,
+    deadLetter: QUEUES.WEBHOOK_PROCESS_DLQ,
+  });
+
+  await instance.createQueue(QUEUES.DRIVER_DEACTIVATION_REFUND, {
+    retryLimit: 3,
+    retryDelay: 30,
+    retryBackoff: true,
+    retryDelayMax: 300,
+    deleteAfterSeconds: 86400,
+    deadLetter: QUEUES.DRIVER_DEACTIVATION_REFUND_DLQ,
   });
 
   logger.info("pg_boss.queues_created");

@@ -1,14 +1,34 @@
 import { createHash } from "node:crypto";
-import { and, desc, eq, inArray, isNull, lt, or } from "drizzle-orm";
-import type { DriverNotification, JWTPayload, NotificationTone } from "@shared/types";
+import { and, eq, isNull, lt, or } from "drizzle-orm";
+import type { DriverNotification, JWTPayload } from "@shared/types";
 import { createServiceError } from "@shared/utils";
-import { db } from "../db/connection";
-import { driver } from "../db/index";
 import { notification } from "../db/notification-schema";
 import {
   publishNotificationReadAllInBackground,
   publishNotificationReadInBackground,
 } from "./realtime";
+import { NotificationRepository } from "./notification.repository";
+import { db } from "../db/connection";
+
+export interface NotificationInput {
+  notificationKey: string;
+  kind: "event" | "state";
+  type: string;
+  title: string;
+  message: string;
+  href?: string | null;
+  tag: string;
+  tone: "critical" | "attention" | "positive" | "info";
+  metadata?: Record<string, unknown> | null;
+  occurredAt?: Date;
+}
+
+interface UpsertNotificationResult {
+  notification: DriverNotification | null;
+  shouldDeliver: boolean;
+}
+
+type NotificationTransaction = Parameters<Parameters<typeof db.transaction>[0]>[0];
 
 const MAX_LIMIT = 50;
 const BANK_VERIFICATION_NOTIFICATION_KEYS = [
@@ -17,43 +37,18 @@ const BANK_VERIFICATION_NOTIFICATION_KEYS = [
   "bank-verification-verified",
 ] as const;
 
-export interface NotificationDescriptor {
-  notificationKey: string;
-  kind: "event" | "state";
-  type: string;
-  title: string;
-  message: string;
-  href?: string | null;
-  tag: string;
-  tone: NotificationTone;
-  metadata?: Record<string, unknown> | null;
-  occurredAt?: Date;
-}
-
-interface EnsuredNotificationResult {
-  notification: DriverNotification | null;
-  shouldDeliver: boolean;
-}
-
-type NotificationWriter = {
-  insert: typeof db.insert;
-};
-type NotificationTransaction = Parameters<Parameters<typeof db.transaction>[0]>[0];
-
 export class NotificationService {
-  async resolveDriverId(userId: string): Promise<string> {
-    const driverRecord = await db.query.driver.findFirst({
-      where: eq(driver.userId, userId),
-    });
+  constructor(private repo = new NotificationRepository()) {}
 
+  private async resolveDriverId(userId: string): Promise<string> {
+    const driverRecord = await this.repo.findDriverByUserId(userId);
     if (!driverRecord) {
       throw createServiceError("Driver not found", 404);
     }
-
     return driverRecord.id;
   }
 
-  private buildContentHash(input: NotificationDescriptor): string {
+  private hashContent(input: NotificationInput): string {
     return createHash("sha256")
       .update(
         JSON.stringify({
@@ -92,11 +87,10 @@ export class NotificationService {
     };
   }
 
-  private clampLimit(limit?: number): number {
+  private normalizeLimit(limit?: number): number {
     if (!limit || !Number.isFinite(limit)) {
       return 20;
     }
-
     return Math.max(1, Math.min(MAX_LIMIT, Math.floor(limit)));
   }
 
@@ -111,10 +105,7 @@ export class NotificationService {
     try {
       driverId = await this.resolveDriverId(user.userId);
     } catch {
-      return {
-        notifications: [],
-        nextCursor: null,
-      };
+      return { notifications: [], nextCursor: null };
     }
 
     const unreadFilters = options?.unreadOnly
@@ -144,13 +135,12 @@ export class NotificationService {
       );
     }
 
-    const limit = this.clampLimit(options?.limit);
-    const notifications = await db.query.notification.findMany({
-      where: whereClause,
-      orderBy: [desc(notification.occurredAt), desc(notification.createdAt)],
-      limit: limit + 1,
-    });
-    
+    const limit = this.normalizeLimit(options?.limit);
+    const notifications = await this.repo.findNotifications(
+      whereClause,
+      limit + 1,
+    );
+
     let nextCursor: string | null = null;
     if (notifications.length > limit) {
       const nextItem = notifications[limit];
@@ -161,10 +151,7 @@ export class NotificationService {
       .slice(0, limit)
       .map((item) => this.mapRecordToNotification(item));
 
-    return {
-      notifications: result,
-      nextCursor,
-    };
+    return { notifications: result, nextCursor };
   }
 
   async markNotificationRead(
@@ -172,13 +159,7 @@ export class NotificationService {
     id: string,
   ): Promise<DriverNotification> {
     const driverId = await this.resolveDriverId(user.userId);
-    const existing = await db.query.notification.findFirst({
-      where: and(
-        eq(notification.id, id),
-        eq(notification.driverId, driverId),
-        isNull(notification.archivedAt),
-      ),
-    });
+    const existing = await this.repo.findNotificationByIdAndDriver(id, driverId);
 
     if (!existing) {
       throw createServiceError("Notification not found", 404);
@@ -189,19 +170,13 @@ export class NotificationService {
     }
 
     const readAt = new Date();
-    const [updated] = await db
-      .update(notification)
-      .set({
-        readAt,
-        updatedAt: readAt,
-      })
-      .where(eq(notification.id, id))
-      .returning();
+    const updated = await this.repo.updateNotification(id, {
+      readAt,
+      updatedAt: readAt,
+    });
 
     const updatedNotification = this.mapRecordToNotification(updated);
-
     publishNotificationReadInBackground(driverId, id);
-
     return updatedNotification;
   }
 
@@ -209,66 +184,36 @@ export class NotificationService {
     const driverId = await this.resolveDriverId(user.userId);
     const readAt = new Date();
 
-    await db
-      .update(notification)
-      .set({
-        readAt,
-        updatedAt: readAt,
-      })
-      .where(
-        and(
-          eq(notification.driverId, driverId),
-          isNull(notification.archivedAt),
-          isNull(notification.readAt),
-        ),
-      )
-      .execute();
+    await this.repo.updateNotificationsByDriver(
+      driverId,
+      { readAt, updatedAt: readAt },
+      [isNull(notification.archivedAt), isNull(notification.readAt)],
+    );
 
     publishNotificationReadAllInBackground(driverId);
   }
 
   async createForDriverInTransaction(
-    tx: NotificationWriter,
+    tx: NotificationTransaction,
     driverId: string,
-    descriptor: NotificationDescriptor,
+    descriptor: NotificationInput,
   ): Promise<DriverNotification> {
-    const contentHash = this.buildContentHash(descriptor);
+    const contentHash = this.hashContent(descriptor);
 
-    const [created] = await tx
-      .insert(notification)
-      .values({
-        driverId,
-        notificationKey: descriptor.notificationKey,
-        kind: descriptor.kind,
-        type: descriptor.type,
-        title: descriptor.title,
-        message: descriptor.message,
-        href: descriptor.href || null,
-        tag: descriptor.tag,
-        tone: descriptor.tone,
-        metadata: descriptor.metadata || null,
-        contentHash,
-        occurredAt: descriptor.occurredAt || new Date(),
-      })
-      .onConflictDoUpdate({
-        target: [notification.driverId, notification.notificationKey],
-        set: {
-          kind: descriptor.kind,
-          type: descriptor.type,
-          title: descriptor.title,
-          message: descriptor.message,
-          href: descriptor.href || null,
-          tag: descriptor.tag,
-          tone: descriptor.tone,
-          metadata: descriptor.metadata || null,
-          contentHash,
-          readAt: null,
-          archivedAt: null,
-          occurredAt: descriptor.occurredAt || new Date(),
-          updatedAt: new Date(),
-        },
-      })
-      .returning();
+    const created = await this.repo.upsertNotification(tx, {
+      driverId,
+      notificationKey: descriptor.notificationKey,
+      kind: descriptor.kind,
+      type: descriptor.type,
+      title: descriptor.title,
+      message: descriptor.message,
+      href: descriptor.href || null,
+      tag: descriptor.tag,
+      tone: descriptor.tone,
+      metadata: descriptor.metadata || null,
+      contentHash,
+      occurredAt: descriptor.occurredAt || new Date(),
+    });
 
     return this.mapRecordToNotification(created);
   }
@@ -276,35 +221,21 @@ export class NotificationService {
   async createBankVerificationStateInTransaction(
     tx: NotificationTransaction,
     driverId: string,
-    descriptor: NotificationDescriptor,
-  ): Promise<EnsuredNotificationResult> {
+    descriptor: NotificationInput,
+  ): Promise<UpsertNotificationResult> {
     const now = new Date();
-    const contentHash = this.buildContentHash(descriptor);
+    const contentHash = this.hashContent(descriptor);
     const staleKeys = BANK_VERIFICATION_NOTIFICATION_KEYS.filter(
       (key) => key !== descriptor.notificationKey,
     );
 
-    await tx
-      .update(notification)
-      .set({
-        archivedAt: now,
-        updatedAt: now,
-      })
-      .where(
-        and(
-          eq(notification.driverId, driverId),
-          eq(notification.kind, "state"),
-          isNull(notification.archivedAt),
-          inArray(notification.notificationKey, [...staleKeys]),
-        ),
-      );
+    await this.repo.archiveNotificationsByKeys(tx, driverId, [...staleKeys]);
 
-    const existing = await tx.query.notification.findFirst({
-      where: and(
-        eq(notification.driverId, driverId),
-        eq(notification.notificationKey, descriptor.notificationKey),
-      ),
-    });
+    const existing = await this.repo.findNotificationByDriverAndKey(
+      tx,
+      driverId,
+      descriptor.notificationKey,
+    );
 
     if (!existing) {
       const created = await this.createForDriverInTransaction(
@@ -312,19 +243,16 @@ export class NotificationService {
         driverId,
         descriptor,
       );
-
-      return {
-        notification: created,
-        shouldDeliver: true,
-      };
+      return { notification: created, shouldDeliver: true };
     }
 
     const contentChanged =
       existing.contentHash !== contentHash || existing.archivedAt !== null;
 
-    const [updated] = await tx
-      .update(notification)
-      .set({
+    const updated = await this.repo.updateNotificationInTransaction(
+      tx,
+      existing.id,
+      {
         kind: descriptor.kind,
         type: descriptor.type,
         title: descriptor.title,
@@ -340,9 +268,8 @@ export class NotificationService {
           : existing.occurredAt,
         readAt: contentChanged ? null : existing.readAt,
         updatedAt: now,
-      })
-      .where(eq(notification.id, existing.id))
-      .returning();
+      },
+    );
 
     return {
       notification: this.mapRecordToNotification(updated),

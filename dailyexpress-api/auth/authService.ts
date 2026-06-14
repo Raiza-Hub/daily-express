@@ -1,15 +1,6 @@
 import { createHash, randomBytes, randomInt } from "node:crypto";
 import { type EnvConfig } from "../config/index";
 import { db } from "../db/connection";
-import {
-  driver,
-  users,
-  otp,
-  passwordResetTokens,
-  userProviders,
-} from "../db/index";
-import type { User } from "../db/index";
-import { eq, and, count, isNull } from "drizzle-orm";
 import bcrypt from "bcryptjs";
 import { createServiceError } from "@shared/utils";
 import jwt, { type Secret, type SignOptions } from "jsonwebtoken";
@@ -21,6 +12,9 @@ import {
   getEmailSubject,
   isSupportedTemplate,
 } from "@repo/email";
+import { AuthRepository } from "./auth.repository";
+import { DriverRepository } from "../driver/driver.repository";
+import { isUnder13 } from "./validation";
 
 const OTP_EXPIRY_MINUTES = 10;
 const PASSWORD_RESET_EXPIRY_MINUTES = 30;
@@ -29,7 +23,7 @@ const PASSWORD_RESET_TOKEN_BYTES = 32;
 async function renderVerifyOtpEmail(storedOtp: string) {
   const brandName = process.env.EMAIL_BRAND_NAME || "Daily Express";
   const supportEmail =
-    process.env.SUPPORT_EMAIL || "support@dailyexpress.com";
+    process.env.SUPPORT_EMAIL || "support@dailyexpress.app";
 
   const props = {
     otp: storedOtp,
@@ -55,7 +49,7 @@ async function renderVerifyOtpEmail(storedOtp: string) {
 
 async function renderResetPasswordEmail(resetLink: string) {
   const brandName = process.env.EMAIL_BRAND_NAME || "Daily Express";
-  const supportEmail = process.env.SUPPORT_EMAIL || "support@dailyexpress.com";
+  const supportEmail = process.env.SUPPORT_EMAIL || "support@dailyexpress.app";
 
   const props = {
     resetUrl: resetLink,
@@ -84,13 +78,17 @@ export class AuthService {
   private readonly jwtExpiresIn: string;
   private readonly jwtRefreshExpiresIn: string;
   private readonly bcryptRounds: number;
+  private readonly repo: AuthRepository;
+  private readonly driverRepo: DriverRepository;
 
-  constructor(config: EnvConfig) {
+  constructor(config: EnvConfig, repo?: AuthRepository) {
     this.jwtSecret = config.JWT_SECRET;
     this.jwtRefreshSecret = config.JWT_REFRESH_SECRET;
     this.jwtExpiresIn = config.JWT_EXPIRES_IN;
     this.jwtRefreshExpiresIn = config.JWT_REFRESH_EXPIRES_IN;
     this.bcryptRounds = config.BCRYPT_ROUNDS;
+    this.repo = repo ?? new AuthRepository();
+    this.driverRepo = new DriverRepository();
   }
 
   async register(
@@ -99,13 +97,17 @@ export class AuthService {
     firstName: string,
     lastName: string,
     dateOfBirth: Date,
-  ): Promise<{ user: User; accessToken: string; refreshToken: string }> {
-    //check if user exists
-    const userExists = await db.query.users.findFirst({
-      where: eq(users.email, email),
-    });
+  ) {
+    const userExists = await this.repo.findUserByEmail(email);
     if (userExists) {
       throw createServiceError("User Already Exists", 409);
+    }
+
+    if (isUnder13(dateOfBirth)) {
+      throw createServiceError(
+        "You must be at least 13 years old to create an account",
+        400,
+      );
     }
 
     const storedOtp = this.generateOtp();
@@ -113,18 +115,16 @@ export class AuthService {
     const emailJob = await renderVerifyOtpEmail(storedOtp);
 
     const result = await db.transaction(async (tx) => {
-      const data = {
+      const createdUser = await this.repo.insertUser(tx, {
         email,
         password: hashedPassword,
         firstName,
         lastName,
         dateOfBirth,
-        referal: "",
-      };
+        referral: "",
+      });
 
-      const [createdUser] = await tx.insert(users).values(data).returning();
-
-      await tx.insert(otp).values({
+      await this.repo.insertOtp(tx, {
         email: createdUser.email,
         otp: storedOtp,
         expiresAt: new Date(Date.now() + OTP_EXPIRY_MINUTES * 60 * 1000),
@@ -146,42 +146,24 @@ export class AuthService {
   }
 
   async verifyOtp(email: string, userOtp: string) {
-    const user = await db.query.users.findFirst({
-      where: eq(users.email, email),
-    });
+    const user = await this.repo.findUserByEmail(email);
     if (!user) {
       throw createServiceError("User not found", 404);
     }
 
-    const storedOtp = await db.query.otp.findFirst({
-      where: eq(otp.email, email),
+    const storedOtp = await this.repo.findOtpByEmail(email);
+    if (!storedOtp || storedOtp.otp !== userOtp || storedOtp.expiresAt < new Date()) {
+      throw createServiceError("Invalid or expired OTP", 401);
+    }
+
+    const [updatedUser] = await this.repo.updateUserStandalone(user.id, {
+      emailVerified: true,
     });
-    if (!storedOtp) {
-      throw createServiceError("Invalid or expired OTP", 401);
-    }
-
-    if (storedOtp.otp !== userOtp) {
-      throw createServiceError("Invalid or expired OTP", 401);
-    }
-
-    if (storedOtp.expiresAt < new Date()) {
-      throw createServiceError("Invalid or expired OTP", 401);
-    }
-
-    const updatedUser = await db
-      .update(users)
-      .set({ emailVerified: true })
-      .where(eq(users.id, user.id))
-      .returning();
-    await db.delete(otp).where(eq(otp.email, email));
+    await this.repo.deleteOtp(email);
 
     return {
-      user: updatedUser[0],
-      tokens: this.generateTokens(
-        updatedUser[0].id,
-        updatedUser[0].email,
-        true,
-      ),
+      user: updatedUser,
+      tokens: this.generateTokens(updatedUser.id, updatedUser.email, true),
     };
   }
 
@@ -191,36 +173,17 @@ export class AuthService {
     emailVerified: boolean,
   ): { accessToken: string; refreshToken: string } {
     const payload = { userId, email, emailVerified };
-
-    const accessTokenOptions: SignOptions = {
-      expiresIn: this.jwtExpiresIn,
-    } as SignOptions;
-
     const accessToken = jwt.sign(
       payload,
       this.jwtSecret as Secret,
-      accessTokenOptions,
+      { expiresIn: this.jwtExpiresIn } as SignOptions,
     ) as string;
-
-    const refreshTokenOptions: SignOptions = {
-      expiresIn: this.jwtRefreshExpiresIn,
-    } as SignOptions;
-
     const refreshToken = jwt.sign(
       payload,
       this.jwtRefreshSecret as Secret,
-      refreshTokenOptions,
+      { expiresIn: this.jwtRefreshExpiresIn } as SignOptions,
     ) as string;
-
     return { accessToken, refreshToken };
-  }
-
-  public createTokens(
-    userId: string,
-    email: string,
-    emailVerified: boolean,
-  ): { accessToken: string; refreshToken: string } {
-    return this.generateTokens(userId, email, emailVerified);
   }
 
   private generateOtp() {
@@ -233,7 +196,6 @@ export class AuthService {
 
   private createPasswordResetToken() {
     const rawToken = randomBytes(PASSWORD_RESET_TOKEN_BYTES).toString("hex");
-
     return {
       rawToken,
       tokenHash: this.hashPasswordResetToken(rawToken),
@@ -244,38 +206,20 @@ export class AuthService {
   }
 
   async forgotPassword(email: string): Promise<void> {
-    const user = await db.query.users.findFirst({
-      where: eq(users.email, email),
-    });
-
-    if (!user) {
-      return;
-    }
+    const user = await this.repo.findUserByEmail(email);
+    if (!user) return;
 
     const { rawToken, tokenHash, expiresAt } = this.createPasswordResetToken();
     const resetLink = `${FRONTEND_URL}/reset-password?token=${encodeURIComponent(rawToken)}`;
     const emailJob = await renderResetPasswordEmail(resetLink);
 
     await db.transaction(async (tx) => {
-      await tx
-        .update(passwordResetTokens)
-        .set({
-          usedAt: new Date(),
-          updatedAt: new Date(),
-        })
-        .where(
-          and(
-            eq(passwordResetTokens.userId, user.id),
-            isNull(passwordResetTokens.usedAt),
-          ),
-        );
-
-      await tx.insert(passwordResetTokens).values({
+      await this.repo.invalidatePasswordResetTokens(tx, user.id);
+      await this.repo.insertPasswordResetToken(tx, {
         userId: user.id,
         tokenHash,
         expiresAt,
       });
-
       await jobService.enqueueEmail(tx, "email.auth.reset_password", {
         to: user.email,
         subject: emailJob.subject,
@@ -285,12 +229,9 @@ export class AuthService {
   }
 
   async resetPassword(token: string, password: string) {
-    const resetToken = await db.query.passwordResetTokens.findFirst({
-      where: eq(
-        passwordResetTokens.tokenHash,
-        this.hashPasswordResetToken(token),
-      ),
-    });
+    const resetToken = await this.repo.findPasswordResetTokenByHash(
+      this.hashPasswordResetToken(token),
+    );
 
     if (
       !resetToken ||
@@ -300,52 +241,32 @@ export class AuthService {
       throw createServiceError("Invalid or expired token", 401);
     }
 
-    const user = await db.query.users.findFirst({
-      where: eq(users.id, resetToken.userId),
-    });
+    const user = await this.repo.findUserById(resetToken.userId);
     if (!user) {
       throw createServiceError("User not found", 404);
     }
+
     const hashedPassword = await bcrypt.hash(password, this.bcryptRounds);
 
     await db.transaction(async (tx) => {
       const now = new Date();
-
-      await tx
-        .update(users)
-        .set({
-          password: hashedPassword,
-          sessionInvalidBefore: now,
-          updatedAt: now,
-        })
-        .where(eq(users.id, user.id));
-
-      await tx
-        .update(passwordResetTokens)
-        .set({
-          usedAt: now,
-          updatedAt: now,
-        })
-        .where(
-          and(
-            eq(passwordResetTokens.userId, user.id),
-            isNull(passwordResetTokens.usedAt),
-          ),
-        );
+      await this.repo.updateUser(tx, user.id, {
+        password: hashedPassword,
+        sessionInvalidBefore: now,
+        updatedAt: now,
+      });
+      await this.repo.invalidatePasswordResetTokens(tx, user.id);
     });
 
     return { user };
   }
 
   async login(email: string, password: string) {
-    const userExists = await db.query.users.findFirst({
-      where: eq(users.email, email),
-    });
+    const userExists = await this.repo.findUserByEmail(email);
     if (!userExists) {
       throw createServiceError("Invalid Email or Password", 401);
     }
 
-    // Check if user signed up with Google (no password)
     if (!userExists.password) {
       throw createServiceError(
         "This account was created with Google. Please sign in with Google.",
@@ -353,13 +274,11 @@ export class AuthService {
       );
     }
 
-    //verify the password
     const isPasswordValid = await bcrypt.compare(password, userExists.password);
     if (!isPasswordValid) {
       throw createServiceError("Invalid Email or Password", 401);
     }
 
-    //check if email is verified
     if (!userExists.emailVerified) {
       throw createServiceError(
         "Please verify your email before logging in. Check your inbox for the verification code or request a new one.",
@@ -367,7 +286,6 @@ export class AuthService {
       );
     }
 
-    //return token
     return this.generateTokens(
       userExists.id,
       userExists.email,
@@ -376,28 +294,12 @@ export class AuthService {
   }
 
   async getUserById(userId: string) {
-    const user = await db.query.users.findFirst({
-      where: eq(users.id, userId),
-      columns: {
-        id: true,
-        email: true,
-        firstName: true,
-        lastName: true,
-        dateOfBirth: true,
-        emailVerified: true,
-        createdAt: true,
-        updatedAt: true,
-        password: true,
-        profilePictureUrl: true,
-      },
-    });
-
+    const user = await this.repo.findUserById(userId);
     if (!user) {
       throw createServiceError("User not found", 404);
     }
 
     const { password, ...userWithoutPassword } = user;
-
     return {
       ...userWithoutPassword,
       hasPassword: !!password,
@@ -405,64 +307,41 @@ export class AuthService {
   }
 
   async getUserSessionState(userId: string) {
-    const user = await db.query.users.findFirst({
-      where: eq(users.id, userId),
-      columns: {
-        id: true,
-        sessionInvalidBefore: true,
-      },
-    });
-
+    const user = await this.repo.findUserById(userId);
     if (!user) {
       throw createServiceError("User not found", 404);
     }
-
-    return {
-      sessionInvalidBefore: user.sessionInvalidBefore,
-    };
+    return { sessionInvalidBefore: user.sessionInvalidBefore };
   }
 
   async updateProfile(userId: string, data: UpdateUserRequest) {
-    const user = await db.query.users.findFirst({
-      where: eq(users.id, userId),
-    });
+    const user = await this.repo.findUserById(userId);
     if (!user) {
       throw createServiceError("User not found", 404);
     }
-    const [updatedUser] = await db
-      .update(users)
-      .set(data)
-      .where(eq(users.id, userId))
-      .returning();
-
-    return updatedUser;
+    const [updated] = await this.repo.updateUserStandalone(userId, data);
+    return updated;
   }
 
   async resendOtp(email: string) {
-    const user = await db.query.users.findFirst({
-      where: eq(users.email, email),
-    });
+    const user = await this.repo.findUserByEmail(email);
     if (!user) {
       throw createServiceError("User not found", 404);
     }
+
     const storedOtp = this.generateOtp();
-    const existingOtp = await db.query.otp.findFirst({
-      where: eq(otp.email, user.email),
-    });
+    const existingOtp = await this.repo.findOtpByEmail(user.email);
     const emailJob = await renderVerifyOtpEmail(storedOtp);
 
     await db.transaction(async (tx) => {
       if (existingOtp) {
-        await tx
-          .update(otp)
-          .set({
-            otp: storedOtp,
-            expiresAt: new Date(Date.now() + OTP_EXPIRY_MINUTES * 60 * 1000),
-            updatedAt: new Date(),
-          })
-          .where(eq(otp.email, user.email));
+        await this.repo.updateOtp(tx, user.email, {
+          otp: storedOtp,
+          expiresAt: new Date(Date.now() + OTP_EXPIRY_MINUTES * 60 * 1000),
+          updatedAt: new Date(),
+        });
       } else {
-        await tx.insert(otp).values({
+        await this.repo.insertOtp(tx, {
           email: user.email,
           otp: storedOtp,
           expiresAt: new Date(Date.now() + OTP_EXPIRY_MINUTES * 60 * 1000),
@@ -481,73 +360,44 @@ export class AuthService {
 
   async deleteUser(userId: string): Promise<void> {
     await db.transaction(async (tx) => {
-      const existingDriver = await tx.query.driver.findFirst({
-        where: eq(driver.userId, userId),
-      });
+      const existingDriver = await this.repo.findDriverByUserId(userId);
 
       if (existingDriver) {
-        await tx
-          .update(driver)
-          .set({
-            isActive: false,
-            deletedAt: new Date(),
-            updatedAt: new Date(),
-          })
-          .where(eq(driver.id, existingDriver.id));
+        await jobService.enqueueDriverDeactivationRefund(tx, {
+          driverId: existingDriver.id,
+        });
+        await this.driverRepo.deactivateDriver(tx, existingDriver.id);
       }
 
-      await tx
-        .delete(passwordResetTokens)
-        .where(eq(passwordResetTokens.userId, userId));
-      await tx
-        .delete(userProviders)
-        .where(eq(userProviders.userId, userId));
+      await this.repo.deletePasswordResetTokensByUser(tx, userId);
+      await this.repo.deleteUserProvidersByUser(tx, userId);
 
-      await tx
-        .update(users)
-        .set({
-          firstName: "[deleted]",
-          lastName: "[deleted]",
-          email: `deleted-${userId}@dailyexpress.com`,
-          password: null,
-          dateOfBirth: new Date(0),
-          profilePictureUrl: null,
-          sessionInvalidBefore: new Date(),
-          deletedAt: new Date(),
-          anonymizedAt: new Date(),
-          updatedAt: new Date(),
-        })
-        .where(eq(users.id, userId));
+      await this.repo.updateUser(tx, userId, {
+        firstName: "[deleted]",
+        lastName: "[deleted]",
+        email: `deleted-${userId}@dailyexpress.com`,
+        password: null,
+        dateOfBirth: new Date(0),
+        profilePictureUrl: null,
+        sessionInvalidBefore: new Date(),
+        deletedAt: new Date(),
+        anonymizedAt: new Date(),
+        updatedAt: new Date(),
+      });
     });
   }
 
   async getUserByEmail(email: string) {
-    const user = await db.query.users.findFirst({
-      where: eq(users.email, email),
-    });
-    return user;
+    return this.repo.findUserByEmail(email);
   }
 
   async getProviders(userId: string) {
-    const providers = await db.query.userProviders.findMany({
-      where: eq(userProviders.userId, userId),
-      columns: {
-        provider: true,
-      },
-    });
-    return providers.map((p: typeof providers[number]) => p.provider);
+    const providers = await this.repo.findUserProviders(userId);
+    return providers.map((p) => p.provider);
   }
 
   async disconnectProvider(userId: string, provider: string) {
-    const [userLoginSummary] = await db
-      .select({
-        password: users.password,
-        providerCount: count(userProviders.id),
-      })
-      .from(users)
-      .leftJoin(userProviders, eq(userProviders.userId, users.id))
-      .where(eq(users.id, userId))
-      .groupBy(users.id);
+    const userLoginSummary = await this.repo.findUserLoginSummary(userId);
 
     if (!userLoginSummary) {
       throw createServiceError("User not found", 404);
@@ -560,21 +410,11 @@ export class AuthService {
       );
     }
 
-    await db
-      .delete(userProviders)
-      .where(
-        and(
-          eq(userProviders.userId, userId),
-          eq(userProviders.provider, provider),
-        ),
-      );
+    await this.repo.deleteUserProvider(userId, provider);
   }
 
   async setPassword(userId: string, password: string) {
     const hashedPassword = await bcrypt.hash(password, this.bcryptRounds);
-    await db
-      .update(users)
-      .set({ password: hashedPassword })
-      .where(eq(users.id, userId));
+    await this.repo.updateUserStandalone(userId, { password: hashedPassword });
   }
 }
