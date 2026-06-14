@@ -1,17 +1,18 @@
-import { createHash, randomBytes } from "node:crypto";
 import axios from "axios";
-import { OAuth2Client } from "google-auth-library";
 import type { CookieOptions, Request, Response } from "express";
-import { and, eq } from "drizzle-orm";
+import { OAuth2Client } from "google-auth-library";
+import { createHash, randomBytes } from "node:crypto";
 import { getConfig } from "../config/index";
 import { db } from "../db/connection";
-import { users, userProviders, type User } from "../db/index";
+import { type User } from "../db/index";
 import { getCookieDomain, setAuthCookies } from "../middleware/auth";
-import {
-  GOOGLE_AUTH_FAILURE_REDIRECT_URL,
-  resolveFrontendRedirect,
-} from "./authUrls";
 import { logger, reportError } from "../utils/logger";
+import { AuthRepository } from "./auth.repository";
+import { isUnder13 } from "./validation";
+import {
+    GOOGLE_AUTH_FAILURE_REDIRECT_URL,
+    resolveFrontendRedirect,
+} from "./authUrls";
 
 const GOOGLE_AUTH_URL = "https://accounts.google.com/o/oauth2/v2/auth";
 const GOOGLE_TOKEN_URL = "https://oauth2.googleapis.com/token";
@@ -56,16 +57,9 @@ interface GoogleIdPayload {
 }
 
 interface GooglePeopleResponse {
-  names?: Array<{
-    givenName?: string;
-    familyName?: string;
-  }>;
+  names?: Array<{ givenName?: string; familyName?: string }>;
   birthdays?: Array<{
-    date?: {
-      year?: number;
-      month?: number;
-      day?: number;
-    };
+    date?: { year?: number; month?: number; day?: number };
   }>;
 }
 
@@ -84,6 +78,8 @@ class GoogleOAuthError extends Error {
     this.name = "GoogleOAuthError";
   }
 }
+
+const repo = new AuthRepository();
 
 function base64Url(buffer: Buffer): string {
   return buffer
@@ -116,23 +112,14 @@ function getOAuthCookieOptions(maxAge?: number): CookieOptions {
 }
 
 function getQueryValue(value: unknown): string | undefined {
-  if (typeof value === "string") {
-    return value;
-  }
-
-  if (Array.isArray(value) && typeof value[0] === "string") {
-    return value[0];
-  }
-
+  if (typeof value === "string") return value;
+  if (Array.isArray(value) && typeof value[0] === "string") return value[0];
   return undefined;
 }
 
 function getSignedCookie(req: Request, name: OAuthCookieName): string | null {
-  const signedCookies = req.signedCookies as
-    | Record<string, unknown>
-    | undefined;
+  const signedCookies = req.signedCookies as Record<string, unknown> | undefined;
   const value = signedCookies?.[name];
-
   return typeof value === "string" ? value : null;
 }
 
@@ -188,25 +175,12 @@ export async function completeGoogleOAuth(
     const expectedNonce = getSignedCookie(req, "oauth_nonce");
     const codeVerifier = getSignedCookie(req, "oauth_code_verifier");
 
-    if (!code) {
-      throw new GoogleOAuthError("Missing Google OAuth code");
-    }
-
-    if (!returnedState) {
-      throw new GoogleOAuthError("Missing Google OAuth state");
-    }
-
-    if (!expectedState || returnedState !== expectedState) {
+    if (!code) throw new GoogleOAuthError("Missing Google OAuth code");
+    if (!returnedState) throw new GoogleOAuthError("Missing Google OAuth state");
+    if (!expectedState || returnedState !== expectedState)
       throw new GoogleOAuthError("Invalid Google OAuth state");
-    }
-
-    if (!expectedNonce) {
-      throw new GoogleOAuthError("Missing Google OAuth nonce cookie");
-    }
-
-    if (!codeVerifier) {
-      throw new GoogleOAuthError("Missing Google OAuth PKCE verifier");
-    }
+    if (!expectedNonce) throw new GoogleOAuthError("Missing Google OAuth nonce cookie");
+    if (!codeVerifier) throw new GoogleOAuthError("Missing Google OAuth PKCE verifier");
 
     const tokenResponse = await exchangeCodeForTokens(code, codeVerifier);
     const profile = await verifyGoogleIdentity(tokenResponse, expectedNonce);
@@ -229,9 +203,7 @@ export async function completeGoogleOAuth(
     clearGoogleOAuthCookies(res);
 
     if (error instanceof GoogleOAuthError) {
-      logger.warn("auth.google_oauth_rejected", {
-        reason: error.message,
-      });
+      logger.warn("auth.google_oauth_rejected", { reason: error.message });
     } else {
       reportError(error, {
         source: "google-oauth",
@@ -260,11 +232,7 @@ async function exchangeCodeForTokens(
   const response = await axios.post<GoogleTokenResponse>(
     GOOGLE_TOKEN_URL,
     params.toString(),
-    {
-      headers: {
-        "Content-Type": "application/x-www-form-urlencoded",
-      },
-    },
+    { headers: { "Content-Type": "application/x-www-form-urlencoded" } },
   );
 
   if (!response.data.id_token || !response.data.access_token) {
@@ -286,33 +254,13 @@ async function verifyGoogleIdentity(
   });
   const payload = ticket.getPayload() as GoogleIdPayload | undefined;
 
-  if (!payload) {
-    throw new GoogleOAuthError("Google ID token has no payload");
-  }
-
-  if (payload.iss !== GOOGLE_ISSUER) {
-    throw new GoogleOAuthError("Google ID token issuer is invalid");
-  }
-
-  if (payload.aud !== config.GOOGLE_CLIENT_ID) {
-    throw new GoogleOAuthError("Google ID token audience is invalid");
-  }
-
-  if (!payload.sub) {
-    throw new GoogleOAuthError("Google ID token is missing subject");
-  }
-
-  if (!payload.email) {
-    throw new GoogleOAuthError("Google ID token is missing email");
-  }
-
-  if (payload.email_verified !== true) {
-    throw new GoogleOAuthError("Google email is not verified");
-  }
-
-  if (payload.nonce !== expectedNonce) {
-    throw new GoogleOAuthError("Google ID token nonce is invalid");
-  }
+  if (!payload) throw new GoogleOAuthError("Google ID token has no payload");
+  if (payload.iss !== GOOGLE_ISSUER) throw new GoogleOAuthError("Google ID token issuer is invalid");
+  if (payload.aud !== config.GOOGLE_CLIENT_ID) throw new GoogleOAuthError("Google ID token audience is invalid");
+  if (!payload.sub) throw new GoogleOAuthError("Google ID token is missing subject");
+  if (!payload.email) throw new GoogleOAuthError("Google ID token is missing email");
+  if (payload.email_verified !== true) throw new GoogleOAuthError("Google email is not verified");
+  if (payload.nonce !== expectedNonce) throw new GoogleOAuthError("Google ID token nonce is invalid");
 
   const profileFromToken = {
     firstName: payload.given_name,
@@ -339,19 +287,11 @@ async function verifyGoogleIdentity(
   };
 }
 
-async function getGoogleUserInfo(accessToken: string): Promise<{
-  firstName: string;
-  lastName: string;
-  dateOfBirth: Date | null;
-}> {
+async function getGoogleUserInfo(accessToken: string) {
   try {
     const response = await axios.get<GooglePeopleResponse>(GOOGLE_PEOPLE_URL, {
-      headers: {
-        Authorization: `Bearer ${accessToken}`,
-      },
-      params: {
-        personFields: "names,birthdays",
-      },
+      headers: { Authorization: `Bearer ${accessToken}` },
+      params: { personFields: "names,birthdays" },
     });
 
     const name = response.data.names?.[0];
@@ -367,98 +307,75 @@ async function getGoogleUserInfo(accessToken: string): Promise<{
       source: "google-people-api",
       message: "Error fetching Google user info",
     });
-
-    return {
-      firstName: "Google",
-      lastName: "User",
-      dateOfBirth: null,
-    };
+    return { firstName: "Google", lastName: "User", dateOfBirth: null };
   }
 }
 
 function parseGoogleBirthday(
-  birthday:
-    | {
-        year?: number;
-        month?: number;
-        day?: number;
-      }
-    | undefined,
+  birthday: { year?: number; month?: number; day?: number } | undefined,
 ): Date | null {
-  if (!birthday?.year || !birthday.month || !birthday.day) {
-    return null;
-  }
-
+  if (!birthday?.year || !birthday.month || !birthday.day) return null;
   return new Date(birthday.year, birthday.month - 1, birthday.day);
 }
 
 function parseBirthdate(birthdate: string | undefined): Date | null {
-  if (!birthdate) {
-    return null;
-  }
-
+  if (!birthdate) return null;
   const parsed = new Date(birthdate);
   return Number.isNaN(parsed.getTime()) ? null : parsed;
 }
 
 async function upsertGoogleUser(profile: GoogleProfile): Promise<User> {
   return db.transaction(async (tx) => {
-    const existingProvider = await tx.query.userProviders.findFirst({
-      where: and(
-        eq(userProviders.provider, "google"),
-        eq(userProviders.providerId, profile.googleId),
-      ),
-    });
+    const existingProvider = await repo.findUserProvider(tx, "google", profile.googleId);
 
     if (existingProvider) {
-      const [updatedUser] = await tx
-        .update(users)
-        .set({ profilePictureUrl: profile.picture, updatedAt: new Date() })
-        .where(eq(users.id, existingProvider.userId))
-        .returning();
-
+      const updatedUser = await repo.updateUser(tx, existingProvider.userId, {
+        profilePictureUrl: profile.picture,
+        updatedAt: new Date(),
+      });
       if (!updatedUser) {
         throw new GoogleOAuthError("Google provider is linked to a missing user");
       }
-
       return updatedUser;
     }
 
-    const existingUserByEmail = await tx.query.users.findFirst({
-      where: eq(users.email, profile.email),
-    });
+    const existingUserByEmail = await repo.findUserByEmail(profile.email);
 
     if (existingUserByEmail) {
-      await tx.insert(userProviders).values({
+      await repo.insertUserProvider(tx, {
         userId: existingUserByEmail.id,
         provider: "google",
         providerId: profile.googleId,
       });
 
-      const [updatedUser] = await tx
-        .update(users)
-        .set({ profilePictureUrl: profile.picture, updatedAt: new Date() })
-        .where(eq(users.id, existingUserByEmail.id))
-        .returning();
-
-      return updatedUser;
+      const updated = await repo.updateUser(tx, existingUserByEmail.id, {
+        profilePictureUrl: profile.picture,
+        updatedAt: new Date(),
+      });
+      if (!updated) {
+        throw new GoogleOAuthError("Failed to update existing user");
+      }
+      return updated;
     }
 
-    const [createdUser] = await tx
-      .insert(users)
-      .values({
-        email: profile.email,
-        firstName: profile.firstName,
-        lastName: profile.lastName,
-        password: null,
-        dateOfBirth: profile.dateOfBirth || new Date(0),
-        emailVerified: true,
-        referal: "",
-        profilePictureUrl: profile.picture,
-      })
-      .returning();
+    if (profile.dateOfBirth && isUnder13(profile.dateOfBirth)) {
+      throw new GoogleOAuthError(
+        "You must be at least 13 years old to create an account",
+      );
+    }
 
-    await tx.insert(userProviders).values({
+    const createdUser = await repo.insertUser(tx, {
+      email: profile.email,
+      firstName: profile.firstName,
+      lastName: profile.lastName,
+      password: null,
+      dateOfBirth: profile.dateOfBirth || new Date(0),
+      emailVerified: true,
+      referral: "",
+      profilePictureUrl: profile.picture,
+    });
+
+    await repo.insertUserProvider(tx, {
       userId: createdUser.id,
       provider: "google",
       providerId: profile.googleId,

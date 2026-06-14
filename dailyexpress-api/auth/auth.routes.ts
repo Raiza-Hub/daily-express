@@ -16,21 +16,33 @@ import {
 
 const router: Router = Router();
 
-//public routes
 router.post(
   "/register",
   validateRequest(registerSchema),
   authcontroller.register,
 );
 
-router.post("/login", validateRequest(loginSchema), authcontroller.login);
+router.post(
+  "/login",
+  validateRequest(loginSchema),
+  authcontroller.login
+);
 
-router.get("/resend-otp", authenticateGatewayRequest, authcontroller.resendOtp);
+router.get(
+  "/resend-otp",
+  authenticateGatewayRequest,
+  authcontroller.resendOtp
+);
 
-// Google OAuth routes
-router.get("/google", authcontroller.startGoogleOAuth);
+router.get(
+  "/google",
+  authcontroller.startGoogleOAuth
+);
 
-router.get("/google/callback", authcontroller.completeGoogleOAuth);
+router.get(
+  "/google/callback",
+  authcontroller.completeGoogleOAuth
+);
 
 router.get(
   "/logout",
@@ -55,6 +67,7 @@ router.post(
   validateRequest(resetPasswordSchema),
   authcontroller.resetPassword,
 );
+
 router.get(
   "/profile",
   authenticateVerifiedGatewayRequest,
@@ -62,13 +75,13 @@ router.get(
 );
 
 router.delete(
-  "/profile",
+  "/delete-account",
   authenticateVerifiedGatewayRequest,
   authcontroller.deleteAccount,
 );
 
 router.put(
-  "/profile",
+  "/update-profile",
   authenticateVerifiedGatewayRequest,
   validateRequest(updateProfileSchema),
   authcontroller.updateProfile,
@@ -89,7 +102,7 @@ router.delete(
 
 // Set password (authenticated user sets password without old password)
 router.post(
-  "/password",
+  "/set-password",
   authenticateVerifiedGatewayRequest,
   validateRequest(setPasswordSchema),
   authcontroller.setPassword,

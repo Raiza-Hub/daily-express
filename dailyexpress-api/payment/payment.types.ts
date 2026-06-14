@@ -23,12 +23,6 @@ export interface InitializePaymentInput {
   metadata?: Record<string, unknown>;
 }
 
-export interface UpsertBookingHoldInput {
-  bookingId: string;
-  tripId: string;
-  userId: string;
-  expiresAt: string;
-}
 
 export interface KoraInitializeRequest {
   customer: {

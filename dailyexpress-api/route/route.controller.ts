@@ -1,10 +1,10 @@
-import type { Request, RequestHandler, Response } from "express";
 import { asyncHandler } from "@shared/middleware";
 import { createSuccessResponse } from "@shared/utils";
-import { getAuthenticatedUser } from "../middleware/auth";
+import type { Request, RequestHandler, Response } from "express";
 import { sendErrorResponse } from "../middleware/apiResponses";
-import { RouteService } from "./routeService";
+import { getAuthenticatedUser } from "../middleware/auth";
 import { timeAsync } from "../utils/timing";
+import { RouteService } from "./routeService";
 
 const routeService = new RouteService();
 const ALLOWED_VEHICLE_TYPES = new Set(["car", "bus", "luxury car"]);
@@ -126,7 +126,7 @@ export const deleteRoute: RequestHandler = asyncHandler(
   },
 );
 
-export const getTripsSummaryRange: RequestHandler = asyncHandler(
+export const getDailyTripSummaries: RequestHandler = asyncHandler(
   async (req: Request, res: Response) => {
     const user = getAuthenticatedUser(req);
     const { startDate, endDate } = req.query;
@@ -186,7 +186,7 @@ export const getTripsSummaryRange: RequestHandler = asyncHandler(
     const summaries = await timeAsync(
       "route.trips_summary_range.service",
       { userId: user.userId, startDate, endDate },
-      () => routeService.getTripsSummaryRange(user, startDate, endDate),
+      () => routeService.getDailyTripSummaries(user, startDate, endDate),
     );
     return res
       .status(200)
@@ -408,44 +408,6 @@ export const getTripBookings: RequestHandler = asyncHandler(
     return res
       .status(200)
       .json(createSuccessResponse(bookings, "Bookings fetched successfully"));
-  },
-);
-
-export const createBooking: RequestHandler = asyncHandler(
-  async (req: Request, res: Response) => {
-    const user = getAuthenticatedUser(req);
-    const { routeId, tripDate } = req.body;
-    if (!user) {
-      return sendErrorResponse(res, 401, "Please sign in again to continue.", {
-        code: "AUTHENTICATION_REQUIRED",
-      });
-    }
-    if (!routeId) {
-      return sendErrorResponse(res, 400, "Route ID is required.", {
-        code: "MISSING_ROUTE_ID",
-      });
-    }
-    const parsedTripDate = parseDateOnly(tripDate);
-    if (!parsedTripDate) {
-      return sendErrorResponse(
-        res,
-        400,
-        "Trip date must be in YYYY-MM-DD format.",
-        { code: "INVALID_TRIP_DATE" },
-      );
-    }
-    const booking = await timeAsync(
-      "route.create_booking.service",
-      { userId: user.userId, routeId, tripDate: parsedTripDate },
-      () =>
-        routeService.createBooking(user.userId, {
-          routeId,
-          tripDate: parsedTripDate,
-        }),
-    );
-    return res
-      .status(201)
-      .json(createSuccessResponse(booking, "Booking created successfully"));
   },
 );
 
