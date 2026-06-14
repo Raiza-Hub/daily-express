@@ -188,7 +188,7 @@ VerifyOtpEmail.PreviewProps = {
   otp: "916617",
   expiresInMinutes: 30,
   brandName: "Daily Express",
-  supportEmail: "support@dailyexpress.com",
+  supportEmail: "support@dailyexpress.app",
   year: 2026,
   frontendUrl: "",
 } as VerifyOtpEmailProps;

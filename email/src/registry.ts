@@ -5,6 +5,7 @@ import RefundFailedEmail from "./emails/RefundFailedEmail";
 import ResetPasswordEmail from "./emails/ResetPasswordEmail";
 import VerifyOtpEmail from "./emails/VerifyOtpEmail";
 import PayoutFailedEmail from "./emails/PayoutFailedEmail";
+import TripCancelledEmail from "./emails/TripCancelledEmail";
 
 export const templates = {
   BookingConfirmedEmail: BookingConfirmedEmail,
@@ -12,6 +13,7 @@ export const templates = {
   ResetPasswordEmail: ResetPasswordEmail,
   VerifyOtpEmail: VerifyOtpEmail,
   PayoutFailedEmail: PayoutFailedEmail,
+  TripCancelledEmail: TripCancelledEmail,
 } as const;
 
 export type TemplateName = keyof typeof templates;
@@ -44,6 +46,8 @@ export function getEmailSubject(
       return `Verify your email`;
     case "PayoutFailedEmail":
       return `Payout Failed - Action Required`;
+    case "TripCancelledEmail":
+      return `Trip Cancelled - Refund Initiated`;
     default:
       return "Notification from Daily Express";
   }
