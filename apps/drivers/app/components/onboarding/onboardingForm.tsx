@@ -222,6 +222,11 @@ const OnboardingForm = () => {
             <CurrentStepComponent />
           </div>
 
+          {onboardError && (
+            <p className="mb-4 text-center text-sm text-red-500">
+              {onboardError}
+            </p>
+          )}
           <div className="flex justify-center space-x-4 mb-8">
             <Button
               variant="outline"
@@ -237,11 +242,6 @@ const OnboardingForm = () => {
               Prev step
             </Button>
 
-            {onboardError && (
-              <p className="px-1 pb-2 inline-flex justify-center text-sm text-red-500">
-                {onboardError}
-              </p>
-            )}
             <Button
               className="w-32 cursor-pointer"
               type="button"

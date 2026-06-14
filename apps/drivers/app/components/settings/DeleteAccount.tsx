@@ -37,18 +37,18 @@ const DeleteAccount = () => {
     <div className="mt-10 pt-6 border-t border-red-100">
       <div className="mb-6 py-4 border-b border-gray-100">
         <h2 className="text-xl font-semibold mb-1 text-red-600">
-          Deactivate Account
+          Delete Account
         </h2>
         <p className="text-sm text-muted-foreground">
-          Once you deactivate your account, you will lose access to the
-          platform. Your data will be retained for record-keeping purposes.
+           Permanently delete your account and remove access to the platform.
+      This action cannot be undone.
         </p>
       </div>
       <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
         <div>
-          <p className="text-sm font-medium">Deactivate my account</p>
+          <p className="text-sm font-medium">Permanently delete my account</p>
           <p className="text-xs text-muted-foreground mt-0.5">
-            Once deactivated, your account will no longer be accessible.
+            Once deleted, your account will no longer be accessible.
           </p>
         </div>
         <Button
@@ -59,7 +59,7 @@ const DeleteAccount = () => {
           onClick={handleDelete}
         >
           <TrashIcon className="size-4" />
-          <span>Deactivate Account</span>
+          <span>Delete Account</span>
         </Button>
       </div>
     </div>
