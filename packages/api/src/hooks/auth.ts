@@ -172,7 +172,7 @@ export const updateProfileFn = async (
 ): Promise<User> => {
   try {
     const response = await authApi.put<ApiResponse<User>>(
-      "/profile",
+      "/update-profile",
       data,
     );
     if (!response.data.success || !response.data.data) {
@@ -186,7 +186,7 @@ export const updateProfileFn = async (
 
 export const deleteAccountFn = async (): Promise<void> => {
   try {
-    const response = await authApi.delete<ApiResponse<null>>("/profile");
+    const response = await authApi.delete<ApiResponse<null>>("/delete-account");
     if (!response.data.success) {
       throw new Error(response.data.error || "Failed to delete account");
     }
@@ -297,7 +297,7 @@ export const useDisconnectProvider = (options?: {
 
 export const setPasswordFn = async (password: string): Promise<void> => {
   try {
-    const response = await authApi.post<ApiResponse<null>>("/password", {
+    const response = await authApi.post<ApiResponse<null>>("/set-password", {
       password,
     });
     if (!response.data.success) {

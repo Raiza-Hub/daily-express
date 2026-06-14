@@ -89,7 +89,7 @@ export const getSummary: RequestHandler = asyncHandler(
     const summary = await timeAsync(
       "payout.summary.service",
       { userId: user.userId, week },
-      () => payoutService.getSummary(user, week),
+      () => payoutService.getWeeklySummary(user, week),
     );
     return res
       .status(200)

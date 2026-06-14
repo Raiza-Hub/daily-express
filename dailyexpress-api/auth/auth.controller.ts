@@ -119,26 +119,6 @@ export const getProfile: RequestHandler = asyncHandler(
   },
 );
 
-export const getUserSessionStateInternal: RequestHandler = asyncHandler(
-  async (req: Request, res: Response) => {
-    const userId = req.params.id;
-
-    if (!userId || typeof userId !== "string") {
-      return sendErrorResponse(res, 400, "User ID is required.", {
-        code: "MISSING_USER_ID",
-      });
-    }
-
-    const sessionState = await authService.getUserSessionState(userId);
-
-    return res
-      .status(200)
-      .json(
-        createSuccessResponse(sessionState, "User session state retrieved"),
-      );
-  },
-);
-
 export const deleteAccount: RequestHandler = asyncHandler(
   async (req: Request, res: Response) => {
     const gatewayUser = getAuthenticatedUser(req);

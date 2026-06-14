@@ -5,6 +5,7 @@ export { registerPaymentWebhookWorker } from "./payment-webhook.worker";
 export { registerPayoutWorker } from "./payout.worker";
 export { registerBankVerificationWorker } from "./bank-verification.worker";
 export { registerDriverProfileUploadWorker } from "./driver-profile-upload.worker";
+export { registerDriverDeactivationRefundWorker } from "./driver-deactivation-refund.worker";
 
 export async function startWorkers() {
   const { registerEmailWorker } = await import("./email.worker");
@@ -21,6 +22,9 @@ export async function startWorkers() {
   const { registerDriverProfileUploadWorker } = await import(
     "./driver-profile-upload.worker"
   );
+  const { registerDriverDeactivationRefundWorker } = await import(
+    "./driver-deactivation-refund.worker"
+  );
 
   await Promise.all([
     registerEmailWorker(),
@@ -29,5 +33,6 @@ export async function startWorkers() {
     registerPayoutWorker(),
     registerBankVerificationWorker(),
     registerDriverProfileUploadWorker(),
+    registerDriverDeactivationRefundWorker(),
   ]);
 }

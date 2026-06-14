@@ -192,51 +192,15 @@ export class KoraClient {
   async getBalance() {
     return this.request<KoraBalanceResponse>("/merchant/api/v1/balances");
   }
-
-  private normalizePayoutHistoryItems(data: unknown): KoraPayoutHistoryItem[] {
-    if (Array.isArray(data)) {
-      return data.filter(
-        (item): item is KoraPayoutHistoryItem =>
-          Boolean(item) &&
-          typeof item === "object" &&
-          typeof (item as KoraPayoutHistoryItem).reference === "string",
-      );
-    }
-
-    if (
-      data &&
-      typeof data === "object" &&
-      Array.isArray((data as { data?: unknown[] }).data)
-    ) {
-      return this.normalizePayoutHistoryItems(
-        (data as { data?: unknown[] }).data,
-      );
-    }
-
-    if (
-      data &&
-      typeof data === "object" &&
-      typeof (data as KoraPayoutHistoryItem).reference === "string"
-    ) {
-      return [data as KoraPayoutHistoryItem];
-    }
-
-    return [];
-  }
-
   async findPayoutByReference(reference: string) {
-    const response = await this.request<unknown>(
-      "/merchant/api/v1/payouts?limit=100",
-    );
-
-    const payout = this.normalizePayoutHistoryItems(response.data).find(
-      (item) => item.reference === reference,
-    );
-
-    return {
-      data: payout || null,
-      raw: response.raw,
-    };
+    try {
+      const response = await this.request<KoraPayoutHistoryItem>(
+        `/merchant/api/v1/payouts/${encodeURIComponent(reference)}`,
+      );
+      return { data: response.data, raw: response.raw };
+    } catch {
+      return { data: null, raw: null };
+    }
   }
 
   verifyWebhookSignature(

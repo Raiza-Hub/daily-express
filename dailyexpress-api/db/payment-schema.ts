@@ -96,28 +96,11 @@ export const webhookProcessed = pgTable("webhook_processed", {
     .notNull(),
 });
 
-export const bookingHold = pgTable(
-  "booking_hold",
-  {
-    id: uuid("id").defaultRandom().primaryKey(),
-    bookingId: uuid("booking_id").references(() => booking.id, { onDelete: "cascade" }).notNull().unique(),
-    tripId: uuid("trip_id").references(() => trip.id, { onDelete: "restrict" }).notNull(),
-    userId: uuid("user_id").references(() => users.id, { onDelete: "cascade" }).notNull(),
-    expiresAt: timestamp("expires_at", { mode: "date" }).notNull(),
-    pgBossJobId: text("pg_boss_job_id"),
-    createdAt: timestamp("created_at", { mode: "date" }).defaultNow().notNull(),
-    updatedAt: timestamp("updated_at", { mode: "date" }).defaultNow().notNull(),
-  },
-  (table) => [index("booking_hold_expires_at_idx").on(table.expiresAt)],
-);
-
 export const paymentSchema = {
   payment,
   paymentWebhook,
   webhookProcessed,
-  bookingHold,
 };
 
 export type Payment = typeof payment.$inferSelect;
 export type PaymentWebhook = typeof paymentWebhook.$inferSelect;
-export type BookingHold = typeof bookingHold.$inferSelect;

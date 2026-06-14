@@ -61,3 +61,19 @@ export function formatRouteTime(date: Date) {
     minute: "2-digit",
   }).format(date);
 }
+
+export function getStartOfTodayInRouteTimezone(): Date {
+  const tz = getRouteServiceTimeZone();
+  const todayKey = formatDateKey(new Date(), tz);
+  const utcMidnight = new Date(`${todayKey}T00:00:00.000Z`);
+  const parts = getDateTimeParts(utcMidnight, tz);
+  const localAtUtcMidnight = Date.UTC(
+    parts.year,
+    parts.month - 1,
+    parts.day,
+    parts.hour,
+    parts.minute,
+  );
+  const offsetMs = localAtUtcMidnight - utcMidnight.getTime();
+  return new Date(utcMidnight.getTime() - offsetMs);
+}
