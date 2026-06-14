@@ -111,7 +111,7 @@ const TripStatusFilter = () => {
               onChange={(e) =>
                 dispatch({ type: "setBookingRef", value: e.target.value })
               }
-              placeholder="e.g. DX-1234567890-ABC"
+              placeholder="e.g. 260606180100124386343403"
               className="w-full text-sm font-medium bg-transparent outline-none"
             />
           </div>

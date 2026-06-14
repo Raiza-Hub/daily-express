@@ -19,13 +19,13 @@ export default function StatsCard() {
       name: "Pending Payments",
       value: isLoading ? "..." : formatCurrency(stats?.pendingPayments || 0),
     },
+     {
+      name: "In Review",
+      value: isLoading ? "..." : formatCurrency(stats?.inReviewPayments || 0),
+    },
     {
       name: "Passengers",
       value: isLoading ? "..." : String(stats?.totalPassengers || 0),
-    },
-    {
-      name: "In Review",
-      value: isLoading ? "..." : formatCurrency(stats?.inReviewPayments || 0),
     },
   ];
 
