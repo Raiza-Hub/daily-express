@@ -36,7 +36,7 @@ router.patch(
 router.get(
   "/driver/trips-summary-range",
   authenticateVerifiedGatewayRequest,
-  routeController.getTripsSummaryRange,
+  routeController.getDailyTripSummaries,
 );
 router.delete(
   "/driver/route/:id",
@@ -59,11 +59,6 @@ router.get(
   routeController.searchBookingByRef,
 );
 router.get("/search", routeController.searchRoutes);
-router.post(
-  "/user/booking",
-  authenticateVerifiedGatewayRequest,
-  routeController.createBooking,
-);
 router.post(
   "/user/booking/checkout",
   authenticateVerifiedGatewayRequest,

@@ -18,7 +18,7 @@ export const users = pgTable("users", {
   emailVerified: boolean("email_verified")
     .$defaultFn(() => false)
     .notNull(),
-  referal: text("referal"),
+  referral: text("referral"),
   profilePictureUrl: text("profile_picture_url"),
   sessionInvalidBefore: timestamp("session_invalid_before", { mode: "date" }),
   deletedAt: timestamp("deleted_at", { mode: "date" }),

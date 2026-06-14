@@ -1,4 +1,5 @@
 import { createServiceError } from "@shared/utils";
+import { randomInt } from "node:crypto";
 import { KoraChannel } from "../payment/payment.types";
 import type { WebhookJobData } from "../workers/boss";
 import { formatRouteDate, formatRouteTime } from "./timezone";
@@ -19,6 +20,20 @@ export function dedupeChannels(channels?: KoraChannel[]) {
   }
 
   return uniqueChannels;
+}
+
+export function generateReference(): string {
+  const now = new Date();
+  const yymmdd =
+    now.getFullYear().toString().slice(-2) +
+    (now.getMonth() + 1).toString().padStart(2, "0") +
+    now.getDate().toString().padStart(2, "0");
+  const hhmmss =
+    now.getHours().toString().padStart(2, "0") +
+    now.getMinutes().toString().padStart(2, "0") +
+    now.getSeconds().toString().padStart(2, "0");
+  const random = randomInt(0, 10 ** 12).toString().padStart(12, "0");
+  return `${yymmdd}${hhmmss}${random}`;
 }
 
 export function normalizeAmount(value: number | string | null | undefined) {

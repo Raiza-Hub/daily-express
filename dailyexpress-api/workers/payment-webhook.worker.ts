@@ -16,7 +16,7 @@ export async function registerPaymentWebhookWorker() {
   const boss = await getBoss();
 
   await boss.work<WebhookJobData>(
-    QUEUES.PROCESS_WEBHOOK,
+    QUEUES.WEBHOOK_PROCESS,
     async ([job]) => {
       logger.info("worker.payment_webhook.started", {
         jobId: job.id,
@@ -39,7 +39,7 @@ export async function registerPaymentWebhookWorker() {
   );
 
   await boss.work<WebhookJobData>(
-    QUEUES.PROCESS_WEBHOOK_DLQ,
+    QUEUES.WEBHOOK_PROCESS_DLQ,
     async ([job]) => {
       logger.error("worker.payment_webhook.dlq", {
         jobId: job.id,
