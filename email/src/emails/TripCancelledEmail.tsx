@@ -1,0 +1,237 @@
+import {
+    Body,
+    Container,
+    Head,
+    Hr,
+    Html,
+    Img,
+    Link,
+    Preview,
+    Section,
+    Text,
+} from "@react-email/components";
+import { EMAIL_LOGO_CONTENT_ID } from "../assets";
+
+export interface TripCancelledEmailProps {
+  frontendUrl: string;
+  customerName: string | null;
+  customerEmail: string;
+  paymentReference: string;
+  productName: string;
+  amountMinor: number;
+  currency?: string;
+  refundReference: string;
+  supportEmail?: string;
+  supportPhone?: string;
+}
+
+function formatCurrency(amountMinor: number, currency: string = "NGN") {
+  return new Intl.NumberFormat("en-NG", {
+    style: "currency",
+    currency,
+    minimumFractionDigits: 2,
+  }).format(amountMinor / 100);
+}
+
+const TripCancelledEmail = ({
+  customerName,
+  customerEmail,
+  paymentReference,
+  productName,
+  amountMinor,
+  currency = "NGN",
+  refundReference,
+  supportEmail = "support@dailyexpress.app",
+  supportPhone = "+234 9063611541",
+}: TripCancelledEmailProps) => {
+  const greetingName = customerName || customerEmail;
+  const previewText = "Your trip has been cancelled and a refund is being processed";
+
+  return (
+    <Html>
+      <Head />
+      <Preview>{previewText}</Preview>
+      <Body style={main}>
+        <Container style={page}>
+          <Section style={brandSection}>
+            <Img
+              src={`cid:${EMAIL_LOGO_CONTENT_ID}`}
+              alt="Daily Express Logo"
+              width="112"
+              height="40"
+              style={logo}
+            />
+          </Section>
+
+          <Container style={card}>
+            <Text style={greeting}>Dear {greetingName},</Text>
+
+            <Text style={summary}>
+              We're sorry to let you know that your trip, {" "}
+              <strong style={strong}>{productName}</strong> has been cancelled. 
+Unfortunately, this occurred because the assigned driver is no longer available 
+on our platform. We understand how inconvenient this can be, and we sincerely apologise.
+            </Text>
+
+            <Text style={summary}>
+              As a result, we have immediately initiated a full refund of{" "}
+              <strong style={strong}>{formatCurrency(amountMinor, currency)}</strong>{" "}
+              to your original payment method. You can expect this to reflect in your account within 
+3–5 business days, though processing times may vary depending on your bank or 
+card provider.
+            </Text>
+
+            <Hr style={divider} />
+
+            <Text style={sectionTitle}>Refund Details</Text>
+            <Text style={detail}>
+              Payment reference:{" "}
+              <strong style={strong}>{paymentReference}</strong>
+            </Text>
+            <Text style={detail}>
+              Refund reference:{" "}
+              <strong style={strong}>{refundReference}</strong>
+            </Text>
+            <Text style={detail}>
+              Amount:{" "}
+              <strong style={strong}>
+                {formatCurrency(amountMinor, currency)}
+              </strong>
+            </Text>
+            {/* <Text style={detail}>
+              Status:{" "}
+              <strong style={strong}>Processing</strong>
+            </Text> */}
+
+            <Hr style={divider} />
+
+            <Text style={supportText}>
+              Our support team is available to assist you should you have any questions about 
+your refund or your next booking. You can reach us through:
+            </Text>
+            <Text style={supportText}>
+              Phone: <strong style={strong}>{supportPhone}</strong>
+            </Text>
+            <Text style={supportText}>
+              Email:{" "}
+              <Link href={`mailto:${supportEmail}`} style={supportLink}>
+                {supportEmail}
+              </Link>
+            </Text>
+
+            <Hr style={divider} />
+
+            <Text style={footerText}>
+              We truly regret the disruption to your travel plans and appreciate your 
+understanding. We remain committed to providing you with a reliable and 
+seamless experience on every journey.
+            </Text>
+            <Text style={footerText}>The Daily Express Team</Text>
+          </Container>
+        </Container>
+      </Body>
+    </Html>
+  );
+};
+
+const main = {
+  backgroundColor: "#ffffff",
+  color: "#333",
+  fontFamily: "'Helvetica Neue', Arial, sans-serif",
+  padding: "0",
+};
+
+const page = {
+  margin: "0 auto",
+  maxWidth: "600px",
+  padding: "0 0 32px",
+};
+
+const brandSection = {
+  backgroundColor: "#0f172a",
+  borderRadius: "12px 12px 0 0",
+  padding: "24px 40px",
+  marginBottom: "0",
+  textAlign: "center" as const,
+};
+
+const logo = {
+  display: "inline-block",
+  height: "40px",
+  width: "112px",
+};
+
+const card = {
+  borderRadius: "0 0 12px 12px",
+  padding: "32px 40px 28px",
+};
+
+const greeting = {
+  color: "#111",
+  fontSize: "14px",
+  marginBottom: "8px",
+};
+
+const summary = {
+  color: "#111",
+  fontSize: "14px",
+  lineHeight: "22px",
+  marginBottom: "14px",
+};
+
+const divider = {
+  borderTop: "1px solid #e4e7ec",
+  margin: "24px 0",
+};
+
+const sectionTitle = {
+  color: "#111",
+  fontSize: "14px",
+  fontWeight: "bold" as const,
+  marginBottom: "12px",
+};
+
+const detail = {
+  color: "#333",
+  fontSize: "13px",
+  lineHeight: "20px",
+  margin: "0 0 8px",
+};
+
+const supportText = {
+  color: "#333",
+  fontSize: "13px",
+  lineHeight: "21px",
+  marginBottom: "6px",
+};
+
+const supportLink = {
+  color: "#2563eb",
+  textDecoration: "none",
+};
+
+const strong = {
+  color: "#111",
+};
+
+const footerText = {
+  color: "#666",
+  fontSize: "12px",
+  margin: "4px 0",
+  textAlign: "center" as const,
+};
+
+TripCancelledEmail.PreviewProps = {
+  frontendUrl: "",
+  customerName: "Ada Okafor",
+  customerEmail: "ada@example.com",
+  paymentReference: "PAY-REF-2026-001",
+  productName: "Lagos to Abuja Trip",
+  amountMinor: 1250000,
+  currency: "NGN",
+  refundReference: "RFD-PAY-REF-2026-001",
+  supportEmail: "support@dailyexpress.app",
+  supportPhone: "+234 9063611541",
+} as TripCancelledEmailProps;
+
+export default TripCancelledEmail;
