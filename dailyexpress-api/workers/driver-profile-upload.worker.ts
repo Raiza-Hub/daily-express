@@ -1,4 +1,4 @@
-import { and, eq, isNull } from "drizzle-orm";
+import { and, eq, gt, isNull } from "drizzle-orm";
 import { Readable } from "stream";
 import { sentryServer } from "@shared/sentry";
 import { db } from "../db/connection";
@@ -9,7 +9,7 @@ import {
   extractPublicIdFromUrl,
   type File,
 } from "../driver/cloudinary";
-import { NotificationService } from "../notification/notificationService";
+import { notificationService } from "../notification/notification.service";
 import { publishNotificationCreated } from "../notification/realtime";
 import { logger } from "../utils/logger";
 import {
@@ -18,7 +18,7 @@ import {
   type DriverProfileImageUploadJobData,
 } from "./boss";
 
-const notificationService = new NotificationService();
+
 
 function decodeUploadBase64(record: typeof driverProfileImageUpload.$inferSelect) {
   const fileBase64 = record.fileBase64.trim();
@@ -66,7 +66,7 @@ async function createUploadNotification(input: {
 }) {
   const notification = await db.transaction(async (tx) =>
     notificationService.createForDriverInTransaction(tx, input.driverId, {
-      notificationKey: `profile-picture-upload:${input.uploadId}:${
+      notificationKey: `profile:picture:upload:${input.uploadId}:${
         input.success ? "success" : "failed"
       }`,
       kind: "event",
@@ -112,6 +112,26 @@ async function processUpload(uploadId: string) {
       .set({
         status: "failed",
         errorMessage: "Driver no longer exists",
+        processedAt: new Date(),
+        updatedAt: new Date(),
+      })
+      .where(eq(driverProfileImageUpload.id, uploadId));
+    return;
+  }
+
+  const newerUpload = await db.query.driverProfileImageUpload.findFirst({
+    where: and(
+      eq(driverProfileImageUpload.driverId, uploadRecord.driverId),
+      gt(driverProfileImageUpload.createdAt, uploadRecord.createdAt),
+    ),
+  });
+
+  if (newerUpload) {
+    await db
+      .update(driverProfileImageUpload)
+      .set({
+        status: "failed",
+        errorMessage: "Profile picture upload was superseded by a newer upload.",
         processedAt: new Date(),
         updatedAt: new Date(),
       })
