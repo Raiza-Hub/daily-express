@@ -1,15 +1,16 @@
 import type { KoraCheckoutChannel } from "@shared/types";
+import type { DbTransaction } from "../db/connection";
+
+export type PaymentTransaction = DbTransaction;
 
 export type PaymentStatus =
   | "initialized"
   | "pending"
+  | "processing"
   | "successful"
   | "failed"
   | "cancelled"
-  | "expired"
-  | "refund_pending"
-  | "refunded"
-  | "refund_failed";
+  | "expired";
 
 export type KoraChannel = KoraCheckoutChannel;
 
@@ -85,6 +86,7 @@ export interface KoraWebhookPayload {
 export interface KoraRefundRequest {
   reference: string;
   payment_reference: string;
+  amount: number;
   reason: string;
 }
 

@@ -32,6 +32,7 @@ export const createTripCheckoutFn = async (
     >("/user/booking/checkout", {
       routeId: data.routeId,
       tripDate: data.tripDate,
+      vehicleType: data.vehicleType,
     });
 
     if (!bookingResponse.data.success || !bookingResponse.data.data) {

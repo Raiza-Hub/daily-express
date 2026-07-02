@@ -1,5 +1,7 @@
 import { createHmac, timingSafeEqual } from "node:crypto";
+import CircuitBreaker from "opossum";
 import { getConfig } from "../config/index";
+import { logger } from "../utils/logger";
 import type {
   KoraInitializeRequest,
   KoraInitializeResponse,
@@ -37,23 +39,42 @@ function getKoraErrorMessage(
 export class KoraClient {
   private baseUrl: string;
   private secretKey: string;
+  private breaker: CircuitBreaker;
 
   constructor() {
     const config = getConfig();
     this.baseUrl = config.KORA_BASE_URL;
     this.secretKey = config.KORA_SECRET_KEY;
+
+    this.breaker = new CircuitBreaker(
+      async (path: string, options: RequestInit = {}) =>
+        this.rawRequest(path, options),
+      {
+        timeout: config.KORA_TIMEOUT_MS,
+        errorThresholdPercentage: 50,
+        resetTimeout: 30000,
+        volumeThreshold: 10,
+        name: "kora-api",
+      },
+    );
+
+    this.breaker.on("open", () => logger.warn("kora.circuit_open"));
+    this.breaker.on("halfOpen", () => logger.info("kora.circuit_half_open"));
+    this.breaker.on("close", () => logger.info("kora.circuit_closed"));
   }
 
-  private async request<T>(
+  private async rawRequest<T>(
     path: string,
     options: RequestInit = {},
   ): Promise<{
     data: T;
     raw: KoraApiEnvelope<T>;
   }> {
+    const config = getConfig();
     const url = `${this.baseUrl}${path}`;
     const response = await fetch(url, {
       ...options,
+      signal: AbortSignal.timeout(config.KORA_TIMEOUT_MS),
       headers: {
         Authorization: `Bearer ${this.secretKey}`,
         "Content-Type": "application/json",
@@ -98,6 +119,19 @@ export class KoraClient {
       data: raw.data,
       raw,
     };
+  }
+
+  private async request<T>(
+    path: string,
+    options: RequestInit = {},
+  ): Promise<{
+    data: T;
+    raw: KoraApiEnvelope<T>;
+  }> {
+    return this.breaker.fire(path, options) as Promise<{
+      data: T;
+      raw: KoraApiEnvelope<T>;
+    }>;
   }
 
   async initializeTransaction(data: KoraInitializeRequest) {
@@ -230,3 +264,5 @@ export class KoraClient {
     }
   }
 }
+
+export const koraClient = new KoraClient();
