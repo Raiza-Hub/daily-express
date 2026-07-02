@@ -87,6 +87,10 @@ export const authSchema = {
 };
 
 export type User = typeof users.$inferSelect;
+export type UserRecord = User;
 export type Otp = typeof otp.$inferSelect;
+export type OtpRecord = Otp;
 export type UserProvider = typeof userProviders.$inferSelect;
+export type UserProviderRecord = UserProvider;
 export type PasswordResetToken = typeof passwordResetTokens.$inferSelect;
+export type PasswordResetTokenRecord = PasswordResetToken;

@@ -42,6 +42,9 @@ export interface CreateDriverRequest {
   bankCode: string;
   accountNumber: string;
   accountName: string;
+  kycType: string;
+  kycId: string;
+  kycConsent: boolean;
 }
 
 export interface Driver {
@@ -65,12 +68,19 @@ export interface Driver {
   bankVerificationFailureReason?: string | null;
   bankVerificationRequestedAt?: Date | null;
   bankVerifiedAt?: Date | null;
+  kycStatus: KycStatus;
+  kycType?: string | null;
+  kycVerificationReference?: string | null;
+  kycFailureReason?: string | null;
+  kycRequestedAt?: Date | null;
+  kycVerifiedAt?: Date | null;
   isActive?: boolean;
   createdAt: Date;
   updatedAt: Date;
 }
 
 export type BankVerificationStatus = "pending" | "active" | "failed";
+export type KycStatus = "none" | "pending" | "active" | "failed";
 
 export interface DriverPublicProfile {
   id: string;
@@ -108,6 +118,9 @@ export interface UpdateProfileRequest {
   bankCode?: string;
   accountNumber?: string;
   accountName?: string;
+  kycType?: string;
+  kycId?: string;
+  kycConsent?: boolean;
 }
 
 export interface ServiceResponse<T = any> {
@@ -168,7 +181,6 @@ export function logError(error: Error, context?: Record<string, any>): void {
 
 export interface Route {
   id: string;
-  driverId: string;
   pickup_location_title: string;
   pickup_location_locality: string;
   pickup_location_label: string;
@@ -178,25 +190,14 @@ export interface Route {
   intermediate_stops_title: string | null;
   intermediate_stops_locality: string | null;
   intermediate_stops_label: string | null;
-  vehicleType: "car" | "bus" | "luxury car";
   meeting_point: string;
-  availableSeats: number;
-  remainingSeats: number;
-  price: number;
-  departure_time: Date;
-  arrival_time: Date;
+  priceCar: number;
+  priceBus: number;
+  departure_time: string;
+  arrival_time: string;
   status: "inactive" | "pending" | "active";
   createdAt: Date;
   updatedAt: Date;
-  driver: {
-    id: string;
-    firstName: string;
-    lastName: string;
-    phone: string;
-    profile_pic: string | null;
-    country: string;
-    state: string;
-  };
 }
 export interface CreateRoute {
   driverId?: string;
@@ -209,12 +210,11 @@ export interface CreateRoute {
   intermediate_stops_title: string | null;
   intermediate_stops_locality: string | null;
   intermediate_stops_label: string | null;
-  vehicleType: "car" | "bus" | "luxury car";
   meeting_point: string;
-  availableSeats: number;
-  price: number;
-  departure_time: Date;
-  arrival_time: Date;
+  priceCar: number;
+  priceBus: number;
+  departure_time: string;
+  arrival_time: string;
   status: "inactive" | "pending" | "active";
 }
 
@@ -222,7 +222,7 @@ export interface SearchRoutesRequest {
   from: string;
   to: string;
   date: string;
-  vehicleType?: string[];
+  departureTime?: string;
 }
 
 export interface updateRouteRequest {
@@ -235,14 +235,15 @@ export interface updateRouteRequest {
   intermediate_stops_title?: string | null;
   intermediate_stops_locality?: string | null;
   intermediate_stops_label?: string | null;
-  vehicleType?: "car" | "bus" | "luxury car";
   meeting_point?: string;
-  availableSeats?: number;
-  price?: number;
-  departure_time?: Date;
-  arrival_time?: Date;
+  priceCar?: number;
+  priceBus?: number;
+  departure_time?: string;
+  arrival_time?: string;
   status?: "inactive" | "pending" | "active";
 }
+
+export type TripStatus = "pending" | "confirmed" | "cancelled" | "completed" | "awaiting_driver";
 
 export interface CreateTrip {
   routeId: string;
@@ -250,27 +251,17 @@ export interface CreateTrip {
   driverId?: string;
   capacity?: number;
   bookedSeats?: number;
-  status?:
-    | "pending"
-    | "confirmed"
-    | "cancelled"
-    | "completed"
-    | "booking_closed";
+  status?: TripStatus;
 }
 
 export interface Trip {
   id: string;
   routeId: string;
-  driverId: string;
+  driverId: string | null;
   date: Date;
   capacity: number;
   bookedSeats: number;
-  status:
-    | "pending"
-    | "confirmed"
-    | "cancelled"
-    | "completed"
-    | "booking_closed";
+  status: TripStatus;
   createdAt: Date;
   updatedAt: Date;
 }
@@ -291,17 +282,12 @@ export interface TripsSummary {
 
 export interface Booking {
   id: string;
-  tripId: string;
+  tripId: string | null;
   userId: string;
   seatNumber: number | null;
   fareAmount: number;
   currency: string;
-  status:
-    | "pending"
-    | "confirmed"
-    | "cancelled"
-    | "completed"
-    | "booking_closed";
+  status: TripStatus;
   expiresAt?: Date | null;
   paymentReference?: string | null;
   paymentStatus?: string | null;
@@ -311,12 +297,12 @@ export interface Booking {
 
 export interface UserBookingDetails extends Booking {
   trip: DriverTripDetails;
-  driver?: Route["driver"] | null;
 }
 
 export interface CreateBooking {
   routeId: string;
   tripDate: string;
+  vehicleType: "car" | "bus";
 }
 
 export interface updateBookingRequest {
@@ -385,6 +371,7 @@ export interface Payment {
 export interface CreateTripCheckoutRequest {
   routeId: string;
   tripDate: string;
+  vehicleType: "car" | "bus";
   channels?: KoraCheckoutChannel[];
   productName: string;
   productDescription: string;
@@ -572,6 +559,49 @@ export const driverNotificationSchema: z.ZodType<DriverNotification> = z.object(
   createdAt: z.union([z.string(), z.date()]),
   updatedAt: z.union([z.string(), z.date()]),
 });
+
+export type VehicleStatus = "available" | "in_use";
+
+export interface Vehicle {
+  id: string;
+  plateNumber: string;
+  make: string;
+  model: string;
+  capacity: number;
+  color: string;
+  status: VehicleStatus;
+  createdAt: Date;
+  updatedAt: Date;
+}
+
+export interface CreateVehicleRequest {
+  plateNumber: string;
+  make: string;
+  model: string;
+  capacity: number;
+  color: string;
+}
+
+export interface UpdateVehicleRequest {
+  plateNumber?: string;
+  make?: string;
+  model?: string;
+  capacity?: number;
+  color?: string;
+}
+
+export interface DriverInfoResponse {
+  firstName: string;
+  lastName: string;
+  phoneNumber: string;
+  country: string;
+  state: string;
+  profilePictureUrl: string | null;
+  vehicleMake: string;
+  vehicleModel: string;
+  vehiclePlateNumber: string;
+  vehicleColor: string;
+}
 
 export const driverNotificationRealtimeEnvelopeSchema = z.object({
   version: z.literal(DRIVER_NOTIFICATION_REALTIME_VERSION),
