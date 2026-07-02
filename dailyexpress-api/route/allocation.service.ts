@@ -101,7 +101,7 @@ export class AllocationService {
                t.created_at, t.updated_at
         FROM ${trip} t
         WHERE t.route_id = ${bookingRecord.routeId}
-          AND t.date = ${bookingRecord.tripDate}
+          AND t.date = ${tripDateStr}::date
           AND t.vehicle_type = ${bookingRecord.vehicleType}
           AND t.booked_seats < t.capacity
           AND t.status IN ('awaiting_driver', 'pending', 'confirmed')
@@ -127,7 +127,7 @@ export class AllocationService {
         const capacity = VEHICLE_CAPACITY[bookingRecord.vehicleType] ?? 40;
         const newTripRows = (await tx.execute(sql`
           INSERT INTO ${trip} (route_id, date, vehicle_type, capacity, booked_seats, status, created_at, updated_at)
-          VALUES (${bookingRecord.routeId}, ${bookingRecord.tripDate}, ${bookingRecord.vehicleType}, ${capacity}, 0, 'awaiting_driver', now(), now())
+          VALUES (${bookingRecord.routeId}::text, ${tripDateStr}::text, ${bookingRecord.vehicleType}::text, ${capacity}, 0, 'awaiting_driver', now(), now())
           RETURNING id, capacity, driver_id
         `)) as Array<{ id: string; capacity: number; driver_id: null }>;
 
@@ -188,7 +188,7 @@ export class AllocationService {
             gross_amount_minor, fee_amount_minor, net_amount_minor,
             currency, status, source_event_id, created_at, updated_at)
           VALUES (${tripDriverId}, ${bookingId}, ${tripId}, ${bookingRecord.routeId},
-            ${bookingRecord.tripDate}, ${minor}, 0, ${minor},
+            ${tripDateStr}::date, ${minor}, 0, ${minor},
             'NGN', 'pending_trip_completion', ${`payment:${reference}:allocation-driver-present`}, now(), now())
         `);
         await tx.execute(sql`
