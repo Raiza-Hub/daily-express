@@ -1,18 +1,17 @@
 import { createServiceError } from "@shared/utils";
 import { and, desc, eq, getTableColumns, inArray, lt, ne, notInArray, sql } from "drizzle-orm";
 import { db } from "../db/connection";
-import { booking, driver, route, trip, users } from "../db/index";
+import { booking, driver, externalDriver, route, trip, users, vehicle, type BookingRecord, type TripRecord, type RouteRecord } from "../db/index";
 import { logger } from "../utils/logger";
 import {
+    formatBusinessDate,
     getBusinessDayWindow,
     getScheduledDepartureTime,
     HIDDEN_BOOKING_PAYMENT_STATUSES,
-    isConstraintError
 } from "../utils/route";
 import { timeAsync } from "../utils/timing";
-import { RouteRepository } from "./route.repository";
+import { RouteRepository, routeRepository } from "./route.repository";
 import {
-    BOOKABLE_TRIP_STATUSES,
     normalizePageLimit,
     decodeCursor,
     encodeCursor,
@@ -20,26 +19,148 @@ import {
     VISIBLE_BOOKING_STATUSES,
 } from "./utils";
 
-type RouteTransaction = Parameters<Parameters<typeof db.transaction>[0]>[0];
-type BookingRecord = typeof booking.$inferSelect;
-type TripRecord = typeof trip.$inferSelect;
-type RouteRecord = typeof route.$inferSelect;
-
-type CreateBookingInput = {
+export type CreateBookingInput = {
   routeId: string;
   tripDate: string;
+  vehicleType: "car" | "bus";
 };
 
 export class BookingService {
   constructor(private repo: RouteRepository) {}
 
   async createCheckoutBooking(userId: string, input: CreateBookingInput) {
-    const result = await this.createBookingResult(userId, input);
+    const passengerRecord = await this.repo.findUserById(userId);
+    if (!passengerRecord) {
+      throw createServiceError("Passenger not found", 404);
+    }
+
+    const routeRecord = await this.repo.findRouteById(input.routeId);
+    if (!routeRecord) throw createServiceError("Route not found", 404);
+    if (routeRecord.status !== "active") {
+      throw createServiceError("Route is not open for booking", 400);
+    }
+
+    const scheduledDepartureTime = getScheduledDepartureTime(
+      input.tripDate,
+      routeRecord.departure_time,
+    );
+    if (scheduledDepartureTime <= new Date()) {
+      throw createServiceError(
+        "This trip has already departed and can no longer be booked",
+        400,
+      );
+    }
+
+    const { start } = getBusinessDayWindow(input.tripDate);
+
+    const fareAmount =
+      input.vehicleType === "car" ? routeRecord.priceCar : routeRecord.priceBus;
+
+    const existingBooking = await db.query.booking.findFirst({
+      where: and(
+        eq(booking.routeId, routeRecord.id),
+        eq(booking.tripDate, start),
+        eq(booking.userId, userId),
+        eq(booking.vehicleType, input.vehicleType),
+        inArray(booking.status, ["pending", "confirmed"]),
+      ),
+    });
+
+    if (existingBooking) {
+      const notExpired = existingBooking.expiresAt && existingBooking.expiresAt.getTime() > Date.now();
+
+      if (existingBooking.status === "confirmed" || notExpired) {
+        await db
+          .update(booking)
+          .set({ fareAmount, updatedAt: new Date() })
+          .where(eq(booking.id, existingBooking.id));
+
+        logger.info("booking.reused", {
+          bookingId: existingBooking.id,
+          routeId: existingBooking.routeId,
+          userId,
+        });
+        return {
+          booking: { ...existingBooking, fareAmount },
+          fareAmount,
+          currency: existingBooking.currency,
+          expiresAt: existingBooking.expiresAt,
+        };
+      }
+
+      await db
+        .update(booking)
+        .set({
+          status: "cancelled",
+          paymentStatus: "expired",
+          updatedAt: new Date(),
+        })
+        .where(eq(booking.id, existingBooking.id));
+
+      logger.info("booking.expired_replaced", {
+        bookingId: existingBooking.id,
+        routeId: existingBooking.routeId,
+        userId,
+      });
+    }
+
+    const expiresAt = new Date(Date.now() + 30 * 60 * 1000);
+
+    let newBooking: BookingRecord;
+    try {
+      [newBooking] = await db.insert(booking).values({
+        routeId: routeRecord.id,
+        tripDate: start,
+        vehicleType: input.vehicleType,
+        userId,
+        firstName: passengerRecord.firstName,
+        lastName: passengerRecord.lastName,
+        fareAmount,
+        currency: "NGN",
+        status: "pending",
+        expiresAt,
+      }).returning();
+    } catch (err: any) {
+      if (err?.code === "23505") {
+        const existing = await db.query.booking.findFirst({
+          where: and(
+            eq(booking.routeId, routeRecord.id),
+            eq(booking.tripDate, start),
+            eq(booking.userId, userId),
+            eq(booking.vehicleType, input.vehicleType),
+            inArray(booking.status, ["pending", "confirmed"]),
+          ),
+        });
+        if (existing) {
+          logger.warn("booking.duplicate_prevented", {
+            bookingId: existing.id,
+            routeId: existing.routeId,
+            userId,
+          });
+          return {
+            booking: existing,
+            fareAmount: existing.fareAmount,
+            currency: existing.currency,
+            expiresAt: existing.expiresAt,
+          };
+        }
+      }
+      throw err;
+    }
+
+    logger.info("booking.created", {
+      bookingId: newBooking.id,
+      routeId: newBooking.routeId,
+      vehicleType: newBooking.vehicleType,
+      fareAmount: newBooking.fareAmount,
+      expiresAt: newBooking.expiresAt?.toISOString(),
+    });
+
     return {
-      booking: result.booking,
-      fareAmount: result.fareAmount,
-      currency: result.currency,
-      expiresAt: result.booking.expiresAt,
+      booking: newBooking,
+      fareAmount: newBooking.fareAmount,
+      currency: newBooking.currency,
+      expiresAt: newBooking.expiresAt,
     };
   }
 
@@ -64,11 +185,15 @@ export class BookingService {
             trip: getTableColumns(trip),
             route: getTableColumns(route),
             driver: getTableColumns(driver),
+            externalDriver: getTableColumns(externalDriver),
+            vehicle: getTableColumns(vehicle),
           })
           .from(booking)
-          .innerJoin(trip, eq(booking.tripId, trip.id))
-          .innerJoin(route, eq(trip.routeId, route.id))
-          .innerJoin(driver, eq(route.driverId, driver.id))
+          .innerJoin(route, eq(booking.routeId, route.id))
+          .leftJoin(trip, eq(booking.tripId, trip.id))
+          .leftJoin(driver, eq(trip.driverId, driver.id))
+          .leftJoin(vehicle, eq(vehicle.driverId, driver.id))
+          .leftJoin(externalDriver, eq(externalDriver.tripId, trip.id))
           .where(
             and(
               visibleBookingConditions,
@@ -83,49 +208,114 @@ export class BookingService {
     const nextBookingRow = bookingRows[parsedLimit];
     const lastBookingRow = pageBookingRows[pageBookingRows.length - 1];
 
-    const bookings = pageBookingRows.map((row) => ({
-      id: row.booking.id,
-      seatNumber: row.booking.seatNumber ?? 0,
-      fareAmount: row.booking.fareAmount,
-      currency: row.booking.currency,
-      status: row.booking.status,
-      paymentReference: row.booking.paymentReference ?? null,
-      paymentStatus: row.booking.paymentStatus,
-      createdAt: row.booking.createdAt,
-      updatedAt: row.booking.updatedAt,
-      tripId: row.booking.tripId,
-      trip: {
-        id: row.trip.id,
-        date: row.trip.date,
-        status: row.trip.status,
-        bookedSeats: row.trip.bookedSeats,
-        capacity: row.trip.capacity,
-        availableSeats: Math.max(row.trip.capacity - row.trip.bookedSeats, 0),
-        route: {
-          id: row.route.id,
-          pickupLocationTitle: row.route.pickup_location_title,
-          pickupLocationLocality: row.route.pickup_location_locality,
-          pickupLocationLabel: row.route.pickup_location_label,
-          dropoffLocationTitle: row.route.dropoff_location_title,
-          dropoffLocationLocality: row.route.dropoff_location_locality,
-          dropoffLocationLabel: row.route.dropoff_location_label,
-          price: row.route.price,
-          vehicleType: row.route.vehicleType,
-          meetingPoint: row.route.meeting_point,
-          departureTime: row.route.departure_time,
-          arrivalTime: row.route.arrival_time,
-          driver: {
-            id: row.driver.id,
+    const bookings = pageBookingRows.map((row) => {
+      let driverStatus: "assigned" | "overdue" | "awaiting" | "unassigned";
+      let displayMessage: string | null;
+      let driverInfo: Record<string, unknown> | null;
+
+      if (!row.trip) {
+        driverStatus = "unassigned";
+        displayMessage = "Booking confirmed. Assigning trip shortly.";
+        driverInfo = null;
+      } else {
+        const dateKey = formatBusinessDate(row.trip.date);
+        const scheduledDeparture = getScheduledDepartureTime(
+          dateKey,
+          row.route.departure_time,
+        );
+        const hasDeparted = scheduledDeparture <= new Date();
+
+        if (row.driver) {
+          driverStatus = "assigned";
+          displayMessage = null;
+          driverInfo = {
+            source: "platform",
             firstName: row.driver.firstName,
             lastName: row.driver.lastName,
             phoneNumber: row.driver.phone,
             profilePictureUrl: row.driver.profile_pic ?? null,
             country: row.driver.country,
             state: row.driver.state,
-          },
-        },
-      },
-    }));
+            vehicleMake: row.vehicle?.make ?? "",
+            vehicleModel: row.vehicle?.model ?? "",
+            vehiclePlateNumber: row.vehicle?.plateNumber ?? "",
+            vehicleColor: row.vehicle?.color ?? "",
+          };
+        } else if (row.externalDriver) {
+          driverStatus = "assigned";
+          displayMessage = null;
+          driverInfo = {
+            source: "external",
+            firstName: row.externalDriver.firstName,
+            lastName: row.externalDriver.lastName,
+            phoneNumber: row.externalDriver.phone,
+            country: row.externalDriver.country ?? "",
+            state: row.externalDriver.state ?? "",
+            vehicleMake: row.externalDriver.vehicleMake ?? "",
+            vehicleModel: row.externalDriver.vehicleModel ?? "",
+            vehiclePlateNumber: row.externalDriver.vehiclePlateNumber ?? "",
+            vehicleColor: row.externalDriver.vehicleColor ?? "",
+          };
+        } else if (hasDeparted) {
+          driverStatus = "overdue";
+          displayMessage =
+            "We weren't able to confirm a driver in time for departure. We'll continue searching for the next 30 minutes. If unsuccessful, your payment will be refunded automatically.";
+          driverInfo = null;
+        } else {
+          driverStatus = "awaiting";
+          displayMessage =
+            "We're matching you with a nearby driver. This usually takes a few minutes, and we'll email you as soon as a driver is confirmed.";
+          driverInfo = null;
+        }
+      }
+
+      return {
+        id: row.booking.id,
+        seatNumber: row.booking.seatNumber ?? 0,
+        fareAmount: row.booking.fareAmount,
+        currency: row.booking.currency,
+        status: row.booking.status,
+        paymentReference: row.booking.paymentReference ?? null,
+        paymentStatus: row.booking.paymentStatus,
+        createdAt: row.booking.createdAt,
+        updatedAt: row.booking.updatedAt,
+        tripId: row.booking.tripId,
+        driverStatus,
+        displayMessage,
+        driverInfo,
+        trip: row.trip
+          ? {
+              id: row.trip.id,
+              date: row.trip.date,
+              status: row.trip.status,
+              bookedSeats: row.trip.bookedSeats,
+              capacity: row.trip.capacity,
+              availableSeats: Math.max(
+                row.trip.capacity - row.trip.bookedSeats,
+                0,
+              ),
+              route: {
+                id: row.route.id,
+                pickup_location_title: row.route.pickup_location_title,
+                pickup_location_locality:
+                  row.route.pickup_location_locality,
+                pickup_location_label: row.route.pickup_location_label,
+                dropoff_location_title:
+                  row.route.dropoff_location_title,
+                dropoff_location_locality:
+                  row.route.dropoff_location_locality,
+                dropoff_location_label:
+                  row.route.dropoff_location_label,
+                price: row.booking.fareAmount,
+                vehicle_type: row.booking.vehicleType,
+                meeting_point: row.route.meeting_point,
+                departure_time: row.route.departure_time,
+                arrival_time: row.route.arrival_time,
+              },
+            }
+          : null,
+      };
+    });
 
     return {
       bookings,
@@ -198,203 +388,6 @@ export class BookingService {
         : [],
     );
   }
-
-  private async allocateLowestAvailableSeat(
-    tx: RouteTransaction,
-    tripId: string,
-  ): Promise<{
-    trip: TripRecord;
-    seatNumber: number;
-    activeBookingCount: number;
-  }> {
-    const lockedTrip = await this.repo.lockTrip(tx, tripId);
-    if (!lockedTrip) {
-      throw createServiceError("Trip not found", 404);
-    }
-
-    if (!BOOKABLE_TRIP_STATUSES.has(lockedTrip.status)) {
-      throw createServiceError("Trip is not open for booking", 400);
-    }
-
-    const seatRows = (await tx.execute(sql`
-      WITH active_bookings AS (
-        SELECT seat_number
-        FROM booking
-        WHERE trip_id = ${tripId}
-          AND status IN ('pending', 'confirmed')
-          AND seat_number IS NOT NULL
-      ),
-      active_count AS (
-        SELECT count(*)::int AS value
-        FROM active_bookings
-      )
-      SELECT
-        candidate.seat_number,
-        active_count.value AS active_booking_count
-      FROM active_count
-      CROSS JOIN LATERAL (
-        SELECT candidate_seat.seat_number
-        FROM generate_series(1, ${lockedTrip.capacity}) AS candidate_seat(seat_number)
-        WHERE NOT EXISTS (
-          SELECT 1
-          FROM active_bookings
-          WHERE active_bookings.seat_number = candidate_seat.seat_number
-        )
-        ORDER BY candidate_seat.seat_number
-        LIMIT 1
-      ) AS candidate
-    `)) as Array<{
-      seat_number: number;
-      active_booking_count: number;
-    }>;
-
-    const seatRow = seatRows[0];
-    if (!seatRow) {
-      throw createServiceError("Trip is full", 400);
-    }
-
-    return {
-      trip: lockedTrip,
-      seatNumber: seatRow.seat_number,
-      activeBookingCount: seatRow.active_booking_count,
-    };
-  }
-
-  private async createBookingResult(userId: string, input: CreateBookingInput) {
-    const passengerRecord = await this.repo.findUserById(userId);
-    if (!passengerRecord) {
-      throw createServiceError("Passenger not found", 404);
-    }
-
-    const { start, end } = getBusinessDayWindow(input.tripDate);
-    const expiresAt = new Date(Date.now() + 10 * 60 * 1000);
-    const result = await db.transaction(async (tx) => {
-      const routeRecord = await tx.query.route.findFirst({
-        where: eq(route.id, input.routeId),
-      });
-      if (!routeRecord) throw createServiceError("Route not found", 404);
-      if (routeRecord.status !== "active") {
-        throw createServiceError("Route is not open for booking", 400);
-      }
-
-      const scheduledDepartureTime = getScheduledDepartureTime(
-        input.tripDate,
-        routeRecord.departure_time,
-      );
-      if (scheduledDepartureTime <= new Date()) {
-        throw createServiceError(
-          "This trip has already departed and can no longer be booked",
-          400,
-        );
-      }
-
-      let tripRecord = await this.repo.findTripByRouteAndDate(
-        input.routeId,
-        start,
-        end,
-      );
-
-      if (!tripRecord) {
-        const createdTrip = await this.repo.insertTrip(tx, {
-          routeId: routeRecord.id,
-          driverId: routeRecord.driverId,
-          date: start,
-          capacity: routeRecord.availableSeats,
-          bookedSeats: 0,
-          status: "pending",
-        });
-        tripRecord =
-          createdTrip ??
-          (await this.repo.findTripByRouteAndDate(input.routeId, start, end));
-      }
-
-      if (!tripRecord) throw createServiceError("Trip not found", 404);
-
-      const lockedTrip = await this.repo.lockTrip(tx, tripRecord.id);
-      if (!lockedTrip || !BOOKABLE_TRIP_STATUSES.has(lockedTrip.status)) {
-        throw createServiceError("Trip is not open for booking", 400);
-      }
-      tripRecord = lockedTrip;
-
-      const existingBooking = await this.repo.findExistingActiveBooking(
-        tx,
-        tripRecord.id,
-        userId,
-      );
-
-      if (existingBooking) {
-        if (existingBooking.status === "confirmed") {
-          throw createServiceError(
-            "You already have a confirmed booking for this trip",
-            409,
-          );
-        }
-        const isExpired =
-          existingBooking.expiresAt instanceof Date &&
-          existingBooking.expiresAt.getTime() <= Date.now();
-        if (isExpired) {
-          throw createServiceError(
-            "Seat reservation is expiring. Please try again shortly.",
-            409,
-          );
-        }
-        return {
-          booking: existingBooking,
-          fareAmount: existingBooking.fareAmount,
-          currency: existingBooking.currency,
-        };
-      }
-
-      const allocatedSeat = await this.allocateLowestAvailableSeat(
-        tx,
-        tripRecord.id,
-      );
-
-      let newBooking: BookingRecord;
-      try {
-        newBooking = await this.repo.insertBooking(tx, {
-          tripId: tripRecord.id,
-          userId,
-          seatNumber: allocatedSeat.seatNumber,
-          firstName: passengerRecord.firstName,
-          lastName: passengerRecord.lastName,
-          fareAmount: routeRecord.price,
-          currency: "NGN",
-          status: "pending",
-          expiresAt,
-        });
-      } catch (error) {
-        if (isConstraintError(error, "booking_trip_id_user_id_active_idx")) {
-          throw createServiceError(
-            "You already have an active booking for this trip",
-            409,
-          );
-        }
-        throw error;
-      }
-
-      await tx
-        .update(trip)
-        .set({
-          bookedSeats: allocatedSeat.activeBookingCount + 1,
-          updatedAt: new Date(),
-        })
-        .where(eq(trip.id, allocatedSeat.trip.id));
-
-      return {
-        booking: newBooking,
-        fareAmount: newBooking.fareAmount,
-        currency: newBooking.currency,
-      };
-    });
-
-    logger.info("booking.created", {
-      bookingId: result.booking.id,
-      tripId: result.booking.tripId,
-      seatNumber: result.booking.seatNumber,
-      expiresAt: result.booking.expiresAt?.toISOString(),
-    });
-
-    return result;
-  }
 }
+
+export const bookingService = new BookingService(routeRepository);

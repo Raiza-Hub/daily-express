@@ -2,26 +2,19 @@ import type { JWTPayload } from "@shared/types";
 import { createServiceError } from "@shared/utils";
 import { eq } from "drizzle-orm";
 import { db } from "../db/connection";
-import { driver, route, trip } from "../db/index";
+import { driver, type RouteRecord, type TripRecord } from "../db/index";
 import {
-    formatBusinessDate,
-    getScheduledDepartureTime,
+  formatBusinessDate,
+  getScheduledDepartureTime,
 } from "../utils/route";
 
-export const ALLOWED_VEHICLE_TYPES = ["car", "bus", "luxury car"] as const;
-export const ROUTE_DUPLICATE_CONSTRAINT =
-  "route_driver_origin_destination_departure_unique_idx";
-export const ACTIVE_BOOKING_CONSTRAINT = "booking_trip_id_user_id_active_idx";
+export const ALLOWED_VEHICLE_TYPES = ["car", "bus"] as const;
 export const ROUTE_SEARCH_SCORE_THRESHOLD = 0.15;
-export const BOOKABLE_TRIP_STATUSES = new Set(["pending", "confirmed"]);
-export const VISIBLE_BOOKING_STATUSES = ["confirmed", "completed"] as const;
+export const VISIBLE_BOOKING_STATUSES = ["confirmed", "completed", "awaiting_driver"] as const;
 export const DEFAULT_PAGE_LIMIT = 20;
 export const MAX_PAGE_LIMIT = 50;
 
 export type VehicleType = (typeof ALLOWED_VEHICLE_TYPES)[number];
-type RouteRecord = typeof route.$inferSelect;
-type TripRecord = typeof trip.$inferSelect;
-type DriverRecord = typeof driver.$inferSelect;
 
 export function normalizePageLimit(limit?: number): number {
   if (!limit || !Number.isFinite(limit)) {

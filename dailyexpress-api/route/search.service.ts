@@ -1,23 +1,19 @@
 import { createServiceError } from "@shared/utils";
-import { and, asc, desc, eq, getTableColumns, gt, gte, inArray, lt, or, sql } from "drizzle-orm";
-import { Route } from "shared/types";
+import { and, asc, desc, eq, getTableColumns, gt, gte, lt, or, sql } from "drizzle-orm";
 import { db } from "../db/connection";
-import { driver, route, trip } from "../db/index";
+import { route } from "../db/index";
 import {
     createNormalizedSearchScore,
     getBusinessDayWindow,
-    mapDriverToRouteDriver,
     normalizeSearchText,
 } from "../utils/route";
 import {
-    ALLOWED_VEHICLE_TYPES,
     ROUTE_SEARCH_SCORE_THRESHOLD,
     normalizePageLimit,
     decodeCursor,
     encodeCursor,
 } from "./utils";
 
-type VehicleType = (typeof ALLOWED_VEHICLE_TYPES)[number];
 type RouteSearchCursor = {
   combinedScore: number;
   pickupScore: number;
@@ -44,21 +40,17 @@ export class SearchService {
     from: string;
     to: string;
     date: string;
-    vehicleType?: string[];
+    departureTime?: string;
     limit?: number;
     cursor?: string;
-  }): Promise<{ routes: Route[]; nextCursor: string | null }> {
-    const { from, to, date, vehicleType, cursor } = params;
+  }) {
+    const { from, to, date, departureTime, cursor } = params;
     const limit = normalizePageLimit(params.limit);
     const parsedFrom = from.trim();
     const parsedTo = to.trim();
     const normalizedFrom = parsedFrom ? normalizeSearchText(parsedFrom) : "";
     const normalizedTo = parsedTo ? normalizeSearchText(parsedTo) : "";
     const decodedCursor = decodeCursor(cursor, isRouteSearchCursor);
-    const parsedVehicleType = vehicleType?.filter(
-      (value): value is VehicleType =>
-        ALLOWED_VEHICLE_TYPES.includes(value as VehicleType),
-    );
 
     if (!parsedFrom || !parsedTo) {
       throw createServiceError("from and to are required", 400);
@@ -113,8 +105,18 @@ export class SearchService {
     const combinedScore = sql<number>`${pickupScore} + ${dropoffScore}`;
     const conditions = [eq(route.status, "active")];
 
-    if (parsedVehicleType && parsedVehicleType.length > 0) {
-      conditions.push(inArray(route.vehicleType, parsedVehicleType));
+    const TIME_RANGES: Record<string, { start: string; end: string }> = {
+      morning: { start: "00:00:00", end: "11:59:59" },
+      afternoon: { start: "12:00:00", end: "23:59:59" },
+    };
+
+    if (departureTime) {
+      const range = TIME_RANGES[departureTime];
+      if (range) {
+        conditions.push(
+          sql`${route.departure_time}::time BETWEEN ${range.start}::time AND ${range.end}::time`,
+        );
+      }
     }
 
     if (decodedCursor) {
@@ -150,37 +152,21 @@ export class SearchService {
       }
     }
 
-    const tripBookedSeats = db
-      .select({
-        routeId: trip.routeId,
-        bookedSeats: sql<number>`coalesce(sum(${trip.bookedSeats}), 0)::int`.as(
-          "booked_seats",
-        ),
-      })
-      .from(trip)
-      .where(and(gte(trip.date, start), lt(trip.date, end)))
-      .groupBy(trip.routeId)
-      .as("trip_booked_seats");
-    const remainingSeats = sql<number>`greatest(${route.availableSeats} - coalesce(${tripBookedSeats.bookedSeats}, 0), 0)`;
+    const routeColumns = getTableColumns(route);
 
     const routesResult = await db
       .select({
-        route: getTableColumns(route),
-        driver: getTableColumns(driver),
+        route: routeColumns,
         pickupScore,
         dropoffScore,
         combinedScore,
-        remainingSeats,
       })
       .from(route)
-      .innerJoin(driver, eq(driver.id, route.driverId))
-      .leftJoin(tripBookedSeats, eq(tripBookedSeats.routeId, route.id))
       .where(
         and(
           ...conditions,
           gte(pickupScore, ROUTE_SEARCH_SCORE_THRESHOLD),
           gte(dropoffScore, ROUTE_SEARCH_SCORE_THRESHOLD),
-          sql`${remainingSeats} > 0`,
         ),
       )
       .orderBy(
@@ -197,11 +183,7 @@ export class SearchService {
     }
 
     const visibleRoutes = routesResult.map((record) => ({
-      route: {
-        ...record.route,
-        remainingSeats: record.remainingSeats,
-        driver: mapDriverToRouteDriver(record.driver),
-      },
+      route: record.route,
       cursor: {
         combinedScore: record.combinedScore,
         pickupScore: record.pickupScore,
@@ -222,3 +204,5 @@ export class SearchService {
     };
   }
 }
+
+export const searchService = new SearchService();
