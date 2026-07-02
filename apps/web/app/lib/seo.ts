@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import type { ApiResponse, Route } from "@shared/types";
 import { env } from "~/env";
+import { parseTimeString } from "./utils";
 
 const WEB_APP_NAME = "Daily Express";
 const DEFAULT_WEB_DESCRIPTION =
@@ -55,36 +56,6 @@ function formatPrice(amount: number) {
     currency: "NGN",
     maximumFractionDigits: 0,
   }).format(amount);
-}
-
-function joinVehicleTypes(vehicleTypes?: string[]) {
-  if (!vehicleTypes?.length) {
-    return "";
-  }
-
-  const labels = vehicleTypes.map((vehicleType) =>
-    vehicleType.replaceAll("_", " "),
-  );
-
-  if (labels.length === 1) {
-    return labels[0] || "";
-  }
-
-  return `${labels.slice(0, -1).join(", ")} and ${labels.at(-1)}`;
-}
-
-function normalizeArrayParam(value?: string | string[]) {
-  if (!value) {
-    return undefined;
-  }
-
-  const values = Array.isArray(value) ? value : [value];
-  const normalized = values
-    .flatMap((entry) => entry.split(","))
-    .map((entry) => entry.trim())
-    .filter(Boolean);
-
-  return normalized.length > 0 ? normalized : undefined;
 }
 
 function normalizeStringParam(value?: string | string[]) {
@@ -153,7 +124,6 @@ async function fetchSearchRoutePreview(params: {
   from: string;
   to: string;
   date?: string;
-  vehicleType?: string[];
 }) {
   const searchParams = new URLSearchParams({
     from: params.from,
@@ -163,10 +133,6 @@ async function fetchSearchRoutePreview(params: {
 
   if (params.date) {
     searchParams.set("date", params.date);
-  }
-
-  if (params.vehicleType?.length) {
-    searchParams.set("vehicleType", params.vehicleType.join(","));
   }
 
   try {
@@ -196,12 +162,10 @@ export async function buildHomeMetadataFromSearchParams(searchParams: {
   from?: string | string[];
   to?: string | string[];
   date?: string | string[];
-  vehicleType?: string | string[];
 }) {
   const from = normalizeStringParam(searchParams.from)?.trim();
   const to = normalizeStringParam(searchParams.to)?.trim();
   const date = normalizeStringParam(searchParams.date)?.trim();
-  const vehicleType = normalizeArrayParam(searchParams.vehicleType);
 
   if (!from || !to) {
     return buildWebMetadata({
@@ -216,15 +180,10 @@ export async function buildHomeMetadataFromSearchParams(searchParams: {
     from,
     to,
     date,
-    vehicleType,
   });
   const formattedDate = formatTravelDate(date);
-  const formattedVehicleType = joinVehicleTypes(vehicleType);
   const routeLabel = `${from} to ${to}`;
   const dateLabel = formattedDate ? ` on ${formattedDate}` : "";
-  const vehicleLabel = formattedVehicleType
-    ? ` for ${formattedVehicleType} trips`
-    : "";
   const canonicalUrl = new URL("/", webAppUrl);
 
   canonicalUrl.searchParams.set("from", from);
@@ -234,29 +193,25 @@ export async function buildHomeMetadataFromSearchParams(searchParams: {
     canonicalUrl.searchParams.set("date", date);
   }
 
-  if (vehicleType?.length) {
-    canonicalUrl.searchParams.set("vehicleType", vehicleType.join(","));
-  }
-
   if (results.length === 0) {
     return buildWebMetadata({
       title: `${routeLabel} Trips`,
-      description: `Browse Daily Express availability from ${routeLabel}${dateLabel}${vehicleLabel}. No trips are listed right now, so check nearby dates or adjust your filters.`,
+      description: `Browse Daily Express availability from ${routeLabel}${dateLabel}. No trips are listed right now, so check nearby dates or adjust your filters.`,
       path: `${canonicalUrl.pathname}${canonicalUrl.search}`,
     });
   }
 
-  const prices = results.map((route) => route.price);
+  const prices = results.flatMap((route) => [route.priceCar, route.priceBus]);
   const lowestPrice = Math.min(...prices);
   const firstTrip = results[0];
   const departureTime = firstTrip
     ? new Intl.DateTimeFormat("en-NG", {
         hour: "numeric",
         minute: "2-digit",
-      }).format(new Date(firstTrip.departure_time))
+      }).format(parseTimeString(firstTrip.departure_time, new Date()))
     : undefined;
   const descriptionParts = [
-    `Browse Daily Express trips from ${routeLabel}${dateLabel}${vehicleLabel}.`,
+    `Browse Daily Express trips from ${routeLabel}${dateLabel}.`,
     `Current fares start from ${formatPrice(lowestPrice)}.`,
   ];
 

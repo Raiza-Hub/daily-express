@@ -1,15 +1,22 @@
 "use client";
 
-import { CarProfileIcon } from "@phosphor-icons/react";
 import { SearchTrip } from "~/lib/type";
 import TripDetailsSheet from "./TripDetailsSheet";
 import { PlaneDots } from "@repo/ui/PlaneDots";
-import { DriverInfo } from "~/components/DriverInfo";
 import { formatPrice } from "@repo/ui/lib/utils";
-import { AnimatePresence, domAnimation, LazyMotion, m } from "framer-motion";
+import { toast } from "@repo/ui/components/sonner";
 import { useState } from "react";
 import dayjs from "dayjs";
+import duration from "dayjs/plugin/duration";
+import { useCreateTripCheckout } from "@repo/api";
+import { useRouter } from "next/navigation";
+import { usePostHog } from "posthog-js/react";
+import { posthogEvents } from "~/lib/posthog-events";
+import { Spinner } from "@phosphor-icons/react";
 
+dayjs.extend(duration);
+
+const TRANSACTION_FEE = 1000;
 
 const TripCardItem = ({
     item,
@@ -18,128 +25,199 @@ const TripCardItem = ({
     item: SearchTrip;
     bookingDate: string;
 }) => {
-    const [expanded, setExpanded] = useState(false);
     const [sheetOpen, setSheetOpen] = useState(false);
-    const departureTime = dayjs(item.route.departureTime).format("h:mma");
-    const arrivalTime = dayjs(item.route.estimatedArrivalTime).format("h:mma");
+    const [bookingVehicleType, setBookingVehicleType] = useState<"car" | "bus" | null>(null);
+
+    const departure = dayjs(item.departureTime);
+    const arrival = dayjs(item.estimatedArrivalTime);
+
+    const departureTime = departure.format("h:mma");
+    const arrivalTime = arrival.format("h:mma");
+
+    const tripDuration = dayjs.duration(arrival.diff(departure));
+
+    const totalHours = Math.floor(tripDuration.asHours());
+    const minutes = tripDuration.minutes();
+
+    const durationText =
+        totalHours > 0 && minutes > 0
+            ? `${totalHours}h ${minutes}m`
+            : totalHours > 0
+                ? `${totalHours}h`
+                : `${minutes}m`;
+
+    const hasDeparted = dayjs().isAfter(item.departureTime);
+
+    const router = useRouter();
+    const posthog = usePostHog();
+
+    const { mutateAsync: createTripCheckout, isPending: isCreatingCheckout } =
+        useCreateTripCheckout();
+
+    const handleBook = async (vehicleType: "car" | "bus") => {
+        if (isCreatingCheckout || hasDeparted) return;
+
+        setBookingVehicleType(vehicleType);
+
+        posthog.capture(posthogEvents.trip_book_initiated, {
+            routeId: item.routeId,
+            tripDate: bookingDate,
+        });
+
+        try {
+            const checkout = await createTripCheckout({
+                routeId: item.routeId,
+                tripDate: bookingDate,
+                vehicleType,
+                channels: ["bank_transfer"],
+                productName: `${item.pickupLocationTitle} to ${item.dropoffLocationTitle}`,
+                productDescription: `Trip booking for ${dayjs(bookingDate).format("ddd, D MMM YYYY")}`,
+                // metadata: {
+                //     routeId: item.routeId,
+                //     tripDate: bookingDate,
+                // },
+            });
+
+            if (!checkout.paymentReference || !checkout.checkoutUrl) {
+                throw new Error("Payment initialization failed");
+            }
+
+            posthog.capture(posthogEvents.payment_initialization_succeeded, {
+                checkoutUrl: checkout.checkoutUrl,
+            });
+
+            setBookingVehicleType(null);
+            window.location.assign(checkout.checkoutUrl);
+        } catch (error) {
+            setBookingVehicleType(null);
+            const msg = error instanceof Error ? error.message : "Unable to start payment";
+            const lower = msg.toLowerCase();
+            if (lower.includes("login") || lower.includes("authenticated") || lower.includes("session expired")) {
+                router.push("/sign-in");
+                return;
+            }
+            toast.error(msg);
+        }
+    };
+
     const openSheet = () => setSheetOpen(true);
+
+    const tripForSheet = {
+        departureCity: {
+            title: item.pickupLocationTitle,
+            locality: item.pickupLocationLocality,
+            label: item.pickupLocationLabel,
+        },
+        arrivalCity: {
+            title: item.dropoffLocationTitle,
+            locality: item.dropoffLocationLocality,
+            label: item.dropoffLocationLabel,
+        },
+        vehicleType: "car" as const,
+        seatNumber: 0,
+        priceCar: item.priceCar,
+        priceBus: item.priceBus,
+        departureTime: item.departureTime,
+        estimatedArrivalTime: item.estimatedArrivalTime,
+        meetingPoint: item.meetingPoint,
+    };
 
     return (
         <>
-            <div
-                className="w-full bg-white rounded-2xl overflow-hidden border border-gray-200 cursor-pointer"
-                role="button"
-                tabIndex={0}
-                onClick={openSheet}
-                onKeyDown={(event) => {
-                    if (event.key === "Enter" || event.key === " ") {
-                        event.preventDefault();
-                        openSheet();
-                    }
-                }}
-            >
-                <div className="flex flex-col md:flex-row md:items-center px-6 py-5 gap-4 md:gap-5">
-                    <div className="flex flex-col gap-0.5 md:w-min">
-                        <div className="flex items-center gap-2">
-                            <span className="text-lg lg:text-xl font-medium text-neutral-900 tracking-tight whitespace-nowrap">
+            <div className="w-full bg-white rounded-2xl overflow-hidden px-1">
+                <div className="flex flex-col lg:flex-row lg:items-start px-2 py-5 gap-6">
+                    {/* Left Section */}
+                    <div className="flex-1 min-w-0 lg:mr-14">
+                        <div className="grid grid-cols-[auto_1fr_auto] gap-y-1 items-center">
+                            <span className="text-lg lg:text-xl font-medium text-neutral-900 whitespace-nowrap">
                                 {departureTime}
                             </span>
-                            <PlaneDots />
-                            <span className="text-lg lg:text-xl font-medium text-neutral-900 tracking-tight relative whitespace-nowrap">
+
+                            <div className="flex justify-center px-2">
+                                <PlaneDots />
+                            </div>
+
+                            <span className="text-lg lg:text-xl font-medium text-neutral-900 whitespace-nowrap">
                                 {arrivalTime}
                             </span>
+
+                            <span className="text-sm text-muted-foreground whitespace-nowrap">
+                                {item.pickupLocationTitle}
+                            </span>
+
+                            <span className="text-sm text-muted-foreground text-center whitespace-nowrap">
+                                {durationText}
+                            </span>
+
+                            <span className="text-sm text-end text-muted-foreground whitespace-nowrap">
+                                {item.dropoffLocationTitle}
+                            </span>
                         </div>
-                        <p className="text-sm text-muted-foreground">
-                            {item.route.departureCity.title} (
-                            {item.route.departureCity.locality}) –{" "}
-                            {item.route.arrivalCity.title} ({item.route.arrivalCity.locality})
-                        </p>
+
+                        <button
+                            onClick={openSheet}
+                            className="mt-4 text-sm font-medium text-neutral-800 underline underline-offset-2 hover:text-black cursor-pointer"
+                        >
+                            Trip details
+                        </button>
                     </div>
 
-                    <div className="hidden md:flex flex-1" />
+                    {/* Right Section */}
+                    <div className="flex gap-3 shrink-0">
+                        <div
+                            onClick={hasDeparted ? undefined : () => handleBook("car")}
+                            className={`w-[160px] rounded-xl border px-4 py-2.5 transition  ${hasDeparted
+                                ? "cursor-not-allowed"
+                                : "border-neutral-200 bg-white hover:border-black cursor-pointer"
+                                }`}
+                        >
+                            <p className="text-sm text-neutral-500 flex items-center gap-2">
+                                Car
+                                {isCreatingCheckout && bookingVehicleType === "car" && (
+                                    <Spinner className="h-4 w-4 animate-spin" />
+                                )}
+                            </p>
 
-                    <div className="flex items-center md:contents gap-5">
-                        <div className="flex md:hidden flex-col items-center gap-1">
-                            <p className="text-sm font-medium text-neutral-900">
-                                Transport:{" "}
-                                <span className="capitalize">{item.route.vehicleType}</span>
+                            <p className="mt-2 text-xl font-medium text-neutral-900">
+                                {hasDeparted ? <span className="text-sm text-muted-foreground font-normal">Not available</span> : formatPrice(item.priceCar + TRANSACTION_FEE)}
                             </p>
                         </div>
 
-                        <div className="hidden md:flex flex-col items-center gap-1">
-                            <CarProfileIcon weight="duotone" size={24} />
-                            <p className="text-sm text-muted-foreground">Transport</p>
-                        </div>
-
-                        <div className="hidden md:flex flex-1" />
-
-                        <div className="flex md:hidden flex-col items-end ml-auto">
-                            <p className="text-xl font-medium text-neutral-900">
-                                {formatPrice(item.route.price)}
+                        <div
+                            onClick={hasDeparted ? undefined : () => handleBook("bus")}
+                            className={`w-[160px] rounded-xl border px-4 py-2.5 transition ${hasDeparted
+                                ? "cursor-not-allowed"
+                                : "border-neutral-200 bg-white hover:border-black cursor-pointer"
+                                }`}
+                        >
+                            <p className="text-sm text-neutral-500 flex items-center gap-2">
+                                Bus
+                                {isCreatingCheckout && bookingVehicleType === "bus" && (
+                                    <Spinner className="h-4 w-4 animate-spin" />
+                                )}
                             </p>
-                        </div>
 
-                        <div className="hidden md:flex flex-col items-end">
-                            <p className="text-2xl font-medium text-neutral-900">
-                                {formatPrice(item.route.price)}
+                            <p className="mt-2 text-xl font-medium text-neutral-900">
+                                {hasDeparted ? <span className="text-sm text-muted-foreground font-normal">Not available</span> : formatPrice(item.priceBus + TRANSACTION_FEE)}
                             </p>
-                            <p className="text-sm text-muted-foreground">Price</p>
                         </div>
                     </div>
                 </div>
-
-                <div className="border-t border-gray-200" />
-
-                <div className="flex justify-end px-6 py-1.5">
-                    <button
-                        type="button"
-                        onClick={(e) => {
-                            e.stopPropagation();
-                            setExpanded(!expanded);
-                        }}
-                        className="text-sm text-blue-600 hover:text-blue-800 transition-colors cursor-pointer"
-                    >
-                        {expanded ? "Hide details" : "Driver details"}
-                    </button>
-                </div>
-
-                <AnimatePresence initial={false}>
-                    {expanded && item.driver && (
-                        <LazyMotion features={domAnimation}>
-                            <m.div
-                                key="driver-details"
-                                initial={{ height: 0, opacity: 0 }}
-                                animate={{ height: "auto", opacity: 1 }}
-                                exit={{ height: 0, opacity: 0 }}
-                                transition={{ duration: 0.35, ease: [0.16, 1, 0.3, 1] }}
-                                style={{ overflow: "hidden" }}
-                            >
-                                <DriverInfo
-                                    firstName={item.driver.firstName}
-                                    lastName={item.driver.lastName}
-                                    phoneNumber={item.driver.phone}
-                                    country={item.driver.country}
-                                    state={item.driver.state}
-                                    profilePictureUrl={item.driver.profile_pic ?? ""}
-                                />
-                            </m.div>
-                        </LazyMotion>
-                    )}
-                </AnimatePresence>
             </div>
 
             <TripDetailsSheet
-                trip={item.route}
+                trip={tripForSheet}
                 open={sheetOpen}
                 onOpenChange={setSheetOpen}
                 bookingContext={{
                     routeId: item.routeId,
                     tripDate: bookingDate,
-                    remainingSeats: item.remainingSeats,
+                    remainingSeats: 0,
                 }}
+                showDriverDetails={false}
             />
         </>
     );
-}
+};
 
 export default TripCardItem;

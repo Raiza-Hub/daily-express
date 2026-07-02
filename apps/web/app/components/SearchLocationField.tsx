@@ -37,14 +37,14 @@ const SearchLocationField = ({
         }
       />
 
-      <LocationDropdown
+      {/* <LocationDropdown
         visible={fieldState.isOpen}
         suggestions={fieldState.suggestions}
         isLoading={fieldState.isLoading}
         message={fieldState.message}
         query={value}
         onSelect={(location) => fieldState.select(location)}
-      />
+      /> */}
     </div>
   );
 }
