@@ -13,20 +13,21 @@
     "db:pull": "bun x drizzle-kit pull",
     "db:migrate": "bun x drizzle-kit migrate",
     "db:studio": "bun x drizzle-kit studio",
-    "db:clear": "bun run scripts/clear-db.ts --yes"
+    "db:seed": "bun run scripts/seed.ts",
+    "db:clear": "bun run scripts/clear-db.ts --yes",
+    "db:seed-adebola": "bun run scripts/seed-adebola-bookings.ts"
   },
   "dependencies": {
     "@aws-sdk/client-sesv2": "^3.1048.0",
     "@repo/email": "workspace:*",
     "@sentry/bun": "10.53.1",
-    "@types/multer": "^2.1.0",
-    "@upstash/realtime": "^1.0.3",
     "@upstash/redis": "^1.38.0",
     "axios": "^1.16.1",
     "bcryptjs": "^3.0.3",
     "cloudinary": "^2.10.0",
     "cookie-parser": "^1.4.7",
     "cors": "^2.8.6",
+    "csrf-csrf": "^4.0.3",
     "dotenv": "^17.4.2",
     "drizzle-orm": "^0.45.2",
     "express": "^5.2.1",
@@ -36,6 +37,7 @@
     "joi": "^18.2.1",
     "jsonwebtoken": "^9.0.3",
     "multer": "^2.1.1",
+    "opossum": "^9.0.0",
     "pg-boss": "^12.18.2",
     "postgres": "^3.4.9",
     "rate-limit-redis": "^5.0.0",
@@ -48,6 +50,8 @@
     "@types/express": "^5.0.6",
     "@types/jsonwebtoken": "^9.0.10",
     "@types/node": "^25.7.0",
+    "@types/multer": "^2.1.0",
+    "@types/opossum": "^8.1.9",
     "drizzle-kit": "^0.31.10",
     "typescript": "^6.0.3"
   }

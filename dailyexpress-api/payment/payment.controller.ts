@@ -3,14 +3,12 @@ import { asyncHandler } from "@shared/middleware";
 import { createSuccessResponse } from "@shared/utils";
 import { getAuthenticatedUser } from "../middleware/auth";
 import { sendErrorResponse } from "../middleware/apiResponses";
-import { PaymentService } from "./paymentService";
+import { paymentService } from "./payment.service";
 import type {
   InitializePaymentInput,
   KoraWebhookPayload,
 } from "./payment.types";
 import { timeAsync } from "../utils/timing";
-
-const paymentService = new PaymentService();
 
 export const initializePayment: RequestHandler = asyncHandler(
   async (req: Request, res: Response) => {
@@ -66,17 +64,11 @@ export const getPaymentReturn: RequestHandler = asyncHandler(
         : typeof req.query.reference === "string"
           ? req.query.reference
           : null;
-    const providerStatus =
-      typeof req.query.status === "string"
-        ? req.query.status
-        : typeof req.query.result === "string"
-          ? req.query.result
-          : null;
 
     const redirectUrl = await timeAsync(
       "payment.return.service",
-      { hasReference: Boolean(reference), providerStatus },
-      () => paymentService.resolveReturnUrl(reference, providerStatus),
+      { hasReference: Boolean(reference) },
+      () => paymentService.handlePaymentReturn(reference),
     );
     return res.redirect(redirectUrl);
   },

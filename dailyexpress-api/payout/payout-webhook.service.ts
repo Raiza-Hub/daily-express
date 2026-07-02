@@ -1,10 +1,13 @@
 import { logger } from "../utils/logger";
-import { PayoutRepository } from "./payout.repository";
-import { PayoutAttemptService } from "./payout-attempt.service";
-import { PayoutProcessorService } from "./payout-processor.service";
-import { PayoutNotificationService } from "./payout-notification.service";
-import { KoraClient } from "../payment/kora.client";
-import { parseMajorCurrencyToMinor } from "../utils/payout";
+import { db } from "../db/connection";
+import { and, eq } from "drizzle-orm";
+import { payout as payoutTable, payoutAttempt } from "../db/index";
+import { PayoutRepository, payoutRepository } from "./payout.repository";
+import { PayoutAttemptService, payoutAttemptService } from "./payout-attempt.service";
+import { PayoutProcessorService, payoutProcessorService } from "./payout-processor.service";
+import { PayoutNotificationService, payoutNotificationService } from "./payout-notification.service";
+import { koraClient } from "../payment/kora.client";
+import { parseMajorCurrencyToMinor, KORA_ERROR_CODES } from "../utils/payout";
 import type { KoraPayoutWebhookPayload } from "../payment/payment.types";
 
 const WEBHOOK_RETRYABLE_PATTERNS = [
@@ -16,12 +19,8 @@ const WEBHOOK_RETRYABLE_PATTERNS = [
   "destination bank is not available",
 ];
 
-const KORA_ERROR_CODES = {
-  INSUFFICIENT_BALANCE: "INSUFFICIENT_BALANCE",
-} as const;
-
 export class PayoutWebhookService {
-  private readonly kora = new KoraClient();
+  private readonly kora = koraClient;
 
   constructor(
     private repo: PayoutRepository,
@@ -79,7 +78,7 @@ export class PayoutWebhookService {
         return { processed: true, signatureValid };
       }
 
-      await this.attemptService.settleAttempt(
+      await this.attemptService.finalizeAttempt(
         payoutRecord,
         attempt,
         input.event,
@@ -90,33 +89,65 @@ export class PayoutWebhookService {
     }
 
     if (input.event.event === "transfer.failed") {
-      if (
-        payoutRecord.status === "success" ||
-        payoutRecord.status === "permanent_failed" ||
-        attempt.status === "settled" ||
-        attempt.status === "failed"
-      ) {
+      const failureReason = this.getWebhookFailureReason(input.event);
+
+      const result = await db.transaction(async (tx) => {
+        const [lockedPayout] = await tx
+          .select()
+          .from(payoutTable)
+          .where(eq(payoutTable.id, attempt.payoutId))
+          .for("update")
+          .limit(1);
+
+        if (!lockedPayout) return { action: "skip" as const };
+
+        const [lockedAttempt] = await tx
+          .select()
+          .from(payoutAttempt)
+          .where(eq(payoutAttempt.id, attempt.id))
+          .for("update")
+          .limit(1);
+
+        if (!lockedAttempt) return { action: "skip" as const };
+
+        if (
+          lockedPayout.status === "success" ||
+          lockedPayout.status === "permanent_failed" ||
+          lockedAttempt.status === "settled" ||
+          lockedAttempt.status === "failed"
+        ) {
+          return { action: "skip" as const };
+        }
+
+        await tx
+          .update(payoutAttempt)
+          .set({
+            status: "failed",
+            failureReason,
+            rawWebhook: input.event,
+          })
+          .where(eq(payoutAttempt.id, lockedAttempt.id));
+
+        return { action: "process" as const, payout: lockedPayout };
+      });
+
+      if (result.action === "skip") {
         await this.repo.updateWebhookProcessedAt(webhookRecord.id);
         return { processed: true, signatureValid };
       }
 
-      const failureReason = this.getWebhookFailureReason(input.event);
-      await this.repo.updatePayoutAttempt(attempt.id, {
-        status: "failed",
-        failureReason,
-        rawWebhook: input.event,
-      });
+      const currentPayout = result.payout;
 
       if (failureReason === KORA_ERROR_CODES.INSUFFICIENT_BALANCE) {
-        await this.processorService.scheduleRetry(payoutRecord, failureReason);
+        await this.processorService.scheduleRetry(currentPayout, failureReason);
       } else if (
         this.isRetryableFailure(failureReason) &&
-        this.processorService.canRetry(payoutRecord.retryCount)
+        this.processorService.canRetry(currentPayout.retryCount)
       ) {
-        await this.processorService.scheduleRetry(payoutRecord, "API_ERROR");
+        await this.processorService.scheduleRetry(currentPayout, "API_ERROR");
       } else {
-        await this.notificationService.handlePayoutFailure(
-          payoutRecord,
+        await this.notificationService.processPayoutFailure(
+          currentPayout,
           failureReason,
           input.event,
           true,
@@ -146,3 +177,10 @@ export class PayoutWebhookService {
     );
   }
 }
+
+export const payoutWebhookService = new PayoutWebhookService(
+  payoutRepository,
+  payoutAttemptService,
+  payoutProcessorService,
+  payoutNotificationService,
+);

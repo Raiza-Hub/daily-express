@@ -1,8 +1,8 @@
 import { logger } from "../utils/logger";
-import { PayoutService } from "../payout/payoutService";
+import { payoutService } from "../payout/payout.service";
 import { getBoss, QUEUES, type PayoutProcessJobData } from "./boss";
 
-const payoutService = new PayoutService();
+
 
 export async function registerPayoutWorker() {
   const boss = await getBoss();

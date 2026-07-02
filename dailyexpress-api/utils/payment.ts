@@ -1,10 +1,10 @@
 import { createServiceError } from "@shared/utils";
 import { randomInt } from "node:crypto";
-import { KoraChannel } from "../payment/payment.types";
+import type { KoraCheckoutChannel } from "@shared/types";
 import type { WebhookJobData } from "../workers/boss";
-import { formatRouteDate, formatRouteTime } from "./timezone";
-const CHECKOUT_FEE_RATE = 0.1;
-const MAX_CHECKOUT_FEE = 1000;
+
+type KoraChannel = KoraCheckoutChannel;
+const TRANSACTION_FEE = 0;
 const MAX_CHECKOUT_AMOUNT = 200_000;
 
 export function dedupeChannels(channels?: KoraChannel[]) {
@@ -36,19 +36,6 @@ export function generateReference(): string {
   return `${yymmdd}${hhmmss}${random}`;
 }
 
-export function normalizeAmount(value: number | string | null | undefined) {
-  if (typeof value === "number") {
-    return Math.round(value);
-  }
-
-  if (typeof value === "string") {
-    const parsed = Number.parseFloat(value.trim());
-    return Number.isFinite(parsed) ? Math.round(parsed) : null;
-  }
-
-  return null;
-}
-
 export function parseDate(value?: string | Date | null) {
   if (!value) {
     return null;
@@ -59,11 +46,7 @@ export function parseDate(value?: string | Date | null) {
 }
 
 export function calculateTrustedChargeAmount(fareAmount: number) {
-  const fee = Math.min(
-    Math.round(fareAmount * CHECKOUT_FEE_RATE),
-    MAX_CHECKOUT_FEE,
-  );
-  return fareAmount + fee;
+  return fareAmount + TRANSACTION_FEE;
 }
 
 export function assertCheckoutAmountWithinLimit(amount: number) {
@@ -74,21 +57,6 @@ export function assertCheckoutAmountWithinLimit(amount: number) {
 
 export function toMinorAmount(amount: number) {
   return Math.round(amount * 100);
-}
-
-export function formatMajorAmount(amount: number, currency: string) {
-  return new Intl.NumberFormat("en-NG", {
-    style: "currency",
-    currency,
-  }).format(amount);
-}
-
-export function formatTripDate(value: Date) {
-  return formatRouteDate(value);
-}
-
-export function formatTripTime(value: Date) {
-  return formatRouteTime(value);
 }
 
 export function getPaymentReference(job: WebhookJobData) {

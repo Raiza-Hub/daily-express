@@ -11,27 +11,24 @@ import {
     generateReference,
 } from "../utils/payment";
 import { jobService } from "../workers/jobService";
-import { KoraClient } from "./kora.client";
-import { PaymentConfirmService } from "./payment-confirm.service";
-import { PaymentRepository } from "./payment.repository";
+import { koraClient } from "./kora.client";
+import { PaymentRepository, paymentRepository } from "./payment.repository";
 import type {
     InitializePaymentInput,
-    KoraChannel
+    KoraChannel,
+    PaymentTransaction,
 } from "./payment.types";
+import type { PaymentRecord } from "../db/index";
 import { enrichWithExpiry } from "./payment.utils";
-
-type PaymentTransaction = Parameters<Parameters<typeof db.transaction>[0]>[0];
-type PaymentRecord = typeof payment.$inferSelect;
 
 const KORA_METADATA_KEY_REGEX = /^[A-Za-z0-9-]{1,20}$/;
 
 export class PaymentInitService {
   private readonly config = getConfig();
-  private readonly kora = new KoraClient();
+  private readonly kora = koraClient;
 
   constructor(
     private repo: PaymentRepository,
-    private confirmService: PaymentConfirmService,
   ) {}
 
   async initializePayment(
@@ -46,6 +43,19 @@ export class PaymentInitService {
       throw createServiceError("Booking not found", 404);
     }
 
+    if (bookingRecord.userId !== userId) {
+      throw createServiceError("Booking not found", 404);
+    }
+
+    // 1. If another request is currently initializing this payment, return the existing payment record (conflict handling)
+    let existingPayment = await this.repo.findPaymentByBookingId(input.bookingId);
+    if (existingPayment?.status === "initialized") {
+      logger.info("payment.initialize_conflict_skipped", {
+        bookingId: input.bookingId,
+      });
+      return enrichWithExpiry(existingPayment, bookingRecord.expiresAt);
+    }
+
     if (
       !bookingRecord.expiresAt ||
       bookingRecord.expiresAt.getTime() <= Date.now()
@@ -54,18 +64,6 @@ export class PaymentInitService {
         "Seat reservation has expired - cannot initialize payment",
         400,
       );
-    }
-
-    if (bookingRecord.userId !== userId) {
-      throw createServiceError("Booking not found", 404);
-    }
-
-    const existingPayment = await this.repo.findPaymentByBookingId(
-      input.bookingId,
-    );
-
-    if (existingPayment && existingPayment.userId !== userId) {
-      throw createServiceError("Booking not found", 404);
     }
 
     if (existingPayment?.status === "pending") {
@@ -101,43 +99,131 @@ export class PaymentInitService {
 
     assertCheckoutAmountWithinLimit(trustedAmount);
 
-    const initializeResponse = await this.createKoraCheckoutSession({
-      email: authenticatedEmail.trim(),
-      customerName: input.customerName,
-      amount: trustedAmount,
-      reference,
-      currency: trustedCurrency,
-      channels,
-      metadata,
-    });
+    // 2. Pre-insert the payment with status 'initialized' under row lock to claim checkout session creation
+    const setupResult = await db.transaction(async (tx) => {
+      const [lockedBooking] = await tx
+        .select()
+        .from(booking)
+        .where(eq(booking.id, input.bookingId))
+        .for("update")
+        .limit(1);
 
-    const insertedPayment = await db.transaction(async (tx) => {
-      const [record] = await this.repo.insertPayment(tx, {
-        userId,
-        bookingId: input.bookingId,
-        provider: "kora",
-        reference,
-        amount: trustedAmount,
-        currency: trustedCurrency,
-        productName,
-        customerName: this.sanitizeOptional(input.customerName),
-        customerEmail: authenticatedEmail.trim(),
-        status: "pending",
-        providerStatus: "pending",
-        checkoutUrl: initializeResponse.data.checkout_url,
-        checkoutToken: initializeResponse.data.reference,
-        channels,
-        rawInitializeResponse: initializeResponse.raw,
-        metadata,
+      if (!lockedBooking) {
+        throw createServiceError("Booking not found", 404);
+      }
+
+      if (
+        !lockedBooking.expiresAt ||
+        lockedBooking.expiresAt.getTime() <= Date.now()
+      ) {
+        throw createServiceError(
+          "Seat reservation has expired - cannot initialize payment",
+          400,
+        );
+      }
+
+      const currentPayment = await tx.query.payment.findFirst({
+        where: eq(payment.bookingId, input.bookingId),
       });
 
-      await jobService.enqueuePaymentExpiry(
-        tx,
-        { bookingId: input.bookingId, reference },
-        bookingRecord.expiresAt!,
-      );
+      if (currentPayment?.status === "pending") {
+        return { action: "return_pending" as const, payment: currentPayment };
+      }
 
-      return record;
+      if (currentPayment) {
+        return { action: "return_existing" as const, payment: currentPayment };
+      }
+
+      const [inserted] = await tx
+        .insert(payment)
+        .values({
+          userId,
+          bookingId: input.bookingId,
+          provider: "kora",
+          reference,
+          amount: trustedAmount,
+          currency: trustedCurrency,
+          productName,
+          customerName: this.sanitizeOptional(input.customerName),
+          customerEmail: authenticatedEmail.trim(),
+          status: "initialized",
+          providerStatus: "pending",
+          channels,
+          metadata,
+        })
+        .onConflictDoNothing({ target: payment.bookingId })
+        .returning();
+
+      if (inserted) {
+        return { action: "call_kora" as const, payment: inserted };
+      } else {
+        const existing = await tx.query.payment.findFirst({
+          where: eq(payment.bookingId, input.bookingId),
+        });
+        if (existing) {
+          return { action: "return_existing" as const, payment: existing };
+        }
+        throw new Error("Payment conflict occurred but existing record not found");
+      }
+    });
+
+    if (setupResult.action === "return_pending") {
+      return this.resolveExistingPendingCheckout(
+        setupResult.payment,
+        authenticatedEmail,
+        input,
+        bookingRecord.expiresAt,
+      );
+    }
+
+    if (setupResult.action === "return_existing") {
+      return enrichWithExpiry(setupResult.payment, bookingRecord.expiresAt);
+    }
+
+    // 3. call Kora checkout API outside the transaction
+    let initializeResponse;
+    try {
+      initializeResponse = await this.createKoraCheckoutSession({
+        email: authenticatedEmail.trim(),
+        customerName: input.customerName,
+        amount: trustedAmount,
+        reference,
+        currency: trustedCurrency,
+        channels,
+        metadata,
+      });
+    } catch (koraError) {
+      await db.transaction(async (tx) => {
+        await tx
+          .delete(payment)
+          .where(eq(payment.id, setupResult.payment.id));
+      });
+      throw koraError;
+    }
+
+    // 4. finalize the payment to pending and enqueue expiry
+    const finalPayment = await db.transaction(async (tx) => {
+      const [updated] = await tx
+        .update(payment)
+        .set({
+          status: "pending",
+          checkoutUrl: initializeResponse.data.checkout_url,
+          checkoutToken: initializeResponse.data.reference,
+          rawInitializeResponse: initializeResponse.raw,
+          updatedAt: new Date(),
+        })
+        .where(eq(payment.id, setupResult.payment.id))
+        .returning();
+
+      if (updated) {
+        await jobService.enqueuePaymentExpiry(
+          tx,
+          { bookingId: input.bookingId, reference },
+          bookingRecord.expiresAt!,
+        );
+      }
+
+      return updated || setupResult.payment;
     });
 
     logger.info("payment.initialized", {
@@ -145,7 +231,7 @@ export class PaymentInitService {
       reference,
     });
 
-    return enrichWithExpiry(insertedPayment, bookingRecord.expiresAt);
+    return enrichWithExpiry(finalPayment, bookingRecord.expiresAt);
   }
 
   private async resolveExistingPendingCheckout(
@@ -160,15 +246,32 @@ export class PaymentInitService {
     const providerStatus = verification.data.status.toLowerCase();
 
     if (providerStatus === "success") {
-      const confirmed = await this.confirmService.confirmPayment(
-        existingPayment.reference,
-        verification.data,
-        verification.raw,
-      );
-      return confirmed || enrichWithExpiry(existingPayment, expiresAt);
+      await db.transaction(async (tx) => {
+        await jobService.enqueue(tx, "allocation.process", {
+          bookingId: existingPayment.bookingId,
+          reference: existingPayment.reference,
+        });
+      });
+      return enrichWithExpiry(existingPayment, expiresAt);
     }
 
     if (["pending", "processing"].includes(providerStatus)) {
+      const bookingFare = await this.repo.findBookingFareByBookingId(
+        existingPayment.bookingId,
+        existingPayment.userId,
+      );
+      const expectedAmount = calculateTrustedChargeAmount(bookingFare.fareAmount);
+
+      if (expectedAmount !== existingPayment.amount) {
+        return this.reinitializePayment(
+          existingPayment,
+          authenticatedEmail,
+          input,
+          expiresAt,
+          providerStatus,
+        );
+      }
+
       return enrichWithExpiry(existingPayment, expiresAt);
     }
 
@@ -220,15 +323,55 @@ export class PaymentInitService {
       providerStatus,
     });
 
-    const initializeResponse = await this.createKoraCheckoutSession({
-      email: authenticatedEmail.trim(),
-      customerName: input.customerName || existingPayment.customerName || undefined,
-      amount: trustedAmount,
-      reference,
-      currency: trustedCurrency,
-      channels,
-      metadata,
+    const result = await db.transaction(async (tx) => {
+      const [locked] = await tx
+        .select()
+        .from(payment)
+        .where(eq(payment.id, existingPayment.id))
+        .for("update")
+        .limit(1);
+
+      if (!locked || locked.status !== "pending") return null;
+
+      const [updated] = await tx
+        .update(payment)
+        .set({
+          status: "initialized",
+          updatedAt: new Date(),
+        })
+        .where(eq(payment.id, existingPayment.id))
+        .returning();
+
+      return updated;
     });
+
+    if (!result) {
+      const reloaded = await this.repo.findPaymentByBookingId(input.bookingId);
+      return enrichWithExpiry(reloaded || existingPayment, expiresAt);
+    }
+
+    let initializeResponse;
+    try {
+      initializeResponse = await this.createKoraCheckoutSession({
+        email: authenticatedEmail.trim(),
+        customerName: input.customerName || existingPayment.customerName || undefined,
+        amount: trustedAmount,
+        reference,
+        currency: trustedCurrency,
+        channels,
+        metadata,
+      });
+    } catch (koraError) {
+      await db
+        .update(payment)
+        .set({
+          status: "failed",
+          failureReason: koraError instanceof Error ? koraError.message : "Checkout retry re-initialization failed",
+          updatedAt: new Date(),
+        })
+        .where(eq(payment.id, existingPayment.id));
+      throw koraError;
+    }
 
     const updatedPayment = await db.transaction(async (tx) => {
       const [record] = await tx
@@ -257,9 +400,7 @@ export class PaymentInitService {
           failureReason: null,
           updatedAt: new Date(),
         })
-        .where(
-          and(eq(payment.id, existingPayment.id), eq(payment.status, "pending")),
-        )
+        .where(eq(payment.id, existingPayment.id))
         .returning();
 
       if (record) {
@@ -270,7 +411,7 @@ export class PaymentInitService {
         );
       }
 
-      return record || null;
+      return record;
     });
 
     return updatedPayment
@@ -370,5 +511,6 @@ export class PaymentInitService {
   private getWebhookUrl() {
     return `${this.getPaymentPublicBaseUrl()}/api/v1/payments/webhooks/kora`;
   }
-
 }
+
+export const paymentInitService = new PaymentInitService(paymentRepository);

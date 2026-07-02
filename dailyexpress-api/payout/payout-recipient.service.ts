@@ -1,5 +1,5 @@
 import { createHash } from "node:crypto";
-import { PayoutRepository } from "./payout.repository";
+import { PayoutRepository, payoutRepository } from "./payout.repository";
 import type { driver } from "../db/index";
 
 type ActivePayoutDriver = typeof driver.$inferSelect & {
@@ -60,3 +60,5 @@ export class PayoutRecipientService {
       .digest("hex");
   }
 }
+
+export const payoutRecipientService = new PayoutRecipientService(payoutRepository);

@@ -1,14 +1,12 @@
 import type { Request, RequestHandler, Response } from "express";
 import { asyncHandler } from "@shared/middleware";
-import { PayoutService } from "./payoutService";
+import { payoutService } from "./payout.service";
 import { createSuccessResponse } from "@shared/utils";
 import { sendErrorResponse } from "../middleware/apiResponses";
 import { getAuthenticatedUser } from "../middleware/auth";
 import { timeAsync } from "../utils/timing";
 import type { PayoutStatus } from "@shared/types";
 import type { KoraPayoutWebhookPayload } from "../payment/payment.types";
-
-const payoutService = new PayoutService();
 
 export const getBalance: RequestHandler = asyncHandler(
   async (req: Request, res: Response) => {

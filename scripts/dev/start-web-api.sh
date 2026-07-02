@@ -58,7 +58,7 @@ start_database() {
 
   echo "Waiting for Postgres to become healthy..."
   for _ in {1..60}; do
-    if [ "$(docker inspect -f '{{.State.Health.Status}}' daily_express 2>/dev/null || true)" = "healthy" ]; then
+    if [ "$(docker inspect -f '{{.State.Health.Status}}' dailyexpress-db 2>/dev/null || true)" = "healthy" ]; then
       echo "Postgres is ready."
       return
     fi

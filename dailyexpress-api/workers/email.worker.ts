@@ -1,5 +1,5 @@
 import { getBoss, QUEUES } from "./boss";
-import { MailService } from "../mail/mailService";
+import { MailService } from "../mail/mail.service";
 import { logger } from "../utils/logger";
 
 const mailService = new MailService();
