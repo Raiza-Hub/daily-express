@@ -43,6 +43,19 @@ export const onboardingSchema = z.object({
     .max(20, { error: "Account number must be at most 20 digits long." }),
 
   accountName: z.string().min(1, { error: "Account name is required" }),
+
+  kycType: z.enum(["", "bvn", "nin"], {
+    error: "KYC type is required",
+  }),
+
+  kycId: z
+    .string()
+    .min(10, { error: "KYC ID must be at least 10 characters" })
+    .max(20, { error: "KYC ID must not exceed 20 characters" }),
+
+  kycConsent: z.boolean().refine((val) => val === true, {
+    message: "You must consent to identity verification.",
+  }),
 });
 
 export type TonboardingSchema = z.infer<typeof onboardingSchema>;

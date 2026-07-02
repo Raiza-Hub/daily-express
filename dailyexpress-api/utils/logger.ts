@@ -42,6 +42,11 @@ function sendSentryLog(level: LogLevel, event: string, fields?: LogFields) {
 
   const sanitized = sanitizeFields(fields);
 
+  if (level === "info") {
+    Sentry.logger.info(event, sanitized);
+    return;
+  }
+
   if (level === "warn") {
     Sentry.logger.warn(event, sanitized);
     return;

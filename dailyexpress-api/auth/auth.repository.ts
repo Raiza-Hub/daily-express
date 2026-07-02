@@ -1,14 +1,10 @@
 import { and, count, eq, isNull } from "drizzle-orm";
 import { db } from "../db/connection";
 import { users, otp, passwordResetTokens, userProviders } from "../db/index";
-import { driver } from "../db/index";
+import { driver, type DriverRecord, type UserRecord, type OtpRecord, type PasswordResetTokenRecord, type UserProviderRecord } from "../db/index";
+import type { DbTransaction } from "../db/connection";
 
-type AuthTransaction = Parameters<Parameters<typeof db.transaction>[0]>[0];
-type UserRecord = typeof users.$inferSelect;
-type OtpRecord = typeof otp.$inferSelect;
-type PasswordResetTokenRecord = typeof passwordResetTokens.$inferSelect;
-type UserProviderRecord = typeof userProviders.$inferSelect;
-type DriverRecord = typeof driver.$inferSelect;
+type AuthTransaction = DbTransaction;
 
 export class AuthRepository {
   async findUserByEmail(email: string): Promise<UserRecord | null> {
@@ -24,6 +20,18 @@ export class AuthRepository {
     data: typeof users.$inferInsert,
   ): Promise<UserRecord> {
     const [created] = await tx.insert(users).values(data).returning();
+    return created;
+  }
+
+  async insertUserOnConflictDoNothing(
+    tx: AuthTransaction,
+    data: typeof users.$inferInsert,
+  ): Promise<UserRecord | undefined> {
+    const [created] = await tx
+      .insert(users)
+      .values(data)
+      .onConflictDoNothing({ target: users.email })
+      .returning();
     return created;
   }
 
@@ -74,6 +82,19 @@ export class AuthRepository {
     tokenHash: string,
   ): Promise<PasswordResetTokenRecord | null> {
     return (await db.query.passwordResetTokens.findFirst({ where: eq(passwordResetTokens.tokenHash, tokenHash) })) ?? null;
+  }
+
+  async findPasswordResetTokenByHashForUpdate(
+    tx: AuthTransaction,
+    tokenHash: string,
+  ): Promise<PasswordResetTokenRecord | null> {
+    const [token] = await tx
+      .select()
+      .from(passwordResetTokens)
+      .where(eq(passwordResetTokens.tokenHash, tokenHash))
+      .for('update')
+      .limit(1);
+    return token ?? null;
   }
 
   async invalidatePasswordResetTokens(
@@ -134,6 +155,19 @@ export class AuthRepository {
       .where(eq(userProviders.userId, userId));
   }
 
+  async lockUserById(
+    tx: AuthTransaction,
+    id: string,
+  ): Promise<UserRecord | null> {
+    const [user] = await tx
+      .select()
+      .from(users)
+      .where(eq(users.id, id))
+      .for('update')
+      .limit(1);
+    return user ?? null;
+  }
+
   async findUserLoginSummary(userId: string) {
     const [summary] = await db
       .select({
@@ -145,6 +179,35 @@ export class AuthRepository {
       .where(eq(users.id, userId))
       .groupBy(users.id);
     return summary ?? null;
+  }
+
+  async findUserLoginSummaryForUpdate(tx: AuthTransaction, userId: string) {
+    const [summary] = await tx
+      .select({
+        password: users.password,
+        providerCount: count(userProviders.id),
+      })
+      .from(users)
+      .leftJoin(userProviders, eq(userProviders.userId, users.id))
+      .where(eq(users.id, userId))
+      .groupBy(users.id)
+      .for('update');
+    return summary ?? null;
+  }
+
+  async deleteUserProviderWithTx(
+    tx: AuthTransaction,
+    userId: string,
+    provider: string,
+  ): Promise<void> {
+    await tx
+      .delete(userProviders)
+      .where(
+        and(
+          eq(userProviders.userId, userId),
+          eq(userProviders.provider, provider),
+        ),
+      );
   }
 
   async findDriverByUserId(userId: string): Promise<DriverRecord | null> {
@@ -173,3 +236,5 @@ export class AuthRepository {
     await tx.insert(userProviders).values(values);
   }
 }
+
+export const authRepository = new AuthRepository();

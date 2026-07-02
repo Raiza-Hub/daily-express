@@ -1,5 +1,5 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { authApi } from "../api";
+import { authApi, setCsrfToken } from "../api";
 import type {
   User,
   ApiResponse,
@@ -34,6 +34,11 @@ interface UpdateProfilePayload {
 interface ResetPasswordPayload {
   token: string;
   password: string;
+}
+
+interface VerifyOtpResponse {
+  user: User;
+  tokens: AuthTokens;
 }
 
 export const registerFn = async (
@@ -72,14 +77,14 @@ export const verifyOtpFn = async (
   data: VerifyOtpPayload,
 ): Promise<AuthTokens> => {
   try {
-    const response = await authApi.post<ApiResponse<AuthTokens>>(
+    const response = await authApi.post<ApiResponse<VerifyOtpResponse>>(
       "/verify-otp",
       data,
     );
     if (!response.data.success || !response.data.data) {
       throw new Error(response.data.error || "OTP verification failed");
     }
-    return response.data.data;
+    return response.data.data.tokens;
   } catch (err) {
     return handleApiError(err, "OTP verification failed") as never;
   }
@@ -156,8 +161,6 @@ export const useGetMe = (options?: { enabled?: boolean }) => {
   return useQuery({
     queryKey: ["user"],
     queryFn: getMeFn,
-    retry: false,
-    staleTime: Infinity,
     enabled: options?.enabled ?? true,
   });
 };
@@ -316,3 +319,12 @@ export const useSetPassword = (options?: {
     mutationFn: setPasswordFn,
     ...options,
   });
+
+export async function fetchCsrfToken(): Promise<void> {
+  try {
+    const response = await authApi.get<{ csrfToken: string }>("/csrf-token");
+    setCsrfToken(response.data.csrfToken);
+  } catch {
+    // CSRF token fetch is best-effort
+  }
+}

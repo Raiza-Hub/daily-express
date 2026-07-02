@@ -27,9 +27,10 @@ export function resolveFrontendRedirect(redirect?: string) {
     const url = new URL(redirect);
     return allowedOrigins.has(url.origin) ? url.toString() : FRONTEND_URL;
   } catch {
-    return new URL(
+    const resolved = new URL(
       redirect.startsWith("/") ? redirect : `/${redirect}`,
       FRONTEND_URL,
-    ).toString();
+    );
+    return allowedOrigins.has(resolved.origin) ? resolved.toString() : FRONTEND_URL;
   }
 }
