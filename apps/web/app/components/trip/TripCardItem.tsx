@@ -8,7 +8,7 @@ import { toast } from "@repo/ui/components/sonner";
 import { useState } from "react";
 import dayjs from "dayjs";
 import duration from "dayjs/plugin/duration";
-import { useCreateTripCheckout } from "@repo/api";
+import { useCreateTripCheckout, isApiError } from "@repo/api";
 import { useRouter } from "next/navigation";
 import { usePostHog } from "posthog-js/react";
 import { posthogEvents } from "~/lib/posthog-events";
@@ -90,12 +90,11 @@ const TripCardItem = ({
             window.location.assign(checkout.checkoutUrl);
         } catch (error) {
             setBookingVehicleType(null);
-            const msg = error instanceof Error ? error.message : "Unable to start payment";
-            const lower = msg.toLowerCase();
-            if (lower.includes("login") || lower.includes("authenticated") || lower.includes("session expired")) {
+            if (isApiError(error) && error.statusCode === 401) {
                 router.push("/sign-in");
                 return;
             }
+            const msg = error instanceof Error ? error.message : "Unable to start payment";
             toast.error(msg);
         }
     };
