@@ -42,6 +42,9 @@ const DriverInfoSchema = onboardingSchema
     accountNumber: true,
     accountName: true,
     currency: true,
+    kycType: true,
+    kycId: true,
+    kycConsent: true,
   });
 
 type TDriverInfoSchema = z.infer<typeof DriverInfoSchema>;

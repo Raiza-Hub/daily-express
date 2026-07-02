@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useMemo, useState } from "react";
+import { useMemo, useState, useCallback } from "react";
 import dayjs from "dayjs";
 import isoWeek from "dayjs/plugin/isoWeek";
 import { useGetTripsSummaryRange } from "@repo/api";
@@ -8,6 +8,12 @@ import { ProfitCalendar } from "./ProfitCalendar";
 import RouteCard from "./route/RouteCard";
 
 dayjs.extend(isoWeek);
+
+function clampDateToWeek(date: dayjs.Dayjs, weekStart: dayjs.Dayjs, weekEnd: dayjs.Dayjs) {
+  if (date.isBefore(weekStart, "day")) return weekStart;
+  if (date.isAfter(weekEnd, "day")) return weekStart;
+  return date;
+}
 
 export function DashboardRoutes() {
   const [viewDate, setViewDate] = useState(() => dayjs());
@@ -27,23 +33,20 @@ export function DashboardRoutes() {
     endDateStr,
   );
 
-  useEffect(() => {
-    const startOfWeek = viewDate.startOf("isoWeek");
-    const endOfWeek = viewDate.endOf("isoWeek");
-
-    if (
-      selectedDate.isBefore(startOfWeek, "day") ||
-      selectedDate.isAfter(endOfWeek, "day")
-    ) {
-      setSelectedDate(startOfWeek);
-    }
-  }, [selectedDate, viewDate]);
+  const handleViewDateChange = useCallback((newViewDate: dayjs.Dayjs) => {
+    setViewDate(newViewDate);
+    setSelectedDate((prevSelected) => {
+      const weekStart = newViewDate.startOf("isoWeek");
+      const weekEnd = newViewDate.endOf("isoWeek");
+      return clampDateToWeek(prevSelected, weekStart, weekEnd);
+    });
+  }, []);
 
   return (
     <div className="space-y-4">
       <ProfitCalendar
         viewDate={viewDate}
-        onViewDateChange={setViewDate}
+        onViewDateChange={handleViewDateChange}
         selectedDate={selectedDate}
         onSelectedDateChange={setSelectedDate}
         tripsSummaryRange={tripsSummaryRange}

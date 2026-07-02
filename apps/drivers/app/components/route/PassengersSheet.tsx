@@ -77,10 +77,10 @@ export default function PassengersSheet({
               No trip selected.
             </p>
           ) : isLoading ? (
-            <p className="flex flex-col items-center  text-center py-8">
+            <div className="flex flex-col items-center text-center py-8">
               <CircleNotchIcon className="h-6 w-6 text-neutral-500" />
               <p className="text-sm text-muted-foreground">Loading passengers...</p>
-            </p>
+            </div>
           ) : isError ? (
             <div className="flex flex-col items-center gap-3 py-8 text-center">
               <p className="text-sm text-muted-foreground">

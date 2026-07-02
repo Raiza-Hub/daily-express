@@ -30,6 +30,13 @@ import {
 import { CaretDownIcon, CheckIcon } from "@phosphor-icons/react";
 import Image from "next/image";
 import { Bank } from "~/lib/type";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@repo/ui/components/select";
 
 
 const PaymentInfo = () => {
@@ -46,6 +53,7 @@ const PaymentInfo = () => {
   const selectedBank = (BankList as Bank[]).find(
     (b) => b.name === selectedBankName,
   );
+  const selectedKycType = watch("kycType");
 
   return (
     <div>
@@ -181,6 +189,57 @@ const PaymentInfo = () => {
                       </Command>
                     </PopoverContent>
                   </Popover>
+                  {fieldState.invalid && (
+                    <FieldError errors={[fieldState.error]} />
+                  )}
+                </Field>
+              )}
+            />
+          </div>
+
+          <div className="grid gap-2">
+            <Controller
+              name="kycType"
+              control={control}
+              render={({ field, fieldState }) => (
+                <Field data-invalid={fieldState.invalid}>
+                  <FieldLabel htmlFor="kycType">Verification Method</FieldLabel>
+                  <Select
+                    onValueChange={field.onChange}
+                    value={field.value}
+                  >
+                    <SelectTrigger id="kycType" className="w-full cursor-pointer">
+                      <SelectValue placeholder="Select verification method" />
+                    </SelectTrigger>
+                    <SelectContent position="popper">
+                      <SelectItem value="bvn">BVN (Bank Verification Number)</SelectItem>
+                      <SelectItem value="nin">NIN (National Identification Number)</SelectItem>
+                    </SelectContent>
+                  </Select>
+                  {fieldState.invalid && (
+                    <FieldError errors={[fieldState.error]} />
+                  )}
+                </Field>
+              )}
+            />
+          </div>
+
+          <div className="grid gap-2">
+            <Controller
+              name="kycId"
+              control={control}
+              render={({ field, fieldState }) => (
+                <Field data-invalid={fieldState.invalid}>
+                  <FieldLabel htmlFor="kycId">
+                    {selectedKycType ? `${selectedKycType.toUpperCase()} Number` : "KYC ID"}
+                  </FieldLabel>
+                  <Input
+                    {...field}
+                    id="kycId"
+                    aria-invalid={fieldState.invalid}
+                    placeholder={selectedKycType ? `Enter your ${selectedKycType.toUpperCase()}` : "Enter KYC ID"}
+                    autoComplete="off"
+                  />
                   {fieldState.invalid && (
                     <FieldError errors={[fieldState.error]} />
                   )}

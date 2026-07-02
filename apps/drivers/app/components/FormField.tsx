@@ -45,34 +45,19 @@ import {
 } from "react-hook-form";
 import PhoneNumberInput from "react-phone-number-input";
 import "react-phone-number-input/style.css";
-import { z } from "zod/v4";
 import CountryList from "../../country-list.json";
-import { onboardingSchema } from "@repo/types/index";
+import { TonboardingSchema } from "@repo/types/index";
 
-
-
-export const DriverInfoSchema = onboardingSchema
-  .extend({
-    file: z.union([z.instanceof(File), z.string()]).optional().nullable(),
-  })
-  .omit({
-    bankName: true,
-    bankCode: true,
-    accountNumber: true,
-    accountName: true,
-    currency: true,
-  });
-
-
-
-type TDriverInfoSchema = z.infer<typeof DriverInfoSchema>;
+type TDriverInfoSchema = Omit<TonboardingSchema, "bankName" | "bankCode" | "accountNumber" | "accountName" | "currency" | "kycType" | "kycId" | "kycConsent" | "file"> & {
+  file?: File | string | null;
+};
 type UploadedFile = FileUploadState["files"][number] | null;
 type CountryState = (typeof CountryList.data)[number]["states"][number];
 
 
 
 
-export const SettingsRow = ({
+const SettingsRow = ({
   label,
   htmlFor,
   children,
@@ -91,7 +76,7 @@ export const SettingsRow = ({
   );
 }
 
-export function PreviewImage({ src, alt }: { src: string; alt: string }) {
+function PreviewImage({ src, alt }: { src: string; alt: string }) {
   return (
     <Image
       src={src}
