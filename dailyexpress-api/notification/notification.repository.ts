@@ -3,7 +3,8 @@ import { db } from "../db/connection";
 import { driver } from "../db/index";
 import { notification } from "../db/notification-schema";
 
-type NotificationTransaction = Parameters<Parameters<typeof db.transaction>[0]>[0];
+import type { DbTransaction } from "../db/connection";
+type NotificationTransaction = DbTransaction;
 type InsertNotification = typeof notification.$inferInsert;
 
 export class NotificationRepository {

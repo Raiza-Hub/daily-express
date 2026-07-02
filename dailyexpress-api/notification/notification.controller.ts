@@ -3,10 +3,8 @@ import { asyncHandler } from "@shared/middleware";
 import { createSuccessResponse } from "@shared/utils";
 import { getAuthenticatedUser } from "../middleware/auth";
 import { sendErrorResponse } from "../middleware/apiResponses";
-import { NotificationService } from "./notificationService";
+import { notificationService } from "./notification.service";
 import { timeAsync } from "../utils/timing";
-
-const notificationService = new NotificationService();
 
 export const getNotifications: RequestHandler = asyncHandler(
   async (req: Request, res: Response) => {
