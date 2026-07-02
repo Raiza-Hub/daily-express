@@ -24,11 +24,7 @@ export interface BookingConfirmedEmailProps {
   tripDate: string | Date;
   departureTime: string | Date;
   timeZone: string;
-  vehicleType: string;
-  seatNumber: number;
   meetingPoint: string;
-  driverName?: string | null;
-  driverPhone?: string | null;
 }
 
 const BookingConfirmedEmail = ({
@@ -40,11 +36,7 @@ const BookingConfirmedEmail = ({
   tripDate,
   departureTime,
   timeZone,
-  vehicleType,
-  seatNumber,
   meetingPoint,
-  driverName,
-  driverPhone,
 }: BookingConfirmedEmailProps) => {
   const previewText = `Your booking to ${dropoffTitle} is confirmed!`;
   const formattedTripDate = formatTripDate(tripDate, timeZone);
@@ -72,35 +64,15 @@ const BookingConfirmedEmail = ({
             </Text>
 
             <Text style={summary}>
-              Great news! Your payment of{" "}
-              <strong style={strong}>{pricePaid}</strong> has been received and
-              your seat on the{" "}
-              <strong style={strong}>
-                {pickupTitle} to {dropoffTitle}
-              </strong>{" "}
-              trip is now confirmed.
-            </Text>
-
-            <Text style={summary}>
-              Please review your booking details below and keep this email as
-              your travel reference. We recommend arriving at the meeting point
-              at least <strong style={strong}>15 minutes</strong> before your
-              scheduled departure time.
+              Your booking has been confirmed and your payment of{" "}
+              <strong style={strong}>{pricePaid}</strong> has been received.
             </Text>
 
             <Hr style={divider} />
 
-            <Text style={sectionTitle}>Booking Details</Text>
+            <Text style={sectionTitle}>Trip Details</Text>
 
             <Section style={infoTable}>
-              <Row style={row}>
-                <Column style={labelCol}>
-                  <Text style={label}>Booking Reference:</Text>
-                </Column>
-                <Column style={valueCol}>
-                  <Text style={value}>{paymentReference}</Text>
-                </Column>
-              </Row>
               <Row style={row}>
                 <Column style={labelCol}>
                   <Text style={label}>Route:</Text>
@@ -113,14 +85,6 @@ const BookingConfirmedEmail = ({
               </Row>
               <Row style={row}>
                 <Column style={labelCol}>
-                  <Text style={label}>Trip Date:</Text>
-                </Column>
-                <Column style={valueCol}>
-                  <Text style={value}>{formattedTripDate}</Text>
-                </Column>
-              </Row>
-              <Row style={row}>
-                <Column style={labelCol}>
                   <Text style={label}>Departure Time:</Text>
                 </Column>
                 <Column style={valueCol}>
@@ -129,51 +93,37 @@ const BookingConfirmedEmail = ({
               </Row>
               <Row style={row}>
                 <Column style={labelCol}>
-                  <Text style={label}>Vehicle Type:</Text>
-                </Column>
-                <Column style={{ ...valueCol }}>
-                  <Text style={{ ...value, textTransform: "capitalize" }}>
-                    {vehicleType}
-                  </Text>
-                </Column>
-              </Row>
-              <Row style={row}>
-                <Column style={labelCol}>
-                  <Text style={label}>Seat Number:</Text>
+                  <Text style={label}>Booking Reference:</Text>
                 </Column>
                 <Column style={valueCol}>
-                  <Text style={value}>{seatNumber}</Text>
+                  <Text style={value}>{paymentReference}</Text>
                 </Column>
               </Row>
-              <Row style={row}>
-                <Column style={labelCol}>
-                  <Text style={label}>Meeting Point:</Text>
-                </Column>
-                <Column style={valueCol}>
-                  <Text style={value}>{meetingPoint}</Text>
-                </Column>
-              </Row>
-              {driverName && (
-                <Row style={row}>
-                  <Column style={labelCol}>
-                    <Text style={label}>Driver Name:</Text>
-                  </Column>
-                  <Column style={valueCol}>
-                    <Text style={value}>{driverName}</Text>
-                  </Column>
-                </Row>
-              )}
-              {driverPhone && (
-                <Row style={row}>
-                  <Column style={labelCol}>
-                    <Text style={label}>Driver Phone:</Text>
-                  </Column>
-                  <Column style={valueCol}>
-                    <Text style={value}>{driverPhone}</Text>
-                  </Column>
-                </Row>
-              )}
             </Section>
+
+            <Hr style={divider} />
+
+            <Text style={sectionTitle}>Current Status</Text>
+            <Text style={summary}>
+              Awaiting driver assignment. A driver has not yet accepted this
+              trip. We are notifying eligible drivers and will update you once a
+              driver is assigned.
+            </Text>
+
+            <Text style={sectionTitle}>What happens next?</Text>
+            <Text style={bullet}>
+              • If a driver accepts before departure, we'll send you the driver
+              and vehicle details immediately.
+            </Text>
+            <Text style={bullet}>
+              • If no driver is assigned by the departure deadline, we'll notify
+              you with available options (reschedule or refund).
+            </Text>
+
+            <Text style={summary}>
+              Meeting point:{" "}
+              <strong style={strong}>{meetingPoint}</strong>
+            </Text>
 
             <Hr style={divider} />
 
@@ -194,7 +144,7 @@ const BookingConfirmedEmail = ({
             <Hr style={divider} />
 
             <Text style={footerText}>
-              Thank you for choosing Daily Express.
+              Thank you for booking with Daily Express.
             </Text>
             <Text style={footerText}>The Daily Express Team</Text>
           </Container>
@@ -328,6 +278,14 @@ const value = {
   margin: 0,
 };
 
+const bullet = {
+  color: "#111",
+  fontSize: "13px",
+  lineHeight: "20px",
+  marginBottom: "8px",
+  paddingLeft: "4px",
+};
+
 const supportText = {
   color: "#333",
   fontSize: "13px",
@@ -356,11 +314,7 @@ BookingConfirmedEmail.PreviewProps = {
   dropoffTitle: "Ibadan",
   tripDate: "Saturday, April 25, 2026",
   departureTime: "08:30 AM",
-  vehicleType: "bus",
-  seatNumber: 7,
   meetingPoint: "Daily Express Terminal, Yaba",
-  driverName: "Tunde Bello",
-  driverPhone: "08030001234",
 } as BookingConfirmedEmailProps;
 
 export default BookingConfirmedEmail;
