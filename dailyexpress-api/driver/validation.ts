@@ -51,6 +51,19 @@ export const createDriverSchema = Joi.object({
   accountName: Joi.string().min(2).max(100).required().messages({
     "string.empty": "Account name is required",
   }),
+  kycType: Joi.string().valid("bvn", "nin").required().messages({
+    "any.only": "KYC type must be either 'bvn' or 'nin'",
+    "string.empty": "KYC type is required",
+  }),
+  kycId: Joi.string().min(10).max(20).required().messages({
+    "string.min": "KYC ID must be at least 10 characters",
+    "string.max": "KYC ID must not exceed 20 characters",
+    "string.empty": "KYC ID is required",
+  }),
+  kycConsent: Joi.boolean().valid(true).required().messages({
+    "any.only": "You must consent to identity verification",
+    "any.required": "KYC consent is required",
+  }),
 });
 
 export const updateDriverSchema = Joi.object({
@@ -83,4 +96,14 @@ export const updateDriverSchema = Joi.object({
   bankCode: Joi.string().min(2).max(20).optional(),
   accountNumber: Joi.string().min(2).max(100).optional(),
   accountName: Joi.string().min(2).max(100).optional(),
+  kycType: Joi.string().valid("bvn", "nin").optional().messages({
+    "any.only": "KYC type must be either 'bvn' or 'nin'",
+  }),
+  kycId: Joi.string().min(10).max(20).optional().messages({
+    "string.min": "KYC ID must be at least 10 characters",
+    "string.max": "KYC ID must not exceed 20 characters",
+  }),
+  kycConsent: Joi.boolean().valid(true).optional().messages({
+    "any.only": "You must consent to identity verification",
+  }),
 }).min(1); // Ensures at least one field is provided for an update

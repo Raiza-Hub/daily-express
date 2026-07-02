@@ -2,21 +2,21 @@ import type { Driver, DriverStats, UpdateProfileRequest } from "@shared/types";
 import { db } from "../db/connection";
 import { driver } from "../db/index";
 import { createServiceError, sanitizeInput } from "@shared/utils";
-import { NotificationService } from "../notification/notificationService";
+import { notificationService } from "../notification/notification.service";
 import { publishNotificationCreatedInBackground } from "../notification/realtime";
 import { jobService } from "../workers/jobService";
+import { kycDedupClient } from "../kyc/kyc-dedup.client";
 import { timeAsync } from "../utils/timing";
 import type { DriverProfileImageUploadFile } from "./cloudinary";
-import { DriverRepository } from "./driver.repository";
+import { DriverRepository, driverRepository } from "./driver.repository";
 
-type DriverTransaction = Parameters<Parameters<typeof db.transaction>[0]>[0];
-type DriverRecord = typeof driver.$inferSelect;
+import type { DbTransaction } from "../db/connection";
+import type { DriverRecord } from "../db/index";
+type DriverTransaction = DbTransaction;
 
 type DriverMutationResult = Driver & {
   profilePictureUpload?: { id: string; status: "pending" };
 };
-
-const notificationService = new NotificationService();
 
 export class DriverProfileService {
   constructor(private repo: DriverRepository) {}
@@ -25,82 +25,122 @@ export class DriverProfileService {
     userId: string,
     driverData: Partial<UpdateProfileRequest>,
     profileImageUpload?: DriverProfileImageUploadFile,
+    kycData?: { kycType: "bvn" | "nin"; kycId: string },
   ): Promise<DriverMutationResult> {
     const existingDriver = await this.repo.findDriverByUserId(userId);
     if (existingDriver) {
       throw createServiceError("Driver profile already exists", 400);
     }
 
-    const sanitizeData = this.sanitizeProfileData(driverData);
-    if (profileImageUpload) {
-      delete sanitizeData.profile_pic;
+    if (kycData) {
+      const dupCheck = await kycDedupClient.checkDuplicate(kycData.kycId, null, kycData.kycType);
+      if (dupCheck.isDuplicate) {
+        throw createServiceError(
+          "This identity document has already been verified with another driver account",
+          409,
+        );
+      }
     }
 
-    const result = await timeAsync(
-      "driver.create.transaction",
-      { userId },
-      () =>
-        db.transaction(async (tx) => {
-          const createdDriver = await this.repo.insertDriver(tx, {
-            ...sanitizeData,
-            userId,
-            bankVerificationStatus: "pending",
-            bankVerificationFailureReason: null,
-            bankVerificationRequestedAt: new Date(),
-            bankVerifiedAt: null,
-          } as typeof driver.$inferInsert);
+    try {
+      const sanitizeData = this.sanitizeProfileData(driverData);
+      if (profileImageUpload) {
+        delete sanitizeData.profile_pic;
+      }
 
-          await this.repo.insertDriverStats(tx, {
-            driverId: createdDriver.id,
-          });
+      const result = await timeAsync(
+        "driver.create.transaction",
+        { userId },
+        () =>
+          db.transaction(async (tx) => {
+            const createdDriver = await this.repo.insertDriver(tx, {
+              ...sanitizeData,
+              userId,
+              bankVerificationStatus: "pending",
+              bankVerificationFailureReason: null,
+              bankVerificationRequestedAt: new Date(),
+              bankVerifiedAt: null,
+              kycStatus: kycData ? "pending" : "none",
+              kycType: kycData?.kycType ?? null,
+              kycRequestedAt: kycData ? new Date() : null,
+              kycFailureReason: null,
+              kycVerifiedAt: null,
+            } as typeof driver.$inferInsert);
 
-          const bankNotification =
-            await notificationService.createBankVerificationStateInTransaction(
+            await this.repo.insertDriverStats(tx, {
+              driverId: createdDriver.id,
+            });
+
+            const bankNotification =
+              await notificationService.createBankVerificationStateInTransaction(
+                tx,
+                createdDriver.id,
+                this.getBankVerificationPendingNotification(),
+              );
+
+            await jobService.enqueueDriverVerification(
               tx,
-              createdDriver.id,
-              this.getBankVerificationPendingNotification(),
+              {
+                type: "bank_verification",
+                driverId: createdDriver.id,
+                bankName: createdDriver.bankName,
+                bankCode: createdDriver.bankCode,
+                accountNumber: createdDriver.accountNumber,
+                accountName: createdDriver.accountName,
+                currency: createdDriver.currency,
+              },
             );
 
-          await timeAsync(
-            "driver.create.bank_verification_enqueue",
-            { driverId: createdDriver.id },
-            () =>
-              jobService.enqueueDriverBankVerification(
+            if (kycData) {
+              await jobService.enqueueDriverVerification(
                 tx,
-                this.getBankVerificationJobData(createdDriver),
-              ),
-          );
+                {
+                  type: "kyc_verification",
+                  driverId: createdDriver.id,
+                  kycType: kycData.kycType,
+                  kycId: kycData.kycId,
+                  firstName: sanitizeData.firstName ?? undefined,
+                  lastName: sanitizeData.lastName ?? undefined,
+                },
+              );
+            }
 
-          const profilePictureUpload = profileImageUpload
-            ? await this.enqueueProfileImageUpload(tx, {
-                driverId: createdDriver.id,
-                userId,
-                oldProfilePictureUrl: null,
-                file: profileImageUpload,
-              })
-            : null;
+            const profilePictureUpload = profileImageUpload
+              ? await this.enqueueProfileImageUpload(tx, {
+                  driverId: createdDriver.id,
+                  userId,
+                  oldProfilePictureUrl: null,
+                  file: profileImageUpload,
+                })
+              : null;
 
-          return {
-            driver: createdDriver,
-            bankNotification,
-            profilePictureUpload,
-          };
-        }),
-    );
-
-    if (
-      result.bankNotification.notification &&
-      result.bankNotification.shouldDeliver
-    ) {
-      publishNotificationCreatedInBackground(
-        result.bankNotification.notification,
+            return {
+              driver: createdDriver,
+              bankNotification,
+              profilePictureUpload,
+            };
+          }),
       );
-    }
 
-    return this.withProfilePictureUpload(
-      result.driver,
-      result.profilePictureUpload,
-    );
+      if (
+        result.bankNotification.notification &&
+        result.bankNotification.shouldDeliver
+      ) {
+        publishNotificationCreatedInBackground(
+          result.bankNotification.notification,
+        );
+      }
+
+      return this.withProfilePictureUpload(
+        result.driver,
+        result.profilePictureUpload,
+      );
+    } catch (error) {
+      if (kycData) {
+        await kycDedupClient.releaseClaim(kycData.kycId).catch(() => {});
+      }
+      throw error;
+    }
   }
 
   async getProfile(userId: string): Promise<Driver | null> {
@@ -112,18 +152,47 @@ export class DriverProfileService {
     userId: string,
     driverData: Partial<UpdateProfileRequest>,
     profileImageUpload?: DriverProfileImageUploadFile,
+    kycData?: { kycType: "bvn" | "nin"; kycId: string },
   ): Promise<DriverMutationResult> {
     const existingDriver = await this.repo.findDriverByUserId(userId);
     if (!existingDriver) {
       throw createServiceError("Driver not found", 404);
     }
 
-    const sanitizedData = this.sanitizeProfileData(driverData);
-    if (profileImageUpload) {
-      delete sanitizedData.profile_pic;
+    if (kycData) {
+      if (existingDriver.kycStatus === "active") {
+        throw createServiceError(
+          "Your identity has already been verified and cannot be changed",
+          400,
+        );
+      }
+      if (existingDriver.kycStatus === "pending") {
+        throw createServiceError(
+          "Identity verification is already in progress",
+          409,
+        );
+      }
+
+      const dupCheck = await kycDedupClient.checkDuplicate(
+        kycData.kycId,
+        existingDriver.id,
+        kycData.kycType,
+      );
+      if (dupCheck.isDuplicate) {
+        throw createServiceError(
+          "This identity document has already been verified with another driver account",
+          409,
+        );
+      }
     }
 
-    const bankDetailsChanged =
+    try {
+      const sanitizedData = this.sanitizeProfileData(driverData);
+      if (profileImageUpload) {
+        delete sanitizedData.profile_pic;
+      }
+
+      const bankDetailsChanged =
       (sanitizedData.bankName !== undefined &&
         sanitizedData.bankName !== existingDriver.bankName) ||
       (sanitizedData.bankCode !== undefined &&
@@ -133,64 +202,102 @@ export class DriverProfileService {
       (sanitizedData.accountName !== undefined &&
         sanitizedData.accountName !== existingDriver.accountName);
 
-    const result = await db.transaction(async (tx) => {
-      const record = await this.repo.updateDriver(tx, userId, {
-        ...sanitizedData,
-        ...(bankDetailsChanged
-          ? {
-              bankVerificationStatus: "pending" as const,
-              bankVerificationFailureReason: null,
-              bankVerificationRequestedAt: new Date(),
-              bankVerifiedAt: null,
-            }
-          : {}),
-        updatedAt: new Date(),
+      const result = await db.transaction(async (tx) => {
+        const record = await this.repo.updateDriver(tx, userId, {
+          ...sanitizedData,
+          ...(bankDetailsChanged
+            ? {
+                bankVerificationStatus: "pending" as const,
+                bankVerificationFailureReason: null,
+                bankVerificationRequestedAt: new Date(),
+                bankVerifiedAt: null,
+              }
+            : {}),
+          ...(kycData
+            ? {
+                kycStatus: "pending" as const,
+                kycType: kycData.kycType,
+                kycRequestedAt: new Date(),
+                kycFailureReason: null,
+                kycVerifiedAt: null,
+                kycVerificationReference: null,
+              }
+            : {}),
+          updatedAt: new Date(),
+        });
+
+        let bankNotification: Awaited<
+          ReturnType<
+            typeof notificationService.createBankVerificationStateInTransaction
+          >
+        > | null = null;
+        if (bankDetailsChanged) {
+          bankNotification =
+            await notificationService.createBankVerificationStateInTransaction(
+              tx,
+              record.id,
+              this.getBankVerificationPendingNotification(),
+            );
+
+          await jobService.enqueueDriverVerification(
+            tx,
+            {
+              type: "bank_verification",
+              driverId: record.id,
+              bankName: record.bankName,
+              bankCode: record.bankCode,
+              accountNumber: record.accountNumber,
+              accountName: record.accountName,
+              currency: record.currency,
+            },
+          );
+        }
+
+        if (kycData) {
+          await jobService.enqueueDriverVerification(
+            tx,
+            {
+              type: "kyc_verification",
+              driverId: record.id,
+              kycType: kycData.kycType,
+              kycId: kycData.kycId,
+              firstName: record.firstName ?? undefined,
+              lastName: record.lastName ?? undefined,
+            },
+          );
+        }
+
+        const profilePictureUpload = profileImageUpload
+          ? await this.enqueueProfileImageUpload(tx, {
+              driverId: record.id,
+              userId,
+              oldProfilePictureUrl: existingDriver.profile_pic ?? null,
+              file: profileImageUpload,
+            })
+          : null;
+
+        return { driver: record, bankNotification, profilePictureUpload };
       });
 
-      let bankNotification: Awaited<
-        ReturnType<
-          typeof notificationService.createBankVerificationStateInTransaction
-        >
-      > | null = null;
-      if (bankDetailsChanged) {
-        bankNotification =
-          await notificationService.createBankVerificationStateInTransaction(
-            tx,
-            record.id,
-            this.getBankVerificationPendingNotification(),
-          );
-
-        await jobService.enqueueDriverBankVerification(
-          tx,
-          this.getBankVerificationJobData(record),
+      if (
+        result.bankNotification?.notification &&
+        result.bankNotification.shouldDeliver
+      ) {
+        publishNotificationCreatedInBackground(
+          result.bankNotification.notification,
         );
       }
 
-      const profilePictureUpload = profileImageUpload
-        ? await this.enqueueProfileImageUpload(tx, {
-            driverId: record.id,
-            userId,
-            oldProfilePictureUrl: existingDriver.profile_pic ?? null,
-            file: profileImageUpload,
-          })
-        : null;
-
-      return { driver: record, bankNotification, profilePictureUpload };
-    });
-
-    if (
-      result.bankNotification?.notification &&
-      result.bankNotification.shouldDeliver
-    ) {
-      publishNotificationCreatedInBackground(
-        result.bankNotification.notification,
+      return this.withProfilePictureUpload(
+        result.driver,
+        result.profilePictureUpload,
       );
+    } catch (error) {
+      if (kycData) {
+        await kycDedupClient.releaseClaim(kycData.kycId).catch(() => {});
+      }
+      throw error;
     }
-
-    return this.withProfilePictureUpload(
-      result.driver,
-      result.profilePictureUpload,
-    );
   }
 
   async deactivateDriver(userId: string): Promise<void> {
@@ -226,17 +333,6 @@ export class DriverProfileService {
       tag: "Verification",
       tone: "attention" as const,
       occurredAt: new Date(),
-    };
-  }
-
-  private getBankVerificationJobData(record: DriverRecord) {
-    return {
-      driverId: record.id,
-      bankName: record.bankName,
-      bankCode: record.bankCode,
-      accountNumber: record.accountNumber,
-      accountName: record.accountName,
-      currency: record.currency,
     };
   }
 
@@ -334,3 +430,5 @@ export class DriverProfileService {
     return sanitized;
   }
 }
+
+export const driverProfileService = new DriverProfileService(driverRepository);

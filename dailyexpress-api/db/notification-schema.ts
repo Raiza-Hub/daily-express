@@ -70,3 +70,4 @@ export const notification = pgTable(
 );
 
 export type Notification = typeof notification.$inferSelect;
+export type NotificationRecord = Notification;
