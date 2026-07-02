@@ -25,6 +25,7 @@ import { sql } from "drizzle-orm";
 import { db } from "./db/connection";
 import { initSentry, sentryServer } from "@shared/sentry";
 import { logger } from "./utils/logger";
+import { getClientIp } from "./middleware/utils";
 
 initSentry({ serviceName: "dailyexpress-api" });
 
@@ -68,7 +69,6 @@ async function createApp(): Promise<Express> {
   app.use(express.json({ limit: "10mb" }));
   app.use(express.urlencoded({ extended: true }));
   app.use(createRequestLoggingMiddleware({ ignorePaths: ["/health", "/health/ready"] }));
-  app.use(doubleCsrfProtection);
 
   // Initialize pg-boss and start workers
   await getBoss();
@@ -175,11 +175,13 @@ async function createApp(): Promise<Express> {
 
       res.json({
         trustProxyHops: config.TRUST_PROXY_HOPS,
+        clientIp: getClientIp(req),
         ip: req.ip,
         ips: req.ips,
-        rateLimitKey: req.ip,
+        rateLimitKey: getClientIp(req),
         socketRemoteAddress: req.socket.remoteAddress,
         headers: {
+          cfConnectingIp: req.header("cf-connecting-ip"),
           xRealIp: req.header("x-real-ip"),
           xForwardedFor: req.header("x-forwarded-for"),
           xForwardedProto: req.header("x-forwarded-proto"),
@@ -199,14 +201,15 @@ async function createApp(): Promise<Express> {
 
   // Mount routes
   app.use("/api/v1/auth", authLimiter, authMiddleware, authRoutes);
-  app.use("/api/v1/driver", authMiddleware, driverRoutes);
+  app.use("/api/v1/driver", authMiddleware, doubleCsrfProtection, driverRoutes);
   app.use("/api/v1/admin", adminLimiter, adminRoutes);
-  app.use("/api/v1/route", authMiddleware, routeRoutes);
-  app.use("/api/v1/payments", authMiddleware, paymentRoutes);
-  app.use("/api/v1/payouts", authMiddleware, payoutRoutes);
+  app.use("/api/v1/route", authMiddleware, doubleCsrfProtection, routeRoutes);
+  app.use("/api/v1/payments", authMiddleware, doubleCsrfProtection, paymentRoutes);
+  app.use("/api/v1/payouts", authMiddleware, doubleCsrfProtection, payoutRoutes);
   app.use(
     "/api/v1/notifications",
     authMiddleware,
+    doubleCsrfProtection,
     notificationRoutes,
     notificationSSERoutes,
   );

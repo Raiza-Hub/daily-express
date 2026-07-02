@@ -8,6 +8,7 @@ import {
   isPublicAuthPath,
 } from "./publicPaths";
 import { createErrorPayload } from "./apiResponses";
+import { getClientIp } from "./utils";
 
 const config = getConfig();
 const hasUpstashCredentials = Boolean(
@@ -31,7 +32,7 @@ const redis =
     : null;
 
 function getClientKey(req: Request): string {
-  return `ip:${ipKeyGenerator(req.ip as string)}`;
+  return `ip:${ipKeyGenerator(getClientIp(req))}`;
 }
 
 function createLimiter(options: {
