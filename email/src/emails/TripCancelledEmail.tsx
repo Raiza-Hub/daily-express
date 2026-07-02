@@ -12,6 +12,8 @@ import {
 } from "@react-email/components";
 import { EMAIL_LOGO_CONTENT_ID } from "../assets";
 
+export type CancellationReason = "driver_deactivated" | "no_driver_found" | "admin_cancelled";
+
 export interface TripCancelledEmailProps {
   frontendUrl: string;
   customerName: string | null;
@@ -21,6 +23,7 @@ export interface TripCancelledEmailProps {
   amountMinor: number;
   currency?: string;
   refundReference: string;
+  reason?: CancellationReason;
   supportEmail?: string;
   supportPhone?: string;
 }
@@ -33,6 +36,17 @@ function formatCurrency(amountMinor: number, currency: string = "NGN") {
   }).format(amountMinor / 100);
 }
 
+function getCancellationText(reason: TripCancelledEmailProps["reason"], productName: string) {
+  switch (reason) {
+    case "no_driver_found":
+      return `We were unable to assign a driver to your trip, ${productName}. Your booking has been cancelled and a refund is being processed. We sincerely apologise for the inconvenience.`;
+    case "driver_deactivated":
+      return `We're sorry to let you know that your trip, ${productName} has been cancelled. Unfortunately, this occurred because the assigned driver is no longer available on our platform. We understand how inconvenient this can be, and we sincerely apologise.`;
+    default:
+      return `We're sorry to let you know that your trip, ${productName} has been cancelled. A refund is being processed. We sincerely apologise for the inconvenience.`;
+  }
+}
+
 const TripCancelledEmail = ({
   customerName,
   customerEmail,
@@ -41,11 +55,13 @@ const TripCancelledEmail = ({
   amountMinor,
   currency = "NGN",
   refundReference,
+  reason,
   supportEmail = "support@dailyexpress.app",
   supportPhone = "+234 9063611541",
 }: TripCancelledEmailProps) => {
   const greetingName = customerName || customerEmail;
   const previewText = "Your trip has been cancelled and a refund is being processed";
+  const cancellationText = getCancellationText(reason, productName);
 
   return (
     <Html>
@@ -66,19 +82,14 @@ const TripCancelledEmail = ({
           <Container style={card}>
             <Text style={greeting}>Dear {greetingName},</Text>
 
-            <Text style={summary}>
-              We're sorry to let you know that your trip, {" "}
-              <strong style={strong}>{productName}</strong> has been cancelled. 
-Unfortunately, this occurred because the assigned driver is no longer available 
-on our platform. We understand how inconvenient this can be, and we sincerely apologise.
-            </Text>
+            <Text style={summary}>{cancellationText}</Text>
 
             <Text style={summary}>
-              As a result, we have immediately initiated a full refund of{" "}
+              We have initiated a full refund of{" "}
               <strong style={strong}>{formatCurrency(amountMinor, currency)}</strong>{" "}
               to your original payment method. You can expect this to reflect in your account within 
-3–5 business days, though processing times may vary depending on your bank or 
-card provider.
+              3–5 business days, though processing times may vary depending on your bank or 
+              card provider.
             </Text>
 
             <Hr style={divider} />
@@ -230,6 +241,7 @@ TripCancelledEmail.PreviewProps = {
   amountMinor: 1250000,
   currency: "NGN",
   refundReference: "RFD-PAY-REF-2026-001",
+  reason: "no_driver_found",
   supportEmail: "support@dailyexpress.app",
   supportPhone: "+234 9063611541",
 } as TripCancelledEmailProps;
