@@ -1,7 +1,7 @@
 import { asyncHandler } from "@shared/middleware";
-import { AuthService } from "./authService";
+import { AuthService } from "./auth.service";
 import type { CookieOptions, Request, Response, RequestHandler } from "express";
-import { getAuthenticatedUser } from "../middleware/auth";
+import { getAuthenticatedUser, getCookieDomain } from "../middleware/auth";
 import { createSuccessResponse } from "@shared/utils";
 import { sendErrorResponse } from "../middleware/apiResponses";
 import { getConfig } from "../config/index";
@@ -15,18 +15,9 @@ const authService = new AuthService(getConfig());
 const ACCESS_TOKEN_MAX_AGE = 15 * 60 * 1000;
 const REFRESH_TOKEN_MAX_AGE = 7 * 24 * 60 * 60 * 1000;
 
-function getCookieDomain() {
-  const config = getConfig();
-  if (config.NODE_ENV !== "production") {
-    return undefined;
-  }
-
-  return config.COOKIE_DOMAIN || ".dailyexpress.app";
-}
-
 function getCookieOptions(maxAge: number): CookieOptions {
   const config = getConfig();
-  const cookieDomain = getCookieDomain();
+  const cookieDomain = getCookieDomain(config);
 
   return {
     httpOnly: true,
@@ -54,7 +45,7 @@ function setAuthCookies(
 }
 
 function clearAuthCookies(res: Response) {
-  const cookieDomain = getCookieDomain();
+  const cookieDomain = getCookieDomain(getConfig());
   const clearCookieOptions: CookieOptions = cookieDomain
     ? { domain: cookieDomain }
     : {};
@@ -192,7 +183,11 @@ export const verifyOtp: RequestHandler = asyncHandler(
 );
 
 export const logout: RequestHandler = asyncHandler(
-  async (_req: Request, res: Response) => {
+  async (req: Request, res: Response) => {
+    const gatewayUser = getAuthenticatedUser(req);
+    if (gatewayUser?.userId) {
+      await authService.invalidateSessions(gatewayUser.userId);
+    }
     clearAuthCookies(res);
     res
       .status(200)
