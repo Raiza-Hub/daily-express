@@ -25,7 +25,7 @@ const VerifyEmailForm = ({ redirect }: { redirect?: string }) => {
       verifyOtp(
         { otp },
         {
-          onSuccess: () => {
+          onSuccess: async () => {
             posthog.capture(posthogEvents.auth_email_verified);
             queryClient.invalidateQueries();
             router.push(redirect || "/");

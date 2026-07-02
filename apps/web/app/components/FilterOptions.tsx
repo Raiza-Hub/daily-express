@@ -2,25 +2,25 @@ import { CheckboxItem } from "./CheckboxItem";
 import { FilterSection } from "./FilterSection";
 
 interface FilterOptionsProps {
-  currentVehicleTypes: string[];
+  currentDepartureTime: string | null;
   onToggle: (value: string) => void;
-  vehicleTypeData: { label: string; value: string; count?: number }[];
+  departureTimeData: { label: string; value: string; count?: number }[];
 }
 
 const FilterOptions = ({
-  currentVehicleTypes,
+  currentDepartureTime,
   onToggle,
-  vehicleTypeData,
+  departureTimeData,
 }: FilterOptionsProps) => {
   return (
     <div className="divide-y divide-slate-100">
-      <FilterSection title="Vehicle Type">
-        {vehicleTypeData.map((item) => (
+      <FilterSection title="Departure Time">
+        {departureTimeData.map((item) => (
           <CheckboxItem
             key={item.value}
             label={item.label}
             count={item.count}
-            checked={currentVehicleTypes.includes(item.value)}
+            checked={item.value === currentDepartureTime}
             onChange={() => onToggle(item.value)}
           />
         ))}

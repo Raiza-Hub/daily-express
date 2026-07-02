@@ -25,7 +25,7 @@ export async function generateMetadata({
 
 export default function Home() {
   return (
-    <div className="w-full min-h-screen flex flex-col">
+    <div className="w-full min-h-screen flex flex-col bg-neutral-50">
       <div className="bg-white">
         <Navbar />
         <div className="bg-gray-50 border-b border-neutral-200 flex flex-col">

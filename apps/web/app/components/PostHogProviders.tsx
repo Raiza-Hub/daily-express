@@ -22,10 +22,11 @@ export function PostHogProvider({ children }: { children: React.ReactNode }) {
       person_profiles: "identified_only",
       capture_pageleave: true,
       capture_exceptions: true,
-      session_recording: {
-        maskAllInputs: false,
-        maskInputOptions: { password: true },
-      },
+      // session_recording: {
+      //   maskAllInputs: false,
+      //   maskInputOptions: { password: true },
+      // },
+      disable_session_recording: true,
       persistence:
         cookieConsentGiven() === "yes" ? "localStorage+cookie" : "memory",
     });
