@@ -1,1 +1,0 @@
-ALTER TABLE "driver" ALTER COLUMN "gender" SET NOT NULL;
