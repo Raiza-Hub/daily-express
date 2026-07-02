@@ -1,47 +1,58 @@
 import { Router } from "express";
 import { authenticateVerifiedGatewayRequest } from "../middleware/gatewayAuth";
-import { validateRequest } from "../middleware/requestValidation";
+import { createTokenBucketLimiter } from "../middleware/tokenBucket";
+import { getConfig } from "../config/index";
 import * as routeController from "./route.controller";
-import { createRouteSchema, updateRouteSchema } from "./validation";
+const config = getConfig();
+
+const bookingLimiter = createTokenBucketLimiter({
+  capacity: config.TOKEN_BUCKET_BOOKING_CAPACITY,
+  refillRate: config.TOKEN_BUCKET_BOOKING_REFILL_RATE,
+  refillIntervalSec: config.TOKEN_BUCKET_BOOKING_REFILL_INTERVAL_SEC,
+  prefix: "booking",
+  message: "Too many booking attempts. Please wait before trying again.",
+});
+
+const driverActionLimiter = createTokenBucketLimiter({
+  capacity: config.TOKEN_BUCKET_DRIVER_CAPACITY,
+  refillRate: config.TOKEN_BUCKET_DRIVER_REFILL_RATE,
+  refillIntervalSec: config.TOKEN_BUCKET_DRIVER_REFILL_INTERVAL_SEC,
+  prefix: "driver",
+  message: "Too many driver actions. Please slow down.",
+});
 
 const router: Router = Router();
 
 router.get(
-  "/driver/routes",
+  "/trips/live",
+  routeController.streamTripUpdates,
+);
+router.get(
+  "/driver/trips/available",
   authenticateVerifiedGatewayRequest,
-  routeController.getAllDriverRoutes,
+  routeController.getAvailableTrips,
+);
+router.get(
+  "/driver/trips/available/calendar",
+  authenticateVerifiedGatewayRequest,
+  routeController.getAvailableTripsCountByDate,
 );
 router.post(
-  "/create/driver/route",
+  "/driver/trip/:id/claim",
   authenticateVerifiedGatewayRequest,
-  validateRequest(createRouteSchema),
-  routeController.createRoute,
-);
-router.put(
-  "/update/driver/route/:id",
-  authenticateVerifiedGatewayRequest,
-  validateRequest(updateRouteSchema),
-  routeController.updateRoute,
-);
-router.patch(
-  "/driver/trip/:id",
-  authenticateVerifiedGatewayRequest,
-  routeController.updateTripStatus,
+  driverActionLimiter,
+  routeController.claimTrip,
 );
 router.patch(
   "/driver/trip/:id/complete",
   authenticateVerifiedGatewayRequest,
+  driverActionLimiter,
   routeController.completeTrip,
 );
 router.get(
   "/driver/trips-summary-range",
   authenticateVerifiedGatewayRequest,
   routeController.getDailyTripSummaries,
-);
-router.delete(
-  "/driver/route/:id",
-  authenticateVerifiedGatewayRequest,
-  routeController.deleteRoute,
 );
 router.get(
   "/driver/trip/:tripId/bookings",
@@ -62,6 +73,7 @@ router.get("/search", routeController.searchRoutes);
 router.post(
   "/user/booking/checkout",
   authenticateVerifiedGatewayRequest,
+  bookingLimiter,
   routeController.createCheckoutBooking,
 );
 

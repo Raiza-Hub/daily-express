@@ -1,38 +1,38 @@
-export { getBoss, stopBoss } from "./boss";
-export { registerEmailWorker } from "./email.worker";
-export { registerPaymentExpiryWorker } from "./payment-expiry.worker";
-export { registerPaymentWebhookWorker } from "./payment-webhook.worker";
-export { registerPayoutWorker } from "./payout.worker";
-export { registerBankVerificationWorker } from "./bank-verification.worker";
-export { registerDriverProfileUploadWorker } from "./driver-profile-upload.worker";
-export { registerDriverDeactivationRefundWorker } from "./driver-deactivation-refund.worker";
-
 export async function startWorkers() {
-  const { registerEmailWorker } = await import("./email.worker");
-  const { registerPaymentExpiryWorker } = await import(
-    "./payment-expiry.worker"
-  );
-  const { registerPaymentWebhookWorker } = await import(
-    "./payment-webhook.worker"
-  );
-  const { registerPayoutWorker } = await import("./payout.worker");
-  const { registerBankVerificationWorker } = await import(
-    "./bank-verification.worker"
-  );
-  const { registerDriverProfileUploadWorker } = await import(
-    "./driver-profile-upload.worker"
-  );
-  const { registerDriverDeactivationRefundWorker } = await import(
-    "./driver-deactivation-refund.worker"
-  );
+  const [
+    { registerEmailWorker },
+    { registerPaymentExpiryWorker },
+    { registerPaymentWebhookWorker },
+    { registerPayoutWorker },
+    { registerDriverVerificationWorker },
+    { registerDriverProfileUploadWorker },
+    { registerTripRefundWorker },
+    { registerAllocationWorker },
+    { registerTripDriverAssignedWorker },
+    { registerPaymentZombieSweepWorker },
+  ] = await Promise.all([
+    import("./email.worker"),
+    import("./payment-expiry.worker"),
+    import("./payment-webhook.worker"),
+    import("./payout.worker"),
+    import("./driver-verification.worker"),
+    import("./driver-profile-upload.worker"),
+    import("./trip-refund.worker"),
+    import("./allocation.worker"),
+    import("./trip-driver-assigned.worker"),
+    import("./payment-zombie-sweep.worker"),
+  ]);
 
   await Promise.all([
     registerEmailWorker(),
     registerPaymentExpiryWorker(),
     registerPaymentWebhookWorker(),
     registerPayoutWorker(),
-    registerBankVerificationWorker(),
+    registerDriverVerificationWorker(),
     registerDriverProfileUploadWorker(),
-    registerDriverDeactivationRefundWorker(),
+    registerTripRefundWorker(),
+    registerAllocationWorker(),
+    registerTripDriverAssignedWorker(),
+    registerPaymentZombieSweepWorker(),
   ]);
 }

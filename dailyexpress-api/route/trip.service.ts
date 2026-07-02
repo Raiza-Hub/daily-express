@@ -4,48 +4,21 @@ import { and, asc, eq, getTableColumns, gte, inArray, lt, ne, notInArray, sql } 
 import { db } from "../db/connection";
 import { booking, route, trip } from "../db/index";
 import { publishNotificationCreatedInBackground } from "../notification/realtime";
-import { PayoutService } from "../payout/payoutService";
 import {
     addDaysToDateKey,
     formatBusinessDate,
     getBusinessDayWindow,
     HIDDEN_BOOKING_PAYMENT_STATUSES,
 } from "../utils/route";
-import { RouteRepository } from "./route.repository";
-import { getTripArrivalAt, resolveDriverId } from "./utils";
+import { RouteRepository, routeRepository } from "./route.repository";
+import { payoutService as sharedPayoutService } from "../payout/payout.service";
+import { getTripArrivalAt, resolveDriverId, VISIBLE_BOOKING_STATUSES } from "./utils";
+import { logger } from "../utils/logger";
 
 export class TripService {
-  private readonly payoutService = new PayoutService();
+  private readonly payoutService = sharedPayoutService;
 
   constructor(private repo: RouteRepository) {}
-
-  async updateTripStatus(
-    user: JWTPayload,
-    tripId: string,
-    status: "booking_closed",
-  ) {
-    const driverId = await resolveDriverId(user);
-    const tripExists = await this.repo.findTripById(tripId);
-    if (!tripExists) {
-      throw createServiceError("Trip not found", 404);
-    }
-    if (tripExists.driverId !== driverId) {
-      throw createServiceError(
-        "You are not authorized to update this trip",
-        403,
-      );
-    }
-    if (tripExists.bookedSeats >= tripExists.capacity) {
-      throw createServiceError("Cannot stop booking - trip is full", 400);
-    }
-
-    const updatedTrip = await this.repo.updateTripStandalone(tripId, {
-      status,
-      updatedAt: new Date(),
-    });
-
-    return updatedTrip;
-  }
 
   async completeTrip(user: JWTPayload, tripId: string) {
     const driverId = await resolveDriverId(user);
@@ -76,8 +49,26 @@ export class TripService {
     }
 
     const result = await db.transaction(async (tx) => {
+      const lockedTrip = await this.repo.lockTrip(tx, tripId);
+      if (!lockedTrip) {
+        throw createServiceError("Trip not found", 404);
+      }
+      if (lockedTrip.driverId !== driverId) {
+        throw createServiceError(
+          "You are not authorized to complete this trip",
+          403,
+        );
+      }
+      if (lockedTrip.status === "cancelled") {
+        throw createServiceError("Cancelled trips cannot be completed", 400);
+      }
+      if (lockedTrip.status === "completed") {
+        throw createServiceError("Trip is already completed", 400);
+      }
+
       const updatedTrip = await this.repo.updateTrip(tx, tripId, {
         status: "completed",
+        vehicleId: null,
         updatedAt: new Date(),
       });
       if (!updatedTrip) {
@@ -122,8 +113,6 @@ export class TripService {
     const { start: rangeEnd } = getBusinessDayWindow(
       addDaysToDateKey(endDate, 1),
     );
-
-    const VISIBLE_BOOKING_STATUSES = ["confirmed", "completed"] as const;
 
     const bookingTotals = db
       .select({
@@ -177,7 +166,8 @@ export class TripService {
         pickup_location_locality: row.route.pickup_location_locality,
         dropoff_location_title: row.route.dropoff_location_title,
         dropoff_location_locality: row.route.dropoff_location_locality,
-        price: row.route.price,
+        priceCar: row.route.priceCar,
+        priceBus: row.route.priceBus,
         departure_time: row.route.departure_time,
         arrival_time: row.route.arrival_time,
       },
@@ -219,3 +209,5 @@ export class TripService {
     );
   }
 }
+
+export const tripService = new TripService(routeRepository);

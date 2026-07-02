@@ -1,8 +1,7 @@
-import type { Route } from "@shared/types";
 import { sql } from "drizzle-orm";
 
 import { createServiceError } from "@shared/utils";
-import { booking, driver } from "../db/index";
+import { booking, type BookingRecord } from "../db/index";
 import {
   formatDateKey,
   getDateTimeParts,
@@ -19,8 +18,6 @@ export const HIDDEN_BOOKING_PAYMENT_STATUSES = [
   "refunded",
   "refund_failed",
 ];
-
-type BookingRecord = typeof booking.$inferSelect;
 
 export function normalizeSearchText(value: string): string {
   return value.trim().toLowerCase().replace(/\s+/g, " ");
@@ -146,21 +143,21 @@ export function getBusinessDayWindow(dateInput: string) {
 
 export function getScheduledDepartureTime(
   tripDate: string,
-  departureTime: Date,
+  departureTime: string,
 ) {
   const dateKey = parseDateKey(tripDate);
   const [year, month, day] = dateKey.split("-").map(Number);
+  const [hour, minute, second = 0] = departureTime.split(":").map(Number);
   const timeZone = getRouteServiceTimeZone();
-  const timeParts = getDateTimeParts(departureTime, timeZone);
 
   return zonedDateTimeToUtc(
     year,
     month,
     day,
-    timeParts.hour,
-    timeParts.minute,
-    timeParts.second,
-    departureTime.getMilliseconds(),
+    hour,
+    minute,
+    second,
+    0,
     timeZone,
   );
 }
@@ -169,17 +166,5 @@ export function formatBusinessDate(date: Date): string {
   return formatDateKey(date);
 }
 
-export function mapDriverToRouteDriver(
-  record: typeof driver.$inferSelect,
-): Route["driver"] {
-  return {
-    id: record.id,
-    firstName: record.firstName,
-    lastName: record.lastName,
-    phone: record.phone,
-    profile_pic: record.profile_pic ?? null,
-    country: record.country,
-    state: record.state,
-  };
-}
+
 
