@@ -2,12 +2,6 @@ import type { Request, Response, NextFunction } from "express";
 import type { JWTPayload } from "@shared/types";
 import { sendErrorResponse } from "./apiResponses";
 
-function getHeaderValue(
-  value: string | string[] | undefined,
-): string | undefined {
-  return typeof value === "string" ? value : value?.[0];
-}
-
 function parseGatewayUser(req: Request): JWTPayload | null {
   const requestUser = req.user as Partial<JWTPayload> | undefined;
 
@@ -24,21 +18,7 @@ function parseGatewayUser(req: Request): JWTPayload | null {
     };
   }
 
-  const userId = getHeaderValue(req.headers["x-user-id"]);
-  const email = getHeaderValue(req.headers["x-user-email"]);
-  const emailVerifiedHeader = getHeaderValue(
-    req.headers["x-user-email-verified"],
-  );
-
-  if (!userId || !email || !emailVerifiedHeader) {
-    return null;
-  }
-
-  return {
-    userId,
-    email,
-    emailVerified: emailVerifiedHeader === "true",
-  };
+  return null;
 }
 
 export function authenticateGatewayRequest(

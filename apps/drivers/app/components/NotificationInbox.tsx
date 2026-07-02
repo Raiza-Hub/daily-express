@@ -78,6 +78,7 @@ const NotificationInbox = () => {
     <Popover open={open} onOpenChange={handleOpenChange}>
       <PopoverTrigger asChild>
         <button
+          type="button"
           className="relative inline-flex cursor-pointer items-center justify-center rounded-full p-2 hover:bg-muted"
           aria-label="Open notifications"
         >

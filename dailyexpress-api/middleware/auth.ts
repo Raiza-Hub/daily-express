@@ -35,7 +35,7 @@ export function getCookieDomain(config: ReturnType<typeof getConfig>) {
     return undefined;
   }
 
-  return process.env.COOKIE_DOMAIN || ".dailyexpress.app";
+  return config.COOKIE_DOMAIN || ".dailyexpress.app";
 }
 
 export function clearAuthCookies(
@@ -73,16 +73,18 @@ export function setAuthCookies(
     emailVerified: payload.emailVerified,
   };
 
-  const accessToken = jwt.sign(accessPayload, config.JWT_SECRET as Secret, {
+  const tokenSignOptions: SignOptions = {
     expiresIn: ACCESS_TOKEN_EXPIRES_IN,
-  });
+    issuer: "dailyexpress-api",
+    audience: "dailyexpress-app",
+  };
+
+  const accessToken = jwt.sign(accessPayload, config.JWT_SECRET as Secret, tokenSignOptions);
 
   const refreshToken = jwt.sign(
     accessPayload,
     config.JWT_REFRESH_SECRET as Secret,
-    {
-      expiresIn: REFRESH_TOKEN_EXPIRES_IN,
-    },
+    { ...tokenSignOptions, expiresIn: REFRESH_TOKEN_EXPIRES_IN },
   );
 
   res.cookie("token", accessToken, getCookieOptions(ACCESS_TOKEN_MAX_AGE_MS));
@@ -109,10 +111,15 @@ export function authMiddleware(
   const refreshToken = req.cookies?.refreshToken;
   const config = getConfig();
 
+  const verifyOptions = {
+    issuer: "dailyexpress-api",
+    audience: "dailyexpress-app",
+  };
+
   void (async () => {
     if (accessToken) {
       try {
-        const decoded = jwt.verify(accessToken, config.JWT_SECRET as Secret);
+        const decoded = jwt.verify(accessToken, config.JWT_SECRET as Secret, verifyOptions);
 
         if (!isJwtPayload(decoded)) {
           clearAuthCookies(res, config);
@@ -148,6 +155,7 @@ export function authMiddleware(
     const refreshed = jwt.verify(
       refreshToken,
       config.JWT_REFRESH_SECRET as Secret,
+      verifyOptions,
     );
 
     if (!isJwtPayload(refreshed) || typeof refreshed.iat !== "number") {
@@ -202,9 +210,13 @@ export function authMiddleware(
       return;
     }
 
-    logger.error("auth.token_validation_failed", {
-      error: error instanceof Error ? error.message : String(error),
-    });
+    try {
+      logger.error("auth.token_validation_failed", {
+        error: error instanceof Error ? error.message : String(error),
+      });
+    } catch {
+      // Logger failure is non-fatal
+    }
     sendErrorResponse(res, 500, undefined, {
       code: "TOKEN_VALIDATION_FAILED",
     });
