@@ -11,7 +11,7 @@ import { PaymentConfirmService } from "./payment-confirm.service";
 import { PaymentRefundService } from "./payment-refund.service";
 import { PaymentWebhookService } from "./payment-webhook.service";
 import { PaymentExpiryService } from "./payment-expiry.service";
-import { PayoutService } from "../payout/payoutService";
+import { PayoutService } from "../payout/payout.service";
 import { KoraClient } from "./kora.client";
 import type {
   InitializePaymentInput,
@@ -39,9 +39,9 @@ export class PaymentService {
   private readonly repo = new PaymentRepository();
   private readonly confirmService = new PaymentConfirmService(this.repo, payoutService);
   private readonly refundService = new PaymentRefundService(this.repo);
-  private readonly webhookService = new PaymentWebhookService(this.repo, this.confirmService, this.refundService);
-  private readonly expiryService = new PaymentExpiryService(this.repo, this.confirmService, this.refundService);
-  private readonly initService = new PaymentInitService(this.repo, this.confirmService);
+  private readonly webhookService = new PaymentWebhookService(this.repo, this.refundService);
+  private readonly expiryService = new PaymentExpiryService(this.repo);
+  private readonly initService = new PaymentInitService(this.repo);
   private readonly kora = new KoraClient();
 
   async initializePayment(

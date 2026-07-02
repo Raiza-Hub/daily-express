@@ -10,7 +10,7 @@ import {
     dedupeChannels,
     generateReference,
 } from "../utils/payment";
-import { jobService } from "../workers/jobService";
+import { jobService } from "../workers/job.service";
 import { koraClient } from "./kora.client";
 import { PaymentRepository, paymentRepository } from "./payment.repository";
 import type {

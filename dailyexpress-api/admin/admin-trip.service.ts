@@ -15,7 +15,7 @@ import { RouteRepository, routeRepository } from "../route/route.repository";
 import { logger } from "../utils/logger";
 import { generateReference } from "../utils/payment";
 import { formatBusinessDate, getScheduledDepartureTime } from "../utils/route";
-import { jobService } from "../workers/jobService";
+import { jobService } from "../workers/job.service";
 type ExternalDriverInsert = typeof externalDriverTable.$inferInsert;
 
 export class AdminTripService {

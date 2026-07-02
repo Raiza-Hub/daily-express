@@ -7,7 +7,7 @@ import { addDaysToDateKey, formatBusinessDate, getBusinessDayWindow, getSchedule
 import { formatRouteDate } from "../utils/timezone";
 import { notificationService } from "../notification/notification.service";
 import { publishNotificationCreatedInBackground } from "../notification/realtime";
-import { jobService } from "../workers/jobService";
+import { jobService } from "../workers/job.service";
 import { RouteRepository, routeRepository } from "./route.repository";
 import { sseManager } from "./sse-manager";
 import { decodeCursor, encodeCursor, normalizePageLimit } from "./utils";

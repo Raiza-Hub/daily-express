@@ -4,7 +4,7 @@ import { driver } from "../db/index";
 import { createServiceError, sanitizeInput } from "@shared/utils";
 import { notificationService } from "../notification/notification.service";
 import { publishNotificationCreatedInBackground } from "../notification/realtime";
-import { jobService } from "../workers/jobService";
+import { jobService } from "../workers/job.service";
 import { kycDedupClient } from "../kyc/kyc-dedup.client";
 import { timeAsync } from "../utils/timing";
 import type { DriverProfileImageUploadFile } from "./cloudinary";

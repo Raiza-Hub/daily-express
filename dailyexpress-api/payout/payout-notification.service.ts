@@ -7,7 +7,7 @@ import { PayoutRepository, payoutRepository } from "./payout.repository";
 import { driverService as sharedDriverService } from "../driver/driver.service";
 import { notificationService as sharedNotificationService } from "../notification/notification.service";
 import { publishNotificationCreatedInBackground } from "../notification/realtime";
-import { jobService } from "../workers/jobService";
+import { jobService } from "../workers/job.service";
 import { formatAmountMinor } from "../utils/payout";
 import type { DriverNotification } from "@shared/types";
 import type { DbTransaction } from "../db/connection";

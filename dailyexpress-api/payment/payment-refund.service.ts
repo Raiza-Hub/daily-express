@@ -6,7 +6,7 @@ import { booking, earning, payment, refund, trip } from "../db/index";
 import { driverService as sharedDriverService } from "../driver/driver.service";
 import { logger } from "../utils/logger";
 import { generateReference, toMinorAmount } from "../utils/payment";
-import { jobService } from "../workers/jobService";
+import { jobService } from "../workers/job.service";
 import { koraClient } from "./kora.client";
 import { PaymentRepository, paymentRepository } from "./payment.repository";
 import type { PaymentRecord, BookingRecord, RefundRecord } from "../db/index";

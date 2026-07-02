@@ -6,7 +6,7 @@ import { createServiceError } from "@shared/utils";
 import jwt, { type Secret, type SignOptions } from "jsonwebtoken";
 import type { UpdateUserRequest } from "@shared/types";
 import { FRONTEND_URL } from "./authUrls";
-import { jobService } from "../workers/jobService";
+import { jobService } from "../workers/job.service";
 import {
   renderEmail,
   getEmailSubject,

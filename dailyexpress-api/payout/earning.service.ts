@@ -6,7 +6,7 @@ import { earning } from "../db/index";
 import { PayoutRepository, payoutRepository } from "./payout.repository";
 import { driverService as sharedDriverService } from "../driver/driver.service";
 import { notificationService as sharedNotificationService } from "../notification/notification.service";
-import { jobService } from "../workers/jobService";
+import { jobService } from "../workers/job.service";
 import type { DriverNotification } from "@shared/types";
 
 type PayoutTransaction = DbTransaction;

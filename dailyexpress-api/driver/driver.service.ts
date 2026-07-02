@@ -5,7 +5,7 @@ import { DriverProfileService } from "./driver-profile.service";
 import { DriverStatsService } from "./driver-stats.service";
 import type { DriverProfileImageUploadFile } from "./cloudinary";
 import { db } from "../db/connection";
-import { JobService } from "../workers/jobService";
+import { JobService } from "../workers/job.service";
 
 type DriverMutationResult = Driver & {
   profilePictureUpload?: { id: string; status: "pending" };
@@ -107,3 +107,5 @@ export class DriverService {
     return this.statsService.recordRouteStatusChange(tx, input);
   }
 }
+
+export const driverService = new DriverService();

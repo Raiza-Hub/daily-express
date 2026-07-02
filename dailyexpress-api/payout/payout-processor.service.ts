@@ -9,7 +9,7 @@ import { PayoutRecipientService, payoutRecipientService } from "./payout-recipie
 import { PayoutAttemptService, payoutAttemptService } from "./payout-attempt.service";
 import { PayoutNotificationService, payoutNotificationService } from "./payout-notification.service";
 import { koraClient } from "../payment/kora.client";
-import { jobService } from "../workers/jobService";
+import { jobService } from "../workers/job.service";
 import {
   isFatalKoraError,
   isRetryableKoraError,

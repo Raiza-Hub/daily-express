@@ -7,7 +7,7 @@ import { routeRepository } from "../route/route.repository";
 import { notificationService } from "../notification/notification.service";
 import type { DriverNotification } from "@shared/types";
 import { publishNotificationCreated } from "../notification/realtime";
-import { jobService } from "./jobService";
+import { jobService } from "./job.service";
 import { getBoss, QUEUES, type TripDriverAssignedJobData } from "./boss";
 import { renderEmail, getEmailSubject } from "@repo/email";
 import { toMinorAmount } from "../utils/payment";
