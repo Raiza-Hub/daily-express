@@ -1,5 +1,3 @@
-import { Redis } from "@upstash/redis";
-import { Realtime, type Realtime as UpstashRealtime } from "@upstash/realtime";
 import type {
   DriverNotification,
   DriverNotificationCreatedRealtimeEvent,
@@ -8,55 +6,9 @@ import type {
 } from "@shared/types";
 import {
   DRIVER_NOTIFICATION_REALTIME_VERSION,
-  driverNotificationCreatedRealtimeEventSchema,
-  driverNotificationReadRealtimeEventSchema,
-  driverNotificationReadAllRealtimeEventSchema,
 } from "@shared/types";
-import { getConfig } from "../config";
 import { logger } from "../utils/logger";
-
-const schema = {
-  notification: {
-    created: driverNotificationCreatedRealtimeEventSchema,
-    read: driverNotificationReadRealtimeEventSchema,
-    read_all: driverNotificationReadAllRealtimeEventSchema,
-  },
-} as const;
-
-type NotificationRealtimeOptions = {
-  schema: typeof schema;
-  redis: Redis;
-  history: {
-    maxLength: number;
-    expireAfterSecs: number;
-  };
-};
-
-type NotificationRealtime = UpstashRealtime<NotificationRealtimeOptions>;
-
-let realtimeInstance: NotificationRealtime | null = null;
-
-function getRealtime(): NotificationRealtime {
-  if (!realtimeInstance) {
-    const config = getConfig();
-    realtimeInstance = new Realtime({
-      schema,
-      redis: new Redis({
-        url: config.NOTIFICATION_UPSTASH_REDIS_REST_URL || "",
-        token: config.NOTIFICATION_UPSTASH_REDIS_REST_TOKEN || "",
-      }),
-      history: {
-        maxLength: 500,
-        expireAfterSecs: 24 * 60 * 60,
-      },
-    });
-  }
-  return realtimeInstance;
-}
-
-function getDriverChannel(driverId: string) {
-  return `driver:${driverId}`;
-}
+import { publish as ssePublish } from "./sseManager";
 
 function toIsoString(value: Date | string | null | undefined) {
   if (!value) {
@@ -78,50 +30,32 @@ function serializeNotification(
   };
 }
 
-async function publishToDriverChannel(
-  driverId: string,
-  event:
-    | DriverNotificationCreatedRealtimeEvent
-    | DriverNotificationReadRealtimeEvent
-    | DriverNotificationReadAllRealtimeEvent,
-) {
-  try {
-    await getRealtime()
-      .channel(getDriverChannel(driverId))
-      .emit(event.type, event);
-  } catch (error) {
-    logger.warn("realtime.publish_failed", {
-      driverId,
-      eventType: event.type,
-      error: error instanceof Error ? error.message : String(error),
-    });
-    throw error;
-  }
-}
-
 export async function publishNotificationCreated(
   notification: DriverNotification,
   timestamp = Date.now(),
 ): Promise<void> {
-  await publishToDriverChannel(notification.driverId, {
+  const event: DriverNotificationCreatedRealtimeEvent = {
     version: DRIVER_NOTIFICATION_REALTIME_VERSION,
     type: "notification.created",
     payload: serializeNotification(notification),
     timestamp,
-  });
+  };
+  ssePublish(notification.driverId, "notification.created", event);
 }
 
 export function publishNotificationCreatedInBackground(
   notification: DriverNotification,
   timestamp = Date.now(),
 ): void {
-  void publishNotificationCreated(notification, timestamp).catch((error) => {
-    logger.warn("realtime.notification_created_publish_failed", {
+  try {
+    void publishNotificationCreated(notification, timestamp);
+  } catch (error) {
+    logger.warn("sse.notification_created_publish_failed", {
       driverId: notification.driverId,
       notificationId: notification.id,
       error: error instanceof Error ? error.message : String(error),
     });
-  });
+  }
 }
 
 export async function publishNotificationRead(
@@ -129,12 +63,13 @@ export async function publishNotificationRead(
   notificationId: string,
   timestamp = Date.now(),
 ): Promise<void> {
-  await publishToDriverChannel(driverId, {
+  const event: DriverNotificationReadRealtimeEvent = {
     version: DRIVER_NOTIFICATION_REALTIME_VERSION,
     type: "notification.read",
     payload: { id: notificationId },
     timestamp,
-  });
+  };
+  ssePublish(driverId, "notification.read", event);
 }
 
 export function publishNotificationReadInBackground(
@@ -142,37 +77,40 @@ export function publishNotificationReadInBackground(
   notificationId: string,
   timestamp = Date.now(),
 ): void {
-  void publishNotificationRead(driverId, notificationId, timestamp).catch(
-    (error) => {
-      logger.warn("realtime.notification_read_publish_failed", {
-        driverId,
-        notificationId,
-        error: error instanceof Error ? error.message : String(error),
-      });
-    },
-  );
+  try {
+    void publishNotificationRead(driverId, notificationId, timestamp);
+  } catch (error) {
+    logger.warn("sse.notification_read_publish_failed", {
+      driverId,
+      notificationId,
+      error: error instanceof Error ? error.message : String(error),
+    });
+  }
 }
 
 export async function publishNotificationReadAll(
   driverId: string,
   timestamp = Date.now(),
 ): Promise<void> {
-  await publishToDriverChannel(driverId, {
+  const event: DriverNotificationReadAllRealtimeEvent = {
     version: DRIVER_NOTIFICATION_REALTIME_VERSION,
     type: "notification.read_all",
     payload: {},
     timestamp,
-  });
+  };
+  ssePublish(driverId, "notification.read_all", event);
 }
 
 export function publishNotificationReadAllInBackground(
   driverId: string,
   timestamp = Date.now(),
 ): void {
-  void publishNotificationReadAll(driverId, timestamp).catch((error) => {
-    logger.warn("realtime.notification_read_all_publish_failed", {
+  try {
+    void publishNotificationReadAll(driverId, timestamp);
+  } catch (error) {
+    logger.warn("sse.notification_read_all_publish_failed", {
       driverId,
       error: error instanceof Error ? error.message : String(error),
     });
-  });
+  }
 }
