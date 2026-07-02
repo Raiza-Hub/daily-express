@@ -1,44 +1,41 @@
+/* eslint-disable @next/next/no-img-element */
 "use client";
 
-import type { TRoute } from "@repo/types/routeSchema";
 import {
-  Sheet,
-  SheetContent,
-  SheetHeader,
-  SheetTitle,
-  SheetDescription,
-} from "@repo/ui/components/sheet";
-import { Button } from "@repo/ui/components/button";
-import { Separator } from "@repo/ui/components/separator";
-import {
-  CarProfileIcon,
   InfoIcon,
   MapPinAreaIcon,
-  SpinnerIcon,
-  VanIcon,
+  SteeringWheelIcon
 } from "@phosphor-icons/react";
-import { useState } from "react";
-import { formatPrice, getDuration } from "@repo/ui/lib/utils";
+import type { TRoute } from "@repo/types/routeSchema";
+import {
+  Drawer,
+  DrawerContent,
+  DrawerDescription,
+  DrawerHeader,
+  DrawerTitle
+} from "@repo/ui/components/drawer";
+import {
+  Tabs,
+  TabsContent,
+  TabsList,
+  TabsTrigger,
+} from "@repo/ui/components/tabs";
 import dayjs from "dayjs";
-import { useCreateTripCheckout } from "@repo/api";
-import { useRouter } from "next/navigation";
-import { combineTripDateAndTime, parseLocalDate } from "~/lib/utils";
+import { useState } from "react";
 import { BookingContext } from "~/lib/type";
-import { posthogEvents } from "~/lib/posthog-events";
-import { usePostHog } from "posthog-js/react";
-
-const TRANSACTION_FEE_RATE = 0.1;
-const MAX_TRANSACTION_FEE = 1000;
-const WEB_PAYMENT_CHANNELS = ["bank_transfer"] as const;
+import { parseLocalDate, parseTimeString } from "~/lib/utils";
+import { DriverInfo, DriverInfoProps } from "../DriverInfo";
 
 interface TripDetailsSheetProps {
   trip: TRoute;
   open: boolean;
   onOpenChange: (open: boolean) => void;
   bookingContext?: BookingContext;
-  allowBooking?: boolean;
-  analyticsContext?: "search_results" | "trip_status";
   paymentStatus?: string;
+  showDriverDetails?: boolean;
+  driver?: DriverInfoProps;
+  displayMessage?: string | null;
+  driverStatus?: string;
 }
 
 const TripDetailsSheet = ({
@@ -46,25 +43,26 @@ const TripDetailsSheet = ({
   open,
   onOpenChange,
   bookingContext,
-  allowBooking = true,
   paymentStatus,
+  showDriverDetails,
+  driver,
+  displayMessage,
+  driverStatus,
 }: TripDetailsSheetProps) => {
-  const router = useRouter();
-  const posthog = usePostHog();
-  const duration = getDuration(trip.departureTime, trip.estimatedArrivalTime);
-  const transactionFee = Math.min(
-    Math.round(trip.price * TRANSACTION_FEE_RATE),
-    MAX_TRANSACTION_FEE,
-  );
+  const [activeTab, setActiveTab] = useState("trip");
+
+  const timeBaseDate = bookingContext
+    ? parseLocalDate(bookingContext.tripDate)
+    : new Date();
+
+  const depTime = parseTimeString(trip.departureTime, timeBaseDate);
+  const arrTime = parseTimeString(trip.estimatedArrivalTime, timeBaseDate);
+
   const selectedTripDate = bookingContext
     ? parseLocalDate(bookingContext.tripDate)
-    : trip.departureTime;
-  const scheduledDepartureTime = bookingContext
-    ? combineTripDateAndTime(selectedTripDate, trip.departureTime)
-    : trip.departureTime;
-  let scheduledArrivalTime = bookingContext
-    ? combineTripDateAndTime(selectedTripDate, trip.estimatedArrivalTime)
-    : trip.estimatedArrivalTime;
+    : depTime;
+  const scheduledDepartureTime = depTime;
+  let scheduledArrivalTime = arrTime;
 
   if (scheduledArrivalTime <= scheduledDepartureTime) {
     scheduledArrivalTime = dayjs(scheduledArrivalTime).add(1, "day").toDate();
@@ -76,322 +74,149 @@ const TripDetailsSheet = ({
   const bookingDate = bookingContext
     ? dayjs(selectedTripDate).format("ddd, D MMM YYYY")
     : departureDate;
-  const totalAmount = trip.price + transactionFee;
-  const hasTripDeparted = () => dayjs().isAfter(scheduledDepartureTime);
-  const hasDeparturePassed = hasTripDeparted();
-  const [bookError, setBookError] = useState<string | null>(null);
-  const [isCheckoutRedirecting, setIsCheckoutRedirecting] = useState(false);
 
-  const { mutateAsync: createTripCheckout, isPending: isCreatingCheckout } =
-    useCreateTripCheckout({
-      onError: (error) => {
-        posthog.captureException(error, {
-          action: "book_trip",
-          values: {
-            failureStage: "payment_initialization",
-            routeId: bookingContext?.routeId,
-            tripDate: bookingContext?.tripDate,
-          },
-        });
-        const message = error.message;
-        const requiresAuthentication =
-          message.toLowerCase().includes("login") ||
-          message.toLowerCase().includes("authenticated") ||
-          message.toLowerCase().includes("session expired");
+  const showDriverTab =
+    Boolean(showDriverDetails) &&
+    paymentStatus !== "refunded" &&
+    paymentStatus !== "refund_failed";
 
-        if (requiresAuthentication) {
-          router.push("/sign-in");
-          return;
-        }
-
-        setBookError(message);
-      },
-    });
-
-  const handleBookTrip = async () => {
-    if (isCreatingCheckout || isCheckoutRedirecting) {
-      return;
-    }
-
-    if (!bookingContext) {
-      return;
-    }
-
-    if (hasTripDeparted()) {
-      setBookError("This trip has already departed and can no longer be booked.");
-      return;
-    }
-
-    try {
-      setBookError(null);
-      setIsCheckoutRedirecting(false);
-
-      posthog.capture(posthogEvents.trip_book_initiated, {
-        routeId: bookingContext.routeId,
-        tripDate: bookingContext.tripDate,
-      });
-
-      const checkout = await createTripCheckout({
-        routeId: bookingContext.routeId,
-        tripDate: bookingContext.tripDate,
-        channels: [...WEB_PAYMENT_CHANNELS],
-        productName: `${trip.departureCity.title} to ${trip.arrivalCity.title}`,
-        productDescription: `Trip booking for ${bookingDate}`,
-        metadata: {
-          routeId: bookingContext.routeId,
-          tripDate: bookingContext.tripDate,
-        },
-      });
-
-      if (!checkout.paymentReference || !checkout.checkoutUrl) {
-        throw new Error("Payment initialization failed");
-      }
-
-      posthog.capture(posthogEvents.payment_initialization_succeeded, {
-        checkoutUrl: checkout.checkoutUrl,
-      });
-
-      setIsCheckoutRedirecting(true);
-      window.location.assign(checkout.checkoutUrl);
-    } catch (error) {
-      setIsCheckoutRedirecting(false);
-      const message =
-        error instanceof Error ? error.message : "Unable to start payment";
-      const requiresAuthentication =
-        message.toLowerCase().includes("login") ||
-        message.toLowerCase().includes("authenticated") ||
-        message.toLowerCase().includes("session expired");
-
-      if (requiresAuthentication) {
-        router.push("/sign-in");
-        return;
-      }
-
-      setBookError(message);
-    }
-  };
-
-  const isSubmitting = isCreatingCheckout || isCheckoutRedirecting;
-  const canBook = allowBooking && Boolean(bookingContext) && !hasDeparturePassed;
+  // Derived directly during render — no effect needed
+  const currentTab = showDriverTab ? activeTab : "trip";
 
   return (
-    <Sheet open={open} onOpenChange={onOpenChange}>
-      <SheetContent className="w-full md:max-w-[480px] p-0 flex flex-col overflow-hidden">
-        <SheetHeader className="px-6 pt-6 pb-5 border-b border-gray-100">
-          <SheetTitle className="text-center text-base font-normal tracking-wide text-neutral-800">
-            Trip details
-          </SheetTitle>
-          <SheetDescription className="sr-only">
-            Trip from {trip.departureCity.title} to {trip.arrivalCity.title}
-          </SheetDescription>
-        </SheetHeader>
+    <Drawer open={open} onOpenChange={onOpenChange}>
+      <DrawerContent className="w-full p-0 flex flex-col max-h-[90vh]">
+        <div className="relative w-full max-w-md mx-auto flex flex-col flex-1 min-h-0">
+          <DrawerHeader className="sr-only">
+            <DrawerTitle>Trip details</DrawerTitle>
+            <DrawerDescription>
+              Trip from {trip.departureCity.title} to {trip.arrivalCity.title}
+            </DrawerDescription>
+          </DrawerHeader>
 
-          <div className="flex-1 overflow-y-auto">
-            <div className="px-6  pb-5 space-y-1">
-              <h2 className="text-lg font-bold text-neutral-900">
-                {trip.departureCity.title} to {trip.arrivalCity.title}
-              </h2>
-              <p className="text-sm text-neutral-500">{bookingDate}</p>
-            </div>
+          {(paymentStatus === "refunded" || paymentStatus === "refund_failed") &&
+            currentTab === "trip" ? (
+            <img
+              src={
+                paymentStatus === "refunded"
+                  ? "/refund-stamp.png"
+                  : "/refund-fail-stamp.png"
+              }
+              alt=""
+              className="absolute right-2 top-14 w-20 h-20 sm:-right-16 sm:top-16 sm:w-32 sm:h-32 object-contain pointer-events-none select-none z-10"
+            />
+          ) : null}
 
-            <div className="px-6 pb-2">
-              <div className="flex gap-4">
-                <div className="shrink-0 w-14 flex justify-end items-start">
-                  <span className="text-sm font-medium text-neutral-700 select-none leading-none">
-                    {departureTime}
-                  </span>
-                </div>
-                <div className="relative shrink-0 w-5 flex flex-col items-center">
-                  <div className="relative z-10 w-3.5 h-3.5 rounded-full border-2 border-neutral-400 bg-white shrink-0" />
-                  <div className="flex-1 w-px bg-neutral-300" />
-                </div>
-                <div className="flex-1 flex flex-col pb-5">
-                  <p className="font-semibold text-sm text-neutral-900 leading-none">
-                    {trip.departureCity.title}
-                  </p>
-                </div>
+          <Tabs
+            defaultValue="trip"
+            value={currentTab}
+            onValueChange={setActiveTab}
+            className="flex flex-col flex-1 min-h-0 pt-3"
+          >
+            <TabsList variant="line" className="w-full rounded-none border-b shrink-0">
+              <TabsTrigger value="trip" className="cursor-pointer after:bg-neutral-100">
+                Trip details
+              </TabsTrigger>
+              {showDriverTab ? (
+                <TabsTrigger value="driver" className="cursor-pointer after:bg-neutral-100">
+                  Driver details
+                </TabsTrigger>
+              ) : null}
+            </TabsList>
+
+            <TabsContent value="trip" className="flex-1 overflow-y-auto mt-0 pb-3">
+              <div className="px-6 pt-3 pb-5 space-y-1">
+                <h2 className="text-lg font-bold text-neutral-900">
+                  {trip.departureCity.title} to {trip.arrivalCity.title}
+                </h2>
+                <p className="text-sm text-neutral-500">{bookingDate}</p>
               </div>
 
-              <div className="flex gap-4">
-                <div className="shrink-0 w-14" />
-                <div className="relative shrink-0 w-5 flex flex-col items-center min-h-[90px]">
-                  <div className="w-px bg-neutral-300 flex-1" />
-                  <div className="relative z-10 bg-white py-1 shrink-0">
-                    <MapPinAreaIcon
-                      weight="duotone"
-                      size={20}
-                      className="text-neutral-500"
-                    />
-                  </div>
-                  <div className="w-px bg-neutral-300 flex-1" />
-                </div>
-                <div className="flex-1 flex items-center py-4">
-                  <p className="text-sm text-neutral-900">
-                    {trip.meetingPoint} to board vehicle
-                  </p>
-                </div>
-              </div>
-
-              <div className="flex gap-4">
-                <div className="shrink-0 w-14 flex justify-start items-center">
-                  <span className="text-sm text-neutral-700 select-none">
-                    {duration}
-                  </span>
-                </div>
-                <div className="relative shrink-0 w-5 flex flex-col items-center min-h-[90px]">
-                  <div className="w-px bg-neutral-300 flex-1" />
-                  <div className="relative z-10 bg-white py-1 shrink-0">
-                    {trip.vehicleType === "bus" ? (
-                      <VanIcon
-                        weight="duotone"
-                        size={20}
-                        className="text-neutral-500"
-                      />
-                    ) : (
-                      <CarProfileIcon
-                        weight="duotone"
-                        size={20}
-                        className="text-neutral-500"
-                      />
-                    )}
-                  </div>
-                  <div className="w-px bg-neutral-300 flex-1" />
-                </div>
-                <div className="flex-1 flex items-center py-4">
-                  <p className="flex items-center gap-2 text-sm text-neutral-900 capitalize font-medium">
-                    {trip.vehicleType}
-                    <span className="font-normal text-muted-foreground">
-                      {" "}
-                      · {trip.seatNumber} total seats
+              <div className="px-6 pb-2">
+                <div className="flex gap-4">
+                  <div className="shrink-0 w-14 flex justify-end items-start">
+                    <span className="text-sm font-medium text-neutral-800 select-none leading-none">
+                      {departureTime}
                     </span>
-                  </p>
+                  </div>
+                  <div className="relative shrink-0 w-5 flex flex-col items-center">
+                    <div className="relative z-10 w-3.5 h-3.5 rounded-full border-2 border-neutral-400 bg-white shrink-0" />
+                    <div className="flex-1 w-px bg-neutral-300" />
+                  </div>
+                  <div className="flex-1 flex flex-col pb-5">
+                    <p className="font-semibold text-md text-neutral-900 leading-none">
+                      {trip.departureCity.title}
+                    </p>
+                    <p className="text-sm text-neutral-500 mt-1">
+                      {trip.departureCity.label}({trip.departureCity.locality})
+                    </p>
+                  </div>
                 </div>
-              </div>
 
-              <div className="flex gap-4">
-                <div className="shrink-0 w-14 flex justify-end items-end">
-                  <span className="text-sm font-medium text-neutral-700 select-none leading-none">
-                    {arrivalTime}
-                  </span>
+                <div className="flex gap-4">
+                  <div className="shrink-0 w-14" />
+                  <div className="relative shrink-0 w-5 flex flex-col items-center min-h-[90px]">
+                    <div className="w-px bg-neutral-300 flex-1" />
+                    <div className="relative z-10 bg-white py-1 shrink-0">
+                      <MapPinAreaIcon
+                        weight="duotone"
+                        size={20}
+                        className="text-neutral-500"
+                      />
+                    </div>
+                    <div className="w-px bg-neutral-300 flex-1" />
+                  </div>
+                  <div className="flex-1 flex items-center py-4">
+                    <p className="text-sm font-medium text-neutral-900">
+                      {trip.meetingPoint} to board vehicle
+                    </p>
+                  </div>
                 </div>
-                <div className="relative shrink-0 w-5 flex flex-col items-center">
-                  <div className="w-px bg-neutral-300 flex-1" />
-                  <div className="relative z-10 w-3.5 h-3.5 rounded-full border-2 border-neutral-400 bg-white shrink-0" />
-                </div>
-                <div className="flex-1 flex flex-col justify-end pt-5">
-                  <p className="font-semibold text-sm text-neutral-900 leading-none">
-                    {trip.arrivalCity.title}
-                  </p>
-                </div>
-              </div>
-            </div>
 
-            <div className="px-6 py-6 space-y-4">
-              <Separator />
-              <div className="space-y-2 text-sm">
-                <div className="flex">
-                  <span className="flex-1 text-neutral-900">Seats left</span>
-                  <span className="text-neutral-700">
-                    {bookingContext?.remainingSeats}
-                  </span>
-                </div>
-                <div className="flex">
-                  <span className="flex-1 text-neutral-900">
-                    Transaction fee
-                  </span>
-                  <span className="text-neutral-700">
-                    {formatPrice(transactionFee)}
-                  </span>
-                </div>
-                <div className="flex font-semibold">
-                  <span className="flex-1 text-neutral-900">Total</span>
-                  <span className="text-neutral-900 text-base">
-                    {formatPrice(totalAmount)}
-                  </span>
+                <div className="flex gap-4">
+                  <div className="shrink-0 w-14 flex justify-end items-end">
+                    <span className="text-sm font-medium text-neutral-800 select-none leading-none">
+                      {arrivalTime}
+                    </span>
+                  </div>
+                  <div className="relative shrink-0 w-5 flex flex-col items-center">
+                    <div className="w-px bg-neutral-300 flex-1" />
+                    <div className="relative z-10 w-3.5 h-3.5 rounded-full border-2 border-neutral-400 bg-white shrink-0" />
+                  </div>
+                  <div className="flex-1 flex flex-col justify-end pt-5">
+                    <p className="font-semibold text-md text-neutral-900 leading-none">
+                      {trip.arrivalCity.title}
+                    </p>
+                    <p className="text-sm text-neutral-500 mt-1">
+                      {trip.arrivalCity.label}({trip.arrivalCity.locality})
+                    </p>
+                  </div>
                 </div>
               </div>
-            </div>
-          </div>
+            </TabsContent>
 
-          <div className="px-6 pb-3">
-            {paymentStatus === "refund_pending" ? (
-              <div className="flex items-start gap-2.5 bg-red-50 border border-red-200 rounded-xl px-4 py-3">
-                <InfoIcon
-                  weight="fill"
-                  size={16}
-                  className="text-red-600 shrink-0 mt-0.5"
-                />
-                <p className="text-xs text-red-800 leading-relaxed">
-                  Your 10 minute booking hold for this seat has expired, and a
-                  refund has been initiated.
-                </p>
-              </div>
-            ) : paymentStatus === "refunded" ? (
-              <div className="flex items-start gap-2.5 bg-green-50 border border-green-200 rounded-xl px-4 py-3">
-                <InfoIcon
-                  weight="fill"
-                  size={16}
-                  className="text-green-600 shrink-0 mt-0.5"
-                />
-                <p className="text-xs text-green-800 leading-relaxed">
-                  Your refund has been processed successfully. The amount has
-                  been returned to your original payment method.
-                </p>
-              </div>
-            ) : paymentStatus === "refund_failed" ? (
-              <div className="flex items-start gap-2.5 bg-red-50 border border-red-200 rounded-xl px-4 py-3">
-                <InfoIcon
-                  weight="fill"
-                  size={16}
-                  className="text-red-600 shrink-0 mt-0.5"
-                />
-                <p className="text-xs text-red-800 leading-relaxed">
-                  We were unable to process your refund automatically. Please
-                  contact customer support for assistance.
-                </p>
-              </div>
-            ) : (
-              <div className="flex items-start gap-2.5 bg-amber-50 border border-amber-200 rounded-xl px-4 py-3">
-                <InfoIcon
-                  weight="fill"
-                  size={16}
-                  className="text-amber-600 shrink-0 mt-0.5"
-                />
-                <p className="text-xs text-amber-800 leading-relaxed">
-                  If you intend to travel with luggage, please contact the driver
-                  in advance to confirm availability.
-                </p>
-              </div>
-            )}
-          </div>
-
-          {allowBooking && (
-            <div className="px-6 pb-6 pt-2 border-t border-gray-100">
-              {bookError && (
-                <p className="px-1 pb-2 inline-flex justify-center text-sm text-red-500">
-                  {bookError}
-                </p>
-              )}
-              <Button
-                className="w-full h-12 text-base font-semibold rounded-xl bg-blue-600 hover:bg-blue-700 cursor-pointer"
-                disabled={!canBook || isSubmitting}
-                onClick={handleBookTrip}
-              >
-                {isSubmitting ? (
-                  <span className="inline-flex items-center gap-2">
-                    <SpinnerIcon className="animate-spin" />
-                    Processing
-                  </span>
-                ) : hasDeparturePassed ? (
-                  "Trip Departed"
-                ) : (
-                  "Book Trip"
-                )}
-              </Button>
-            </div>
-          )}
-      </SheetContent>
-    </Sheet>
+            {showDriverTab ? (
+              <TabsContent value="driver" className="flex-1 overflow-y-auto mt-0">
+                <div className="px-6 pt-5 pb-6">
+                  {driver ? (
+                    <DriverInfo {...driver} />
+                  ) : (
+                    <div className="flex flex-col items-center text-center gap-3">
+                      <img
+                        src={driverStatus === "overdue" ? "/driver-not-found.webp" : "/awaiting-driver.webp"}
+                        alt=""
+                        className="h-60 w-84 object-center"
+                      />
+                      <p className="text-sm text-neutral-600">{displayMessage}</p>
+                    </div>
+                  )}
+                </div>
+              </TabsContent>
+            ) : null}
+          </Tabs>
+        </div>
+      </DrawerContent>
+    </Drawer>
   );
 };
 

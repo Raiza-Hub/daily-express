@@ -1,66 +1,56 @@
 "use client";
 
-import { useState, useEffect, useMemo } from "react";
+import { useState, useEffect } from "react";
 import { AnimatePresence, domAnimation, LazyMotion, m } from "framer-motion";
 import { FadersIcon, XIcon } from "@phosphor-icons/react";
 import { Button } from "@repo/ui/components/button";
 import { useBodyScrollLock } from "@repo/ui/hooks/use-body-scroll-lock";
-import { useQueryState } from "nuqs";
-import type { Route } from "@shared/types";
-import ActiveCountClearButton from "../ActiveCountClearButton";
+import { useQueryState, parseAsStringLiteral } from "nuqs";
 import FilterOptions from "../FilterOptions";
-import { searchParams } from "~/lib/type";
+import ActiveCountClearButton from "../ActiveCountClearButton";
 
-const VEHICLE_TYPE_OPTIONS = [
-  { label: "Car", value: "car" },
-  { label: "Bus", value: "bus" },
-  { label: "Luxury Car", value: "luxury car" },
-];
+const DEPARTURE_TIME_OPTIONS = [
+  { label: "Morning", value: "morning" },
+  { label: "Afternoon", value: "afternoon" },
+] as const;
 
 interface TripFilterProps {
-  routes: Route[] | undefined;
   onApplyFilters?: () => void;
 }
 
-const TripFilter = ({ routes, onApplyFilters }: TripFilterProps) => {
-  const [vehicleType, setVehicleType] = useQueryState(
-    "vehicleType",
-    searchParams.vehicleType.withOptions({ history: "replace" }),
+const TripFilter = ({ onApplyFilters }: TripFilterProps) => {
+  const [departureTime, setDepartureTime] = useQueryState(
+    "departureTime",
+    parseAsStringLiteral(["morning", "afternoon"]).withOptions({ history: "replace" }),
   );
   const [drawerOpen, setDrawerOpen] = useState(false);
-  const [mobileDraft, setMobileDraft] = useState<string[]>([]);
+  const [mobileDraft, setMobileDraft] = useState<"morning" | "afternoon" | null>(null);
 
-  const currentVehicleTypes = vehicleType || [];
-
-  const handleVehicleTypeToggle = (value: string, isMobile = false) => {
-    const source = isMobile ? mobileDraft : currentVehicleTypes;
-    const nextVehicleTypes = source.includes(value)
-      ? source.filter((vehicle) => vehicle !== value)
-      : [...source, value];
+  const handleTimeToggle = (value: "morning" | "afternoon", isMobile = false) => {
+    const current = isMobile ? mobileDraft : departureTime;
+    const next = current === value ? null : value;
 
     if (isMobile) {
-      setMobileDraft(nextVehicleTypes);
+      setMobileDraft(next);
     } else {
-      void setVehicleType(
-        nextVehicleTypes.length > 0 ? nextVehicleTypes : null,
-      );
+      void setDepartureTime(next);
     }
   };
 
   const applyMobileFilters = () => {
-    void setVehicleType(mobileDraft.length > 0 ? mobileDraft : null);
+    void setDepartureTime(mobileDraft);
     setDrawerOpen(false);
     onApplyFilters?.();
   };
 
   const openDrawer = () => {
-    setMobileDraft(currentVehicleTypes);
+    setMobileDraft(departureTime);
     setDrawerOpen(true);
   };
 
   const clearAllFilters = () => {
-    void setVehicleType(null);
-    setMobileDraft([]);
+    void setDepartureTime(null);
+    setMobileDraft(null);
   };
 
   useEffect(() => {
@@ -71,7 +61,6 @@ const TripFilter = ({ routes, onApplyFilters }: TripFilterProps) => {
       }
     };
 
-    // Run initially
     handleMediaChange(mql);
 
     mql.addEventListener("change", handleMediaChange);
@@ -81,28 +70,17 @@ const TripFilter = ({ routes, onApplyFilters }: TripFilterProps) => {
   useBodyScrollLock(drawerOpen);
 
   const activeCount = drawerOpen
-    ? mobileDraft.length
-    : currentVehicleTypes.length;
+    ? (mobileDraft ? 1 : 0)
+    : (departureTime ? 1 : 0);
 
-  const vehicleTypeData = useMemo(() => {
-    const counts: Record<string, number> = {};
-    if (routes) {
-      routes.forEach((route) => {
-        const vt = route.vehicleType.toLowerCase();
-        counts[vt] = (counts[vt] || 0) + 1;
-      });
-    }
-
-    return VEHICLE_TYPE_OPTIONS.map(({ label, value }) => ({
-      label,
-      value,
-      count: routes && routes.length > 0 ? counts[value] || 0 : undefined,
-    }));
-  }, [routes]);
+  const departureTimeData = DEPARTURE_TIME_OPTIONS.map(({ label, value }) => ({
+    label,
+    value,
+  }));
 
   return (
     <>
-      <div className="hidden lg:block w-80 bg-white py-6">
+      <div className="hidden lg:block w-80 py-6">
         <div className="flex items-center justify-between mb-6">
           <h2 className="text-lg text-neutral-900 font-semibold">Filter by</h2>
           <ActiveCountClearButton
@@ -112,13 +90,12 @@ const TripFilter = ({ routes, onApplyFilters }: TripFilterProps) => {
         </div>
 
         <FilterOptions
-          currentVehicleTypes={currentVehicleTypes}
-          onToggle={(value) => handleVehicleTypeToggle(value, false)}
-          vehicleTypeData={vehicleTypeData}
+          currentDepartureTime={departureTime}
+          onToggle={(value) => handleTimeToggle(value as "morning" | "afternoon", false)}
+          departureTimeData={departureTimeData}
         />
       </div>
 
-      {/* refactor into its own mobile trip filter with passed props */}
       {/* Mobile View */}
       <div className="block lg:hidden w-full">
         <Button
@@ -180,9 +157,9 @@ const TripFilter = ({ routes, onApplyFilters }: TripFilterProps) => {
                 {/* Scrollable body */}
                 <div className="flex-1 overflow-y-auto px-4 py-2">
                   <FilterOptions
-                    currentVehicleTypes={mobileDraft}
-                    onToggle={(value) => handleVehicleTypeToggle(value, true)}
-                    vehicleTypeData={vehicleTypeData}
+                    currentDepartureTime={mobileDraft}
+                    onToggle={(value) => handleTimeToggle(value as "morning" | "afternoon", true)}
+                    departureTimeData={departureTimeData}
                   />
                 </div>
 
@@ -190,9 +167,9 @@ const TripFilter = ({ routes, onApplyFilters }: TripFilterProps) => {
                 <div className="flex gap-4 p-4 border-t shrink-0">
                   <Button
                     variant="secondary"
-                    className={`flex-1 ${mobileDraft.length === 0 ? "opacity-50 cursor-not-allowed" : "cursor-pointer"}`}
-                    onClick={() => setMobileDraft([])}
-                    disabled={mobileDraft.length === 0}
+                    className={`flex-1 ${mobileDraft === null ? "opacity-50 cursor-not-allowed" : "cursor-pointer"}`}
+                    onClick={() => setMobileDraft(null)}
+                    disabled={mobileDraft === null}
                   >
                     Clear all
                   </Button>

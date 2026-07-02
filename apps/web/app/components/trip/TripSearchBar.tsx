@@ -78,7 +78,7 @@ const TripSearchBar = ({ className }: { className?: string }) => {
             fromField.setQuery(nextFrom);
             toField.setQuery(nextTo);
           }}
-          className="self-center p-2 rounded-full border border-neutral-200 hover:bg-neutral-50 cursor-pointer transition-transform duration-400"
+          className="bg-white self-center p-2 rounded-full border border-neutral-200 hover:bg-neutral-50 cursor-pointer transition-transform duration-400"
         >
           <ArrowsLeftRightIcon size={18} className="rotate-90 lg:rotate-0" />
         </button>

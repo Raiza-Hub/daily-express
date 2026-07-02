@@ -1,6 +1,6 @@
 import type { TRoute } from "@repo/types/routeSchema";
 import { DriverInfoProps } from "~/components/DriverInfo";
-import { parseAsArrayOf, parseAsString } from "nuqs";
+import { parseAsString, parseAsStringLiteral } from "nuqs";
 
 
 export type SubmittedTripSearch = {
@@ -13,17 +13,17 @@ export type SubmittedTripSearch = {
 export interface SearchTrip {
   searchResultId: string;
   routeId: string;
-  route: TRoute;
-  capacity: number;
-  remainingSeats: number;
-  driver: {
-    firstName: string;
-    lastName: string;
-    phone: string;
-    profile_pic: string | null;
-    country: string;
-    state: string;
-  };
+  pickupLocationTitle: string;
+  pickupLocationLocality: string;
+  pickupLocationLabel: string;
+  dropoffLocationTitle: string;
+  dropoffLocationLocality: string;
+  dropoffLocationLabel: string;
+  priceCar: number;
+  priceBus: number;
+  departureTime: Date;
+  estimatedArrivalTime: Date;
+  meetingPoint: string;
 }
 
 export interface BookingContext {
@@ -41,6 +41,8 @@ export interface TripStatusItem {
   tripDate: string;
   remainingSeats: number;
   paymentStatus: string;
+  driverStatus: string;
+  displayMessage?: string | null;
 }
 
 
@@ -49,12 +51,12 @@ export const searchParams = {
   from: parseAsString,
   to: parseAsString,
   date: parseAsString,
-  vehicleType: parseAsArrayOf(parseAsString),
+  departureTime: parseAsStringLiteral(["morning", "afternoon"]),
 };
 
 export type SearchParams = {
   from: string | null;
   to: string | null;
   date: string | null;
-  vehicleType: string[] | null;
+  departureTime: "morning" | "afternoon" | null;
 };
