@@ -202,6 +202,10 @@ export const payoutSchema = {
 };
 
 export type Earning = typeof earning.$inferSelect;
+export type EarningRecord = Earning;
 export type Payout = typeof payout.$inferSelect;
+export type PayoutRecord = Payout;
 export type PayoutRecipient = typeof payoutRecipient.$inferSelect;
+export type PayoutRecipientRecord = PayoutRecipient;
 export type PayoutAttempt = typeof payoutAttempt.$inferSelect;
+export type PayoutAttemptRecord = PayoutAttempt;

@@ -1,8 +1,9 @@
 import { eq, sql, type SQL } from "drizzle-orm";
 import { driverStats } from "../db/index";
 import { db } from "../db/connection";
+import type { DbTransaction } from "../db/connection";
 
-type DriverTransaction = Parameters<Parameters<typeof db.transaction>[0]>[0];
+type DriverTransaction = DbTransaction;
 
 type EarningStatus =
   | "pending_trip_completion"
@@ -11,8 +12,6 @@ type EarningStatus =
   | "paid"
   | "cancelled"
   | "manual_review";
-
-type RouteStatus = "inactive" | "pending" | "active";
 
 const PENDING_PAYMENT_STATUSES = new Set<EarningStatus>([
   "pending_trip_completion",
@@ -115,29 +114,6 @@ export class DriverStatsService {
       .set(updates)
       .where(eq(driverStats.driverId, input.driverId));
   }
-
-  async recordRouteStatusChange(
-    tx: DriverTransaction,
-    input: {
-      driverId: string;
-      previousStatus?: RouteStatus | null;
-      nextStatus?: RouteStatus | null;
-    },
-  ): Promise<void> {
-    const wasActive = input.previousStatus === "active";
-    const isActive = input.nextStatus === "active";
-    if (wasActive === isActive) {
-      return;
-    }
-
-    await tx
-      .update(driverStats)
-      .set({
-        activeRoutes: isActive
-          ? sql`${driverStats.activeRoutes} + 1`
-          : sql`GREATEST(${driverStats.activeRoutes} - 1, 0)`,
-        updatedAt: new Date(),
-      })
-      .where(eq(driverStats.driverId, input.driverId));
-  }
 }
+
+export const driverStatsService = new DriverStatsService();
