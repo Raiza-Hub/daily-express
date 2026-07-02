@@ -1,4 +1,4 @@
-import { and, eq, gt, gte, ne, sql } from "drizzle-orm";
+import { and, eq, gt, gte, inArray, ne, sql } from "drizzle-orm";
 import { createServiceError } from "@shared/utils";
 import { db } from "../db/connection";
 import {
@@ -7,15 +7,14 @@ import {
   earning,
   payment,
   paymentWebhook,
+  refund,
   route,
   trip,
   users,
+  type PaymentRecord,
+  type BookingRecord,
 } from "../db/index";
-import type { PaymentStatus } from "./payment.types";
-
-type PaymentTransaction = Parameters<Parameters<typeof db.transaction>[0]>[0];
-type PaymentRecord = typeof payment.$inferSelect;
-type BookingRecord = typeof booking.$inferSelect;
+import type { PaymentStatus, PaymentTransaction } from "./payment.types";
 
 export interface BookingDetails {
   booking: typeof booking.$inferSelect;
@@ -38,6 +37,13 @@ export class PaymentRepository {
     });
   }
 
+  findPaymentsByBookingIds(bookingIds: string[]) {
+    if (bookingIds.length === 0) return Promise.resolve([]);
+    return db.query.payment.findMany({
+      where: inArray(payment.bookingId, bookingIds),
+    });
+  }
+
   async findBookingFareByBookingId(bookingId: string, userId: string) {
     const bookingRecord = await db.query.booking.findFirst({
       where: eq(booking.id, bookingId),
@@ -57,54 +63,26 @@ export class PaymentRepository {
     tx: PaymentTransaction,
     values: typeof payment.$inferInsert,
   ) {
-    return tx.insert(payment).values(values).returning();
+    return tx
+      .insert(payment)
+      .values(values)
+      .onConflictDoNothing({ target: payment.bookingId })
+      .returning();
   }
 
-  updatePayment(
-    reference: string,
-    status: PaymentStatus,
-    fields: Partial<typeof payment.$inferInsert>,
-  ) {
+  claimPayment(reference: string) {
+    return db
+      .update(payment)
+      .set({ status: "processing", lastStatusCheckAt: new Date(), updatedAt: new Date() })
+      .where(and(eq(payment.reference, reference), eq(payment.status, "pending")))
+      .returning();
+  }
+
+  updateProcessingPayment(reference: string, status: PaymentStatus, fields: Partial<typeof payment.$inferInsert>) {
     return db
       .update(payment)
       .set({ status, ...fields, updatedAt: new Date() })
-      .where(
-        and(eq(payment.reference, reference), eq(payment.status, "pending")),
-      )
-      .returning();
-  }
-
-  updatePaymentInTransaction(
-    tx: PaymentTransaction,
-    reference: string,
-    fields: Partial<typeof payment.$inferInsert>,
-  ) {
-    return tx
-      .update(payment)
-      .set({ ...fields, updatedAt: new Date() })
-      .where(eq(payment.reference, reference))
-      .returning();
-  }
-
-  updatePaymentStatusByIdInTransaction(
-    tx: PaymentTransaction,
-    id: string,
-    fields: Partial<typeof payment.$inferInsert>,
-  ) {
-    return tx
-      .update(payment)
-      .set({ ...fields, updatedAt: new Date() })
-      .where(eq(payment.id, id))
-      .returning();
-  }
-
-  lockPaymentForExpiry(reference: string) {
-    return db
-      .update(payment)
-      .set({ lastStatusCheckAt: new Date() })
-      .where(
-        and(eq(payment.reference, reference), eq(payment.status, "pending")),
-      )
+      .where(and(eq(payment.reference, reference), eq(payment.status, "processing")))
       .returning();
   }
 
@@ -205,7 +183,7 @@ export class PaymentRepository {
       updatePayload.status = nextBookingStatus;
     }
 
-    if (isCancellingTransition) {
+    if (isCancellingTransition && existingBooking.tripId) {
       updatePayload.seatNumber = null;
       await tx
         .update(trip)
@@ -276,52 +254,42 @@ export class PaymentRepository {
     });
   }
 
-  updatePaymentRefundStatus(
-    reference: string,
-    status: "refunded" | "refund_failed",
-  ) {
-    return db.transaction(async (tx) => {
-      await tx
-        .update(payment)
-        .set({
-          status,
-          updatedAt: new Date(),
-          metadata: sql`COALESCE(${payment.metadata},'{}'::jsonb)||${JSON.stringify({
-            refundCompletedAt: new Date().toISOString(),
-            refundFinalStatus: status,
-          })}::jsonb`,
-        })
-        .where(eq(payment.reference, reference));
+  // ── Refund table methods ──
 
-      const [bookingRecord] = await tx
-        .update(booking)
-        .set({ paymentStatus: status, updatedAt: new Date() })
-        .where(eq(booking.paymentReference, reference))
-        .returning();
+  insertRefund(tx: PaymentTransaction, values: typeof refund.$inferInsert) {
+    return tx.insert(refund).values(values).returning();
+  }
 
-      return { booking: bookingRecord ?? null };
+  findRefundByReference(ref: string) {
+    return db.query.refund.findFirst({
+      where: eq(refund.reference, ref),
     });
   }
 
-  updateRefundInTransaction(
+  findRefundByProviderRefundReference(ref: string) {
+    return db.query.refund.findFirst({
+      where: eq(refund.providerRefundReference, ref),
+    });
+  }
+
+  findRefundsByPaymentId(paymentId: string) {
+    return db.query.refund.findMany({
+      where: eq(refund.paymentId, paymentId),
+      orderBy: (ref, { desc }) => [desc(ref.createdAt)],
+    });
+  }
+
+  updateRefundStatus(
     tx: PaymentTransaction,
     id: string,
-    status: "refund_pending" | "refunded" | "refund_failed",
-    reason: string,
-    metadataUpdate: Record<string, unknown>,
+    fields: Partial<typeof refund.$inferInsert>,
   ) {
     return tx
-      .update(payment)
-      .set({
-        status,
-        failureCode: "AUTO_REFUND_INITIATED",
-        failureReason: reason,
-        updatedAt: new Date(),
-        metadata: sql`COALESCE(${payment.metadata},'{}'::jsonb)||${JSON.stringify(metadataUpdate)}::jsonb`,
-      })
-      .where(
-        and(eq(payment.reference, id), eq(payment.status, "expired")),
-      )
+      .update(refund)
+      .set({ ...fields, updatedAt: new Date() })
+      .where(eq(refund.id, id))
       .returning();
   }
 }
+
+export const paymentRepository = new PaymentRepository();

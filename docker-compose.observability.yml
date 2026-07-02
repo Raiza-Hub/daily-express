@@ -3,7 +3,7 @@ name: daily-express
 services:
   db:
     image: postgres:latest
-    container_name: daily_express
+    container_name: dailyexpress-db
     environment:
       POSTGRES_USER: ${POSTGRES_USER}
       POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
@@ -22,6 +22,7 @@ services:
       retries: 10
 
   dailyexpress-api:
+    container_name: dailyexpress-api
     image: daily-express-backend
     build:
       context: .
@@ -56,30 +57,8 @@ services:
       timeout: 10s
       retries: 10
 
-  appsmith:
-    image: index.docker.io/appsmith/appsmith-ee:release
-    ports:
-      - "8080:80"
-    environment:
-      APPSMITH_CUSTOM_DOMAIN: ${APPSMITH_CUSTOM_DOMAIN:-http://localhost:8080}
-      APPSMITH_ENCRYPTION_PASSWORD: ${APPSMITH_ENCRYPTION_PASSWORD}
-      APPSMITH_ENCRYPTION_SALT: ${APPSMITH_ENCRYPTION_SALT}
-    volumes:
-      - appsmith-stacks:/appsmith-stacks
-    depends_on:
-      dailyexpress-api:
-        condition: service_healthy
-      db:
-        condition: service_healthy
-    healthcheck:
-      test: ["CMD-SHELL", "curl -fsS http://localhost >/dev/null || exit 1"]
-      interval: 30s
-      timeout: 10s
-      retries: 10
-      start_period: 90s
-    restart: unless-stopped
-
   metabase:
+    container_name: dailyexpress-metabase
     image: metabase/metabase:latest
     ports:
       - "3002:3000"
@@ -110,4 +89,3 @@ services:
 
 volumes:
   pgdata:
-  appsmith-stacks:

@@ -9,16 +9,17 @@ import {
   payoutRecipient,
   payoutWebhook,
   trip,
+  type EarningRecord,
+  type PayoutRecord,
+  type PayoutAttemptRecord,
+  type PayoutRecipientRecord,
+  type DriverRecord,
 } from "../db/index";
 import { HIDDEN_BOOKING_PAYMENT_STATUSES } from "../utils/route";
 import type { PayoutStatus } from "@shared/types";
+import type { DbTransaction } from "../db/connection";
 
-type PayoutTransaction = Parameters<Parameters<typeof db.transaction>[0]>[0];
-type EarningRecord = typeof earning.$inferSelect;
-type PayoutRecord = typeof payout.$inferSelect;
-type PayoutAttemptRecord = typeof payoutAttempt.$inferSelect;
-type PayoutRecipientRecord = typeof payoutRecipient.$inferSelect;
-type DriverRecord = typeof driver.$inferSelect;
+type PayoutTransaction = DbTransaction;
 
 export interface EarningsReconciliation {
   isReconciled: boolean;
@@ -86,6 +87,7 @@ export class PayoutRepository {
         ),
       )
       .returning({
+        id: earning.id,
         driverId: earning.driverId,
         netAmountMinor: earning.netAmountMinor,
       });
@@ -164,8 +166,8 @@ export class PayoutRepository {
     };
   }
 
-  findPayoutByEarningId(earningId: string) {
-    return db.query.payout.findFirst({
+  findPayoutByEarningId(tx: PayoutTransaction | typeof db, earningId: string) {
+    return tx.query.payout.findFirst({
       where: eq(payout.earningId, earningId),
     });
   }
@@ -218,10 +220,11 @@ export class PayoutRepository {
   }
 
   updatePayoutAttempt(
+    tx: PayoutTransaction | typeof db,
     id: string,
     fields: Partial<typeof payoutAttempt.$inferInsert>,
   ) {
-    return db
+    return tx
       .update(payoutAttempt)
       .set(fields)
       .where(eq(payoutAttempt.id, id));
@@ -354,3 +357,5 @@ export class PayoutRepository {
       .returning();
   }
 }
+
+export const payoutRepository = new PayoutRepository();

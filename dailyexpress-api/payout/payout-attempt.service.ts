@@ -1,18 +1,18 @@
 import { and, eq } from "drizzle-orm";
 import { db } from "../db/connection";
 import { earning, payoutAttempt, payout as payoutTable } from "../db/index";
-import { KoraClient } from "../payment/kora.client";
-import { PayoutRepository } from "./payout.repository";
-import { DriverService } from "../driver/driverService";
-import { NotificationService } from "../notification/notificationService";
+import { koraClient } from "../payment/kora.client";
+import { PayoutRepository, payoutRepository } from "./payout.repository";
+import { driverService as sharedDriverService } from "../driver/driver.service";
+import { notificationService as sharedNotificationService } from "../notification/notification.service";
 import { publishNotificationCreatedInBackground } from "../notification/realtime";
 import { parseMajorCurrencyToMinor, formatAmountMinor } from "../utils/payout";
 import type { KoraPayoutHistoryItem } from "../payment/payment.types";
 import type { DriverNotification } from "@shared/types";
 
-type PayoutTransaction = Parameters<Parameters<typeof db.transaction>[0]>[0];
-type PayoutRecord = typeof payoutTable.$inferSelect;
-type PayoutAttemptRecord = typeof payoutAttempt.$inferSelect;
+import type { DbTransaction } from "../db/connection";
+import type { PayoutRecord, PayoutAttemptRecord } from "../db/index";
+type PayoutTransaction = DbTransaction;
 
 export type AttemptVerificationOutcome =
   | "settled"
@@ -21,13 +21,13 @@ export type AttemptVerificationOutcome =
   | "unknown";
 
 export class PayoutAttemptService {
-  private readonly kora = new KoraClient();
-  private readonly driverService = new DriverService();
-  private readonly notificationService = new NotificationService();
+  private readonly kora = koraClient;
+  private readonly driverService = sharedDriverService;
+  private readonly notificationService = sharedNotificationService;
 
   constructor(private repo: PayoutRepository) {}
 
-  async checkWithProvider(
+  async verifyWithProvider(
     payout: PayoutRecord,
     attempt: PayoutAttemptRecord,
   ): Promise<AttemptVerificationOutcome> {
@@ -38,7 +38,7 @@ export class PayoutAttemptService {
       const verifiedPayout = verification.data as KoraPayoutHistoryItem | null;
 
       if (!verifiedPayout) {
-        await this.markPendingVerification(
+        await this.updateToPendingVerification(
           attempt.id,
           "Payout verification pending",
           verification.raw,
@@ -48,7 +48,7 @@ export class PayoutAttemptService {
 
       const providerStatus = verifiedPayout.status.toLowerCase();
       if (providerStatus === "success") {
-        await this.settleAttempt(
+        await this.finalizeAttempt(
           payout,
           attempt,
           verification.raw,
@@ -58,7 +58,7 @@ export class PayoutAttemptService {
       }
 
       if (providerStatus === "failed") {
-        await this.repo.updatePayoutAttempt(attempt.id, {
+        await this.repo.updatePayoutAttempt(db, attempt.id, {
           status: "failed",
           failureReason:
             verifiedPayout.message ||
@@ -70,7 +70,7 @@ export class PayoutAttemptService {
       }
 
       if (providerStatus === "processing" || providerStatus === "pending") {
-        await this.markPendingVerification(
+        await this.updateToPendingVerification(
           attempt.id,
           "Awaiting payout confirmation",
           verification.raw,
@@ -88,14 +88,14 @@ export class PayoutAttemptService {
         return "processing";
       }
 
-      await this.markPendingVerification(
+      await this.updateToPendingVerification(
         attempt.id,
         verifiedPayout.message || "Payout verification pending",
         verification.raw,
       );
       return "unknown";
     } catch (error) {
-      await this.markPendingVerification(
+      await this.updateToPendingVerification(
         attempt.id,
         error instanceof Error ? error.message : "Payout verification pending",
       );
@@ -103,19 +103,35 @@ export class PayoutAttemptService {
     }
   }
 
-  async settleAttempt(
+  async finalizeAttempt(
     payout: PayoutRecord,
     attempt: PayoutAttemptRecord,
     rawPayload: unknown,
     koraFeeAmount: number,
   ) {
-    if (attempt.status === "settled" || payout.status === "success") return;
-
     let notificationRecord: DriverNotification | null = null;
     const settledAt = new Date();
 
+    // Prevents double finalization: re-reading payout + attempt under lock
+    // ensures the second caller sees the updated status and leaves it alone.
     await db.transaction(async (tx) => {
-      await this.repo.updatePayoutAttempt(attempt.id, {
+      const [lockedPayout] = await tx
+        .select()
+        .from(payoutTable)
+        .where(eq(payoutTable.id, payout.id))
+        .for("update")
+        .limit(1);
+      if (!lockedPayout || lockedPayout.status === "success") return;
+
+      const [lockedAttempt] = await tx
+        .select()
+        .from(payoutAttempt)
+        .where(eq(payoutAttempt.id, attempt.id))
+        .for("update")
+        .limit(1);
+      if (!lockedAttempt || lockedAttempt.status === "settled") return;
+
+      await this.repo.updatePayoutAttempt(tx, lockedAttempt.id, {
         status: "settled",
         koraFeeAmount,
         settledAt,
@@ -134,7 +150,7 @@ export class PayoutAttemptService {
           rawFinalStatusResponse: rawPayload,
           updatedAt: new Date(),
         })
-        .where(eq(payoutTable.id, payout.id))
+        .where(eq(payoutTable.id, lockedPayout.id))
         .returning();
 
       const earningRecord = payout.earningId
@@ -179,12 +195,12 @@ export class PayoutAttemptService {
     }
   }
 
-  async markPendingVerification(
+  async updateToPendingVerification(
     attemptId: string,
     failureReason: string,
     rawWebhook?: unknown,
   ) {
-    await this.repo.updatePayoutAttempt(attemptId, {
+    await this.repo.updatePayoutAttempt(db, attemptId, {
       status: "pending_verification",
       failureReason,
       ...(rawWebhook === undefined ? {} : { rawWebhook }),
@@ -219,3 +235,5 @@ export class PayoutAttemptService {
     );
   }
 }
+
+export const payoutAttemptService = new PayoutAttemptService(payoutRepository);

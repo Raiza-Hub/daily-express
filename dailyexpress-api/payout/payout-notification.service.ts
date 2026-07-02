@@ -1,26 +1,26 @@
 import { renderEmail, getEmailSubject } from "@repo/email";
 import { db } from "../db/connection";
 import { eq } from "drizzle-orm";
-import { earning, payout } from "../db/index";
+import { earning, payout, type PayoutRecord } from "../db/index";
 import { getConfig } from "../config/index";
-import { PayoutRepository } from "./payout.repository";
-import { DriverService } from "../driver/driverService";
-import { NotificationService } from "../notification/notificationService";
+import { PayoutRepository, payoutRepository } from "./payout.repository";
+import { driverService as sharedDriverService } from "../driver/driver.service";
+import { notificationService as sharedNotificationService } from "../notification/notification.service";
 import { publishNotificationCreatedInBackground } from "../notification/realtime";
 import { jobService } from "../workers/jobService";
 import { formatAmountMinor } from "../utils/payout";
 import type { DriverNotification } from "@shared/types";
+import type { DbTransaction } from "../db/connection";
 
-type PayoutTransaction = Parameters<Parameters<typeof db.transaction>[0]>[0];
-type PayoutRecord = typeof payout.$inferSelect;
+type PayoutTransaction = DbTransaction;
 
 export class PayoutNotificationService {
-  private readonly driverService = new DriverService();
-  private readonly notificationService = new NotificationService();
+  private readonly driverService = sharedDriverService;
+  private readonly notificationService = sharedNotificationService;
 
   constructor(private repo: PayoutRepository) {}
 
-  async handlePayoutFailure(
+  async processPayoutFailure(
     payoutRecord: PayoutRecord,
     reason: string,
     rawPayload: unknown,
@@ -56,6 +56,22 @@ export class PayoutNotificationService {
 
     let notificationRecord: DriverNotification | null = null;
     await db.transaction(async (tx) => {
+      const [lockedPayout] = await tx
+        .select()
+        .from(payout)
+        .where(eq(payout.id, payoutRecord.id))
+        .for("update")
+        .limit(1);
+
+      if (!lockedPayout) return;
+
+      if (
+        lockedPayout.status === "success" ||
+        lockedPayout.status === "permanent_failed"
+      ) {
+        return;
+      }
+
       await tx
         .update(payout)
         .set({
@@ -67,23 +83,24 @@ export class PayoutNotificationService {
           rawFinalStatusResponse: rawPayload,
           updatedAt: new Date(),
         })
-        .where(eq(payout.id, payoutRecord.id));
+        .where(eq(payout.id, lockedPayout.id));
 
-      const earningRecord = payoutRecord.earningId
+      const earningId = lockedPayout.earningId;
+      const earningRecord = earningId
         ? await tx.query.earning.findFirst({
-            where: eq(earning.id, payoutRecord.earningId),
+            where: eq(earning.id, earningId),
           })
         : null;
 
-      if (payoutRecord.earningId) {
+      if (earningId) {
         await tx
           .update(earning)
           .set({
             status: "manual_review",
-            payoutId: payoutRecord.id,
+            payoutId: lockedPayout.id,
             updatedAt: new Date(),
           })
-          .where(eq(earning.id, payoutRecord.earningId));
+          .where(eq(earning.id, earningId));
         if (earningRecord) {
           await this.driverService.adjustPaymentCountersForStatusChange(tx, {
             driverId: earningRecord.driverId,
@@ -173,3 +190,5 @@ export class PayoutNotificationService {
     );
   }
 }
+
+export const payoutNotificationService = new PayoutNotificationService(payoutRepository);

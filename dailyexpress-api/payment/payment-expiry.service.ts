@@ -1,82 +1,113 @@
-import { logger } from "../utils/logger";
-import { db } from "../db/connection";
 import { and, eq } from "drizzle-orm";
+import { db } from "../db/connection";
 import { booking, payment } from "../db/index";
-import { PaymentRepository } from "./payment.repository";
-import { PaymentConfirmService } from "./payment-confirm.service";
-import { PaymentRefundService } from "./payment-refund.service";
-import { KoraClient } from "./kora.client";
+import { logger } from "../utils/logger";
+import { PaymentRepository, paymentRepository } from "./payment.repository";
+import type { PaymentStatus } from "./payment.types";
+import { koraClient } from "./kora.client";
+import { paymentRefundService } from "./payment-refund.service";
 
 export class PaymentExpiryService {
-  private readonly kora = new KoraClient();
+  private readonly kora = koraClient;
+  private readonly refundService = paymentRefundService;
 
-  constructor(
-    private repo: PaymentRepository,
-    private confirmService: PaymentConfirmService,
-    private refundService: PaymentRefundService,
-  ) {}
+  constructor(private repo: PaymentRepository) {}
 
-  async expirePayment(payload: { bookingId: string; reference: string }) {
-    const [claimed] = await this.repo.lockPaymentForExpiry(payload.reference);
-
-    if (!claimed) {
-      logger.info("payment.expire_skipped_concurrent", payload);
+  async expirePayment(reference: string) {
+    const existingPayment = await this.repo.findPaymentByReference(reference);
+    if (!existingPayment || existingPayment.status !== "pending") {
+      logger.info("payment.expiry_already_processed", { reference });
       return;
     }
 
-    const verification = await this.kora.verifyTransaction(payload.reference);
+    // Call Kora to check actual transaction status
+    let verification;
+    try {
+      verification = await this.kora.verifyTransaction(reference);
+    } catch (error: any) {
+      // If reference not found on Kora (HTTP 404), it means the user never even started checkout.
+      // In this case, we can proceed to expire it.
+      if (error?.koraHttpStatus === 404) {
+        // Safe to expire
+      } else {
+        // Other network errors: throw to let pg-boss retry the job
+        throw error;
+      }
+    }
 
-    if (verification.data.status.toLowerCase() === "success") {
-      const bookingRecord = await db.query.booking.findFirst({
-        where: eq(booking.id, payload.bookingId),
-        columns: { expiresAt: true },
-      });
+    const koraStatus = verification?.data?.status?.toLowerCase();
 
-      if (
-        bookingRecord?.expiresAt &&
-        bookingRecord.expiresAt.getTime() > Date.now()
-      ) {
-        await this.confirmService.confirmPayment(
-          payload.reference,
-          verification.data,
-          verification.raw,
-        );
+    if (koraStatus === "success" && verification) {
+      // User paid successfully! We must mark the payment as expired (since the hold window passed)
+      // and trigger an auto-refund.
+      const [claimed] = await this.repo.claimPayment(reference);
+      if (!claimed) {
+        logger.info("payment.expiry_claim_failed_race", { reference });
         return;
       }
 
-      await this.failExpiredPayment(payload.reference);
-      await this.refundService.refundPayment(
-        payload.reference,
-        verification.data,
-        verification.raw,
-        "Payment completed after booking hold expired",
-      );
+      await this.repo.updateProcessingPayment(reference, "expired" as PaymentStatus, {
+        failureCode: "BOOKING_EXPIRED",
+        failureReason: "Payment completed after booking hold expired (expiry job verification)",
+        providerStatus: "success",
+      });
+
+      try {
+        await this.refundService.refundPayment(
+          reference,
+          {
+            amount: verification.data.amount,
+            currency: verification.data.currency,
+            paid_at: verification.data.paid_at,
+            payment_reference: verification.data.payment_reference,
+            reference: verification.data.reference,
+            status: verification.data.status,
+          },
+          verification.raw,
+          "Payment completed after booking hold expired (expiry job verification)",
+        );
+      } catch (refundErr: unknown) {
+        logger.error("payment.expiry_job.refund_failed", {
+          reference,
+          error: refundErr instanceof Error ? refundErr.message : String(refundErr),
+        });
+      }
       return;
     }
 
-    await this.failExpiredPayment(payload.reference);
-  }
+    // If not successful at Kora, proceed to expire the payment normally
+    const [claimed] = await this.repo.claimPayment(reference);
+    if (!claimed) {
+      logger.info("payment.expiry_already_claimed", { reference });
+      return;
+    }
 
-  private async failExpiredPayment(reference: string) {
-    const [updatedPayment] = await db
-      .update(payment)
-      .set({
-        status: "expired",
-        failureCode: "PAYMENT_EXPIRED",
-        failureReason: "Seat reservation expired before payment was completed",
-        lastStatusCheckAt: new Date(),
-        updatedAt: new Date(),
-      })
-      .where(
-        and(eq(payment.reference, reference), eq(payment.status, "pending")),
-      )
-      .returning();
+    const bookingId = claimed.bookingId;
 
-    if (!updatedPayment) return;
+    await db.transaction(async (tx) => {
+      const [updated] = await tx
+        .update(payment)
+        .set({ status: "expired", failureCode: "BOOKING_EXPIRED", failureReason: "Seat reservation expired", updatedAt: new Date() })
+        .where(and(eq(payment.reference, reference), eq(payment.status, "processing")))
+        .returning({ id: payment.id });
 
-    logger.info("payment.expired", {
-      bookingId: updatedPayment.bookingId,
-      reference,
+      if (!updated) {
+        logger.warn("payment.expiry_race_lost", { reference });
+        return;
+      }
+
+      if (bookingId) {
+        await tx
+          .update(booking)
+          .set({
+            status: "cancelled",
+            paymentStatus: "expired" as PaymentStatus,
+            updatedAt: new Date(),
+          })
+          .where(eq(booking.id, bookingId));
+      }
     });
   }
 }
+
+export const paymentExpiryService = new PaymentExpiryService(paymentRepository);
