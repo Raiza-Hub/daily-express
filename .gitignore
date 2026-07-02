@@ -1,41 +1,33 @@
-# See https://help.github.com/articles/ignoring-files/ for more about ignoring files.
 
-# Dependencies
-node_modules
+.DS_Store
+.env
+.env.development.local
+.env.local
+.env.production.local
+.env.test.local
+.next/
+.opencode/
 .pnp
 .pnp.js
-
-# Local env files
-.env
-.env.local
-.env.development.local
-.env.test.local
-.env.production.local
-
-# Testing
-coverage
-
-# Turbo
 .turbo
-
-# Vercel
 .vercel
-
+*.pem
 # Build Outputs
-.next/
-out/
-build
-dist
-
-
 # Debug
+# Dependencies
+# Local env files
+# Misc
+# opensrc - source code for packages
+# See https://help.github.com/articles/ignoring-files/ for more about ignoring files.
+# Testing
+# Turbo
+# Vercel
+build
+coverage
+dist
+node_modules
 npm-debug.log*
+opensrc/
+out/
 yarn-debug.log*
 yarn-error.log*
-
-# Misc
-.DS_Store
-*.pem
-
-# opensrc - source code for packages
-opensrc/
