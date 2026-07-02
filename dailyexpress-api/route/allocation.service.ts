@@ -8,7 +8,7 @@ import { logger } from "../utils/logger";
 import { formatAmountMinor } from "../utils/payout";
 import { toMinorAmount } from "../utils/payment";
 import { formatBusinessDate } from "../utils/route";
-import { jobService } from "../workers/jobService";
+import { jobService } from "../workers/job.service";
 
 import { RouteRepository } from "./route.repository";
 import { sseManager } from "./sse-manager";

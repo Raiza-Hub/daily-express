@@ -3,7 +3,7 @@ import { db } from "../db/connection";
 import { booking, payment, refund, webhookProcessed } from "../db/index";
 import { logger } from "../utils/logger";
 import { getPaymentReference } from "../utils/payment";
-import { jobService } from "../workers/jobService";
+import { jobService } from "../workers/job.service";
 import type { WebhookJobData } from "../workers/boss";
 import { koraClient } from "./kora.client";
 import { PaymentRefundService, paymentRefundService } from "./payment-refund.service";

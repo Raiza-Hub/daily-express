@@ -96,3 +96,5 @@ export class RouteService {
     return this.search.searchRoutes(params);
   }
 }
+
+export const routeService = new RouteService();

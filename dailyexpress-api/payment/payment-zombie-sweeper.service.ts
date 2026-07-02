@@ -2,7 +2,7 @@ import { and, eq, lt } from "drizzle-orm";
 import { db } from "../db/connection";
 import { booking, payment, type PaymentRecord } from "../db/index";
 import { logger } from "../utils/logger";
-import { jobService } from "../workers/jobService";
+import { jobService } from "../workers/job.service";
 import { koraClient } from "./kora.client";
 import { PaymentRefundService, paymentRefundService } from "./payment-refund.service";
 import { PaymentRepository, paymentRepository } from "./payment.repository";
