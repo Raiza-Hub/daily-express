@@ -2,6 +2,8 @@ export * from "./registry";
 export * from "./assets";
 export { default as BookingConfirmedEmail } from "./emails/BookingConfirmedEmail";
 export type { BookingConfirmedEmailProps } from "./emails/BookingConfirmedEmail";
+export { default as DriverAssignedEmail } from "./emails/DriverAssignedEmail";
+export type { DriverAssignedEmailProps } from "./emails/DriverAssignedEmail";
 export { default as RefundFailedEmail } from "./emails/RefundFailedEmail";
 export type { RefundFailedEmailProps } from "./emails/RefundFailedEmail";
 export { default as ResetPasswordEmail } from "./emails/ResetPasswordEmail";

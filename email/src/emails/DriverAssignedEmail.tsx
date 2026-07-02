@@ -14,31 +14,37 @@ import {
 } from "@react-email/components";
 import { EMAIL_LOGO_CONTENT_ID } from "../assets";
 
-export interface BookingConfirmedEmailProps {
+export interface DriverAssignedEmailProps {
   frontendUrl: string;
   passengerName: string | null;
-  paymentReference: string;
-  pricePaid: string;
+  driverName: string;
+  driverPhone: string;
+  vehicleMake: string;
+  vehicleModel: string;
+  vehiclePlateNumber: string;
+  vehicleColor: string;
   pickupTitle: string;
   dropoffTitle: string;
-  tripDate: string | Date;
   departureTime: string | Date;
+  tripDate: string | Date;
   timeZone: string;
-  meetingPoint: string;
 }
 
-const BookingConfirmedEmail = ({
+const DriverAssignedEmail = ({
   passengerName,
-  paymentReference,
-  pricePaid,
+  driverName,
+  driverPhone,
+  vehicleMake,
+  vehicleModel,
+  vehiclePlateNumber,
+  vehicleColor,
   pickupTitle,
   dropoffTitle,
-  tripDate,
   departureTime,
+  tripDate,
   timeZone,
-  meetingPoint,
-}: BookingConfirmedEmailProps) => {
-  const previewText = `Your booking to ${dropoffTitle} is confirmed!`;
+}: DriverAssignedEmailProps) => {
+  const previewText = `Driver assigned for ${pickupTitle} to ${dropoffTitle}`;
   const formattedTripDate = formatTripDate(tripDate, timeZone);
   const formattedDepartureTime = formatTripTime(departureTime, timeZone);
 
@@ -64,14 +70,66 @@ const BookingConfirmedEmail = ({
             </Text>
 
             <Text style={summary}>
-              Your booking has been confirmed and your payment of{" "}
-              <strong style={strong}>{pricePaid}</strong> has been received.
+              Good news — a driver has been assigned to your trip.
             </Text>
 
             <Hr style={divider} />
 
-            <Text style={sectionTitle}>Trip Details</Text>
+            <Text style={sectionTitle}>Driver Details</Text>
+            <Section style={infoTable}>
+              <Row style={row}>
+                <Column style={labelCol}>
+                  <Text style={label}>Name:</Text>
+                </Column>
+                <Column style={valueCol}>
+                  <Text style={value}>{driverName}</Text>
+                </Column>
+              </Row>
+              <Row style={row}>
+                <Column style={labelCol}>
+                  <Text style={label}>Phone:</Text>
+                </Column>
+                <Column style={valueCol}>
+                  <Text style={value}>{driverPhone}</Text>
+                </Column>
+              </Row>
+            </Section>
 
+            <Hr style={divider} />
+
+            <Text style={sectionTitle}>Vehicle Details</Text>
+            <Section style={infoTable}>
+              <Row style={row}>
+                <Column style={labelCol}>
+                  <Text style={label}>Vehicle:</Text>
+                </Column>
+                <Column style={valueCol}>
+                  <Text style={value}>
+                    {vehicleMake} {vehicleModel}
+                  </Text>
+                </Column>
+              </Row>
+              <Row style={row}>
+                <Column style={labelCol}>
+                  <Text style={label}>Plate Number:</Text>
+                </Column>
+                <Column style={valueCol}>
+                  <Text style={value}>{vehiclePlateNumber}</Text>
+                </Column>
+              </Row>
+              <Row style={row}>
+                <Column style={labelCol}>
+                  <Text style={label}>Color:</Text>
+                </Column>
+                <Column style={valueCol}>
+                  <Text style={value}>{vehicleColor}</Text>
+                </Column>
+              </Row>
+            </Section>
+
+            <Hr style={divider} />
+
+            <Text style={sectionTitle}>Trip Details</Text>
             <Section style={infoTable}>
               <Row style={row}>
                 <Column style={labelCol}>
@@ -85,44 +143,25 @@ const BookingConfirmedEmail = ({
               </Row>
               <Row style={row}>
                 <Column style={labelCol}>
+                  <Text style={label}>Date:</Text>
+                </Column>
+                <Column style={valueCol}>
+                  <Text style={value}>{formattedTripDate}</Text>
+                </Column>
+              </Row>
+              <Row style={row}>
+                <Column style={labelCol}>
                   <Text style={label}>Departure Time:</Text>
                 </Column>
                 <Column style={valueCol}>
                   <Text style={value}>{formattedDepartureTime}</Text>
                 </Column>
               </Row>
-              <Row style={row}>
-                <Column style={labelCol}>
-                  <Text style={label}>Booking Reference:</Text>
-                </Column>
-                <Column style={valueCol}>
-                  <Text style={value}>{paymentReference}</Text>
-                </Column>
-              </Row>
             </Section>
 
-            <Hr style={divider} />
-
-            <Text style={sectionTitle}>Current Status</Text>
-            <Text style={summary}>
-              Awaiting driver assignment. A driver has not yet accepted this
-              trip. We are notifying eligible drivers and will update you once a
-              driver is assigned.
-            </Text>
-
-            <Text style={sectionTitle}>What happens next?</Text>
-            <Text style={bullet}>
-              • If a driver accepts before departure, we'll send you the driver
-              and vehicle details immediately.
-            </Text>
-            <Text style={bullet}>
-              • If no driver is assigned by the departure deadline, we'll notify
-              you with available options (reschedule or refund).
-            </Text>
-
-            <Text style={summary}>
-              Meeting point:{" "}
-              <strong style={strong}>{meetingPoint}</strong>
+            <Text style={reminder}>
+              Please arrive at the pickup point at least{" "}
+              <strong style={strong}>15 minutes</strong> before departure.
             </Text>
 
             <Hr style={divider} />
@@ -144,7 +183,7 @@ const BookingConfirmedEmail = ({
             <Hr style={divider} />
 
             <Text style={footerText}>
-              Thank you for booking with Daily Express.
+              Thank you for choosing Daily Express.
             </Text>
             <Text style={footerText}>The Daily Express Team</Text>
           </Container>
@@ -158,7 +197,6 @@ function parseDateInput(value: string | Date) {
   if (value instanceof Date) {
     return Number.isNaN(value.getTime()) ? null : value;
   }
-
   const parsed = new Date(value);
   return Number.isNaN(parsed.getTime()) ? null : parsed;
 }
@@ -166,7 +204,6 @@ function parseDateInput(value: string | Date) {
 function formatTripDate(value: string | Date, timeZone: string) {
   const parsed = parseDateInput(value);
   if (!parsed) return String(value);
-
   return new Intl.DateTimeFormat("en-NG", {
     timeZone,
     month: "short",
@@ -178,7 +215,6 @@ function formatTripDate(value: string | Date, timeZone: string) {
 function formatTripTime(value: string | Date, timeZone: string) {
   const parsed = parseDateInput(value);
   if (!parsed) return String(value);
-
   return new Intl.DateTimeFormat("en-NG", {
     timeZone,
     hour: "2-digit",
@@ -278,12 +314,11 @@ const value = {
   margin: 0,
 };
 
-const bullet = {
+const reminder = {
   color: "#111",
   fontSize: "13px",
   lineHeight: "20px",
-  marginBottom: "8px",
-  paddingLeft: "4px",
+  marginTop: "16px",
 };
 
 const supportText = {
@@ -305,16 +340,20 @@ const footerText = {
   textAlign: "center" as const,
 };
 
-BookingConfirmedEmail.PreviewProps = {
+DriverAssignedEmail.PreviewProps = {
   frontendUrl: "",
   passengerName: "Ada Okafor",
-  paymentReference: "BK-92A7F4D1",
-  pricePaid: "NGN 12,500.00",
-  pickupTitle: "Yaba",
-  dropoffTitle: "Ibadan",
-  tripDate: "Saturday, April 25, 2026",
-  departureTime: "08:30 AM",
-  meetingPoint: "Daily Express Terminal, Yaba",
-} as BookingConfirmedEmailProps;
+  driverName: "John Ade",
+  driverPhone: "+234 803 000 1234",
+  vehicleMake: "Toyota",
+  vehicleModel: "Hiace",
+  vehiclePlateNumber: "KJA-204-AA",
+  vehicleColor: "White",
+  pickupTitle: "Abeokuta",
+  dropoffTitle: "Lagos",
+  departureTime: "2:00 PM",
+  tripDate: "Monday, June 15, 2026",
+  timeZone: "Africa/Lagos",
+} as DriverAssignedEmailProps;
 
-export default BookingConfirmedEmail;
+export default DriverAssignedEmail;
