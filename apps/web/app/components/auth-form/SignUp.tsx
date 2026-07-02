@@ -49,7 +49,7 @@ const SignUpForm = ({ redirect }: { redirect?: string }) => {
         dateOfBirth: data.dateOfBirth,
       },
       {
-        onSuccess: () => {
+        onSuccess: async () => {
           router.push(buildVerifyEmailHref(redirect));
           posthog.capture(posthogEvents.auth_signup_succeeded);
         },

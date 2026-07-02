@@ -3,7 +3,6 @@
 import { CircleNotchIcon, ReceiptIcon } from "@phosphor-icons/react";
 import { useGetUserBookingsInfinite } from "@repo/api";
 import { Button } from "@repo/ui/components/button";
-import { useMemo } from "react";
 import { groupByDate, transformToTripStatusItem } from "~/lib/utils";
 import { TripStatusItem } from "~/lib/type";
 import TripStatusCardItem from "./TripStatusCardItem";
@@ -20,20 +19,11 @@ const TripStatusCard = () => {
         error,
     } = useGetUserBookingsInfinite();
 
-    const allBookings = useMemo(() => {
-        if (!data?.pages) return [];
-        return data.pages.flatMap((page) => page.bookings);
-    }, [data]);
-
-    const tripStatusItems = useMemo(() => {
-        return allBookings
-            .map(transformToTripStatusItem)
-            .filter((item): item is TripStatusItem => item !== null);
-    }, [allBookings]);
-
-    const grouped = useMemo(() => {
-        return groupByDate(tripStatusItems);
-    }, [tripStatusItems]);
+    const allBookings = data?.pages?.flatMap((page) => page.bookings) ?? [];
+    const tripStatusItems: TripStatusItem[] = allBookings
+        .map(transformToTripStatusItem)
+        .filter((item): item is TripStatusItem => item !== null);
+    const grouped = groupByDate(tripStatusItems);
 
     return (
         <div className="flex flex-col gap-8 pt-6">

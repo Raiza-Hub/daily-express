@@ -1,18 +1,16 @@
 import { ReactNode } from "react";
 import TripFilter from "./TripFilter";
-import { Route } from "@shared/types";
 
 type TripStateProps = {
   icon: ReactNode;
   title: string;
   description: string;
-  routes: Route[] | undefined;
 };
 
-const TripState = ({ icon, title, description, routes }: TripStateProps) => {
+const TripState = ({ icon, title, description }: TripStateProps) => {
   return (
     <div className="flex flex-col lg:flex-row gap-8 items-start">
-      <TripFilter routes={routes} onApplyFilters={() => {}} />
+      <TripFilter onApplyFilters={() => {}} />
 
       <div className="flex-1 w-full">
         <div className="flex flex-col items-center justify-center gap-2 py-20">

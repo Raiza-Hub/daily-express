@@ -11,7 +11,7 @@ import { useSearchRoutes } from "@repo/api";
 import type { Route } from "@shared/types";
 import dayjs from "dayjs";
 import { useQueryStates } from "nuqs";
-import { useEffect, useMemo, useRef } from "react";
+import { useEffect, useRef } from "react";
 import { searchParams } from "~/lib/type";
 import { toSearchTrip } from "~/lib/utils";
 import TripCardItem from "./TripCardItem";
@@ -19,12 +19,20 @@ import TripFilter from "./TripFilter";
 import TripState from "./TripState";
 
 const TripSearchSection = () => {
+  useEffect(() => {
+    const handler = (e: PageTransitionEvent) => {
+      if (e.persisted) window.location.reload();
+    };
+    window.addEventListener("pageshow", handler);
+    return () => window.removeEventListener("pageshow", handler);
+  }, []);
+
   const [query] = useQueryStates(
     {
       from: searchParams.from,
       to: searchParams.to,
       date: searchParams.date,
-      vehicleType: searchParams.vehicleType,
+      departureTime: searchParams.departureTime,
     },
     { history: "replace" },
   );
@@ -35,7 +43,7 @@ const TripSearchSection = () => {
     from: query.from ?? "",
     to: query.to ?? "",
     date: urlDate,
-    vehicleType: query.vehicleType ?? undefined,
+    departureTime: query.departureTime ?? undefined,
   };
 
   const {
@@ -51,10 +59,7 @@ const TripSearchSection = () => {
     enabled: hasSearchParams,
   });
 
-  const routes: Route[] = useMemo(
-    () => data?.pages?.flatMap((page) => page.routes) ?? [],
-    [data],
-  );
+  const routes: Route[] = data?.pages?.flatMap((page) => page.routes) ?? [];
 
   const lastTripRef = useRef<HTMLDivElement>(null);
 
@@ -79,7 +84,6 @@ const TripSearchSection = () => {
   if (!hasSearchParams) {
     return (
       <TripState
-        routes={undefined}
         icon={<MagnifyingGlassIcon className="size-6 text-neutral-500" />}
         title="Where are you headed?"
         description="Pick your starting point, destination, and date to find the perfect trip."
@@ -90,7 +94,6 @@ const TripSearchSection = () => {
   if (isLoading) {
     return (
       <TripState
-        routes={[]}
         icon={<BinocularsIcon className="size-6 text-neutral-500" />}
         title="Searching routes"
         description="Finding available rides for your route."
@@ -101,7 +104,6 @@ const TripSearchSection = () => {
   if (error) {
     return (
       <TripState
-        routes={[]}
         icon={<WarningCircleIcon className="size-6 text-neutral-500" />}
         title="Routes temporarily unavailable"
         description="We’re unable to load available rides right now. Please try again shortly."
@@ -109,12 +111,11 @@ const TripSearchSection = () => {
     );
   }
 
-  const searchTrips = routes.map((item) => toSearchTrip(item));
+  const searchTrips = routes.map((item) => toSearchTrip(item, urlDate));
 
   if (searchTrips.length === 0) {
     return (
       <TripState
-        routes={routes}
         icon={<CalendarXIcon className="size-6 text-neutral-500" />}
         title="No rides available"
         description="We couldn’t find any rides for your selected route and time. Try adjusting your trip details."
@@ -124,7 +125,7 @@ const TripSearchSection = () => {
 
   return (
     <div className="flex flex-col lg:flex-row gap-8 items-start">
-      <TripFilter routes={routes} onApplyFilters={() => refetch()} />
+      <TripFilter onApplyFilters={() => refetch()} />
       <div className="flex-1 w-full">
         <div className="flex flex-col gap-4 pt-6">
           <div className="flex flex-col gap-1">
@@ -154,8 +155,7 @@ const TripSearchSection = () => {
           <p className="text-sm text-muted-foreground">
             Fares may change depending on the selected trips and dates, and are
             not final until payment is completed and the booking is confirmed.
-            Prices are per person and do not include luggage fees. Bookings are
-            non-refundable once trips are confirmed.
+            Bookings are non-refundable once trips are confirmed.
           </p>
         </div>
       </div>
