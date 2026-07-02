@@ -1,7 +1,6 @@
 import {
   CheckCircleIcon,
   DotsThreeVerticalIcon,
-  ProhibitIcon,
   UsersThreeIcon,
 } from "@phosphor-icons/react";
 import { Button } from "@repo/ui/components/button";
@@ -21,20 +20,16 @@ interface RouteCardActionMenuProps {
   onTripAction: () => void;
   tripActionDisabled?: boolean;
   tripActionLabel?: string;
-  tripActionMode?: "stop_booking" | "complete";
 }
 
 export default function RouteCardActionMenu({
   onPassengers,
   onTripAction,
   tripActionDisabled = false,
-  tripActionLabel = "Stop Booking",
-  tripActionMode = "stop_booking",
+  tripActionLabel = "Mark Completed",
 }: RouteCardActionMenuProps) {
   const [open, setOpen] = useState(false);
   useBodyScrollLock(open);
-  const isCompletionAction = tripActionMode === "complete";
-  const TripActionIcon = isCompletionAction ? CheckCircleIcon : ProhibitIcon;
 
   return (
     <DropdownMenu open={open} onOpenChange={setOpen} modal={false}>
@@ -51,16 +46,11 @@ export default function RouteCardActionMenu({
           </DropdownMenuItem>
           <DropdownMenuSeparator />
           <DropdownMenuItem
-            variant={isCompletionAction ? "default" : "destructive"}
-            className={
-              isCompletionAction
-                ? "cursor-pointer text-emerald-700 focus:text-emerald-700 hover:text-emerald-700 data-[disabled]:text-emerald-400"
-                : "cursor-pointer text-red-600 focus:text-red-600 hover:text-red-600 data-[disabled]:text-red-400"
-            }
+            className="cursor-pointer text-emerald-700 focus:text-emerald-700 hover:text-emerald-700 data-[disabled]:text-emerald-400"
             disabled={tripActionDisabled}
             onSelect={onTripAction}
           >
-            <TripActionIcon aria-hidden="true" size={16} />
+            <CheckCircleIcon aria-hidden="true" size={16} />
             {tripActionLabel}
           </DropdownMenuItem>
         </DropdownMenuGroup>

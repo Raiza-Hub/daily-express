@@ -12,15 +12,14 @@ import {
 } from "@repo/ui/components/stepper";
 import { onboardingSchema, TonboardingSchema } from "@repo/types";
 import { zodResolver } from "@hookform/resolvers/zod";
+import { z } from "zod/v4";
 import { useRouter } from "next/navigation";
 import { useState } from "react";
 import {
   applyApiFieldErrors,
   getApiErrorMessage,
   useCreateDriver,
-  useGetDriver,
 } from "@repo/api";
-import { useEffect } from "react";
 import { FormProvider, useForm } from "react-hook-form";
 import { Button } from "@repo/ui/components/button";
 import { usePostHog } from "posthog-js/react";
@@ -51,9 +50,28 @@ const STEPS = [
     title: "Payment Information",
     description: "Your earnings will be paid into this account.",
     Component: PaymentInfo,
-    fields: ["bankName", "accountNumber", "bankCode", "accountName"],
+    fields: [
+      "bankName",
+      "accountNumber",
+      "bankCode",
+      "accountName",
+      "kycType",
+      "kycId",
+      "kycConsent",
+    ],
   },
 ];
+
+const onboardingFormSchema = onboardingSchema.superRefine((data, ctx) => {
+  const label = data.kycType?.toUpperCase() || "BVN/NIN";
+  if (!data.kycId) {
+    ctx.addIssue({
+      code: z.ZodIssueCode.custom,
+      message: `${label} is required.`,
+      path: ["kycId"],
+    });
+  }
+});
 
 const OnboardingForm = () => {
   const router = useRouter();
@@ -61,16 +79,8 @@ const OnboardingForm = () => {
   const [currentStep, setCurrentStep] = useState<number>(1);
   const [onboardError, setOnboardError] = useState<string | null>(null);
 
-  const { data: driver, isLoading } = useGetDriver({ enabled: true });
-
-  useEffect(() => {
-    if (!isLoading && driver) {
-      router.replace("/");
-    }
-  }, [driver, isLoading, router]);
-
   const methods = useForm<TonboardingSchema>({
-    resolver: zodResolver(onboardingSchema),
+    resolver: zodResolver(onboardingFormSchema),
     mode: "onBlur",
     reValidateMode: "onChange",
     defaultValues: {
@@ -88,6 +98,9 @@ const OnboardingForm = () => {
       bankCode: "",
       accountNumber: "",
       accountName: "",
+      kycType: "",
+      kycId: "",
+      kycConsent: true,
     },
   });
 
@@ -134,17 +147,12 @@ const OnboardingForm = () => {
     formData.append("bankCode", bankCode);
     formData.append("accountNumber", data.accountNumber);
     formData.append("accountName", data.accountName);
+    formData.append("kycType", data.kycType);
+    formData.append("kycId", data.kycId);
+    formData.append("kycConsent", "true");
 
     createDriver(formData);
   };
-
-  if (isLoading) {
-    return (
-      <div className="flex min-h-screen items-center justify-center">
-        <CircleNotchIcon className="size-6 animate-spin text-muted-foreground" />
-      </div>
-    );
-  }
 
   const onNext = async () => {
     const currentData = STEPS[currentStep - 1];

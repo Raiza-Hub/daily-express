@@ -4,6 +4,7 @@ import { Badge } from "@repo/ui/components/badge";
 const VerificationBadge = (props: {
   hasBankDetails: boolean;
   status?: "pending" | "active" | "failed";
+  notSetLabel?: string;
 }) => {
   if (!props.hasBankDetails) {
     return (
@@ -12,7 +13,7 @@ const VerificationBadge = (props: {
           aria-hidden="true"
           className="size-1.5 rounded-full bg-gray-400"
         />
-        No bank set
+        {props.notSetLabel || "No bank set"}
       </Badge>
     );
   }
