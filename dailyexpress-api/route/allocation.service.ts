@@ -70,13 +70,17 @@ export class AllocationService {
       emailSubject = getEmailSubject("BookingConfirmedEmail", propsJson);
     }
 
+    const tripDateStr = bookingRecord.tripDate instanceof Date
+      ? bookingRecord.tripDate.toISOString()
+      : String(bookingRecord.tripDate);
+
     const result = await db.transaction(async (tx) => {
       // Serialize concurrent trip allocations/creations for the same route+date+vehicleType
       // using a Postgres advisory lock scoped to the composite key.
       // Different vehicle types on the same route do NOT block each other.
       await tx.execute(sql`
         SELECT pg_advisory_xact_lock(
-          hashtext(concat(${bookingRecord.routeId}::text, ${bookingRecord.tripDate}::text, ${bookingRecord.vehicleType}::text))::bigint
+          hashtext(concat(${bookingRecord.routeId}, ${tripDateStr}, ${bookingRecord.vehicleType}))::bigint
         )
       `);
 
