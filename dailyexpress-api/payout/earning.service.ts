@@ -1,19 +1,19 @@
 import { and, eq } from "drizzle-orm";
 import { sentryServer } from "@shared/sentry";
 import { logger } from "../utils/logger";
-import { db } from "../db/connection";
+import { db, type DbTransaction } from "../db/connection";
 import { earning } from "../db/index";
-import { PayoutRepository } from "./payout.repository";
-import { DriverService } from "../driver/driverService";
-import { NotificationService } from "../notification/notificationService";
+import { PayoutRepository, payoutRepository } from "./payout.repository";
+import { driverService as sharedDriverService } from "../driver/driver.service";
+import { notificationService as sharedNotificationService } from "../notification/notification.service";
 import { jobService } from "../workers/jobService";
 import type { DriverNotification } from "@shared/types";
 
-type PayoutTransaction = Parameters<Parameters<typeof db.transaction>[0]>[0];
+type PayoutTransaction = DbTransaction;
 
 export class EarningService {
-  private readonly driverService = new DriverService();
-  private readonly notificationService = new NotificationService();
+  private readonly driverService = sharedDriverService;
+  private readonly notificationService = sharedNotificationService;
 
   constructor(private repo: PayoutRepository) {}
 
@@ -119,7 +119,7 @@ export class EarningService {
       return { pendingNotifications };
     }
 
-    await this.repo.updateEarningsByTrip(
+    const releasedEarnings = await this.repo.updateEarningsByTrip(
       tx,
       input.tripId,
       "pending_trip_completion",
@@ -129,16 +129,6 @@ export class EarningService {
         updatedAt: new Date(),
       },
     );
-
-    const releasedEarnings = await tx
-      .select({ id: earning.id })
-      .from(earning)
-      .where(
-        and(
-          eq(earning.tripId, input.tripId),
-          eq(earning.status, "available"),
-        ),
-      );
 
     for (const entry of releasedEarnings) {
       await jobService.enqueuePayout(tx, { earningId: entry.id });
@@ -184,3 +174,5 @@ export class EarningService {
     );
   }
 }
+
+export const earningService = new EarningService(payoutRepository);

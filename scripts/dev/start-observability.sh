@@ -55,5 +55,4 @@ Metabase app database:
   User: metabase_app
 
 Use 'bun run observability:logs' to watch startup logs.
-Use 'bun run observability:appsmith:up' when you want to build or use Appsmith action workflows.
 MSG

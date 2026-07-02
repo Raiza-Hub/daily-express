@@ -1,28 +1,22 @@
 import { and, eq } from "drizzle-orm";
 import { db } from "../db/connection";
-import { booking, payment } from "../db/index";
+import { booking, payment, refund, webhookProcessed } from "../db/index";
 import { logger } from "../utils/logger";
 import { getPaymentReference } from "../utils/payment";
-import type { WebhookJobData } from "../workers/boss";
 import { jobService } from "../workers/jobService";
-import { KoraClient } from "./kora.client";
-import { PaymentConfirmService } from "./payment-confirm.service";
-import { PaymentRefundService } from "./payment-refund.service";
-import { PaymentRepository } from "./payment.repository";
+import type { WebhookJobData } from "../workers/boss";
+import { koraClient } from "./kora.client";
+import { PaymentRefundService, paymentRefundService } from "./payment-refund.service";
+import { PaymentRepository, paymentRepository } from "./payment.repository";
 import type {
     KoraWebhookPayload,
-    PaymentStatus,
 } from "./payment.types";
-import { enrichWithExpiry } from "./payment.utils";
-
-type PaymentRecord = typeof payment.$inferSelect;
 
 export class PaymentWebhookService {
-  private readonly kora = new KoraClient();
+  private readonly kora = koraClient;
 
   constructor(
     private repo: PaymentRepository,
-    private confirmService: PaymentConfirmService,
     private refundService: PaymentRefundService,
   ) {}
 
@@ -32,7 +26,25 @@ export class PaymentWebhookService {
       signature,
     );
 
+    const dedupKey = `${webhook.event}:${webhook.data.payment_reference || webhook.data.reference}`;
+
     await db.transaction(async (tx) => {
+      const [claimed] = await tx.insert(webhookProcessed)
+        .values({
+          eventType: webhook.event,
+          eventReference: dedupKey,
+        })
+        .onConflictDoNothing()
+        .returning({ id: webhookProcessed.id });
+
+      if (!claimed) {
+        logger.debug("payment.webhook_duplicate_skipped", {
+          event: webhook.event,
+          dedupKey,
+        });
+        return;
+      }
+
       await this.repo.insertWebhook(tx, {
         provider: "kora",
         paymentReference:
@@ -72,7 +84,7 @@ export class PaymentWebhookService {
 
     switch (job.event) {
       case "charge.success":
-        await this.processChargeSuccess(job, reference);
+        await this.processChargeSuccess(reference);
         return;
       case "charge.failed":
         await this.processChargeFailure(reference);
@@ -88,163 +100,114 @@ export class PaymentWebhookService {
     }
   }
 
-  private async processChargeSuccess(job: WebhookJobData, reference: string) {
-    const existingPayment = await this.repo.findPaymentByReference(reference);
-    if (existingPayment && existingPayment.status !== "pending") {
-      if (
-        existingPayment.status === "failed" ||
-        existingPayment.status === "expired"
-      ) {
-        logger.info("payment.webhook_post_expiry_success", {
-          reference,
-          currentStatus: existingPayment.status,
+  private async processChargeSuccess(reference: string) {
+    const [claimed] = await this.repo.claimPayment(reference);
+    if (!claimed) {
+      // Defensive check: if the payment is already in 'expired' status, but this webhook got a success callback,
+      // check if a refund has already been created/processed to prevent double refunding.
+      const existing = await this.repo.findPaymentByReference(reference);
+      if (existing?.status === "expired" && existing.bookingId) {
+        const existingRefund = await db.query.refund.findFirst({
+          where: eq(refund.paymentId, existing.id),
         });
-
-        const verification = await this.kora.verifyTransaction(reference);
-        if (verification.data.status.toLowerCase() === "success") {
-          await this.refundService.refundPayment(
-            reference,
-            verification.data,
-            verification.raw,
-            "Payment completed after booking hold expired",
-          );
-          return;
+        if (!existingRefund) {
+          logger.warn("payment.webhook.expired_without_refund", { reference, bookingId: existing.bookingId });
+          const verification = await this.kora.verifyTransaction(reference);
+          if (verification.data.status.toLowerCase() === "success") {
+            try {
+              await this.refundService.refundPayment(
+                reference,
+                {
+                  amount: verification.data.amount,
+                  currency: verification.data.currency,
+                  paid_at: verification.data.paid_at,
+                  payment_reference: verification.data.payment_reference,
+                  reference: verification.data.reference,
+                  status: verification.data.status,
+                },
+                verification.raw,
+                "Payment completed after booking hold expired (webhook fallback)",
+              );
+            } catch (refundErr: unknown) {
+              logger.error("payment.webhook.fallback_refund_failed", {
+                reference,
+                error: refundErr instanceof Error ? refundErr.message : String(refundErr),
+              });
+            }
+          }
         }
-
-        logger.warn("payment.webhook_success_mismatch", {
-          koraStatus: verification.data.status,
-          reference,
-        });
       }
-
-      logger.info("payment.webhook_duplicate_terminal", {
-        event: job.event,
-        reference,
-      });
+      logger.info("payment.webhook_already_claimed", { reference });
       return;
     }
 
     const verification = await this.kora.verifyTransaction(reference);
     if (verification.data.status.toLowerCase() !== "success") {
-      logger.warn("payment.webhook_success_verification_mismatch", {
-        koraStatus: verification.data.status,
-        reference,
+      await this.repo.updateProcessingPayment(reference, "failed", {
+        failureCode: "VERIFICATION_MISMATCH",
+        failureReason: `Webhook indicated success but verification returned ${verification.data.status}`,
+        providerStatus: verification.data.status,
       });
       return;
     }
 
-    if (!existingPayment) {
-      logger.warn("payment.webhook_success_missing_payment", { reference });
-      return;
-    }
-
-    let bookingExpiresAt: Date | null | undefined;
-    if (existingPayment.bookingId) {
+    let bookingExpired = true;
+    if (claimed.bookingId) {
       const bookingRecord = await db.query.booking.findFirst({
-        where: eq(booking.id, existingPayment.bookingId),
+        where: eq(booking.id, claimed.bookingId),
         columns: { expiresAt: true },
       });
-      bookingExpiresAt = bookingRecord?.expiresAt;
+      bookingExpired = !bookingRecord?.expiresAt || bookingRecord.expiresAt.getTime() <= Date.now();
     }
 
-    if (!bookingExpiresAt || bookingExpiresAt.getTime() <= Date.now()) {
+    if (bookingExpired) {
+      await this.repo.updateProcessingPayment(reference, "expired", {
+        failureCode: "BOOKING_EXPIRED",
+        failureReason: "Payment completed after booking hold expired",
+        providerStatus: "success",
+      });
+
       await this.refundService.refundPayment(
         reference,
         verification.data,
         verification.raw,
+        "Payment completed after booking hold expired",
       );
       return;
     }
 
-    await this.confirmService.confirmPayment(
-      reference,
-      verification.data,
-      verification.raw,
-    );
+    await db.transaction(async (tx) => {
+      await tx.update(payment)
+        .set({ status: "successful", paidAt: new Date(), providerStatus: "success", lastStatusCheckAt: new Date(), updatedAt: new Date() })
+        .where(and(eq(payment.reference, reference), eq(payment.status, "processing")));
+
+      await jobService.enqueue(tx, "allocation.process", {
+        bookingId: claimed.bookingId,
+        reference,
+      });
+    });
   }
 
   private async processChargeFailure(reference: string) {
     const verification = await this.kora.verifyTransaction(reference);
 
     if (verification.data.status.toLowerCase() === "success") {
-      await this.processChargeSuccess(
-        {
-          event: "charge.success",
-          data: { ...verification.data, reference },
-          _retryCount: 0,
-        },
-        reference,
-      );
+      await this.processChargeSuccess(reference);
       return;
     }
 
-    await this.failPayment(
-      reference,
-      "failed",
-      verification.data.message || "Payment provider reported a failed charge",
-      {
-        failureCode: "PAYMENT_FAILED",
-        providerStatus: verification.data.status,
-      },
-    );
-  }
-
-  private async failPayment(
-    reference: string,
-    nextStatus: Extract<PaymentStatus, "failed" | "cancelled" | "expired">,
-    reason: string,
-    options?: {
-      failureCode?: string;
-      providerStatus?: string | null;
-    },
-  ) {
-    const existingPayment = await this.repo.findPaymentByReference(reference);
-    if (!existingPayment) return null;
-    if (existingPayment.status !== "pending") {
-      return enrichWithExpiry(existingPayment);
+    const [claimed] = await this.repo.claimPayment(reference);
+    if (!claimed) {
+      logger.info("payment.webhook_fail_already_claimed", { reference });
+      return;
     }
 
-    const [updatedPayment] = await db.transaction(async (tx) => {
-      const [record] = await tx
-        .update(payment)
-        .set({
-          status: nextStatus,
-          providerStatus:
-            options?.providerStatus || existingPayment.providerStatus,
-          lastStatusCheckAt: new Date(),
-          failedAt: existingPayment.failedAt || new Date(),
-          failureCode: options?.failureCode || existingPayment.failureCode,
-          failureReason: reason,
-          updatedAt: new Date(),
-        })
-        .where(
-          and(eq(payment.reference, reference), eq(payment.status, "pending")),
-        )
-        .returning();
-
-      if (!record) return [];
-
-      await this.repo.updateBookingPaymentStatus(tx, {
-        bookingId: record.bookingId,
-        paymentReference: reference,
-        paymentStatus: nextStatus,
-      });
-
-      return [record];
+    await this.repo.updateProcessingPayment(reference, "failed", {
+      failureCode: "PAYMENT_FAILED",
+      failureReason: verification.data.message || "Payment provider reported a failed charge",
+      providerStatus: verification.data.status,
     });
-
-    if (!updatedPayment) {
-      const latest = await this.repo.findPaymentByReference(reference);
-      return latest ? enrichWithExpiry(latest) : null;
-    }
-
-    logger.info("payment.failed", {
-      bookingId: updatedPayment.bookingId,
-      reference,
-      status: nextStatus,
-    });
-
-    return enrichWithExpiry(updatedPayment);
   }
-
 }
+
+export const paymentWebhookService = new PaymentWebhookService(paymentRepository, paymentRefundService);
