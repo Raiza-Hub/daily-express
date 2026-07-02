@@ -24,7 +24,7 @@ export async function registerPaymentWebhookWorker() {
       });
 
       try {
-        await paymentService.handleWebhookJob(job.data);
+        await paymentService.processWebhookJob(job.data);
       } catch (error) {
         logger.error("worker.payment_webhook.failed", {
           jobId: job.id,
