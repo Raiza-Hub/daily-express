@@ -4,11 +4,11 @@ import { OAuth2Client } from "google-auth-library";
 import { createHash, randomBytes } from "node:crypto";
 import { getConfig } from "../config/index";
 import { db } from "../db/connection";
-import { type User } from "../db/index";
+import { type User, users, userProviders } from "../db/index";
 import { getCookieDomain, setAuthCookies } from "../middleware/auth";
 import { logger, reportError } from "../utils/logger";
-import { AuthRepository } from "./auth.repository";
 import { isUnder13 } from "./validation";
+import { parseDate } from "../utils/payment";
 import {
     GOOGLE_AUTH_FAILURE_REDIRECT_URL,
     resolveFrontendRedirect,
@@ -78,8 +78,6 @@ class GoogleOAuthError extends Error {
     this.name = "GoogleOAuthError";
   }
 }
-
-const repo = new AuthRepository();
 
 function base64Url(buffer: Buffer): string {
   return buffer
@@ -265,7 +263,7 @@ async function verifyGoogleIdentity(
   const profileFromToken = {
     firstName: payload.given_name,
     lastName: payload.family_name,
-    dateOfBirth: parseBirthdate(payload.birthdate),
+    dateOfBirth: parseDate(payload.birthdate),
   };
   const needsPeopleApi =
     !profileFromToken.firstName ||
@@ -318,53 +316,15 @@ function parseGoogleBirthday(
   return new Date(birthday.year, birthday.month - 1, birthday.day);
 }
 
-function parseBirthdate(birthdate: string | undefined): Date | null {
-  if (!birthdate) return null;
-  const parsed = new Date(birthdate);
-  return Number.isNaN(parsed.getTime()) ? null : parsed;
-}
-
 async function upsertGoogleUser(profile: GoogleProfile): Promise<User> {
+  if (profile.dateOfBirth && isUnder13(profile.dateOfBirth)) {
+    throw new GoogleOAuthError(
+      "You must be at least 13 years old to create an account",
+    );
+  }
+
   return db.transaction(async (tx) => {
-    const existingProvider = await repo.findUserProvider(tx, "google", profile.googleId);
-
-    if (existingProvider) {
-      const updatedUser = await repo.updateUser(tx, existingProvider.userId, {
-        profilePictureUrl: profile.picture,
-        updatedAt: new Date(),
-      });
-      if (!updatedUser) {
-        throw new GoogleOAuthError("Google provider is linked to a missing user");
-      }
-      return updatedUser;
-    }
-
-    const existingUserByEmail = await repo.findUserByEmail(profile.email);
-
-    if (existingUserByEmail) {
-      await repo.insertUserProvider(tx, {
-        userId: existingUserByEmail.id,
-        provider: "google",
-        providerId: profile.googleId,
-      });
-
-      const updated = await repo.updateUser(tx, existingUserByEmail.id, {
-        profilePictureUrl: profile.picture,
-        updatedAt: new Date(),
-      });
-      if (!updated) {
-        throw new GoogleOAuthError("Failed to update existing user");
-      }
-      return updated;
-    }
-
-    if (profile.dateOfBirth && isUnder13(profile.dateOfBirth)) {
-      throw new GoogleOAuthError(
-        "You must be at least 13 years old to create an account",
-      );
-    }
-
-    const createdUser = await repo.insertUser(tx, {
+    const [user] = await tx.insert(users).values({
       email: profile.email,
       firstName: profile.firstName,
       lastName: profile.lastName,
@@ -373,14 +333,20 @@ async function upsertGoogleUser(profile: GoogleProfile): Promise<User> {
       emailVerified: true,
       referral: "",
       profilePictureUrl: profile.picture,
-    });
+    })
+      .onConflictDoUpdate({
+        target: users.email,
+        set: { profilePictureUrl: profile.picture, updatedAt: new Date() },
+      })
+      .returning();
 
-    await repo.insertUserProvider(tx, {
-      userId: createdUser.id,
+    await tx.insert(userProviders).values({
+      userId: user.id,
       provider: "google",
       providerId: profile.googleId,
-    });
+    })
+      .onConflictDoNothing();
 
-    return createdUser;
+    return user;
   });
 }

@@ -18,3 +18,11 @@ export type HttpMethod =
   | "DELETE"
   | "OPTIONS"
   | "HEAD";
+
+declare global {
+  namespace Express {
+    interface Request {
+      adminUser?: { email: string };
+    }
+  }
+}
