@@ -1,7 +1,7 @@
 "use client";
 
-import { CheckCircleIcon, ProhibitIcon } from "@phosphor-icons/react";
-import { useCompleteTrip, useUpdateTripStatus } from "@repo/api";
+import { CheckCircleIcon } from "@phosphor-icons/react";
+import { useCompleteTrip } from "@repo/api";
 import { Button } from "@repo/ui/components/button";
 import { toast } from "@repo/ui/components/sonner";
 import { PlaneDots } from "@repo/ui/PlaneDots";
@@ -14,9 +14,7 @@ import { RouteWithTrips } from "~/lib/type";
 const RouteCardItem = ({ route }: { route: RouteWithTrips }) => {
   const [passengersOpen, setPassengersOpen] = useState(false);
   const [nowMs, setNowMs] = useState(() => Date.now());
-  const isBookingClosed = route.status === "booking_closed";
   const isCompleted = route.status === "completed";
-  const isTripFull = route.bookedSeats >= route.capacity;
   const arrivalAtMs = new Date(route.arrivalAt).getTime();
   const hasTripArrived = Number.isFinite(arrivalAtMs) && nowMs >= arrivalAtMs;
 
@@ -38,64 +36,26 @@ const RouteCardItem = ({ route }: { route: RouteWithTrips }) => {
     return () => window.clearTimeout(timeout);
   }, [arrivalAtMs, hasTripArrived]);
 
-  const updateTripStatus = useUpdateTripStatus({
-    onError: (error) => {
-      toast.error(error.message);
-    },
-  });
-
   const completeTrip = useCompleteTrip({
     onError: (error) => {
       toast.error(error.message);
     },
   });
 
-  const handleStopBooking = () => {
-    if (
-      isBookingClosed ||
-      isCompleted ||
-      isTripFull ||
-      updateTripStatus.isPending
-    ) {
-      return;
-    }
-
-    updateTripStatus.mutate({ id: route.tripId, status: "booking_closed" });
-  };
-
   const handleCompleteTrip = () => {
-    if (!hasTripArrived || isCompleted || isMutating) {
+    if (!hasTripArrived || isCompleted || completeTrip.isPending) {
       return;
     }
 
     completeTrip.mutate({ id: route.tripId });
   };
 
-  const isMutating = updateTripStatus.isPending || completeTrip.isPending;
-  const isCompletionAction = hasTripArrived || isCompleted;
-  const tripActionDisabled = isCompletionAction
-    ? isCompleted || isMutating
-    : isBookingClosed || isTripFull || isMutating;
-  const tripActionLabel = isCompletionAction
-    ? isCompleted
-      ? "Trip Completed"
-      : completeTrip.isPending
-        ? "Completing..."
-        : "Mark Completed"
-    : isBookingClosed
-      ? "Booking Stopped"
-      : isTripFull
-        ? "Trip Full"
-        : updateTripStatus.isPending
-          ? "Stopping..."
-          : "Stop Booking";
-  const handleTripAction = isCompletionAction
-    ? handleCompleteTrip
-    : handleStopBooking;
-  const TripActionIcon = isCompletionAction ? CheckCircleIcon : ProhibitIcon;
-  const tripActionClassName = isCompletionAction
-    ? "hidden md:inline-flex rounded-lg border-emerald-200 text-emerald-600 hover:bg-emerald-50 hover:border-emerald-300 hover:text-emerald-700 gap-2 font-medium disabled:border-emerald-100 disabled:text-emerald-400 disabled:opacity-60"
-    : "hidden md:inline-flex rounded-lg border-red-200 text-red-500 hover:bg-red-50 hover:border-red-300 hover:text-red-600 gap-2 font-medium disabled:border-red-100 disabled:text-red-400 disabled:opacity-60";
+  const isDisabled = isCompleted || completeTrip.isPending;
+  const buttonLabel = isCompleted
+    ? "Trip Completed"
+    : completeTrip.isPending
+      ? "Completing..."
+      : "Mark Completed";
 
   return (
     <div className="group relative flex flex-col rounded-xl bg-white border border-neutral-200 transition-all duration-200">
@@ -127,23 +87,20 @@ const RouteCardItem = ({ route }: { route: RouteWithTrips }) => {
           <div className="flex items-center gap-4">
             <Button
               variant="outline"
-              className={tripActionClassName}
-              disabled={tripActionDisabled}
-              onClick={handleTripAction}
+              className="hidden md:inline-flex rounded-lg border-emerald-200 text-emerald-600 hover:bg-emerald-50 hover:border-emerald-300 hover:text-emerald-700 gap-2 font-medium disabled:border-emerald-100 disabled:text-emerald-400 disabled:opacity-60"
+              disabled={isDisabled}
+              onClick={handleCompleteTrip}
             >
-              <TripActionIcon size={18} />
-              {tripActionLabel}
+              <CheckCircleIcon size={18} />
+              {buttonLabel}
             </Button>
 
             <div className="md:hidden shrink-0">
               <RouteCardActionMenu
                 onPassengers={handlePassengers}
-                onTripAction={handleTripAction}
-                tripActionDisabled={tripActionDisabled}
-                tripActionLabel={tripActionLabel}
-                tripActionMode={
-                  isCompletionAction ? "complete" : "stop_booking"
-                }
+                onTripAction={handleCompleteTrip}
+                tripActionDisabled={isDisabled}
+                tripActionLabel={buttonLabel}
               />
             </div>
           </div>

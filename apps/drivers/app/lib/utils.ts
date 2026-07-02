@@ -1,6 +1,4 @@
 import { NotificationTone } from "@shared/types";
-import { BusIcon, CarIcon, SparkleIcon } from "@phosphor-icons/react";
-import { getAllDriverRoutesFn } from "@repo/api";
 
 
 const DATE_PATTERN = /^\d{4}-\d{2}-\d{2}$/;
@@ -26,93 +24,79 @@ export function isValidDateString(value: string): boolean {
   );
 }
 
-export function formatDate(dateString?: string | null) {
-  if (!dateString) {
-    return "Not scheduled";
-  }
-
-  return new Date(dateString).toLocaleString("en-NG", {
-    dateStyle: "medium",
-    timeStyle: "short",
-  });
-}
-
 export function combineTripDateAndTime(
   tripDate: Date,
   timeSource: Date | string,
 ): Date {
-  const source = new Date(timeSource);
   const combined = new Date(tripDate);
 
-  combined.setHours(
-    source.getHours(),
-    source.getMinutes(),
-    source.getSeconds(),
-    source.getMilliseconds(),
-  );
+  if (typeof timeSource === "string") {
+    const [hours = 0, minutes = 0, seconds = 0] = timeSource.split(":").map(Number);
+    combined.setHours(hours, minutes, seconds, 0);
+  } else {
+    combined.setHours(
+      timeSource.getHours(),
+      timeSource.getMinutes(),
+      timeSource.getSeconds(),
+      timeSource.getMilliseconds(),
+    );
+  }
 
   return combined;
 }
 
-export function formatCurrency(amountMinor: number, currency: string = "NGN") {
-  return new Intl.NumberFormat("en-NG", {
-    style: "currency",
-    currency: currency || "NGN",
-    minimumFractionDigits: 2,
-  }).format(amountMinor / 100);
+const currencyFormatter = new Intl.NumberFormat("en-NG", {
+  style: "currency",
+  currency: "NGN",
+  minimumFractionDigits: 2,
+});
+
+const relativeFormatter = new Intl.RelativeTimeFormat("en", { numeric: "auto" });
+
+const dateFormatter = new Intl.DateTimeFormat("en-NG", {
+  month: "short",
+  day: "numeric",
+});
+
+const currencyFormatters = new Map<string, Intl.NumberFormat>();
+
+function getCurrencyFormatter(currency: string) {
+  if (currency === "NGN") return currencyFormatter;
+  let fmt = currencyFormatters.get(currency);
+  if (!fmt) {
+    fmt = new Intl.NumberFormat("en-NG", {
+      style: "currency",
+      currency,
+      minimumFractionDigits: 2,
+    });
+    currencyFormatters.set(currency, fmt);
+  }
+  return fmt;
 }
 
-export function getRouteAnalyticsProperties(route: {
-  id?: string;
-  pickup_location_title: string;
-  pickup_location_locality: string;
-  dropoff_location_title: string;
-  dropoff_location_locality: string;
-  vehicleType: "car" | "bus" | "luxury car";
-  availableSeats: number;
-  price: number;
-  departure_time: Date | string;
-  arrival_time: Date | string;
-  status?: "inactive" | "pending" | "active";
-}) {
-  return {
-    route_id: route.id,
-    origin_title: route.pickup_location_title,
-    origin_locality: route.pickup_location_locality,
-    destination_title: route.dropoff_location_title,
-    destination_locality: route.dropoff_location_locality,
-    vehicle_type: route.vehicleType,
-    available_seats: route.availableSeats,
-    price: route.price,
-    departure_time: new Date(route.departure_time).toISOString(),
-    arrival_time: new Date(route.arrival_time).toISOString(),
-    route_status: route.status,
-  };
+export function formatCurrency(amountMinor: number, currency: string = "NGN") {
+  return getCurrencyFormatter(currency).format(amountMinor / 100);
 }
 
 export function formatRelativeTime(timestamp: Date | string) {
   const diffMs = new Date(timestamp).getTime() - Date.now();
-  const rtf = new Intl.RelativeTimeFormat("en", { numeric: "auto" });
   const minutes = Math.round(diffMs / (1000 * 60));
   const hours = Math.round(diffMs / (1000 * 60 * 60));
   const days = Math.round(diffMs / (1000 * 60 * 60 * 24));
 
   if (Math.abs(minutes) < 60) {
-    return rtf.format(minutes, "minute");
+    return relativeFormatter.format(minutes, "minute");
   }
 
   if (Math.abs(hours) < 24) {
-    return rtf.format(hours, "hour");
+    return relativeFormatter.format(hours, "hour");
   }
 
   if (Math.abs(days) < 7) {
-    return rtf.format(days, "day");
+    return relativeFormatter.format(days, "day");
   }
 
-  return new Intl.DateTimeFormat("en-NG", {
-    month: "short",
-    day: "numeric",
-  }).format(new Date(timestamp));
+  return dateFormatter.format(new Date(timestamp));
 }
 
 export function getToneClasses(tone: NotificationTone) {
@@ -140,23 +124,4 @@ export function getToneClasses(tone: NotificationTone) {
   }
 }
 
-export type DriverRoute = Awaited<ReturnType<typeof getAllDriverRoutesFn>>[number];
 
-export const statusStyles: Record<DriverRoute["status"], string> = {
-  active: "bg-emerald-50 text-emerald-700 border-emerald-200",
-  pending: "bg-amber-50 text-amber-700 border-amber-200",
-  inactive: "bg-slate-100 text-slate-700 border-slate-200",
-};
-
-export const vehicleMeta: Record<
-  DriverRoute["vehicleType"],
-  { label: string; Icon: typeof CarIcon }
-> = {
-  car: { label: "Car", Icon: CarIcon },
-  bus: { label: "Bus", Icon: BusIcon },
-  "luxury car": { label: "Luxury Car", Icon: SparkleIcon },
-};
-
-export function formatRouteStatus(status: DriverRoute["status"]) {
-  return status.charAt(0).toUpperCase() + status.slice(1);
-}

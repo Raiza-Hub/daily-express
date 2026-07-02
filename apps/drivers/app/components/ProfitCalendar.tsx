@@ -116,6 +116,7 @@ export const ProfitCalendar: FC<ProfitCalendarProps> = ({
 
             return (
               <button
+                type="button"
                 key={day.toISOString()}
                 onClick={() => setSelectedDate(day)}
                 className={cn(
