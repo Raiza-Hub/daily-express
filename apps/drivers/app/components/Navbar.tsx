@@ -3,7 +3,6 @@ import Link from "next/link";
 import NavItem from "./NavItem";
 import NotificationInbox from "./NotificationInbox";
 import { UserAccountNav } from "./UserAccountNav";
-import CreateRouteDialog from "./CreateRouteDialog";
 import Image from "next/image";
 import MobileNav from "./MobileNav";
 
@@ -28,17 +27,15 @@ const Navbar = async () => {
 
         
         <div className="hidden z-50 lg:ml-8 lg:flex lg:items-center lg:">
-          <NavItem label="Routes" href="/routes" />
+          <NavItem label="Available Trips" href="/trips/available" />
+          <NavItem label="Vehicles" href="/vehicles" />
           <NavItem label="Payouts" href="/payouts" />
           <NavItem label="Settings" href="/settings/profile" />
         </div>
       </div>
 
       <div className="flex items-center gap-6">
-        <div className="flex items-center gap-4 ml-2">
-          <div className="hidden lg:block">
-            <CreateRouteDialog />
-          </div>
+          <div className="flex items-center gap-4 ml-2">
           <NotificationInbox />
           <div className="flex items-center gap-1 text-slate-400 hover:text-slate-600 transition-colors">
             <UserAccountNav />

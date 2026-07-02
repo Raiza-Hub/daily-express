@@ -35,20 +35,255 @@ import { cn } from "@repo/ui/lib/utils";
 import Image from "next/image";
 import { usePostHog } from "posthog-js/react";
 import { useEffect, useState } from "react";
-import { Controller, useForm } from "react-hook-form";
+import {
+  Controller,
+  useForm,
+  type Control,
+  type FieldErrors,
+  type UseFormSetValue,
+} from "react-hook-form";
 import { z } from "zod/v4";
 import { posthogEvents } from "~/lib/posthog-events";
 import { Bank } from "~/lib/type";
 import BankList from "../../../bank-names.json";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@repo/ui/components/select";
 
-const ChangeBankDetailsSchema = onboardingSchema.pick({
-  accountName: true,
-  accountNumber: true,
-  bankName: true,
-  bankCode: true,
-});
+const ChangeBankDetailsSchema = onboardingSchema
+  .pick({
+    accountName: true,
+    accountNumber: true,
+    bankName: true,
+    bankCode: true,
+  })
+  .extend({
+    kycType: z.string().optional(),
+    kycId: z.string().optional(),
+  })
+  .superRefine((data, ctx) => {
+    if (data.kycType || data.kycId) {
+      const label = data.kycType?.toUpperCase() || "BVN/NIN";
+      if (!data.kycType) {
+        ctx.addIssue({
+          code: z.ZodIssueCode.custom,
+          message: "KYC type is required when submitting verification details.",
+          path: ["kycType"],
+        });
+      }
+      if (!data.kycId) {
+        ctx.addIssue({
+          code: z.ZodIssueCode.custom,
+          message: `${label} is required.`,
+          path: ["kycId"],
+        });
+      } else if (data.kycId.length < 10) {
+        ctx.addIssue({
+          code: z.ZodIssueCode.custom,
+          message: `${label} must be at least 10 digits.`,
+          path: ["kycId"],
+        });
+      } else if (data.kycId.length > 20) {
+        ctx.addIssue({
+          code: z.ZodIssueCode.custom,
+          message: `${label} must not exceed 20 digits.`,
+          path: ["kycId"],
+        });
+      }
+    }
+  });
 
 type TBankDetailsFormValues = z.infer<typeof ChangeBankDetailsSchema>;
+
+function BankNameField({
+  control,
+  errors,
+  setValue,
+  openBank,
+  setOpenBank,
+  isSubmitting,
+  selectedBankName,
+  selectedBank,
+}: {
+  control: Control<TBankDetailsFormValues>;
+  errors: FieldErrors<TBankDetailsFormValues>;
+  setValue: UseFormSetValue<TBankDetailsFormValues>;
+  openBank: boolean;
+  setOpenBank: (open: boolean) => void;
+  isSubmitting: boolean;
+  selectedBankName: string;
+  selectedBank: Bank | undefined;
+}) {
+  return (
+    <div className="grid gap-2">
+      <Controller
+        name="bankName"
+        control={control}
+        render={({ fieldState }) => (
+          <Field data-invalid={fieldState.invalid}>
+            <FieldLabel htmlFor="bankName">Bank Name</FieldLabel>
+            <Popover open={openBank} onOpenChange={setOpenBank}>
+              <PopoverTrigger asChild>
+                <Button
+                  type="button"
+                  variant="outline"
+                  disabled={isSubmitting}
+                  className={cn(
+                    "w-full justify-between border-input bg-background px-3 font-normal outline-offset-0 outline-none hover:bg-background focus-visible:outline-[3px] cursor-pointer",
+                    errors.bankName && "border-red-500",
+                  )}
+                >
+                  <div className="flex items-center gap-2">
+                    {selectedBank && (
+                      <span className="relative inline-flex size-5 shrink-0">
+                        <Image
+                          src={`/logos/${selectedBank.slug}.png`}
+                          alt={selectedBank.name}
+                          fill
+                          sizes="20px"
+                          unoptimized
+                          className="rounded-sm object-contain"
+                        />
+                      </span>
+                    )}
+                    {selectedBankName || "Select your bank"}
+                  </div>
+                  <CaretDownIcon className="ml-2 h-4 w-4 shrink-0" />
+                </Button>
+              </PopoverTrigger>
+              <PopoverContent className="w-full min-w-(--radix-popper-anchor-width) border-input p-0">
+                <Command>
+                  <CommandInput placeholder="Search bank..." />
+                  <CommandList
+                    onWheel={(e) => {
+                      e.currentTarget.scrollTop += e.deltaY;
+                    }}
+                  >
+                    <CommandEmpty>No bank found.</CommandEmpty>
+                    <CommandGroup>
+                      {(BankList as Bank[]).map((bank) => (
+                        <CommandItem
+                          key={bank.code}
+                          value={bank.name}
+                          onSelect={(value) => {
+                            const selected = (BankList as Bank[]).find(
+                              (entry) => entry.name === value,
+                            );
+                            setValue("bankName", value, {
+                              shouldValidate: true,
+                              shouldDirty: true,
+                            });
+                            setValue("bankCode", selected?.code || "", {
+                              shouldValidate: true,
+                              shouldDirty: true,
+                            });
+                            setOpenBank(false);
+                          }}
+                          className="flex items-center gap-2 cursor-pointer"
+                        >
+                          <span className="relative inline-flex size-5 shrink-0">
+                            <Image
+                              src={`/logos/${bank.slug}.png`}
+                              alt={bank.name}
+                              fill
+                              sizes="20px"
+                              unoptimized
+                              className="rounded-sm object-contain"
+                            />
+                          </span>
+                          <span>{bank.name}</span>
+                          {selectedBankName === bank.name && (
+                            <CheckIcon className="ml-auto h-4 w-4" />
+                          )}
+                        </CommandItem>
+                      ))}
+                    </CommandGroup>
+                  </CommandList>
+                </Command>
+              </PopoverContent>
+            </Popover>
+            {fieldState.invalid && (
+              <FieldError errors={[fieldState.error]} />
+            )}
+          </Field>
+        )}
+      />
+    </div>
+  );
+}
+
+function KycFields({
+  control,
+  kycStatus,
+  selectedKycType,
+}: {
+  control: Control<TBankDetailsFormValues>;
+  kycStatus: string | undefined;
+  selectedKycType: string | undefined;
+}) {
+  if (kycStatus === "active" || kycStatus === "pending") {
+    return null;
+  }
+
+  return (
+    <>
+      <div className="grid gap-2">
+        <Controller
+          name="kycType"
+          control={control}
+          render={({ field, fieldState }) => (
+            <Field data-invalid={fieldState.invalid}>
+              <FieldLabel htmlFor="kycType">KYC Type</FieldLabel>
+              <Select
+                onValueChange={field.onChange}
+                value={field.value}
+              >
+                <SelectTrigger id="kycType" className="w-full cursor-pointer">
+                  <SelectValue placeholder="Select KYC Type" />
+                </SelectTrigger>
+                <SelectContent position="popper">
+                  <SelectItem value="bvn">BVN (Bank Verification Number)</SelectItem>
+                  <SelectItem value="nin">NIN (National Identification Number)</SelectItem>
+                </SelectContent>
+              </Select>
+              {fieldState.invalid && (
+                <FieldError errors={[fieldState.error]} />
+              )}
+            </Field>
+          )}
+        />
+      </div>
+
+      <div className="grid gap-2">
+        <Controller
+          name="kycId"
+          control={control}
+          render={({ field, fieldState }) => (
+            <Field data-invalid={fieldState.invalid}>
+              <FieldLabel htmlFor="kycId">
+                {selectedKycType ? `${selectedKycType.toUpperCase()} Number` : "KYC ID"}
+              </FieldLabel>
+              <Input
+                {...field}
+                id="kycId"
+                aria-invalid={fieldState.invalid}
+                placeholder={selectedKycType ? `Enter your ${selectedKycType.toUpperCase()}` : "Enter KYC ID"}
+                autoComplete="off"
+              />
+              {fieldState.invalid && (
+                <FieldError errors={[fieldState.error]} />
+              )}
+            </Field>
+          )}
+        />
+      </div>
+    </>
+  );
+}
 
 export default function ChangeBankDetailsDialog() {
   const [open, setOpen] = useState(false);
@@ -73,6 +308,8 @@ export default function ChangeBankDetailsDialog() {
       accountNumber: driver?.accountNumber || "",
       bankName: driver?.bankName || "",
       bankCode: driver?.bankCode || "",
+      kycType: driver?.kycType || "",
+      kycId: "",
     },
   });
   const { mutate: updateDriver, isPending } = useUpdateDriver({
@@ -100,6 +337,8 @@ export default function ChangeBankDetailsDialog() {
       accountNumber: driver?.accountNumber || "",
       bankName: driver?.bankName || "",
       bankCode: driver?.bankCode || "",
+      kycType: driver?.kycType || "",
+      kycId: "",
     });
   }, [driver, open, reset]);
 
@@ -107,18 +346,35 @@ export default function ChangeBankDetailsDialog() {
   const selectedBank = (BankList as Bank[]).find(
     (b) => b.name === selectedBankName,
   );
+  const selectedKycType = watch("kycType");
 
   const onSubmit = async (data: TBankDetailsFormValues) => {
     const selectedBank = (BankList as Bank[]).find(
       (bank) => bank.name === data.bankName,
     );
 
-    updateDriver({
+    const payload: {
+      bankName: string;
+      bankCode: string;
+      accountNumber: string;
+      accountName: string;
+      kycType?: string;
+      kycId?: string;
+      kycConsent?: boolean;
+    } = {
       bankName: data.bankName,
       bankCode: selectedBank?.code || data.bankCode,
       accountNumber: data.accountNumber,
       accountName: data.accountName,
-    });
+    };
+
+    if (data.kycType && data.kycId) {
+      payload.kycType = data.kycType;
+      payload.kycId = data.kycId;
+      payload.kycConsent = true;
+    }
+
+    updateDriver(payload);
   };
 
   const closeModal = () => {
@@ -129,6 +385,8 @@ export default function ChangeBankDetailsDialog() {
       accountNumber: driver?.accountNumber || "",
       bankName: driver?.bankName || "",
       bankCode: driver?.bankCode || "",
+      kycType: driver?.kycType || "",
+      kycId: "",
     });
   };
 
@@ -201,100 +459,22 @@ export default function ChangeBankDetailsDialog() {
             />
           </div>
 
-          <div className="grid gap-2">
-            <Controller
-              name="bankName"
-              control={control}
-              render={({ fieldState }) => (
-                <Field data-invalid={fieldState.invalid}>
-                  <FieldLabel htmlFor="bankName">Bank Name</FieldLabel>
-                  <Popover open={openBank} onOpenChange={setOpenBank}>
-                    <PopoverTrigger asChild>
-                      <Button
-                        type="button"
-                        variant="outline"
-                        disabled={isSubmitting}
-                        className={cn(
-                          "w-full justify-between border-input bg-background px-3 font-normal outline-offset-0 outline-none hover:bg-background focus-visible:outline-[3px] cursor-pointer",
-                          errors.bankName && "border-red-500",
-                        )}
-                      >
-                        <div className="flex items-center gap-2">
-                          {selectedBank && (
-                            <span className="relative inline-flex size-5 shrink-0">
-                              <Image
-                                src={`/logos/${selectedBank.slug}.png`}
-                                alt={selectedBank.name}
-                                fill
-                                sizes="20px"
-                                unoptimized
-                                className="rounded-sm object-contain"
-                              />
-                            </span>
-                          )}
-                          {selectedBankName || "Select your bank"}
-                        </div>
-                        <CaretDownIcon className="ml-2 h-4 w-4 shrink-0" />
-                      </Button>
-                    </PopoverTrigger>
-                    <PopoverContent className="w-full min-w-(--radix-popper-anchor-width) border-input p-0">
-                      <Command>
-                        <CommandInput placeholder="Search bank..." />
-                        <CommandList
-                          onWheel={(e) => {
-                            e.currentTarget.scrollTop += e.deltaY;
-                          }}
-                        >
-                          <CommandEmpty>No bank found.</CommandEmpty>
-                          <CommandGroup>
-                            {(BankList as Bank[]).map((bank) => (
-                              <CommandItem
-                                key={bank.code}
-                                value={bank.name}
-                                onSelect={(value) => {
-                                  const selected = (BankList as Bank[]).find(
-                                    (entry) => entry.name === value,
-                                  );
-                                  setValue("bankName", value, {
-                                    shouldValidate: true,
-                                    shouldDirty: true,
-                                  });
-                                  setValue("bankCode", selected?.code || "", {
-                                    shouldValidate: true,
-                                    shouldDirty: true,
-                                  });
-                                  setOpenBank(false);
-                                }}
-                                className="flex items-center gap-2 cursor-pointer"
-                              >
-                                <span className="relative inline-flex size-5 shrink-0">
-                                  <Image
-                                    src={`/logos/${bank.slug}.png`}
-                                    alt={bank.name}
-                                    fill
-                                    sizes="20px"
-                                    unoptimized
-                                    className="rounded-sm object-contain"
-                                  />
-                                </span>
-                                <span>{bank.name}</span>
-                                {selectedBankName === bank.name && (
-                                  <CheckIcon className="ml-auto h-4 w-4" />
-                                )}
-                              </CommandItem>
-                            ))}
-                          </CommandGroup>
-                        </CommandList>
-                      </Command>
-                    </PopoverContent>
-                  </Popover>
-                  {fieldState.invalid && (
-                    <FieldError errors={[fieldState.error]} />
-                  )}
-                </Field>
-              )}
-            />
-          </div>
+          <BankNameField
+            control={control}
+            errors={errors}
+            setValue={setValue}
+            openBank={openBank}
+            setOpenBank={setOpenBank}
+            isSubmitting={isSubmitting}
+            selectedBankName={selectedBankName}
+            selectedBank={selectedBank}
+          />
+
+          <KycFields
+            control={control}
+            kycStatus={driver?.kycStatus}
+            selectedKycType={selectedKycType}
+          />
         </div>
         {bankError && (
           <p className="px-1 pb-2 inline-flex justify-center text-sm text-red-500">

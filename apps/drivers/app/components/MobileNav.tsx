@@ -5,7 +5,6 @@ import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { CaretDownIcon, ListIcon, XIcon } from "@phosphor-icons/react";
 import NavItem from "./NavItem";
-import CreateRouteDialog from "./CreateRouteDialog";
 import { cn } from "@repo/ui/lib/utils";
 import Image from "next/image";
 
@@ -29,6 +28,7 @@ const MobileNav = () => {
     return (
         <>
             <button
+                type="button"
                 onClick={() => setOpen((prev) => !prev)}
                 className="flex items-center justify-center rounded-md p-1.5 text-muted-foreground hover:text-foreground hover:bg-muted transition-colors lg:hidden cursor-pointer"
                 aria-label="Open navigation menu"
@@ -68,6 +68,7 @@ const MobileNav = () => {
                         <h1 className="text-xl font-semibold leading-none">Daily Express</h1>
                     </Link>
                     <button
+                        type="button"
                         onClick={closeMenu}
                         className="flex items-center justify-center rounded-md p-1.5 text-muted-foreground hover:text-foreground hover:bg-muted transition-colors cursor-pointer"
                         aria-label="Close navigation menu"
@@ -78,11 +79,19 @@ const MobileNav = () => {
 
                 <nav className="flex flex-col gap-1 px-4 py-4">
                     <NavItem
-                        label="Routes"
-                        href="/routes"
+                        label="Available Trips"
+                        href="/trips/available"
                         className="text-base py-2"
                         onClick={closeMenu}
                     />
+
+                    <NavItem
+                        label="Vehicles"
+                        href="/vehicles"
+                        className="text-base py-2"
+                        onClick={closeMenu}
+                    />
+
                     <NavItem
                         label="Payouts"
                         href="/payouts"
@@ -92,6 +101,7 @@ const MobileNav = () => {
 
                     <div>
                         <button
+                            type="button"
                             onClick={() => setSettingsOpen((prev) => !prev)}
                             aria-expanded={settingsOpen}
                             aria-controls="mobile-settings-submenu"
@@ -142,9 +152,6 @@ const MobileNav = () => {
                     </div>
                 </nav>
 
-                <div className="px-4 pb-5">
-                    <CreateRouteDialog />
-                </div>
             </div>
         </>
     );

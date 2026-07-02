@@ -30,6 +30,8 @@ const PayoutSettings = () => {
     );
   }
 
+  console.log(driver?.bankName)
+
   return (
     <div>
       <div className="mb-6 border-b border-gray-100 py-4">
@@ -98,6 +100,67 @@ const PayoutSettings = () => {
 
         <div className="mt-2 flex justify-end md:order-4 md:mt-0">
           <ChangeBankDetailsDialog />
+        </div>
+      </div>
+
+      <hr className="my-8 border-gray-100" />
+
+      <div className="mb-6 border-b border-gray-100 py-4">
+        <h1 className="mb-1 text-xl font-semibold">Identity Verification</h1>
+        <p className="text-sm text-muted-foreground">
+          Your identity must be verified to enable payouts.
+        </p>
+      </div>
+
+      <div className="flex flex-col gap-3 md:flex-row md:items-center md:justify-between md:gap-4">
+        <div className="flex items-center justify-between md:contents">
+          <div className="flex items-center justify-center relative w-10 h-10">
+            <div className="h-10 w-10 rounded-sm bg-muted flex items-center justify-center text-muted-foreground text-xs font-semibold">
+              {driver?.kycType ? driver.kycType.toUpperCase() : "KYC"}
+            </div>
+          </div>
+
+          <div className="md:order-3">
+            <VerificationBadge
+              hasBankDetails={!!driver?.kycType}
+              status={
+                driver?.kycStatus === "active"
+                  ? "active"
+                  : driver?.kycStatus === "failed"
+                    ? "failed"
+                    : driver?.kycStatus === "pending"
+                      ? "pending"
+                      : undefined
+              }
+              notSetLabel="Not verified"
+            />
+          </div>
+        </div>
+
+        <div className="mt-2 md:order-2 md:mt-0 flex-1">
+          <p className="font-semibold tracking-wide">
+            {driver?.kycType ? `${driver.kycType.toUpperCase()} Verification` : "No verification document set"}
+          </p>
+          {driver?.kycStatus === "pending" && (
+            <p className="mt-1 text-sm text-amber-700">
+              Your identity verification is in progress.
+            </p>
+          )}
+          {driver?.kycStatus === "failed" && (
+            <p className="mt-1 text-sm text-red-600">
+              {driver.kycFailureReason || "Verification failed. Please update your KYC details."}
+            </p>
+          )}
+          {driver?.kycStatus === "active" && (
+            <p className="mt-1 text-sm text-emerald-700">
+              Your identity has been successfully verified.
+            </p>
+          )}
+          {driver?.kycStatus === "none" && (
+            <p className="mt-1 text-sm text-muted-foreground">
+              Please change bank details to submit your KYC document.
+            </p>
+          )}
         </div>
       </div>
     </div>

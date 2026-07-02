@@ -18,12 +18,11 @@ export const posthogEvents = {
   driver_account_deactivate_succeeded: "driver:account_deactivate_succeeded",
   driver_account_deactivate_failed: "driver:account_deactivate_failed",
 
-  driver_route_created_succeeded: "driver:route_created_succeeded",
-  driver_route_create_failed: "driver:route_create_failed",
-  driver_route_updated_succeeded: "driver:route_updated_succeeded",
-  driver_route_update_failed: "driver:route_update_failed",
-  driver_route_delete_succeeded: "driver:route_delete_succeeded",
-  driver_route_delete_failed: "driver:route_delete_failed",
+
+  driver_vehicle_created_succeeded: "driver:vehicle_created_succeeded",
+  driver_vehicle_updated_succeeded: "driver:vehicle_updated_succeeded",
+  driver_vehicle_updated_failed: "driver:vehicle_updated_failed",
+  driver_vehicle_deleted_succeeded: "driver:vehicle_deleted_succeeded",
 
   cookie_consent_accepted: "cookie:consent_accepted",
   cookie_consent_declined: "cookie:consent_declined",
