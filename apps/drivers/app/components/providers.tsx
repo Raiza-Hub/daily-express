@@ -1,20 +1,22 @@
 "use client";
 
-import { RealtimeProvider } from "@upstash/realtime/client";
-import { QueryProvider } from "@repo/api";
+import { QueryProvider, fetchCsrfToken } from "@repo/api";
 import { Toaster } from "@repo/ui/components/sonner";
+import { NuqsAdapter } from "nuqs/adapters/next/app";
 import { PostHogProvider } from "./PostHogProviders";
+import { useEffect } from "react";
 
 export default function Providers({ children }: { children: React.ReactNode }) {
+  useEffect(() => {
+    fetchCsrfToken();
+  }, []);
+
   return (
-    <QueryProvider>
-      <RealtimeProvider
-        api={{ url: "/api/realtime", withCredentials: true }}
-        maxReconnectAttempts={5}
-      >
+    <NuqsAdapter>
+      <QueryProvider>
         <PostHogProvider>{children}</PostHogProvider>
-      </RealtimeProvider>
-      <Toaster />
-    </QueryProvider>
+        <Toaster />
+      </QueryProvider>
+    </NuqsAdapter>
   );
 }
