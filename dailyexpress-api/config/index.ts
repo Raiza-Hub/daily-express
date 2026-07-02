@@ -48,15 +48,28 @@ const envSchema = z.object({
     )
     .optional(),
   RATE_LIMIT_PUBLIC_AUTH: z.coerce.number().int().positive().default(20),
-  RATE_LIMIT_PUBLIC_ROUTES: z.coerce.number().int().positive().default(120),
-  RATE_LIMIT_PROTECTED: z.coerce.number().int().positive().default(180),
   RATE_LIMIT_UPSTASH_REDIS_REST_URL: optionalUrl(),
   RATE_LIMIT_UPSTASH_REDIS_REST_TOKEN: optionalString(),
-  NOTIFICATION_UPSTASH_REDIS_REST_URL: optionalUrl(),
-  NOTIFICATION_UPSTASH_REDIS_REST_TOKEN: optionalString(),
+  LOCATION_UPSTASH_REDIS_REST_URL: optionalUrl(),
+  LOCATION_UPSTASH_REDIS_REST_TOKEN: optionalString(),
+
+  KYC_UPSTASH_REDIS_REST_URL: optionalUrl(),
+  KYC_UPSTASH_REDIS_REST_TOKEN: optionalString(),
+
+  TOKEN_BUCKET_BOOKING_CAPACITY: z.coerce.number().int().positive().default(3),
+  TOKEN_BUCKET_BOOKING_REFILL_RATE: z.coerce.number().positive().default(1),
+  TOKEN_BUCKET_BOOKING_REFILL_INTERVAL_SEC: z.coerce.number().int().positive().default(60),
+
+  TOKEN_BUCKET_PAYMENT_CAPACITY: z.coerce.number().int().positive().default(3),
+  TOKEN_BUCKET_PAYMENT_REFILL_RATE: z.coerce.number().positive().default(1),
+  TOKEN_BUCKET_PAYMENT_REFILL_INTERVAL_SEC: z.coerce.number().int().positive().default(60),
+
+  TOKEN_BUCKET_DRIVER_CAPACITY: z.coerce.number().int().positive().default(10),
+  TOKEN_BUCKET_DRIVER_REFILL_RATE: z.coerce.number().positive().default(1),
+  TOKEN_BUCKET_DRIVER_REFILL_INTERVAL_SEC: z.coerce.number().int().positive().default(30),
+
   KORA_SECRET_KEY: z.string().min(1),
   KORA_BASE_URL: z.string().url().default("https://api.korapay.com"),
-  KORA_WEBHOOK_SECRET: z.string().min(1),
   KORA_WEBHOOK_URL: z.string().url().optional(),
   FRONTEND_URL: z.string().url().default("http://localhost:3000"),
   PAYOUT_RETRY_DELAYS_MS: z.string().default("60000,300000,900000"),
@@ -86,7 +99,8 @@ const envSchema = z.object({
   AWS_SECRET_ACCESS_KEY: z.string().min(1),
   EMAIL_FROM: z.string().min(1),
   EMAIL_BRAND_NAME: z.string().default("Daily Express"),
-  SUPPORT_EMAIL: z.string().default("support@dailyexpress.com"),
+  SUPPORT_EMAIL: z.string().default("support@dailyexpress.app"),
+  SUPPORT_PHONE: z.string().default("+234 9063611541"),
 
   // Auth
   BCRYPT_ROUNDS: z.coerce.number().int().positive().default(10),
@@ -95,10 +109,18 @@ const envSchema = z.object({
 
   // Payment
   PAYMENT_PUBLIC_BASE_URL: optionalUrl(),
-  RATE_LIMIT_WEBHOOK: z.coerce.number().int().positive().default(300),
+  KORA_TIMEOUT_MS: z.coerce.number().int().positive().default(15000),
+  CLOUDINARY_TIMEOUT_MS: z.coerce.number().int().positive().default(30000),
 
   // Route
   ROUTE_SERVICE_TIMEZONE: z.string().min(1),
+
+  // Admin API (Appsmith)
+  ADMIN_API_KEY: z.string().min(1),
+  APPSMITH_SIGNATURE_SECRET: optionalString(),
+
+  //csrf
+  CSRF_SECRET: z.string().min(1),
 
   // Logging
   DAILYEXPRESS_API_LOG_CONSOLE: z

@@ -1,8 +1,8 @@
 "use client";
 
-import { useDriverNotificationsRealtime } from "~/hooks/useDriverNotificationsRealtime";
+import { useDriverNotificationsSSE } from "~/hooks/useDriverNotificationsSSE";
 
 export function DriverRealtimeSync() {
-  useDriverNotificationsRealtime();
+  useDriverNotificationsSSE();
   return null;
 }
