@@ -48,7 +48,7 @@ export class PaymentExpiryService {
 
       await this.repo.updateProcessingPayment(reference, "expired" as PaymentStatus, {
         failureCode: "BOOKING_EXPIRED",
-        failureReason: "Payment completed after booking hold expired (expiry job verification)",
+        failureReason: "Payment completed after booking hold expired",
         providerStatus: "success",
       });
 
@@ -64,7 +64,7 @@ export class PaymentExpiryService {
             status: verification.data.status,
           },
           verification.raw,
-          "Payment completed after booking hold expired (expiry job verification)",
+          "Payment completed after booking hold expired",
         );
       } catch (refundErr: unknown) {
         logger.error("payment.expiry_job.refund_failed", {
