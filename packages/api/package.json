@@ -12,6 +12,7 @@
   "dependencies": {
     "@tanstack/react-query": "^5.74.4",
     "axios": "^1.13.6",
+    "js-cookie": "^3.0.5",
     "shared": "workspace:*"
   },
   "peerDependencies": {
@@ -19,6 +20,7 @@
   },
   "devDependencies": {
     "@repo/typescript-config": "workspace:*",
+    "@types/js-cookie": "^3.0.6",
     "@types/react": "19.2.2",
     "react": "^19.2.0",
     "typescript": "5.9.2"
