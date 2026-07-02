@@ -2,6 +2,7 @@ import { v2 as cloudinary } from "cloudinary";
 import { Readable } from "stream";
 import type { Request, Response, NextFunction } from "express";
 import multer from "multer";
+import { getConfig } from "../config/index";
 import { logger } from "../utils/logger";
 import { sendErrorResponse } from "../middleware/apiResponses";
 
@@ -54,7 +55,13 @@ const DRIVER_PROFILE_AVATAR_TRANSFORMATION = {
 export const cloudinaryUpload = async (
   file: File,
 ): Promise<CloudinaryUploadResult> => {
+  const timeoutMs = getConfig().CLOUDINARY_TIMEOUT_MS;
+
   return new Promise((resolve, reject) => {
+    const timer = setTimeout(() => {
+      reject(new Error(`Cloudinary upload timed out after ${timeoutMs}ms`));
+    }, timeoutMs);
+
     const uploadStream = cloudinary.uploader.upload_stream(
       {
         folder: DRIVER_PROFILE_IMAGE_FOLDER,
@@ -64,6 +71,7 @@ export const cloudinaryUpload = async (
         eager: [DRIVER_PROFILE_AVATAR_TRANSFORMATION],
       },
       (error, result) => {
+        clearTimeout(timer);
         if (error) reject(error);
         else if (!result)
           reject(new Error("Cloudinary upload returned no result"));
@@ -113,7 +121,17 @@ export const extractPublicIdFromUrl = (url: string): string | null => {
 };
 
 export const cloudinaryDelete = async (publicId: string): Promise<void> => {
-  await cloudinary.uploader.destroy(publicId);
+  const timeoutMs = getConfig().CLOUDINARY_TIMEOUT_MS;
+
+  await Promise.race([
+    cloudinary.uploader.destroy(publicId),
+    new Promise<never>((_, reject) =>
+      setTimeout(
+        () => reject(new Error(`Cloudinary delete timed out after ${timeoutMs}ms`)),
+        timeoutMs,
+      ),
+    ),
+  ]);
 };
 
 const ALLOWED_MIME_TYPES = [

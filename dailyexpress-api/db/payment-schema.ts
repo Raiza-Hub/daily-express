@@ -18,6 +18,7 @@ export const paymentProviderEnum = pgEnum("payment_provider", ["kora"]);
 export const paymentStatusEnum = pgEnum("payment_status", [
   "initialized",
   "pending",
+  "processing",
   "successful",
   "failed",
   "cancelled",
@@ -25,6 +26,11 @@ export const paymentStatusEnum = pgEnum("payment_status", [
   "refund_pending",
   "refunded",
   "refund_failed",
+]);
+export const refundStatusEnum = pgEnum("refund_status", [
+  "pending",
+  "successful",
+  "failed",
 ]);
 
 export const payment = pgTable(
@@ -96,11 +102,55 @@ export const webhookProcessed = pgTable("webhook_processed", {
     .notNull(),
 });
 
+
+
+export const refund = pgTable(
+  "refund",
+  {
+    id: uuid("id").defaultRandom().primaryKey(),
+    paymentId: uuid("payment_id")
+      .references(() => payment.id, { onDelete: "restrict" })
+      .notNull(),
+    bookingId: uuid("booking_id").references(() => booking.id, {
+      onDelete: "set null",
+    }),
+    reference: varchar("reference", { length: 128 }).notNull().unique(),
+    providerRefundReference: varchar("provider_refund_reference", {
+      length: 128,
+    }),
+    amount: bigint("amount", { mode: "number" }).notNull(),
+    currency: varchar("currency", { length: 8 }).default("NGN").notNull(),
+    reason: text("reason"),
+    status: refundStatusEnum("status").default("pending").notNull(),
+    providerStatus: varchar("provider_status", { length: 32 }),
+    rawProviderResponse: jsonb("raw_provider_response"),
+    failureReason: text("failure_reason"),
+    initiatedBy: varchar("initiated_by", { length: 32 })
+      .default("auto")
+      .notNull(),
+    completedAt: timestamp("completed_at", { mode: "date" }),
+    createdAt: timestamp("created_at", { mode: "date" }).defaultNow().notNull(),
+    updatedAt: timestamp("updated_at", { mode: "date" }).defaultNow().notNull(),
+  },
+  (table) => [
+    index("refund_payment_id_idx").on(table.paymentId),
+    index("refund_booking_id_idx").on(table.bookingId),
+    index("refund_status_idx").on(table.status),
+    index("refund_provider_ref_idx").on(table.providerRefundReference),
+  ],
+);
+
 export const paymentSchema = {
   payment,
   paymentWebhook,
   webhookProcessed,
+  refund,
 };
 
 export type Payment = typeof payment.$inferSelect;
+export type PaymentRecord = Payment;
 export type PaymentWebhook = typeof paymentWebhook.$inferSelect;
+export type PaymentWebhookRecord = PaymentWebhook;
+export type Refund = typeof refund.$inferSelect;
+export type RefundRecord = Refund;
+export type NewRefund = typeof refund.$inferInsert;

@@ -12,8 +12,16 @@ import {
   uuid,
   varchar,
 } from "drizzle-orm/pg-core";
+import { users } from "./auth-schema";
 
 export const bankVerificationStatusEnum = pgEnum("bank_verification_status", [
+  "pending",
+  "active",
+  "failed",
+]);
+
+export const kycStatusEnum = pgEnum("kyc_status", [
+  "none",
   "pending",
   "active",
   "failed",
@@ -26,7 +34,10 @@ export const driverProfileImageUploadStatusEnum = pgEnum(
 
 export const driver = pgTable("driver", {
   id: uuid("id").defaultRandom().primaryKey(),
-  userId: uuid("user_id").notNull().unique(),
+  userId: uuid("user_id")
+    .references(() => users.id, { onDelete: "restrict" })
+    .notNull()
+    .unique(),
   firstName: text("first_name").notNull(),
   lastName: text("last_name").notNull(),
   email: text("email").notNull().unique(),
@@ -49,6 +60,12 @@ export const driver = pgTable("driver", {
     mode: "date",
   }),
   bankVerifiedAt: timestamp("bank_verified_at", { mode: "date" }),
+  kycStatus: kycStatusEnum("kyc_status").default("none").notNull(),
+  kycType: text("kyc_type"),
+  kycVerificationReference: text("kyc_verification_reference"),
+  kycFailureReason: text("kyc_failure_reason"),
+  kycRequestedAt: timestamp("kyc_requested_at", { mode: "date" }),
+  kycVerifiedAt: timestamp("kyc_verified_at", { mode: "date" }),
   isActive: boolean("is_active").default(true).notNull(),
   deletedAt: timestamp("deleted_at", { mode: "date" }),
   createdAt: timestamp("created_at", { mode: "date" }).defaultNow().notNull(),
@@ -71,7 +88,6 @@ export const driverStats = pgTable("driver_stats", {
     .default(0)
     .notNull(),
   totalPassengers: integer("total_passengers").default(0).notNull(),
-  activeRoutes: integer("active_routes").default(0).notNull(),
   createdAt: timestamp("created_at", { mode: "date" }).defaultNow().notNull(),
   updatedAt: timestamp("updated_at", { mode: "date" }).defaultNow().notNull(),
 });
@@ -131,6 +147,8 @@ export const driverSchema = {
 };
 
 export type Driver = typeof driver.$inferSelect;
+export type DriverRecord = Driver;
 export type DriverStats = typeof driverStats.$inferSelect;
+export type DriverStatsRecord = DriverStats;
 export type DriverProfileImageUpload =
   typeof driverProfileImageUpload.$inferSelect;

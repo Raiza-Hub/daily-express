@@ -1,11 +1,11 @@
-import { eq } from "drizzle-orm";
+import { and, desc, eq, notInArray } from "drizzle-orm";
 import { db } from "../db/connection";
-import { driver, driverStats, driverProfileImageUpload } from "../db/index";
+import { driver, driverStats, driverProfileImageUpload, trip, vehicle, type DriverRecord, type DriverStatsRecord, type VehicleRecord } from "../db/index";
+import type { DbTransaction } from "../db/connection";
 
-type DriverTransaction = Parameters<Parameters<typeof db.transaction>[0]>[0];
-type DriverRecord = typeof driver.$inferSelect;
-type DriverStatsRecord = typeof driverStats.$inferSelect;
+type DriverTransaction = DbTransaction;
 type InsertDriverImage = typeof driverProfileImageUpload.$inferInsert;
+type VehicleInsert = typeof vehicle.$inferInsert;
 
 export class DriverRepository {
   async findDriverByUserId(userId: string): Promise<DriverRecord | null> {
@@ -51,6 +51,17 @@ export class DriverRepository {
     await db.update(driver).set(values).where(eq(driver.userId, userId));
   }
 
+  async findNonCompletedTripByDriverId(driverId: string) {
+    const result = await db.query.trip.findFirst({
+      where: and(
+        eq(trip.driverId, driverId),
+        notInArray(trip.status, ["cancelled", "completed"]),
+      ),
+      columns: { id: true },
+    });
+    return result ?? null;
+  }
+
   async deactivateDriver(
     tx: DriverTransaction,
     driverId: string,
@@ -72,4 +83,45 @@ export class DriverRepository {
       .returning({ id: driverProfileImageUpload.id });
     return upload;
   }
+
+  // --- Vehicle ---
+
+  async findVehiclesByDriverId(driverId: string): Promise<VehicleRecord[]> {
+    return db.query.vehicle.findMany({
+      where: eq(vehicle.driverId, driverId),
+      orderBy: [desc(vehicle.createdAt)],
+    });
+  }
+
+  async findVehicleById(id: string): Promise<VehicleRecord | null> {
+    return (await db.query.vehicle.findFirst({ where: eq(vehicle.id, id) })) ?? null;
+  }
+
+  async insertVehicle(
+    tx: DriverTransaction,
+    data: VehicleInsert,
+  ): Promise<VehicleRecord> {
+    const [record] = await tx.insert(vehicle).values(data).returning();
+    return record;
+  }
+
+  async updateVehicle(
+    tx: DriverTransaction,
+    id: string,
+    data: Partial<VehicleInsert>,
+  ): Promise<VehicleRecord | null> {
+    const [record] = await tx
+      .update(vehicle)
+      .set({ ...data, updatedAt: new Date() })
+      .where(eq(vehicle.id, id))
+      .returning();
+    return record ?? null;
+  }
+
+  async deleteVehicle(tx: DriverTransaction, id: string): Promise<void> {
+    await tx.delete(vehicle).where(eq(vehicle.id, id));
+  }
+
 }
+
+export const driverRepository = new DriverRepository();
