@@ -1,11 +1,11 @@
 import { sql, type SQL } from "drizzle-orm";
 import {
   QUEUES,
-  type DriverBankVerificationJobData,
-  type DriverDeactivationRefundJobData,
   type DriverProfileImageUploadJobData,
+  type DriverVerificationJobData,
   type PaymentExpireJobData,
   type PayoutProcessJobData,
+  type TripRefundJobData,
   type WebhookJobData,
 } from "./boss";
 
@@ -79,11 +79,11 @@ export class JobService {
     await this.enqueue(tx, QUEUES.EMAIL_SEND, { emailName, ...payload });
   }
 
-  async enqueueDriverBankVerification(
+  async enqueueDriverVerification(
     tx: JobExecutor,
-    payload: DriverBankVerificationJobData,
+    payload: DriverVerificationJobData,
   ) {
-    await this.enqueue(tx, QUEUES.DRIVER_BANK_VERIFICATION, payload);
+    await this.enqueue(tx, QUEUES.DRIVER_VERIFICATION, payload);
   }
 
   async enqueueDriverProfileImageUpload(
@@ -154,11 +154,11 @@ export class JobService {
     });
   }
 
-  async enqueueDriverDeactivationRefund(
+  async enqueueTripRefund(
     tx: JobExecutor,
-    payload: DriverDeactivationRefundJobData,
+    payload: TripRefundJobData,
   ) {
-    await this.enqueue(tx, QUEUES.DRIVER_DEACTIVATION_REFUND, payload);
+    await this.enqueue(tx, QUEUES.TRIP_REFUND, payload);
   }
 }
 

@@ -1,38 +1,56 @@
-import { and, desc, eq, gte, inArray, lt, ne, notInArray, sql, type SQL } from "drizzle-orm";
+import { and, asc, desc, eq, gte, gt, inArray, isNotNull, isNull, lt, lte, ne, notInArray, or, sql, type SQL } from "drizzle-orm";
 import { db } from "../db/connection";
-import { booking, driver, route, trip, users } from "../db/index";
+import {
+  booking,
+  driver,
+  earning,
+  externalDriver,
+  route,
+  trip,
+  users,
+  type RouteRecord,
+  type TripRecord,
+  type BookingRecord,
+  type DriverRecord,
+  type ExternalDriverRecord,
+} from "../db/index";
+import type { DbTransaction } from "../db/connection";
+import { getRouteServiceTimeZone } from "../utils/timezone";
 
-type RouteTransaction = Parameters<Parameters<typeof db.transaction>[0]>[0];
-type RouteRecord = typeof route.$inferSelect;
-type TripRecord = typeof trip.$inferSelect;
-type BookingRecord = typeof booking.$inferSelect;
-type DriverRecord = typeof driver.$inferSelect;
+type RouteTransaction = DbTransaction;
+type ExternalDriverInsert = typeof externalDriver.$inferInsert;
+
+type TripWithRoute = {
+  trip: TripRecord;
+  route: RouteRecord;
+};
+
+type TripWithRouteAndBookings = TripWithRoute & {
+  confirmedBookingCount: number;
+};
 
 export class RouteRepository {
   async findRouteById(id: string): Promise<RouteRecord | null> {
     return (await db.query.route.findFirst({ where: eq(route.id, id) })) ?? null;
   }
 
-  async findRoutesByDriverId(driverId: string): Promise<RouteRecord[]> {
+  async findAllRoutes(): Promise<RouteRecord[]> {
     return db.query.route.findMany({
-      where: eq(route.driverId, driverId),
       orderBy: [desc(route.createdAt)],
     });
   }
 
   async findRouteConflict(input: {
-    driverId: string;
     pickup_location_title: string;
     pickup_location_locality: string;
     pickup_location_label: string;
     dropoff_location_title: string;
     dropoff_location_locality: string;
     dropoff_location_label: string;
-    departure_time: Date;
+    departure_time: string;
     excludeRouteId?: string;
   }): Promise<RouteRecord | null> {
     const conditions = [
-      eq(route.driverId, input.driverId),
       eq(route.pickup_location_title, input.pickup_location_title),
       eq(route.pickup_location_locality, input.pickup_location_locality),
       eq(route.pickup_location_label, input.pickup_location_label),
@@ -102,7 +120,6 @@ export class RouteRepository {
     const [record] = await tx
       .insert(trip)
       .values(values)
-      .onConflictDoNothing({ target: [trip.routeId, trip.date] })
       .returning();
     return record ?? null;
   }
@@ -229,4 +246,209 @@ export class RouteRepository {
       (await db.query.users.findFirst({ where: eq(users.id, userId) })) ?? null
     );
   }
+
+  async findUsersByIds(userIds: string[]) {
+    if (userIds.length === 0) return [];
+    return db.query.users.findMany({
+      where: inArray(users.id, userIds),
+    });
+  }
+
+  async findTripsWithRoute(
+    conditions: SQL[],
+  ): Promise<TripWithRoute[]> {
+    return db
+      .select({ trip, route })
+      .from(trip)
+      .innerJoin(route, eq(route.id, trip.routeId))
+      .where(and(...conditions))
+      .orderBy(asc(trip.date));
+  }
+
+  async findTripsWithRouteAndBookingCount(
+    conditions: SQL[],
+    limit = 20,
+    cursor?: { date: Date; id: string } | null,
+    search?: string,
+  ): Promise<{ rows: TripWithRouteAndBookings[]; hasMore: boolean; nextCursor: { date: Date; id: string } | null }> {
+    const tz = getRouteServiceTimeZone();
+    const departureFilter = sql`timezone(${tz}, (timezone(${tz}, ${trip.date}))::date + ${route.departure_time}) > now()`;
+
+    const allConditions = [...conditions, departureFilter];
+
+    if (search) {
+      const pattern = `%${search}%`;
+      allConditions.push(
+        sql`(
+          ${route.pickup_location_title} ILIKE ${pattern}
+          OR ${route.pickup_location_locality} ILIKE ${pattern}
+          OR ${route.dropoff_location_title} ILIKE ${pattern}
+          OR ${route.dropoff_location_locality} ILIKE ${pattern}
+        )`,
+      );
+    }
+
+    if (cursor) {
+      const cursorCondition = or(
+        gt(trip.date, cursor.date),
+        and(eq(trip.date, cursor.date), gt(trip.id, cursor.id)),
+      );
+      if (cursorCondition) {
+        allConditions.push(cursorCondition);
+      }
+    }
+
+    const rows = await db
+      .select({
+        trip,
+        route,
+        confirmedBookingCount: sql<number>`
+          count(*) filter (where ${booking.status} = 'confirmed')
+        `.as("confirmed_booking_count"),
+      })
+      .from(trip)
+      .innerJoin(route, eq(route.id, trip.routeId))
+      .leftJoin(booking, eq(booking.tripId, trip.id))
+      .where(and(...allConditions))
+      .groupBy(trip.id, route.id)
+      .orderBy(asc(trip.date))
+      .limit(limit + 1);
+
+    const hasMore = rows.length > limit;
+    const pageRows = hasMore ? rows.slice(0, limit) : rows;
+    const lastRow = pageRows[pageRows.length - 1];
+    const nextCursor = hasMore && lastRow
+      ? { date: lastRow.trip.date, id: lastRow.trip.id }
+      : null;
+
+    return {
+      rows: pageRows.map((r) => ({
+        trip: r.trip,
+        route: r.route,
+        confirmedBookingCount: Number(r.confirmedBookingCount),
+      })),
+      hasMore,
+      nextCursor,
+    };
+  }
+
+  async countAvailableTripsByDateRange(start: Date, end: Date) {
+    const tz = getRouteServiceTimeZone();
+    return db
+      .select({ date: trip.date })
+      .from(trip)
+      .innerJoin(route, eq(route.id, trip.routeId))
+      .where(
+        and(
+          eq(trip.status, "awaiting_driver"),
+          isNull(trip.driverId),
+          gte(trip.date, start),
+          lt(trip.date, end),
+          sql`timezone(${tz}, (timezone(${tz}, ${trip.date}))::date + ${route.departure_time}) > now()`,
+        ),
+      )
+      .orderBy(asc(trip.date));
+  }
+
+  async assignDriverToTrip(
+    tx: RouteTransaction,
+    tripId: string,
+    driverId: string,
+    vehicleId?: string,
+  ): Promise<TripRecord | null> {
+    const [record] = await tx
+      .update(trip)
+      .set({
+        driverId,
+        vehicleId: vehicleId ?? null,
+        driverClaimedAt: new Date(),
+        status: "confirmed",
+        updatedAt: new Date(),
+      })
+      .where(and(eq(trip.id, tripId), isNull(trip.driverId)))
+      .returning();
+    return record ?? null;
+  }
+
+  async insertExternalDriver(
+    tx: RouteTransaction,
+    data: ExternalDriverInsert,
+  ): Promise<ExternalDriverRecord> {
+    const [record] = await tx
+      .insert(externalDriver)
+      .values(data)
+      .returning();
+    return record;
+  }
+
+  async findExternalDriverByTripId(
+    tripId: string,
+  ): Promise<ExternalDriverRecord | null> {
+    return (
+      (await db.query.externalDriver.findFirst({
+        where: eq(externalDriver.tripId, tripId),
+      })) ?? null
+    );
+  }
+
+  async findBookingsByTripId(
+    tripId: string,
+  ): Promise<BookingRecord[]> {
+    return db.query.booking.findMany({
+      where: eq(booking.tripId, tripId),
+    });
+  }
+
+  async findEarningByBookingId(bookingId: string) {
+    return db.query.earning.findFirst({
+      where: eq(earning.bookingId, bookingId),
+    });
+  }
+
+  async findExpiredPendingBookings(before: Date) {
+    return db.query.booking.findMany({
+      where: and(
+        eq(booking.status, "pending"),
+        eq(booking.paymentStatus, "initialized"),
+        isNotNull(booking.expiresAt),
+        lte(booking.expiresAt, before),
+      ),
+    });
+  }
+
+  findSuccessfulBookingsByTripId(tripId: string) {
+    return db.query.booking.findMany({
+      where: and(eq(booking.tripId, tripId), eq(booking.paymentStatus, "successful")),
+    });
+  }
+
+  async findVehicleScheduledAtDeparture(
+    tx: RouteTransaction | typeof db,
+    driverId: string,
+    vehicleId: string,
+    tripDate: Date,
+    departureTime: string,
+    excludeTripId?: string,
+  ): Promise<TripRecord | null> {
+    const conditions = [
+      eq(trip.driverId, driverId),
+      eq(trip.vehicleId, vehicleId),
+      eq(trip.date, tripDate),
+      eq(route.departure_time, departureTime),
+      ne(trip.status, "completed"),
+      ne(trip.status, "cancelled"),
+    ];
+    if (excludeTripId) {
+      conditions.push(ne(trip.id, excludeTripId));
+    }
+    const [result] = await tx
+      .select({ trip })
+      .from(trip)
+      .innerJoin(route, eq(route.id, trip.routeId))
+      .where(and(...conditions))
+      .limit(1);
+    return result?.trip ?? null;
+  }
 }
+
+export const routeRepository = new RouteRepository();
