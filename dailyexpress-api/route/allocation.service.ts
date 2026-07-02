@@ -80,7 +80,7 @@ export class AllocationService {
       // Different vehicle types on the same route do NOT block each other.
       await tx.execute(sql`
         SELECT pg_advisory_xact_lock(
-          hashtext(concat(${bookingRecord.routeId}::text, ${tripDateStr}, ${bookingRecord.vehicleType}::text))::bigint
+          hashtext(concat(${bookingRecord.routeId}::text, ${tripDateStr}::text, ${bookingRecord.vehicleType}::text))::bigint
         )
       `);
 
