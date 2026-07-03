@@ -455,6 +455,7 @@ export const useClaimTrip = (options?: {
     mutationFn: claimTripFn,
     onSuccess: (data) => {
       void queryClient.invalidateQueries({ queryKey: ["availableTrips"] });
+      void queryClient.invalidateQueries({ queryKey: ["availableTripsCount"] });
       void queryClient.invalidateQueries({ queryKey: ["driverRoutes"] });
       void queryClient.invalidateQueries({ queryKey: ["tripsSummaryRange"] });
       void queryClient.invalidateQueries({ queryKey: ["vehicles"] });
