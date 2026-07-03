@@ -1,4 +1,4 @@
-import { and, eq, gt, isNull } from "drizzle-orm";
+import { and, eq, gt, isNull, ne } from "drizzle-orm";
 import { Readable } from "stream";
 import { sentryServer } from "@shared/sentry";
 import { db } from "../db/connection";
@@ -79,7 +79,7 @@ async function createUploadNotification(input: {
       message: input.success
         ? "Your profile picture has been updated."
         : "Profile picture upload failed. Please retry uploading the picture.",
-      href: "/settings/profile",
+      href: "/settings/accounts",
       tag: input.success ? "Profile" : "Action needed",
       tone: input.success ? "positive" : "critical",
       metadata: {
@@ -123,6 +123,7 @@ async function processUpload(uploadId: string) {
     where: and(
       eq(driverProfileImageUpload.driverId, uploadRecord.driverId),
       gt(driverProfileImageUpload.createdAt, uploadRecord.createdAt),
+      ne(driverProfileImageUpload.id, uploadId),
     ),
   });
 

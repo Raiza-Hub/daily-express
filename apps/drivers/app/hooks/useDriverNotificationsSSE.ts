@@ -2,6 +2,7 @@
 
 import type { DriverNotification } from "@shared/types";
 import { useGetDriver, useQueryClient } from "@repo/api";
+import { toast } from "@repo/ui/components/sonner";
 import { useEffect, useRef } from "react";
 
 const DAILYEXPRESS_API_URL =
@@ -29,6 +30,8 @@ const STATS_AFFECTING_TYPES = new Set([
 
 const PROFILE_PICTURE_UPLOAD_SUCCEEDED_NOTIFICATION_TYPE =
   "profile_picture_upload_succeeded";
+const PROFILE_PICTURE_UPLOAD_FAILED_NOTIFICATION_TYPE =
+  "profile_picture_upload_failed";
 
 interface NotificationsPage {
   notifications: DriverNotification[];
@@ -169,6 +172,11 @@ export function useDriverNotificationsSSE() {
           exact: true,
           refetchType: "active",
         });
+        toast.success("Profile picture updated");
+      }
+
+      if (payload.type === PROFILE_PICTURE_UPLOAD_FAILED_NOTIFICATION_TYPE) {
+        toast.error("Profile picture upload failed. Please retry.");
       }
 
       queryClient.setQueriesData(
