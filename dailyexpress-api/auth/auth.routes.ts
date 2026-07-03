@@ -87,6 +87,7 @@ router.put(
   authcontroller.updateProfile,
 );
 
+
 // Connected providers
 router.get(
   "/providers",

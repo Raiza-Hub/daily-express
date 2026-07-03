@@ -7,6 +7,7 @@ import { koraClient } from "./kora.client";
 import { PaymentRepository } from "./payment.repository";
 import { PaymentRefundService } from "./payment-refund.service";
 import type { PayoutService } from "../payout/payout.service";
+import type { KoraVerifyResponse } from "./payment.types";
 
 export class PaymentConfirmService {
   private readonly kora = koraClient;
@@ -18,7 +19,7 @@ export class PaymentConfirmService {
 
   async confirmPayment(
     reference: string,
-    verificationData: Record<string, unknown>,
+    verificationData: KoraVerifyResponse,
     rawResponse: unknown,
   ) {
     const [claimed] = await this.repo.claimPayment(reference);
