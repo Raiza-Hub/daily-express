@@ -10,7 +10,7 @@ import {
   Section,
   Text,
 } from "@react-email/components";
-import { EMAIL_LOGO_CONTENT_ID } from "../assets";
+import { getEmailLogoSrc } from "../assets";
 
 export interface RefundFailedEmailProps {
   frontendUrl: string;
@@ -58,7 +58,7 @@ const RefundFailedEmail = ({
           {/* Dark logo header */}
           <Section style={brandSection}>
             <Img
-              src={`cid:${EMAIL_LOGO_CONTENT_ID}`}
+              src={getEmailLogoSrc()}
               alt="Daily Express Logo"
               width="112"
               height="40"

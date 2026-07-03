@@ -12,7 +12,7 @@ import {
   Row,
   Column,
 } from "@react-email/components";
-import { EMAIL_LOGO_CONTENT_ID } from "../assets";
+import { getEmailLogoSrc } from "../assets";
 
 export interface BookingConfirmedEmailProps {
   frontendUrl: string;
@@ -50,7 +50,7 @@ const BookingConfirmedEmail = ({
         <Container style={page}>
           <Section style={brandSection}>
             <Img
-              src={`cid:${EMAIL_LOGO_CONTENT_ID}`}
+              src={getEmailLogoSrc()}
               alt="Daily Express Logo"
               width="112"
               height="40"
