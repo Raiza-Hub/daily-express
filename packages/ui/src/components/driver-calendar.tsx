@@ -84,7 +84,6 @@ export default function DriverCalendar({
             mode="single"
             numberOfMonths={2}
             onSelect={handleSelect}
-            pagedNavigation
             required
             selected={date}
             showOutsideDays={false}
