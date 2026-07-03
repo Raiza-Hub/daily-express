@@ -4,9 +4,6 @@ import { db } from "../db/connection";
 import { booking, driver, earning, route, trip, users } from "../db/index";
 import { driverRepository } from "../driver/driver.repository";
 import { routeRepository } from "../route/route.repository";
-import { notificationService } from "../notification/notification.service";
-import type { DriverNotification } from "@shared/types";
-import { publishNotificationCreated } from "../notification/realtime";
 import { jobService } from "./job.service";
 import { getBoss, QUEUES, type TripDriverAssignedJobData } from "./boss";
 import { renderEmail, getEmailSubject } from "@repo/email";
@@ -73,7 +70,6 @@ async function processTripDriverAssigned(data: TripDriverAssignedJobData) {
   }
 
   let createdCount = 0;
-  let driverNotification: DriverNotification | undefined;
 
   await db.transaction(async (tx) => {
     for (const bk of payableBookings) {
@@ -119,27 +115,7 @@ async function processTripDriverAssigned(data: TripDriverAssignedJobData) {
 
       createdCount++;
     }
-
-    driverNotification = await notificationService.createForDriverInTransaction(tx, driverId, {
-      notificationKey: `trip:${tripId}:driver-assigned-passengers`,
-      kind: "event",
-      type: "trip_passengers_assigned",
-      title: "Passengers Assigned",
-      message: `${payableBookings.length} passenger(s) assigned to your upcoming trip`,
-      href: `/driver/trips/${tripId}`,
-      tag: "New",
-      tone: "positive",
-      metadata: {
-        tripId,
-        passengerCount: payableBookings.length,
-      },
-      occurredAt: new Date(),
-    });
   });
-
-  if (driverNotification) {
-    await publishNotificationCreated(driverNotification);
-  }
 
   const driverRecord = await repo.findDriverById(driverId);
   const driverUser = driverRecord

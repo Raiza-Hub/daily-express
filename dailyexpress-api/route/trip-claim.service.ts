@@ -218,7 +218,7 @@ export class TripClaimService {
           type: "trip_claimed",
           title: "Trip claimed successfully",
           message: `You have claimed the trip from ${routeRecord.pickup_location_title} to ${routeRecord.dropoff_location_title} on ${formatRouteDate(tripRecord.date)}.`,
-          href: `/trips/${tripId}`,
+          href: "/",
           tag: "Claimed",
           tone: "positive",
           metadata: {
