@@ -14,12 +14,11 @@ import {
 } from "@repo/ui/components/drawer";
 import {
   Tabs,
-  TabsContent,
   TabsList,
   TabsTrigger,
 } from "@repo/ui/components/tabs";
-import { AnimatePresence, motion } from "framer-motion";
 import dayjs from "dayjs";
+import { AnimatePresence, motion } from "framer-motion";
 import { useState } from "react";
 import { BookingContext } from "~/lib/type";
 import { parseLocalDate, parseTimeString } from "~/lib/utils";
@@ -123,7 +122,7 @@ const TripDetailsSheet = ({
               ) : null}
             </TabsList>
 
-            <TabsContent value="trip" forceMount className="flex-1 overflow-y-auto mt-0 pb-3">
+            <div className="relative flex-1 overflow-y-auto mt-0 pb-3">
               <AnimatePresence mode="wait">
                 {currentTab === "trip" && (
                   <motion.div
@@ -203,39 +202,33 @@ const TripDetailsSheet = ({
                     </div>
                   </motion.div>
                 )}
-              </AnimatePresence>
-            </TabsContent>
 
-            {showDriverTab ? (
-              <TabsContent value="driver" forceMount className="flex-1 overflow-y-auto mt-0">
-                <AnimatePresence mode="wait">
-                  {currentTab === "driver" && (
-                    <motion.div
-                      key="driver"
-                      initial={{ opacity: 0, y: 6 }}
-                      animate={{ opacity: 1, y: 0 }}
-                      exit={{ opacity: 0, y: -6 }}
-                      transition={{ duration: 0.15 }}
-                    >
-                      <div className="px-6 pt-5 pb-6">
-                        {driver ? (
-                          <DriverInfo {...driver} />
-                        ) : (
-                          <div className="flex flex-col items-center text-center gap-3">
-                            <img
-                              src={driverStatus === "overdue" ? "/driver-not-found.webp" : "/awaiting-driver.webp"}
-                              alt=""
-                              className="h-60 w-84 object-center"
-                            />
-                            <p className="text-sm text-neutral-600">{displayMessage}</p>
-                          </div>
-                        )}
-                      </div>
-                    </motion.div>
-                  )}
-                </AnimatePresence>
-              </TabsContent>
-            ) : null}
+                {currentTab === "driver" && showDriverTab && (
+                  <motion.div
+                    key="driver"
+                    initial={{ opacity: 0, y: 6 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    exit={{ opacity: 0, y: -6 }}
+                    transition={{ duration: 0.15 }}
+                  >
+                    <div className="px-6 pt-5 pb-6">
+                      {driver ? (
+                        <DriverInfo {...driver} />
+                      ) : (
+                        <div className="flex flex-col items-center text-center gap-3">
+                          <img
+                            src={driverStatus === "overdue" ? "/driver-not-found.webp" : "/awaiting-driver.webp"}
+                            alt=""
+                            className="h-60 w-84 object-center"
+                          />
+                          <p className="text-sm text-neutral-600">{displayMessage}</p>
+                        </div>
+                      )}
+                    </div>
+                  </motion.div>
+                )}
+              </AnimatePresence>
+            </div>
           </Tabs>
         </div>
       </DrawerContent>
