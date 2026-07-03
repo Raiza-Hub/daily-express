@@ -39,7 +39,6 @@ export async function GET(request: NextRequest) {
       );
     }
 
-    console.error("Location place lookup failed:", error);
     return NextResponse.json(
       { message: "Unable to load location details right now." },
       { status: 500 },

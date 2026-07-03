@@ -30,8 +30,6 @@ const PayoutSettings = () => {
     );
   }
 
-  console.log(driver?.bankName)
-
   return (
     <div>
       <div className="mb-6 border-b border-gray-100 py-4">

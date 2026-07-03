@@ -39,7 +39,6 @@ export async function GET(request: NextRequest) {
       );
     }
 
-    console.error("Location suggest failed:", error);
     return NextResponse.json(
       { message: "Unable to search locations right now." },
       { status: 500 },

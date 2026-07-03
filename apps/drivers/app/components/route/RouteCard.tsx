@@ -101,7 +101,6 @@ export default function RouteCard({
         <RouteCardItem
           key={route.id}
           route={route}
-          // onPassengers={() => console.log("passengers")}
         />
       ))}
     </div>
