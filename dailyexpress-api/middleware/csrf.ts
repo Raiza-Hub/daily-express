@@ -7,7 +7,7 @@ const config = getConfig();
 
 export const { generateCsrfToken, doubleCsrfProtection } = doubleCsrf({
   getSecret: () => config.CSRF_SECRET,
-  getSessionIdentifier: (req: Request) => getClientIp(req) ?? "anonymous",
+  getSessionIdentifier: (req: Request) => (req as any).user?.userId ?? getClientIp(req) ?? "anonymous",
   cookieName: "psifi.x-csrf-token",
   cookieOptions: {
     sameSite: "lax",

@@ -194,7 +194,7 @@ async function createApp(): Promise<Express> {
   }
 
   // CSRF token endpoint
-  app.get("/api/v1/auth/csrf-token", (req, res) => {
+  app.get("/api/v1/auth/csrf-token", authMiddleware, (req, res) => {
     const token = generateCsrfToken(req, res);
     res.json({ csrfToken: token });
   });
