@@ -24,11 +24,11 @@ import { usePostHog } from "posthog-js/react";
 const SignUpForm = ({ redirect }: { redirect?: string }) => {
   const router = useRouter();
   const [isVisible, setIsVisible] = useState<boolean>(false);
-  const { mutate: register, isPending, error } = useRegister();
+  const { mutate: register, isPending } = useRegister();
   const [isGoogleLoading, setIsGoogleLoading] = useState(false);
   const posthog = usePostHog();
 
-  const { handleSubmit, control, setError } = useForm<TSignUpSchema>({
+  const { handleSubmit, control, setError, formState } = useForm<TSignUpSchema>({
     resolver: zodResolver(SignUpSchema),
     defaultValues: {
       firstName: "",
@@ -229,9 +229,9 @@ const SignUpForm = ({ redirect }: { redirect?: string }) => {
             />
           </div>
 
-          {error && (
+          {formState.errors.root && (
             <p className="px-1 inline-flex justify-center text-sm text-red-500">
-              {error?.message}
+              {formState.errors.root.message}
             </p>
           )}
           <Button
