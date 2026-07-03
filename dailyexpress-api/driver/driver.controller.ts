@@ -30,6 +30,12 @@ export const getDriver: RequestHandler = asyncHandler(
       driverService.getProfile(userId),
     );
 
+    if (!driver) {
+      return sendErrorResponse(res, 404, "Driver profile not found.", {
+        code: "DRIVER_NOT_FOUND",
+      });
+    }
+
     return res
       .status(200)
       .json(
