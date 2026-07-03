@@ -71,7 +71,7 @@ export default function DriverCalendar({
               month:
                 "relative first-of-type:before:hidden before:absolute before:inset-y-2 before:w-px before:bg-border before:-left-2 md:before:-left-4",
               months:
-                "flex flex-row gap-4 md:gap-8 [&>*:nth-child(2)]:hidden md:[&>*:nth-child(2)]:block relative",
+                "flex flex-row gap-4 md:gap-8 [&>.rdp-month:last-of-type]:hidden md:[&>.rdp-month:last-of-type]:block relative",
               today: "*:after:hidden",
               weekday: "w-10 md:w-12 text-xs font-medium",
             }}

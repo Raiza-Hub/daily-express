@@ -55,7 +55,7 @@ export default function RouteCard({
         id: trip.id,
         tripId: trip.id,
         status: trip.status,
-        tripDate: dayjs(tripDate).format("YYYY-MM-DD"),
+        tripDate: tripDate.toLocaleDateString("en-CA", { timeZone: "Africa/Lagos" }),
         departureTime: dayjs(departureDateTime).format("h:mma"),
         departureCode: trip.route.pickup_location_title,
         arrivalTime: dayjs(arrivalDateTime).format("h:mma"),

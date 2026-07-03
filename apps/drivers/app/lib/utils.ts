@@ -24,11 +24,29 @@ export function isValidDateString(value: string): boolean {
   );
 }
 
+function getDateInTz(
+  date: Date,
+  timeZone: string,
+): { year: number; month: number; day: number } {
+  const parts = new Intl.DateTimeFormat("en-US", {
+    timeZone,
+    year: "numeric",
+    month: "numeric",
+    day: "numeric",
+  }).formatToParts(date);
+  return {
+    year: parseInt(parts.find((p) => p.type === "year")!.value, 10),
+    month: parseInt(parts.find((p) => p.type === "month")!.value, 10),
+    day: parseInt(parts.find((p) => p.type === "day")!.value, 10),
+  };
+}
+
 export function combineTripDateAndTime(
   tripDate: Date,
   timeSource: Date | string,
 ): Date {
-  const combined = new Date(tripDate);
+  const { year, month, day } = getDateInTz(tripDate, "Africa/Lagos");
+  const combined = new Date(year, month - 1, day);
 
   if (typeof timeSource === "string") {
     const [hours = 0, minutes = 0, seconds = 0] = timeSource.split(":").map(Number);
