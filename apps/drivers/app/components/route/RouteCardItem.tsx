@@ -37,13 +37,20 @@ const RouteCardItem = ({ route }: { route: RouteWithTrips }) => {
   }, [arrivalAtMs, hasTripArrived]);
 
   const completeTrip = useCompleteTrip({
+    onSuccess: () => {
+      toast.success("Trip marked as completed!");
+    },
     onError: (error) => {
       toast.error(error.message);
     },
   });
 
   const handleCompleteTrip = () => {
-    if (!hasTripArrived || isCompleted || completeTrip.isPending) {
+    if (!hasTripArrived) {
+      toast.error("Trip has not arrived yet.");
+      return;
+    }
+    if (isCompleted || completeTrip.isPending) {
       return;
     }
 
