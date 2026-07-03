@@ -2,7 +2,7 @@
 
 import { zodResolver } from "@hookform/resolvers/zod";
 import { SignInSchema, TSignInSchema } from "@repo/types/authSchema";
-import { applyApiFieldErrors, getDriverFn, useLogin } from "@repo/api";
+import { applyApiFieldErrors, getApiErrorMessage, getDriverFn, useLogin } from "@repo/api";
 import { Button } from "@repo/ui/components/button";
 import { Field, FieldError, FieldLabel } from "@repo/ui/components/field";
 import { Input } from "@repo/ui/components/input";
@@ -18,11 +18,11 @@ import { usePostHog } from "posthog-js/react";
 
 const LoginForm = ({ redirect }: { redirect?: string }) => {
   const router = useRouter();
-  const { mutate: login, isPending, error } = useLogin();
+  const { mutate: login, isPending } = useLogin();
   const posthog = usePostHog();
   const [isGoogleLoading, setIsGoogleLoading] = useState(false);
 
-  const { handleSubmit, control, setError } = useForm<TSignInSchema>({
+  const { handleSubmit, control, setError, formState } = useForm<TSignInSchema>({
     resolver: zodResolver(SignInSchema),
     defaultValues: {
       email: "",
@@ -72,6 +72,9 @@ const LoginForm = ({ redirect }: { redirect?: string }) => {
           posthog.captureException(new Error(err.message), {
             action: "login",
             values: { email: data.email },
+          });
+          setError("root", {
+            message: getApiErrorMessage(err, "Something went wrong"),
           });
         },
       },
@@ -151,9 +154,9 @@ const LoginForm = ({ redirect }: { redirect?: string }) => {
             />
           </div>
 
-          {error && (
+          {formState.errors.root && (
             <p className="px-1 inline-flex justify-center text-sm text-red-500">
-              {error?.message}
+              {formState.errors.root.message}
             </p>
           )}
 

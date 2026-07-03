@@ -2,7 +2,7 @@
 
 import { zodResolver } from "@hookform/resolvers/zod";
 import { PasswordIcon } from "@phosphor-icons/react";
-import { applyApiFieldErrors, useResetPassword } from "@repo/api";
+import { applyApiFieldErrors, getApiErrorMessage, useResetPassword } from "@repo/api";
 import {
   ResetPasswordSchema,
   TresetPasswordSchema,
@@ -18,11 +18,10 @@ import { usePostHog } from "posthog-js/react";
 
 const ResetPasswordForm = ({ token }: { token?: string }) => {
   const router = useRouter();
-  const { mutate: resetPassword, isPending, error } = useResetPassword();
+  const { mutate: resetPassword, isPending } = useResetPassword();
   const posthog = usePostHog();
 
-  const [tokenError, setTokenError] = useState<string | null>(null);
-  const { handleSubmit, control, setError } = useForm<TresetPasswordSchema>({
+  const { handleSubmit, control, setError, formState } = useForm<TresetPasswordSchema>({
     resolver: zodResolver(ResetPasswordSchema),
     defaultValues: {
       newPassword: "",
@@ -32,7 +31,7 @@ const ResetPasswordForm = ({ token }: { token?: string }) => {
 
   const onSubmit = (data: TresetPasswordSchema) => {
     if (!token) {
-      setTokenError("Invalid or missing reset token");
+      setError("root", { message: "Invalid or missing reset token" });
       return;
     }
     resetPassword(
@@ -48,6 +47,9 @@ const ResetPasswordForm = ({ token }: { token?: string }) => {
           });
           posthog.captureException(new Error(err.message), {
             action: "resetPassword",
+          });
+          setError("root", {
+            message: getApiErrorMessage(err, "Something went wrong"),
           });
         },
       },
@@ -118,9 +120,9 @@ const ResetPasswordForm = ({ token }: { token?: string }) => {
                   />
                 </div>
 
-                {(error || tokenError) && (
+                {formState.errors.root && (
                   <p className="px-1 inline-flex justify-center text-sm text-red-500">
-                    {tokenError || error?.message}
+                    {formState.errors.root.message}
                   </p>
                 )}
 

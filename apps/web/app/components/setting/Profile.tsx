@@ -3,6 +3,7 @@
 import { zodResolver } from "@hookform/resolvers/zod";
 import {
   applyApiFieldErrors,
+  getApiErrorMessage,
   useGetMe,
   useGetProviders,
   useUpdateProfile,
@@ -37,7 +38,7 @@ const Profile = () => {
 
   const isGoogleConnected = providers?.includes("google");
 
-  const { mutate: updateProfile, error } = useUpdateProfile({
+  const { mutate: updateProfile } = useUpdateProfile({
     onSuccess: () => {
       posthog.capture(posthogEvents.profile_update_succeeded);
       refetchUser();
@@ -47,6 +48,9 @@ const Profile = () => {
       applyApiFieldErrors<keyof TProfileSchema>(err, setError);
       posthog.captureException(new Error(err.message), {
         action: "updateProfile",
+      });
+      setError("root", {
+        message: getApiErrorMessage(err, "Something went wrong"),
       });
     },
   });
@@ -216,9 +220,9 @@ const Profile = () => {
             </div>
           </FieldGroup>
 
-          {error && (
+          {formState.errors.root && (
             <p className="px-1 inline-flex justify-center text-sm text-red-500">
-              {error?.message}
+              {formState.errors.root.message}
             </p>
           )}
 
