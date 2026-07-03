@@ -372,16 +372,17 @@ export class PaymentRefundService {
     }
 
     if (!pendingRefund) return;
+    const pending = pendingRefund;
 
     const refundResult = await this.kora.initiateRefund({
-      reference: pendingRefund.reference,
+      reference: pending.reference,
       payment_reference: paymentRecord.reference,
       amount: paymentRecord.amount,
       reason,
     });
 
     await db.transaction(async (tx) => {
-      await this.repo.updateRefundStatus(tx, pendingRefund.id, {
+      await this.repo.updateRefundStatus(tx, pending.id, {
         status: "successful",
         providerRefundReference: refundResult.data.reference,
         providerStatus: refundResult.data.status,
@@ -443,7 +444,7 @@ export class PaymentRefundService {
 
       await this.sendTripCancelledEmail(
         paymentRecord,
-        pendingRefund.reference,
+        pending.reference,
         emailReason,
         tx,
       );
