@@ -173,15 +173,19 @@ export class AuthService {
     emailVerified: boolean,
   ): { accessToken: string; refreshToken: string } {
     const payload = { userId, email, emailVerified };
+    const tokenOptions: SignOptions = {
+      issuer: "dailyexpress-api",
+      audience: "dailyexpress-app",
+    };
     const accessToken = jwt.sign(
       payload,
       this.jwtSecret as Secret,
-      { expiresIn: this.jwtExpiresIn } as SignOptions,
+      { ...tokenOptions, expiresIn: this.jwtExpiresIn } as SignOptions,
     ) as string;
     const refreshToken = jwt.sign(
       payload,
       this.jwtRefreshSecret as Secret,
-      { expiresIn: this.jwtRefreshExpiresIn } as SignOptions,
+      { ...tokenOptions, expiresIn: this.jwtRefreshExpiresIn } as SignOptions,
     ) as string;
     return { accessToken, refreshToken };
   }
@@ -411,6 +415,12 @@ export class AuthService {
     }
 
     await this.repo.deleteUserProvider(userId, provider);
+  }
+
+  async invalidateSessions(userId: string): Promise<void> {
+    await this.repo.updateUserStandalone(userId, {
+      sessionInvalidBefore: new Date(),
+    });
   }
 
   async setPassword(userId: string, password: string) {
