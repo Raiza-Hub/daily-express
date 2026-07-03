@@ -49,14 +49,14 @@ const VehicleList = () => {
             Manage your registered vehicles.
           </p>
         </div>
-        <Button
+        {/* <Button
           variant="secondary"
           className="cursor-pointer"
           onClick={() => setIsCreateOpen(true)}
         >
           <PlusIcon className="size-4 mr-1.5" />
           Add Vehicle
-        </Button>
+        </Button> */}
       </div>
 
       {(!vehicles || vehicles.length === 0) ? (
