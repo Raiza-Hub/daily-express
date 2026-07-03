@@ -1,13 +1,12 @@
 import { doubleCsrf } from "csrf-csrf";
 import type { Request } from "express";
-import { getClientIp } from "./utils";
 import { getConfig } from "../config";
 
 const config = getConfig();
 
 export const { generateCsrfToken, doubleCsrfProtection } = doubleCsrf({
   getSecret: () => config.CSRF_SECRET,
-  getSessionIdentifier: (req: Request) => (req as any).user?.userId ?? getClientIp(req) ?? "anonymous",
+  getSessionIdentifier: (req: Request) => req.user?.userId ?? "anonymous",
   cookieName: "psifi.x-csrf-token",
   cookieOptions: {
     sameSite: "lax",

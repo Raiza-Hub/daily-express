@@ -1,7 +1,7 @@
 "use client";
 
 import { MailboxIcon } from "@phosphor-icons/react";
-import { useQueryClient, useVerifyOtp } from "@repo/api";
+import { useQueryClient, useVerifyOtp, fetchCsrfToken } from "@repo/api";
 import { OtpSchema } from "@repo/types/authSchema";
 import { Button } from "@repo/ui/components/button";
 import { OTPInput } from "@repo/ui/OTPInput";
@@ -27,6 +27,7 @@ const VerifyEmailForm = ({ redirect }: { redirect?: string }) => {
         {
           onSuccess: async () => {
             posthog.capture(posthogEvents.auth_email_verified);
+            await fetchCsrfToken();
             queryClient.invalidateQueries();
             router.push(redirect || "/");
           },

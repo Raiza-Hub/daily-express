@@ -5,7 +5,6 @@ import { CircleNotchIcon, EyeClosedIcon, EyeIcon } from "@phosphor-icons/react";
 import { SignUpSchema, TSignUpSchema } from "@repo/types/authSchema";
 import {
   applyApiFieldErrors,
-  fetchCsrfToken,
   getApiErrorMessage,
   useRegister,
 } from "@repo/api";
@@ -51,7 +50,6 @@ const SignUpForm = ({ redirect }: { redirect?: string }) => {
       },
       {
         onSuccess: async () => {
-          await fetchCsrfToken();
           router.push(buildVerifyEmailHref(redirect));
           posthog.capture(posthogEvents.auth_signup_succeeded);
         },
