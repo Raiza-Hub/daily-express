@@ -67,7 +67,7 @@ const Profile = () => {
       firstName: user?.firstName || "",
       lastName: user?.lastName || "",
       email: user?.email || "",
-      dateOfBirth: user?.dateOfBirth ? new Date(user.dateOfBirth) : new Date(),
+      dateOfBirth: undefined,
     },
   });
 
@@ -77,7 +77,7 @@ const Profile = () => {
         firstName: user.firstName,
         lastName: user.lastName,
         email: user.email,
-        dateOfBirth: user.dateOfBirth ? new Date(user.dateOfBirth) : new Date(),
+        dateOfBirth: new Date(user.dateOfBirth),
       });
     }
   }, [user, isLoading, reset]);
