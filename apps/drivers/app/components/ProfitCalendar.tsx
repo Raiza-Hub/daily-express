@@ -110,7 +110,7 @@ export const ProfitCalendar: FC<ProfitCalendarProps> = ({
       </div>
 
       <div className="rounded-2xl bg-neutral-50 overflow-x-auto">
-        <div className="grid grid-cols-7 divide-x divide-neutral-200 min-w-max">
+        <div className="grid grid-cols-7 divide-x divide-neutral-200 min-w-max cursor-pointer">
           {visibleDays.map((day) => {
             const isSelected = day.isSame(selectedDate, "day");
 
