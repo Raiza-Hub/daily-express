@@ -12,7 +12,6 @@ import { Field, FieldError, FieldLabel } from "@repo/ui/components/field";
 import { Input } from "@repo/ui/components/input";
 import { useRouter } from "next/navigation";
 import { Controller, useForm } from "react-hook-form";
-import { useState } from "react";
 import { posthogEvents } from "~/lib/posthog-events";
 import { usePostHog } from "posthog-js/react";
 
