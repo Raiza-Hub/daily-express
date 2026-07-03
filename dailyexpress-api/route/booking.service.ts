@@ -1,6 +1,6 @@
 import type { CreateBooking } from "@shared/types";
 import { createServiceError } from "@shared/utils";
-import { and, desc, eq, getTableColumns, inArray, lt, ne, notInArray, sql } from "drizzle-orm";
+import { and, desc, eq, getTableColumns, inArray, lt, ne, notInArray, or, sql } from "drizzle-orm";
 import { db } from "../db/connection";
 import { booking, driver, externalDriver, route, trip, users, vehicle, type BookingRecord, type TripRecord, type RouteRecord } from "../db/index";
 import { logger } from "../utils/logger";
@@ -193,7 +193,10 @@ export class BookingService {
           .where(
             and(
               visibleBookingConditions,
-              ne(trip.status, "cancelled"),
+              or(
+                ne(trip.status, "cancelled"),
+                inArray(booking.paymentStatus, ["refund_pending", "refunded", "refund_failed"]),
+              ),
               cursorCondition,
             ),
           )
