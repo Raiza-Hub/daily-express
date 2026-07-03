@@ -15,9 +15,17 @@ function clampDateToWeek(date: dayjs.Dayjs, weekStart: dayjs.Dayjs, weekEnd: day
   return date;
 }
 
-export function DashboardRoutes() {
+export function DashboardRoutes({ urlDate }: { urlDate?: string }) {
+  const initialDate = useMemo(() => {
+    if (urlDate) {
+      const parsed = dayjs(urlDate);
+      if (parsed.isValid()) return parsed;
+    }
+    return dayjs();
+  }, []);
+
   const [viewDate, setViewDate] = useState(() => dayjs());
-  const [selectedDate, setSelectedDate] = useState(() => dayjs());
+  const [selectedDate, setSelectedDate] = useState(() => initialDate);
 
   const startDateStr = useMemo(
     () => viewDate.startOf("isoWeek").format("YYYY-MM-DD"),

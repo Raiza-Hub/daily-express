@@ -12,7 +12,13 @@ export const metadata: Metadata = buildDriverMetadata({
   noIndex: true,
 });
 
-export default function Home() {
+export default async function Home({
+  searchParams,
+}: {
+  searchParams: Promise<{ date?: string }>;
+}) {
+  const { date } = await searchParams;
+
   return (
     <div className="flex flex-col min-h-screen">
       <Navbar />
@@ -29,7 +35,7 @@ export default function Home() {
 
           <StatsCard />
 
-          <DashboardRoutes />
+          <DashboardRoutes urlDate={date} />
         </div>
       </main>
     </div>
