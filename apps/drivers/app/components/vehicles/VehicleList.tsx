@@ -49,27 +49,27 @@ const VehicleList = () => {
             Manage your registered vehicles.
           </p>
         </div>
-        {/* <Button
+        <Button
           variant="secondary"
           className="cursor-pointer"
           onClick={() => setIsCreateOpen(true)}
         >
           <PlusIcon className="size-4 mr-1.5" />
           Add Vehicle
-        </Button> */}
+        </Button>
       </div>
 
       {(!vehicles || vehicles.length === 0) ? (
         <div className="flex flex-col items-center gap-2 py-12">
           <p className="text-muted-foreground">No vehicles added yet.</p>
-          <Button
+          {/* <Button
             variant="secondary"
             className="cursor-pointer"
             onClick={() => setIsCreateOpen(true)}
           >
             <PlusIcon className="size-4 mr-1.5" />
             Add your first vehicle
-          </Button>
+          </Button> */}
         </div>
       ) : (
         <div className="flex flex-col gap-4">
