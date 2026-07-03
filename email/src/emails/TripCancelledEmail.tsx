@@ -59,7 +59,7 @@ const TripCancelledEmail = ({
   supportEmail = "support@dailyexpress.app",
   supportPhone = "+234 9063611541",
 }: TripCancelledEmailProps) => {
-  const greetingName = customerName || customerEmail;
+  const greetingName = customerName || "Valued Customer";
   const previewText = "Your trip has been cancelled and a refund is being processed";
   const cancellationText = getCancellationText(reason, productName);
 

@@ -240,13 +240,24 @@ export class PaymentRefundService {
   async sendRefundFailureEmail(
     paymentRecord: PaymentRecord,
     failureReason: string,
-    tx?: PaymentTransaction,
+    tx: PaymentTransaction,
   ) {
     if (!paymentRecord.customerEmail) return;
 
+    let customerName: string | null = null;
+    if (paymentRecord.bookingId) {
+      const bk = await tx.query.booking.findFirst({
+        where: eq(booking.id, paymentRecord.bookingId),
+        columns: { firstName: true, lastName: true },
+      });
+      if (bk?.firstName) {
+        customerName = `${bk.firstName} ${bk.lastName ?? ""}`.trim();
+      }
+    }
+
     const propsJson = JSON.stringify({
       frontendUrl: this.config.FRONTEND_URL,
-      customerName: paymentRecord.customerName || null,
+      customerName,
       customerEmail: paymentRecord.customerEmail,
       paymentReference: paymentRecord.reference,
       bookingId: paymentRecord.bookingId,
@@ -260,35 +271,37 @@ export class PaymentRefundService {
     const html = await renderEmail("RefundFailedEmail", propsJson);
     const subject = getEmailSubject("RefundFailedEmail", propsJson);
 
-    if (tx) {
-      await jobService.enqueueEmail(tx, "email.refund_failed", {
-        to: paymentRecord.customerEmail,
-        subject,
-        html,
-      });
-    } else {
-      await db.transaction(async (tx) => {
-        await jobService.enqueueEmail(tx, "email.refund_failed", {
-          to: paymentRecord.customerEmail || "",
-          subject,
-          html,
-        });
-      });
-    }
+    await jobService.enqueueEmail(tx, "email.refund_failed", {
+      to: paymentRecord.customerEmail,
+      subject,
+      html,
+    });
   }
 
   async sendTripCancelledEmail(
     paymentRecord: PaymentRecord,
     refundReference: string,
-    reason?: "driver_deactivated" | "no_driver_found" | "admin_cancelled",
-    tx?: PaymentTransaction,
+    reason: "driver_deactivated" | "no_driver_found" | "admin_cancelled" | undefined,
+    tx: PaymentTransaction,
   ) {
     if (!paymentRecord.customerEmail) return;
 
     const amountMinor = toMinorAmount(paymentRecord.amount);
+
+    let customerName: string | null = null;
+    if (paymentRecord.bookingId) {
+      const bk = await tx.query.booking.findFirst({
+        where: eq(booking.id, paymentRecord.bookingId),
+        columns: { firstName: true, lastName: true },
+      });
+      if (bk?.firstName) {
+        customerName = `${bk.firstName} ${bk.lastName ?? ""}`.trim();
+      }
+    }
+
     const propsJson = JSON.stringify({
       frontendUrl: this.config.FRONTEND_URL,
-      customerName: paymentRecord.customerName || null,
+      customerName,
       customerEmail: paymentRecord.customerEmail,
       paymentReference: paymentRecord.reference,
       productName: paymentRecord.productName,
@@ -302,21 +315,11 @@ export class PaymentRefundService {
     const html = await renderEmail("TripCancelledEmail", propsJson);
     const subject = getEmailSubject("TripCancelledEmail", propsJson);
 
-    if (tx) {
-      await jobService.enqueueEmail(tx, "email.trip_cancelled_refund", {
-        to: paymentRecord.customerEmail,
-        subject,
-        html,
-      });
-    } else {
-      await db.transaction(async (tx) => {
-        await jobService.enqueueEmail(tx, "email.trip_cancelled_refund", {
-          to: paymentRecord.customerEmail || "",
-          subject,
-          html,
-        });
-      });
-    }
+    await jobService.enqueueEmail(tx, "email.trip_cancelled_refund", {
+      to: paymentRecord.customerEmail,
+      subject,
+      html,
+    });
   }
 
   async refundConfirmedBooking(
