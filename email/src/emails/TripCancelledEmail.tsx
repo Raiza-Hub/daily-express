@@ -10,7 +10,7 @@ import {
     Section,
     Text,
 } from "@react-email/components";
-import { EMAIL_LOGO_CONTENT_ID } from "../assets";
+import { getEmailLogoSrc } from "../assets";
 
 export type CancellationReason = "driver_deactivated" | "no_driver_found" | "admin_cancelled";
 
@@ -71,7 +71,7 @@ const TripCancelledEmail = ({
         <Container style={page}>
           <Section style={brandSection}>
             <Img
-              src={`cid:${EMAIL_LOGO_CONTENT_ID}`}
+              src={getEmailLogoSrc()}
               alt="Daily Express Logo"
               width="112"
               height="40"

@@ -13,7 +13,7 @@ import {
   Column,
 } from "@react-email/components";
 import * as React from "react";
-import { EMAIL_LOGO_CONTENT_ID } from "../assets";
+import { getEmailLogoSrc } from "../assets";
 
 export interface PayoutFailedEmailProps {
   frontendUrl: string;
@@ -56,7 +56,7 @@ const PayoutFailedEmail = ({
         <Container style={page}>
           <Section style={brandSection}>
             <Img
-              src={`cid:${EMAIL_LOGO_CONTENT_ID}`}
+              src={getEmailLogoSrc()}
               alt="Daily Express Logo"
               width="112"
               height="40"

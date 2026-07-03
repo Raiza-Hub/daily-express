@@ -12,7 +12,7 @@ import {
   Row,
   Column,
 } from "@react-email/components";
-import { EMAIL_LOGO_CONTENT_ID } from "../assets";
+import { getEmailLogoSrc } from "../assets";
 
 export interface DriverAssignedEmailProps {
   frontendUrl: string;
@@ -56,7 +56,7 @@ const DriverAssignedEmail = ({
         <Container style={page}>
           <Section style={brandSection}>
             <Img
-              src={`cid:${EMAIL_LOGO_CONTENT_ID}`}
+              src={getEmailLogoSrc()}
               alt="Daily Express Logo"
               width="112"
               height="40"
@@ -70,7 +70,8 @@ const DriverAssignedEmail = ({
             </Text>
 
             <Text style={summary}>
-              Good news — a driver has been assigned to your trip.
+              Your trip is confirmed and your driver is ready. Here's who to
+              expect and what to know before departure.
             </Text>
 
             <Hr style={divider} />
