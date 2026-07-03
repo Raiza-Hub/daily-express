@@ -2,7 +2,7 @@
 
 import { CaretDown } from "@phosphor-icons/react";
 import { format } from "date-fns";
-import { useRef, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import type { DayButtonProps } from "react-day-picker";
 
 import { Button } from "@repo/ui/components/button";
@@ -25,8 +25,18 @@ export default function DriverCalendar({
   const today = new Date();
   const [date, setDate] = useState<Date | undefined>(today);
   const [open, setOpen] = useState(false);
+  const [isMobile, setIsMobile] = useState(false);
   const containerRef = useRef<HTMLDivElement>(null);
   useClickOutside(containerRef, () => setOpen(false));
+
+  useEffect(() => {
+    const mql = window.matchMedia("(max-width: 767px)");
+    setIsMobile(mql.matches);
+
+    const handleChange = (e: MediaQueryListEvent) => setIsMobile(e.matches);
+    mql.addEventListener("change", handleChange);
+    return () => mql.removeEventListener("change", handleChange);
+  }, []);
 
   const isDateDisabled = (date: Date) => {
     return !counts[format(date, "yyyy-MM-dd")];
@@ -63,15 +73,14 @@ export default function DriverCalendar({
       </CollapsibleTrigger>
 
       <CollapsibleContent className="absolute top-full right-0 md:left-auto z-50 mt-2 w-full md:w-fit">
-        <div className="w-fit max-w-[calc(100vw-2rem)] overflow-x-auto rounded-md border bg-background shadow-lg">
+        <div className="w-fit max-w-[calc(100vw-2rem)] overflow-x-auto rounded-md border bg-background shadow-lg flex justify-center">
           <Calendar
             className="w-fit p-2 [--cell-size:--spacing(10)]"
             classNames={{
               day_button: "size-10 md:size-12 !rounded-md",
               month:
                 "relative first-of-type:before:hidden before:absolute before:inset-y-2 before:w-px before:bg-border before:-left-2 md:before:-left-4",
-              months:
-                "flex flex-row gap-4 md:gap-8 [&>.rdp-month:last-of-type]:hidden md:[&>.rdp-month:last-of-type]:block relative",
+              months: "flex flex-row gap-4 md:gap-8 relative",
               today: "*:after:hidden",
               weekday: "w-10 md:w-12 text-xs font-medium",
             }}
@@ -82,7 +91,7 @@ export default function DriverCalendar({
             }}
             disabled={isDateDisabled}
             mode="single"
-            numberOfMonths={2}
+            numberOfMonths={isMobile ? 1 : 2}
             onSelect={handleSelect}
             required
             selected={date}
