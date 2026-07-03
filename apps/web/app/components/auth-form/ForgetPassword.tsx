@@ -1,6 +1,6 @@
 "use client";
 
-import { applyApiFieldErrors, useForgotPassword } from "@repo/api";
+import { applyApiFieldErrors, getApiErrorMessage, useForgotPassword } from "@repo/api";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { KeyIcon } from "@phosphor-icons/react";
 import {
@@ -17,10 +17,10 @@ import { posthogEvents } from "~/lib/posthog-events";
 import { usePostHog } from "posthog-js/react";
 
 const ForgetPasswordForm = () => {
-  const { mutate: forgotPassword, isPending, error } = useForgotPassword();
+  const { mutate: forgotPassword, isPending } = useForgotPassword();
   const posthog = usePostHog();
 
-  const { handleSubmit, control, setError } = useForm<TForgetPasswordSchema>({
+  const { handleSubmit, control, setError, formState } = useForm<TForgetPasswordSchema>({
     resolver: zodResolver(ForgetPasswordSchema),
     defaultValues: {
       email: "",
@@ -38,6 +38,9 @@ const ForgetPasswordForm = () => {
         posthog.captureException(new Error(err.message), {
           action: "forgotPasswordRequest",
           values: { email: data.email },
+        });
+        setError("root", {
+          message: getApiErrorMessage(err, "Something went wrong"),
         });
       },
     });
@@ -84,9 +87,9 @@ const ForgetPasswordForm = () => {
                   />
                 </div>
 
-                {error && (
+                {formState.errors.root && (
                   <p className="px-1 inline-flex justify-center text-sm text-red-500">
-                    {error?.message}
+                    {formState.errors.root.message}
                   </p>
                 )}
 
