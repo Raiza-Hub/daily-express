@@ -9,7 +9,7 @@ import {
   UserIcon,
 } from "@phosphor-icons/react";
 import { UserAccountNav as SharedUserAccountNav } from "@repo/ui/UserAccountNav";
-import { useGetDriver, useLogout } from "@repo/api";
+import { fetchCsrfToken, useGetDriver, useLogout } from "@repo/api";
 import type { User } from "@shared/types";
 import { buildDriverAppUrl, buildDriverSignUpUrl } from "~/lib/app-routing";
 import { posthogEvents } from "~/lib/posthog-events";
@@ -43,9 +43,10 @@ export function UserAccountNav({ user }: UserAccountNavProps) {
 
   const handleSignOut = () => {
     signOut(undefined, {
-      onSuccess: () => {
+      onSuccess: async () => {
         posthog.capture(posthogEvents.auth_logout_succeeded);
         posthog.reset();
+        await fetchCsrfToken();
         router.push("/sign-in");
       },
     });

@@ -3,7 +3,7 @@
 import { CircleNotchIcon, TrashIcon } from "@phosphor-icons/react";
 import { Button } from "@repo/ui/components/button";
 import { useRouter } from "next/navigation";
-import { useLogout, useDeleteAccount } from "@repo/api";
+import { fetchCsrfToken, useLogout, useDeleteAccount } from "@repo/api";
 import { toast } from "@repo/ui/components/sonner";
 import { posthogEvents } from "~/lib/posthog-events";
 import { usePostHog } from "posthog-js/react";
@@ -19,9 +19,10 @@ const DeleteAccount = () => {
       onSuccess: () => {
         posthog.capture(posthogEvents.account_delete_succeeded);
         signOut(undefined, {
-          onSuccess: () => {
+          onSuccess: async () => {
             posthog.capture(posthogEvents.auth_logout_succeeded);
             posthog.reset();
+            await fetchCsrfToken();
             router.push("/sign-in");
           },
         });

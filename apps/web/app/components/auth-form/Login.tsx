@@ -2,7 +2,7 @@
 
 import { zodResolver } from "@hookform/resolvers/zod";
 import { SignInSchema, TSignInSchema } from "@repo/types/authSchema";
-import { applyApiFieldErrors, getApiErrorMessage, getDriverFn, useLogin } from "@repo/api";
+import { applyApiFieldErrors, fetchCsrfToken, getApiErrorMessage, getDriverFn, useLogin } from "@repo/api";
 import { Button } from "@repo/ui/components/button";
 import { Field, FieldError, FieldLabel } from "@repo/ui/components/field";
 import { Input } from "@repo/ui/components/input";
@@ -39,6 +39,7 @@ const LoginForm = ({ redirect }: { redirect?: string }) => {
       {
         onSuccess: async () => {
           posthog.capture(posthogEvents.auth_login_succeeded);
+          await fetchCsrfToken();
           let isDriver = false;
 
           try {
