@@ -236,7 +236,7 @@ export class PaymentService {
   }
 
   async handlePaymentExpiry(payload: { bookingId: string; reference: string }) {
-    return this.expiryService.expirePayment(payload);
+    return this.expiryService.expirePayment(payload.reference);
   }
 
   isTerminalStatus(status: PaymentStatus) {

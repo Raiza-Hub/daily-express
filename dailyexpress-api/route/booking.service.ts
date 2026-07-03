@@ -1,3 +1,4 @@
+import type { CreateBooking } from "@shared/types";
 import { createServiceError } from "@shared/utils";
 import { and, desc, eq, getTableColumns, inArray, lt, ne, notInArray, sql } from "drizzle-orm";
 import { db } from "../db/connection";
@@ -19,16 +20,11 @@ import {
     VISIBLE_BOOKING_STATUSES,
 } from "./utils";
 
-export type CreateBookingInput = {
-  routeId: string;
-  tripDate: string;
-  vehicleType: "car" | "bus";
-};
 
 export class BookingService {
   constructor(private repo: RouteRepository) {}
 
-  async createCheckoutBooking(userId: string, input: CreateBookingInput) {
+  async createCheckoutBooking(userId: string, input: CreateBooking) {
     const passengerRecord = await this.repo.findUserById(userId);
     if (!passengerRecord) {
       throw createServiceError("Passenger not found", 404);

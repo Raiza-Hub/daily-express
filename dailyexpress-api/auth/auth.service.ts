@@ -14,6 +14,8 @@ import {
 } from "@repo/email";
 import { AuthRepository } from "./auth.repository";
 import { DriverRepository } from "../driver/driver.repository";
+import { paymentRepository } from "../payment/payment.repository";
+import { getStartOfTodayInRouteTimezone } from "../utils/timezone";
 import { isUnder13 } from "./validation";
 
 const OTP_EXPIRY_MINUTES = 10;
@@ -363,13 +365,23 @@ export class AuthService {
   }
 
   async deleteUser(userId: string): Promise<void> {
-    await db.transaction(async (tx) => {
-      const existingDriver = await this.repo.findDriverByUserId(userId);
+    const existingDriver = await this.repo.findDriverByUserId(userId);
 
+    if (existingDriver) {
+      const upcomingTrips = await paymentRepository.findSuccessfulPaymentsForDriverUpcomingTrips(
+        existingDriver.id,
+        getStartOfTodayInRouteTimezone(),
+      );
+      if (upcomingTrips.length > 0) {
+        throw createServiceError(
+          "Cannot delete your account. You have upcoming trips with confirmed bookings.",
+          400,
+        );
+      }
+    }
+
+    await db.transaction(async (tx) => {
       if (existingDriver) {
-        await jobService.enqueueDriverDeactivationRefund(tx, {
-          driverId: existingDriver.id,
-        });
         await this.driverRepo.deactivateDriver(tx, existingDriver.id);
       }
 

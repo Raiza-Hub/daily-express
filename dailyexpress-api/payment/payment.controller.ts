@@ -65,10 +65,15 @@ export const getPaymentReturn: RequestHandler = asyncHandler(
           ? req.query.reference
           : null;
 
+    const status =
+      typeof req.query.status === "string"
+        ? req.query.status
+        : null;
+
     const redirectUrl = await timeAsync(
       "payment.return.service",
       { hasReference: Boolean(reference) },
-      () => paymentService.handlePaymentReturn(reference),
+      () => paymentService.resolveReturnUrl(reference, status),
     );
     return res.redirect(redirectUrl);
   },

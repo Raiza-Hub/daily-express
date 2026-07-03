@@ -256,6 +256,7 @@ export class PaymentInitService {
     }
 
     if (["pending", "processing"].includes(providerStatus)) {
+      if (!existingPayment.bookingId) return null;
       const bookingFare = await this.repo.findBookingFareByBookingId(
         existingPayment.bookingId,
         existingPayment.userId,

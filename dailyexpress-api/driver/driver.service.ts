@@ -5,7 +5,8 @@ import { DriverProfileService } from "./driver-profile.service";
 import { DriverStatsService } from "./driver-stats.service";
 import type { DriverProfileImageUploadFile } from "./cloudinary";
 import { db } from "../db/connection";
-import { JobService } from "../workers/job.service";
+import { paymentRepository } from "../payment/payment.repository";
+import { getStartOfTodayInRouteTimezone } from "../utils/timezone";
 
 type DriverMutationResult = Driver & {
   profilePictureUpload?: { id: string; status: "pending" };
@@ -18,27 +19,25 @@ type EarningStatus =
   | "paid"
   | "cancelled"
   | "manual_review";
-type RouteStatus = "inactive" | "pending" | "active";
 
 export class DriverService {
   private readonly repo: DriverRepository;
   private readonly profileService: DriverProfileService;
   private readonly statsService: DriverStatsService;
-  private readonly jobService: JobService;
 
   constructor() {
     this.repo = new DriverRepository();
     this.profileService = new DriverProfileService(this.repo);
     this.statsService = new DriverStatsService();
-    this.jobService = new JobService();
   }
 
   async createDriver(
     userId: string,
     driverData: Partial<UpdateProfileRequest>,
     profileImageUpload?: DriverProfileImageUploadFile,
+    kycData?: { kycType: "bvn" | "nin"; kycId: string },
   ): Promise<DriverMutationResult> {
-    return this.profileService.createDriver(userId, driverData, profileImageUpload);
+    return this.profileService.createDriver(userId, driverData, profileImageUpload, kycData);
   }
 
   async getProfile(userId: string): Promise<Driver | null> {
@@ -49,8 +48,9 @@ export class DriverService {
     userId: string,
     driverData: Partial<UpdateProfileRequest>,
     profileImageUpload?: DriverProfileImageUploadFile,
+    kycData?: { kycType: "bvn" | "nin"; kycId: string },
   ): Promise<DriverMutationResult> {
-    return this.profileService.updateDriver(userId, driverData, profileImageUpload);
+    return this.profileService.updateDriver(userId, driverData, profileImageUpload, kycData);
   }
 
   async deactivateDriver(userId: string): Promise<void> {
@@ -60,10 +60,18 @@ export class DriverService {
       throw createServiceError("Driver not found", 404);
     }
 
+    const upcomingTrips = await paymentRepository.findSuccessfulPaymentsForDriverUpcomingTrips(
+      driverRecord.id,
+      getStartOfTodayInRouteTimezone(),
+    );
+    if (upcomingTrips.length > 0) {
+      throw createServiceError(
+        "Cannot deactivate your account. You have upcoming trips with confirmed bookings.",
+        400,
+      );
+    }
+
     await db.transaction(async (tx) => {
-      await this.jobService.enqueueDriverDeactivationRefund(tx, {
-        driverId: driverRecord.id,
-      });
       await this.repo.deactivateDriver(tx, driverRecord.id);
     });
   }
@@ -100,12 +108,6 @@ export class DriverService {
     return this.statsService.adjustPaymentCountersForStatusChange(tx, input);
   }
 
-  async recordRouteStatusChange(
-    tx: DriverTransaction,
-    input: { driverId: string; previousStatus?: RouteStatus | null; nextStatus?: RouteStatus | null },
-  ): Promise<void> {
-    return this.statsService.recordRouteStatusChange(tx, input);
-  }
 }
 
 export const driverService = new DriverService();
