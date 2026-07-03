@@ -18,6 +18,7 @@ import {
   TabsList,
   TabsTrigger,
 } from "@repo/ui/components/tabs";
+import { AnimatePresence, motion } from "framer-motion";
 import dayjs from "dayjs";
 import { useState } from "react";
 import { BookingContext } from "~/lib/type";
@@ -122,93 +123,117 @@ const TripDetailsSheet = ({
               ) : null}
             </TabsList>
 
-            <TabsContent value="trip" className="flex-1 overflow-y-auto mt-0 pb-3">
-              <div className="px-6 pt-3 pb-5 space-y-1">
-                <h2 className="text-lg font-bold text-neutral-900">
-                  {trip.departureCity.title} to {trip.arrivalCity.title}
-                </h2>
-                <p className="text-sm text-neutral-500">{bookingDate}</p>
-              </div>
-
-              <div className="px-6 pb-2">
-                <div className="flex gap-4">
-                  <div className="shrink-0 w-14 flex justify-end items-start">
-                    <span className="text-sm font-medium text-neutral-800 select-none leading-none">
-                      {departureTime}
-                    </span>
-                  </div>
-                  <div className="relative shrink-0 w-5 flex flex-col items-center">
-                    <div className="relative z-10 w-3.5 h-3.5 rounded-full border-2 border-neutral-400 bg-white shrink-0" />
-                    <div className="flex-1 w-px bg-neutral-300" />
-                  </div>
-                  <div className="flex-1 flex flex-col pb-5">
-                    <p className="font-semibold text-md text-neutral-900 leading-none">
-                      {trip.departureCity.title}
-                    </p>
-                    <p className="text-sm text-neutral-500 mt-1">
-                      {trip.departureCity.label}({trip.departureCity.locality})
-                    </p>
-                  </div>
-                </div>
-
-                <div className="flex gap-4">
-                  <div className="shrink-0 w-14" />
-                  <div className="relative shrink-0 w-5 flex flex-col items-center min-h-[90px]">
-                    <div className="w-px bg-neutral-300 flex-1" />
-                    <div className="relative z-10 bg-white py-1 shrink-0">
-                      <MapPinAreaIcon
-                        weight="duotone"
-                        size={20}
-                        className="text-neutral-500"
-                      />
+            <TabsContent value="trip" forceMount className="flex-1 overflow-y-auto mt-0 pb-3">
+              <AnimatePresence mode="wait">
+                {currentTab === "trip" && (
+                  <motion.div
+                    key="trip"
+                    initial={{ opacity: 0, y: 6 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    exit={{ opacity: 0, y: -6 }}
+                    transition={{ duration: 0.15 }}
+                  >
+                    <div className="px-6 pt-3 pb-5 space-y-1">
+                      <h2 className="text-lg font-bold text-neutral-900">
+                        {trip.departureCity.title} to {trip.arrivalCity.title}
+                      </h2>
+                      <p className="text-sm text-neutral-500">{bookingDate}</p>
                     </div>
-                    <div className="w-px bg-neutral-300 flex-1" />
-                  </div>
-                  <div className="flex-1 flex items-center py-4">
-                    <p className="text-sm font-medium text-neutral-900">
-                      {trip.meetingPoint} to board vehicle
-                    </p>
-                  </div>
-                </div>
 
-                <div className="flex gap-4">
-                  <div className="shrink-0 w-14 flex justify-end items-end">
-                    <span className="text-sm font-medium text-neutral-800 select-none leading-none">
-                      {arrivalTime}
-                    </span>
-                  </div>
-                  <div className="relative shrink-0 w-5 flex flex-col items-center">
-                    <div className="w-px bg-neutral-300 flex-1" />
-                    <div className="relative z-10 w-3.5 h-3.5 rounded-full border-2 border-neutral-400 bg-white shrink-0" />
-                  </div>
-                  <div className="flex-1 flex flex-col justify-end pt-5">
-                    <p className="font-semibold text-md text-neutral-900 leading-none">
-                      {trip.arrivalCity.title}
-                    </p>
-                    <p className="text-sm text-neutral-500 mt-1">
-                      {trip.arrivalCity.label}({trip.arrivalCity.locality})
-                    </p>
-                  </div>
-                </div>
-              </div>
+                    <div className="px-6 pb-2">
+                      <div className="flex gap-4">
+                        <div className="shrink-0 w-14 flex justify-end items-start">
+                          <span className="text-sm font-medium text-neutral-800 select-none leading-none">
+                            {departureTime}
+                          </span>
+                        </div>
+                        <div className="relative shrink-0 w-5 flex flex-col items-center">
+                          <div className="relative z-10 w-3.5 h-3.5 rounded-full border-2 border-neutral-400 bg-white shrink-0" />
+                          <div className="flex-1 w-px bg-neutral-300" />
+                        </div>
+                        <div className="flex-1 flex flex-col pb-5">
+                          <p className="font-semibold text-md text-neutral-900 leading-none">
+                            {trip.departureCity.title}
+                          </p>
+                          <p className="text-sm text-neutral-500 mt-1">
+                            {trip.departureCity.label}({trip.departureCity.locality})
+                          </p>
+                        </div>
+                      </div>
+
+                      <div className="flex gap-4">
+                        <div className="shrink-0 w-14" />
+                        <div className="relative shrink-0 w-5 flex flex-col items-center min-h-[90px]">
+                          <div className="w-px bg-neutral-300 flex-1" />
+                          <div className="relative z-10 bg-white py-1 shrink-0">
+                            <MapPinAreaIcon
+                              weight="duotone"
+                              size={20}
+                              className="text-neutral-500"
+                            />
+                          </div>
+                          <div className="w-px bg-neutral-300 flex-1" />
+                        </div>
+                        <div className="flex-1 flex items-center py-4">
+                          <p className="text-sm font-medium text-neutral-900">
+                            {trip.meetingPoint} to board vehicle
+                          </p>
+                        </div>
+                      </div>
+
+                      <div className="flex gap-4">
+                        <div className="shrink-0 w-14 flex justify-end items-end">
+                          <span className="text-sm font-medium text-neutral-800 select-none leading-none">
+                            {arrivalTime}
+                          </span>
+                        </div>
+                        <div className="relative shrink-0 w-5 flex flex-col items-center">
+                          <div className="w-px bg-neutral-300 flex-1" />
+                          <div className="relative z-10 w-3.5 h-3.5 rounded-full border-2 border-neutral-400 bg-white shrink-0" />
+                        </div>
+                        <div className="flex-1 flex flex-col justify-end pt-5">
+                          <p className="font-semibold text-md text-neutral-900 leading-none">
+                            {trip.arrivalCity.title}
+                          </p>
+                          <p className="text-sm text-neutral-500 mt-1">
+                            {trip.arrivalCity.label}({trip.arrivalCity.locality})
+                          </p>
+                        </div>
+                      </div>
+                    </div>
+                  </motion.div>
+                )}
+              </AnimatePresence>
             </TabsContent>
 
             {showDriverTab ? (
-              <TabsContent value="driver" className="flex-1 overflow-y-auto mt-0">
-                <div className="px-6 pt-5 pb-6">
-                  {driver ? (
-                    <DriverInfo {...driver} />
-                  ) : (
-                    <div className="flex flex-col items-center text-center gap-3">
-                      <img
-                        src={driverStatus === "overdue" ? "/driver-not-found.webp" : "/awaiting-driver.webp"}
-                        alt=""
-                        className="h-60 w-84 object-center"
-                      />
-                      <p className="text-sm text-neutral-600">{displayMessage}</p>
-                    </div>
+              <TabsContent value="driver" forceMount className="flex-1 overflow-y-auto mt-0">
+                <AnimatePresence mode="wait">
+                  {currentTab === "driver" && (
+                    <motion.div
+                      key="driver"
+                      initial={{ opacity: 0, y: 6 }}
+                      animate={{ opacity: 1, y: 0 }}
+                      exit={{ opacity: 0, y: -6 }}
+                      transition={{ duration: 0.15 }}
+                    >
+                      <div className="px-6 pt-5 pb-6">
+                        {driver ? (
+                          <DriverInfo {...driver} />
+                        ) : (
+                          <div className="flex flex-col items-center text-center gap-3">
+                            <img
+                              src={driverStatus === "overdue" ? "/driver-not-found.webp" : "/awaiting-driver.webp"}
+                              alt=""
+                              className="h-60 w-84 object-center"
+                            />
+                            <p className="text-sm text-neutral-600">{displayMessage}</p>
+                          </div>
+                        )}
+                      </div>
+                    </motion.div>
                   )}
-                </div>
+                </AnimatePresence>
               </TabsContent>
             ) : null}
           </Tabs>
