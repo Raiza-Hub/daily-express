@@ -15,7 +15,6 @@ import {
   type ExternalDriverRecord,
 } from "../db/index";
 import type { DbTransaction } from "../db/connection";
-import { getRouteServiceTimeZone } from "../utils/timezone";
 
 type RouteTransaction = DbTransaction;
 type ExternalDriverInsert = typeof externalDriver.$inferInsert;
@@ -271,8 +270,7 @@ export class RouteRepository {
     cursor?: { date: Date; id: string } | null,
     search?: string,
   ): Promise<{ rows: TripWithRouteAndBookings[]; hasMore: boolean; nextCursor: { date: Date; id: string } | null }> {
-    const tz = getRouteServiceTimeZone();
-    const departureFilter = sql`timezone(${tz}, (timezone(${tz}, ${trip.date}))::date + ${route.departure_time}) > now()`;
+    const departureFilter = sql`((${trip.date} + ${route.departure_time}) AT TIME ZONE 'UTC') > now()`;
 
     const allConditions = [...conditions, departureFilter];
 
@@ -333,7 +331,6 @@ export class RouteRepository {
   }
 
   async countAvailableTripsByDateRange(start: Date, end: Date) {
-    const tz = getRouteServiceTimeZone();
     return db
       .select({ date: trip.date })
       .from(trip)
@@ -344,7 +341,7 @@ export class RouteRepository {
           isNull(trip.driverId),
           gte(trip.date, start),
           lt(trip.date, end),
-          sql`timezone(${tz}, (timezone(${tz}, ${trip.date}))::date + ${route.departure_time}) > now()`,
+          sql`((${trip.date} + ${route.departure_time}) AT TIME ZONE 'UTC') > now()`,
         ),
       )
       .orderBy(asc(trip.date));
