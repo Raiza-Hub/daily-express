@@ -1,4 +1,4 @@
-import type { DriverInfoResponse, Route } from "@shared/types";
+import type { Route } from "@shared/types";
 import { SearchTrip, TripStatusItem } from "./type";
 import { type UserBookingWithTrip } from "@repo/api";
 import dayjs from "dayjs";

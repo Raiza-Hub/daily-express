@@ -60,7 +60,7 @@ const Profile = () => {
     control,
     reset,
     setError,
-    formState: { isSubmitting, isDirty },
+    formState: { errors, isSubmitting, isDirty },
   } = useForm<TProfileSchema>({
     resolver: zodResolver(ProfileSchema),
     defaultValues: {
@@ -220,9 +220,9 @@ const Profile = () => {
             </div>
           </FieldGroup>
 
-          {formState.errors.root && (
+          {errors.root && (
             <p className="px-1 inline-flex justify-center text-sm text-red-500">
-              {formState.errors.root.message}
+              {errors.root.message}
             </p>
           )}
 

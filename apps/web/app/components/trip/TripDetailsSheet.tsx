@@ -2,9 +2,7 @@
 "use client";
 
 import {
-  InfoIcon,
   MapPinAreaIcon,
-  SteeringWheelIcon
 } from "@phosphor-icons/react";
 import type { TRoute } from "@repo/types/routeSchema";
 import {
