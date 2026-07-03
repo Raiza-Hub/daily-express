@@ -92,7 +92,7 @@ async function processTripDriverAssigned(data: TripDriverAssignedJobData) {
           currency, status, source_event_id, created_at, updated_at
         ) VALUES (
           ${driverId}, ${bk.id}, ${tripId},
-          ${tripWithRoute.route.id}, ${tripWithRoute.trip.date},
+          ${tripWithRoute.route.id}, ${tripWithRoute.trip.date.toISOString()},
           ${tripWithRoute.route.pickup_location_title},
           ${tripWithRoute.route.dropoff_location_title},
           ${minor}, 0, ${minor},
