@@ -45,11 +45,11 @@ export default function VehicleFormDialog({
   } = useForm<TVehicleFormValues>({
     resolver: zodResolver(vehicleFormSchema),
     defaultValues: {
-      plateNumber: "",
-      make: "",
-      model: "",
-      capacity: 1,
-      color: "",
+      plateNumber: vehicle?.plateNumber ?? "",
+      make: vehicle?.make ?? "",
+      model: vehicle?.model ?? "",
+      capacity: vehicle?.capacity ?? 1,
+      color: vehicle?.color ?? "",
     },
   });
 
