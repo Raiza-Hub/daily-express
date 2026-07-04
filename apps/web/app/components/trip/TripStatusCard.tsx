@@ -84,11 +84,7 @@ const TripStatusCard = () => {
                     {hasNextPage && !isFetchingNextPage && (
                         <div ref={sentinelRef} className="h-px" />
                     )}
-                    {!hasNextPage && (
-                        <div className="py-4 text-center text-sm text-neutral-400">
-                            All bookings loaded
-                        </div>
-                    )}
+
                 </>
             )}
         </div>

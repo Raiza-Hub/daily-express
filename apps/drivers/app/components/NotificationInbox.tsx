@@ -264,11 +264,7 @@ const NotificationInbox = () => {
               {hasNextPage && !isFetchingNextPage && (
                 <div ref={sentinelRef} className="h-px" />
               )}
-              {!hasNextPage && (
-                <div className="px-4 py-3 text-center text-sm text-muted-foreground">
-                  No more notifications
-                </div>
-              )}
+
             </>
           )}
         </div>
