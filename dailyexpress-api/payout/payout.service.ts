@@ -111,13 +111,23 @@ export class PayoutService {
   async getHistory(
     user: JWTPayload,
     query: { limit?: number; cursor?: string; status?: PayoutStatus },
-  ): Promise<DriverPayoutHistoryItem[]> {
+  ): Promise<{ payouts: DriverPayoutHistoryItem[]; nextCursor: string | null }> {
     const currentDriver = await this.getCurrentDriver(user);
-    if (!currentDriver) return [];
+    if (!currentDriver) return { payouts: [], nextCursor: null };
 
-    const rows = await this.repo.findPayoutHistory(currentDriver.id, query);
+    const limit = this.normalizeLimit(query.limit);
+    const clauses = [eq(payout.driverId, currentDriver.id)];
+    if (query.status) clauses.push(eq(payout.status, query.status));
+    if (query.cursor) clauses.push(lt(payout.createdAt, new Date(query.cursor)));
 
-    return rows.map((row) => ({
+    const rows = await this.repo.findPayoutHistory(and(...clauses), limit + 1);
+
+    let nextCursor: string | null = null;
+    if (rows.length > limit) {
+      nextCursor = rows[limit].createdAt.toISOString();
+    }
+
+    const payouts = rows.slice(0, limit).map((row) => ({
       id: row.id,
       driverId: row.driverId,
       reference: row.reference,
@@ -136,6 +146,13 @@ export class PayoutService {
       updatedAt: row.updatedAt,
       recipientId: row.recipientId,
     }));
+
+    return { payouts, nextCursor };
+  }
+
+  private normalizeLimit(limit?: number): number {
+    if (!limit || !Number.isFinite(limit)) return 20;
+    return Math.max(1, Math.min(100, Math.floor(limit)));
   }
 
   async getWeeklySummary(

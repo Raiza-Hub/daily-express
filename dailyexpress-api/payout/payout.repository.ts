@@ -16,7 +16,6 @@ import {
   type DriverRecord,
 } from "../db/index";
 import { HIDDEN_BOOKING_PAYMENT_STATUSES } from "../utils/route";
-import type { PayoutStatus } from "@shared/types";
 import type { DbTransaction } from "../db/connection";
 
 type PayoutTransaction = DbTransaction;
@@ -302,18 +301,13 @@ export class PayoutRepository {
   }
 
   findPayoutHistory(
-    driverId: string,
-    query: { limit?: number; cursor?: string; status?: PayoutStatus },
+    whereClause: ReturnType<typeof and>,
+    limit: number,
   ) {
-    const clauses = [eq(payout.driverId, driverId)];
-    if (query.status) clauses.push(eq(payout.status, query.status));
-    if (query.cursor)
-      clauses.push(lt(payout.createdAt, new Date(query.cursor)));
-
     return db.query.payout.findMany({
-      where: and(...clauses),
+      where: whereClause,
       orderBy: [desc(payout.createdAt)],
-      limit: Math.max(1, Math.min(query.limit || 20, 100)),
+      limit,
     });
   }
 

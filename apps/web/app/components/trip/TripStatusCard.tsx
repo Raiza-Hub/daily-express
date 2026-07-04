@@ -1,8 +1,8 @@
 "use client";
 
+import { useEffect, useRef } from "react";
 import { CircleNotchIcon, ReceiptIcon } from "@phosphor-icons/react";
 import { useGetUserBookingsInfinite } from "@repo/api";
-import { Button } from "@repo/ui/components/button";
 import { groupByDate, transformToTripStatusItem } from "~/lib/utils";
 import { TripStatusItem } from "~/lib/type";
 import TripStatusCardItem from "./TripStatusCardItem";
@@ -24,6 +24,26 @@ const TripStatusCard = () => {
         .map(transformToTripStatusItem)
         .filter((item): item is TripStatusItem => item !== null);
     const grouped = groupByDate(tripStatusItems);
+
+    const sentinelRef = useRef<HTMLDivElement>(null);
+
+    useEffect(() => {
+        if (!sentinelRef.current || !hasNextPage || isFetchingNextPage) return;
+
+        const observer = new IntersectionObserver(
+            (entries) => {
+                const entry = entries[0];
+                if (entry?.isIntersecting) {
+                    fetchNextPage();
+                }
+            },
+            { threshold: 0.1 },
+        );
+
+        observer.observe(sentinelRef.current);
+
+        return () => observer.disconnect();
+    }, [hasNextPage, isFetchingNextPage, fetchNextPage]);
 
     return (
         <div className="flex flex-col gap-8 pt-6">
@@ -56,22 +76,17 @@ const TripStatusCard = () => {
                         </div>
                     ))}
 
-                    {hasNextPage && (
+                    {isFetchingNextPage && (
                         <div className="flex justify-center py-4">
-                            <Button
-                                variant="outline"
-                                onClick={() => fetchNextPage()}
-                                disabled={isFetchingNextPage}
-                            >
-                                {isFetchingNextPage ? (
-                                    <span className="flex items-center gap-2">
-                                        <CircleNotchIcon className="w-6 h-6 animate-spin" />
-                                        Loading more...
-                                    </span>
-                                ) : (
-                                    "Load more"
-                                )}
-                            </Button>
+                            <CircleNotchIcon className="w-6 h-6 animate-spin text-neutral-500" />
+                        </div>
+                    )}
+                    {hasNextPage && !isFetchingNextPage && (
+                        <div ref={sentinelRef} className="h-px" />
+                    )}
+                    {!hasNextPage && (
+                        <div className="py-4 text-center text-sm text-neutral-400">
+                            All bookings loaded
                         </div>
                     )}
                 </>
