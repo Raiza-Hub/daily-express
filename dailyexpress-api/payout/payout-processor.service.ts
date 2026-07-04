@@ -47,7 +47,18 @@ export class PayoutProcessorService {
       return;
     }
 
-    let payoutRecord = await this.getOrCreatePayout(earningRecord);
+    const payoutDriver = await this.getActivePayoutDriver(
+      earningRecord.driverId,
+    );
+    if (!payoutDriver) {
+      throw new Error(
+        `Cannot process payout for earning ${earningId}: driver is not payout-ready`,
+      );
+    }
+
+    const recipient = await this.recipientService.getRecipient(payoutDriver);
+
+    let payoutRecord = await this.getOrCreatePayout(earningRecord, recipient.id);
     if (
       payoutRecord.status === "success" ||
       payoutRecord.status === "permanent_failed"
@@ -55,24 +66,6 @@ export class PayoutProcessorService {
       return;
     }
 
-    const payoutDriver = await this.getActivePayoutDriver(
-      earningRecord.driverId,
-    );
-    if (!payoutDriver) {
-      if (this.canRetry(payoutRecord.retryCount)) {
-        await this.scheduleRetry(payoutRecord, "DRIVER_PROFILE_INCOMPLETE");
-        return;
-      }
-      await this.notificationService.processPayoutFailure(
-        payoutRecord,
-        "DRIVER_PROFILE_INCOMPLETE",
-        null,
-        true,
-      );
-      return;
-    }
-
-    const recipient = await this.recipientService.getRecipient(payoutDriver);
     if (payoutRecord.recipientId !== recipient.id) {
       const [updated] = await db
         .update(payout)
@@ -387,6 +380,7 @@ export class PayoutProcessorService {
 
   private async getOrCreatePayout(
     earningRecord: EarningRecord,
+    recipientId: string,
   ): Promise<PayoutRecord> {
     return db.transaction(async (tx) => {
       const existingPayout = await this.repo.findPayoutByEarningId(
@@ -406,7 +400,7 @@ export class PayoutProcessorService {
 
       const [createdPayout] = await this.repo.insertPayout(tx, {
         driverId: earningRecord.driverId,
-        recipientId: earningRecord.driverId,
+        recipientId,
         earningId: earningRecord.id,
         reference: this.buildPayoutReference(),
         amountMinor: earningRecord.netAmountMinor,
