@@ -18,7 +18,7 @@ import { cn } from "@repo/ui/lib/utils";
 import type { DriverNotification } from "@shared/types";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { NotificationTab } from "~/lib/type";
 import { formatRelativeTime, getToneClasses } from "~/lib/utils";
 
@@ -70,9 +70,30 @@ const NotificationInbox = () => {
     setOpen(isOpen);
   };
 
-  const handleLoadMore = () => {
-    fetchNextPage();
-  };
+  const sentinelRef = useRef<HTMLDivElement>(null);
+  const scrollContainerRef = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    if (!sentinelRef.current || !hasNextPage || isFetchingNextPage) return;
+
+    const observer = new IntersectionObserver(
+      (entries) => {
+        const entry = entries[0];
+        if (entry?.isIntersecting) {
+          fetchNextPage();
+        }
+      },
+      {
+        root: scrollContainerRef.current,
+        rootMargin: "200px",
+        threshold: 0,
+      },
+    );
+
+    observer.observe(sentinelRef.current);
+
+    return () => observer.disconnect();
+  }, [hasNextPage, isFetchingNextPage, fetchNextPage]);
 
   return (
     <Popover open={open} onOpenChange={handleOpenChange}>
@@ -147,7 +168,7 @@ const NotificationInbox = () => {
           </div>
         </div>
 
-        <div className="max-h-[28rem] overflow-y-auto">
+        <div ref={scrollContainerRef} className="max-h-[28rem] overflow-y-auto">
           {isLoadingDriver || isLoading ? (
             <div className="flex items-center justify-center gap-2 px-4 py-8 text-sm text-muted-foreground">
               <SpinnerIcon className="h-4 w-4 animate-spin" />
@@ -234,29 +255,20 @@ const NotificationInbox = () => {
                 );
               })}
 
-              <div className="px-4 py-3">
-                {hasNextPage ? (
-                  <button
-                    type="button"
-                    onClick={handleLoadMore}
-                    disabled={isFetchingNextPage}
-                    className="w-full rounded-full border bg-background px-4 py-2 text-sm font-medium text-foreground transition-colors hover:bg-accent cursor-pointer disabled:opacity-50"
-                  >
-                    {isFetchingNextPage ? (
-                      <span className="flex items-center justify-center gap-2">
-                        <SpinnerIcon className="h-4 w-4 animate-spin" />
-                        Loading more...
-                      </span>
-                    ) : (
-                      "Load more"
-                    )}
-                  </button>
-                ) : (
-                  <div className="text-center text-sm text-muted-foreground">
-                    No more notifications
-                  </div>
-                )}
-              </div>
+              {isFetchingNextPage && (
+                <div className="flex items-center justify-center gap-2 px-4 py-3 text-sm text-muted-foreground">
+                  <SpinnerIcon className="h-4 w-4 animate-spin" />
+                  Loading more...
+                </div>
+              )}
+              {hasNextPage && !isFetchingNextPage && (
+                <div ref={sentinelRef} className="h-px" />
+              )}
+              {!hasNextPage && (
+                <div className="px-4 py-3 text-center text-sm text-muted-foreground">
+                  No more notifications
+                </div>
+              )}
             </>
           )}
         </div>

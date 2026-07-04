@@ -1,5 +1,6 @@
 "use client";
 
+import { useRef, useEffect } from "react";
 import {
   CheckCircleIcon,
   SpinnerIcon,
@@ -12,13 +13,38 @@ import { formatCurrency } from "~/lib/utils";
 
 const PayoutTable = () => {
   const {
-    data: payouts = [],
+    data,
     isLoading,
     isError,
+    fetchNextPage,
+    hasNextPage,
+    isFetchingNextPage,
   } = useDriverPayoutHistory({
     limit: 20,
   });
-  
+
+  const payouts = data?.pages.flatMap((page) => page.payouts) ?? [];
+
+  const sentinelRef = useRef<HTMLTableRowElement>(null);
+
+  useEffect(() => {
+    if (!sentinelRef.current || !hasNextPage || isFetchingNextPage) return;
+
+    const observer = new IntersectionObserver(
+      (entries) => {
+        const entry = entries[0];
+        if (entry?.isIntersecting) {
+          fetchNextPage();
+        }
+      },
+      { threshold: 0.1 },
+    );
+
+    observer.observe(sentinelRef.current);
+
+    return () => observer.disconnect();
+  }, [hasNextPage, isFetchingNextPage, fetchNextPage]);
+
 
   if (isLoading) {
     return (
@@ -151,6 +177,19 @@ const PayoutTable = () => {
                   </tr>
                 );
               })}
+              {hasNextPage && (
+                <tr ref={sentinelRef}>
+                  <td colSpan={5} className="py-4 text-center">
+                    {isFetchingNextPage ? (
+                      <SpinnerIcon className="animate-spin mx-auto" />
+                    ) : (
+                      <span className="text-xs text-muted-foreground">
+                        Scroll for more
+                      </span>
+                    )}
+                  </td>
+                </tr>
+              )}
             </tbody>
           </table>
         </div>

@@ -15,7 +15,8 @@
     "db:studio": "bun x drizzle-kit studio",
     "db:seed": "bun run scripts/seed.ts",
     "db:clear": "bun run scripts/clear-db.ts --yes",
-    "db:seed-adebola": "bun run scripts/seed-adebola-bookings.ts"
+    "db:seed-adebola": "bun run scripts/seed-adebola-bookings.ts",
+    "db:seed-payouts": "bun run scripts/seed-payouts.ts"
   },
   "dependencies": {
     "@aws-sdk/client-sesv2": "^3.1048.0",

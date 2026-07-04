@@ -1,4 +1,4 @@
-import { useQuery } from "@tanstack/react-query";
+import { useInfiniteQuery, useQuery } from "@tanstack/react-query";
 import { payoutApi } from "../api";
 import type {
   ApiResponse,
@@ -8,6 +8,11 @@ import type {
   PayoutStatus,
 } from "@shared/types";
 import { handleApiError } from "../utils";
+
+interface PayoutHistoryResponse {
+  payouts: DriverPayoutHistoryItem[];
+  nextCursor: string | null;
+}
 
 export const getDriverPayoutBalanceFn =
   async (): Promise<DriverPayoutBalance> => {
@@ -33,7 +38,7 @@ export const getDriverPayoutHistoryFn = async (params?: {
   limit?: number;
   cursor?: string;
   status?: PayoutStatus;
-}): Promise<DriverPayoutHistoryItem[]> => {
+}): Promise<PayoutHistoryResponse> => {
   try {
     const searchParams = new URLSearchParams();
     if (params?.limit) {
@@ -47,7 +52,7 @@ export const getDriverPayoutHistoryFn = async (params?: {
     }
 
     const response = await payoutApi.get<
-      ApiResponse<DriverPayoutHistoryItem[]>
+      ApiResponse<PayoutHistoryResponse>
     >(
       `/history${searchParams.size ? `?${searchParams.toString()}` : ""}`,
     );
@@ -93,29 +98,27 @@ export const useDriverPayoutBalance = (options?: { enabled?: boolean }) => {
 
 export const useDriverPayoutHistory = (params?: {
   limit?: number;
-  cursor?: string;
   status?: PayoutStatus;
   enabled?: boolean;
 }) => {
-  return useQuery({
-    queryKey: [
-      "driver-payout-history",
-      params?.limit,
-      params?.cursor,
-      params?.status,
-    ],
-    queryFn: () =>
+  return useInfiniteQuery({
+    queryKey: ["driver-payout-history", params?.limit, params?.status],
+    queryFn: ({ pageParam }: { pageParam: string | null }) =>
       getDriverPayoutHistoryFn({
         limit: params?.limit,
-        cursor: params?.cursor,
+        cursor: pageParam ?? undefined,
         status: params?.status,
       }),
+    initialPageParam: null as string | null,
+    getNextPageParam: (lastPage) => lastPage.nextCursor,
     retry: false,
     enabled: params?.enabled ?? true,
     refetchInterval: (query) =>
-      query.state.data?.some(
-        (payout) =>
-          payout.status === "processing" || payout.status === "failed",
+      query.state.data?.pages.some((page) =>
+        page.payouts.some(
+          (payout) =>
+            payout.status === "processing" || payout.status === "failed",
+        ),
       )
         ? 15000
         : false,
