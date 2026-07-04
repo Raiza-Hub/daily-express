@@ -177,17 +177,16 @@ const PayoutTable = () => {
                   </tr>
                 );
               })}
-              {hasNextPage && (
-                <tr ref={sentinelRef}>
+              {isFetchingNextPage && (
+                <tr>
                   <td colSpan={5} className="py-4 text-center">
-                    {isFetchingNextPage ? (
-                      <SpinnerIcon className="animate-spin mx-auto" />
-                    ) : (
-                      <span className="text-xs text-muted-foreground">
-                        Scroll for more
-                      </span>
-                    )}
+                    <SpinnerIcon className="animate-spin mx-auto" />
                   </td>
+                </tr>
+              )}
+              {hasNextPage && !isFetchingNextPage && (
+                <tr ref={sentinelRef}>
+                  <td colSpan={5} className="h-px" />
                 </tr>
               )}
             </tbody>
