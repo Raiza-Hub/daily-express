@@ -431,7 +431,7 @@ export class PayoutProcessorService {
         amountMinor: earningRecord.netAmountMinor,
         currency: earningRecord.currency || "NGN",
         earningsCount: 1,
-        status: "processing",
+        status: "pending",
       });
 
       const payoutRecord =
