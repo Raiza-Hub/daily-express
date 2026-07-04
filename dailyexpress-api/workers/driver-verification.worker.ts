@@ -1,12 +1,13 @@
-import { eq } from "drizzle-orm";
+import { and, eq } from "drizzle-orm";
 import { db } from "../db/connection";
-import { driver } from "../db/index";
+import { driver, notification } from "../db/index";
 import { notificationService } from "../notification/notification.service";
 import { publishNotificationCreated } from "../notification/realtime";
 import { koraClient } from "../payment/kora.client";
 import { koraIdentityClient } from "../kyc/kora-identity.client";
 import { kycDedupClient } from "../kyc/kyc-dedup.client";
 import { getBoss, QUEUES, type DriverVerificationJobData } from "./boss";
+import { jobService } from "./job.service";
 import { logger } from "../utils/logger";
 
 function driverExists(driverId: string) {
@@ -81,13 +82,13 @@ async function processBankVerification(
       current.currency,
     );
 
-    const notification = await db.transaction(async (tx) => {
+    const result = await db.transaction(async (tx) => {
       const current = await tx.query.driver.findFirst({
         where: eq(driver.id, data.driverId),
       });
 
       if (!current || !bankDetailsMatch(current, data)) {
-        return null;
+        return { notificationResult: null, earningId: null as string | null };
       }
 
       await tx
@@ -104,15 +105,42 @@ async function processBankVerification(
         })
         .where(eq(driver.id, data.driverId));
 
-      return notificationService.createBankVerificationStateInTransaction(
+      const notificationResult = await notificationService.createBankVerificationStateInTransaction(
         tx,
         data.driverId,
         bankVerifiedNotification(),
       );
+
+      const pendingNotification = await tx.query.notification.findFirst({
+        where: and(
+          eq(notification.driverId, data.driverId),
+          eq(notification.notificationKey, "account-setup-pending"),
+        ),
+        columns: { metadata: true },
+      });
+
+      const earningId = pendingNotification?.metadata &&
+        typeof pendingNotification.metadata === "object" &&
+        "earningId" in pendingNotification.metadata
+        ? (pendingNotification.metadata as Record<string, unknown>).earningId as string
+        : null;
+
+      if (earningId) {
+        await jobService.enqueuePayout(tx, { earningId });
+      }
+
+      return { notificationResult, earningId };
     });
 
-    if (notification?.notification && notification.shouldDeliver) {
-      await publishNotificationCreated(notification.notification);
+    if (result.notificationResult?.notification && result.notificationResult.shouldDeliver) {
+      await publishNotificationCreated(result.notificationResult.notification);
+    }
+
+    if (result.earningId) {
+      logger.info("worker.verification.bank_payout_reenqueued", {
+        driverId: data.driverId,
+        earningId: result.earningId,
+      });
     }
 
     logger.info("worker.verification.bank_completed", {

@@ -4,6 +4,7 @@ import { PlaneDots } from "@repo/ui/PlaneDots";
 import { formatPrice } from "@repo/ui/lib/utils";
 import dayjs from "dayjs";
 import duration from "dayjs/plugin/duration";
+import { useQueryClient } from "@repo/api";
 import { preload } from "react-dom";
 import { useState } from "react";
 import { TripStatusItem } from "~/lib/type";
@@ -15,6 +16,7 @@ const TRANSACTION_FEE = 1000;
 
 const TripStatusCardItem = ({ item }: { item: TripStatusItem }) => {
     const [sheetOpen, setSheetOpen] = useState(false);
+    const queryClient = useQueryClient();
 
     const departure = dayjs(item.trip.departureTime);
     const arrival = dayjs(item.trip.estimatedArrivalTime);
@@ -35,7 +37,10 @@ const TripStatusCardItem = ({ item }: { item: TripStatusItem }) => {
                 ? `${totalHours}h`
                 : `${minutes}m`;
 
-    const openSheet = () => setSheetOpen(true);
+    const openSheet = () => {
+        queryClient.invalidateQueries({ queryKey: ["userBookings"] });
+        setSheetOpen(true);
+    };
     const preloadDriverImages = () => {
         preload("/driver-not-found.webp", { as: "image", fetchPriority: "low" });
         preload("/awaiting-driver.webp", { as: "image", fetchPriority: "low" });
