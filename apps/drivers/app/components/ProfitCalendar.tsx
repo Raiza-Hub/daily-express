@@ -110,7 +110,7 @@ export const ProfitCalendar: FC<ProfitCalendarProps> = ({
       </div>
 
       <div className="rounded-2xl bg-neutral-50 overflow-x-auto">
-        <div className="grid grid-cols-7 divide-x divide-neutral-200 min-w-max cursor-pointer">
+        <div className="grid grid-cols-7 divide-x divide-neutral-200 min-w-max">
           {visibleDays.map((day) => {
             const isSelected = day.isSame(selectedDate, "day");
 
@@ -120,7 +120,7 @@ export const ProfitCalendar: FC<ProfitCalendarProps> = ({
                 key={day.toISOString()}
                 onClick={() => setSelectedDate(day)}
                 className={cn(
-                  "relative flex flex-col items-center justify-center",
+                  "relative flex flex-col items-center justify-center  cursor-pointer",
                   "px-1 py-4 md:py-5",
                   "transition-all duration-200",
                   "focus:outline-none",

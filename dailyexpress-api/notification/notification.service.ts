@@ -108,13 +108,16 @@ export class NotificationService {
   ): Promise<{
     notifications: DriverNotification[];
     nextCursor: string | null;
+    unreadCount: number;
   }> {
     let driverId: string;
     try {
       driverId = await this.resolveDriverId(user.userId);
     } catch {
-      return { notifications: [], nextCursor: null };
+      return { notifications: [], nextCursor: null, unreadCount: 0 };
     }
+
+    const unreadCount = await this.repo.countUnreadByDriver(driverId);
 
     const unreadFilters = options?.unreadOnly
       ? [isNull(notification.readAt)]
@@ -159,7 +162,7 @@ export class NotificationService {
       .slice(0, limit)
       .map((item) => this.mapRecordToNotification(item));
 
-    return { notifications: result, nextCursor };
+    return { notifications: result, nextCursor, unreadCount };
   }
 
   async markNotificationRead(
