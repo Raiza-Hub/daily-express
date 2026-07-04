@@ -8,6 +8,8 @@ import { PayoutRepository, payoutRepository } from "./payout.repository";
 import { PayoutRecipientService, payoutRecipientService } from "./payout-recipient.service";
 import { PayoutAttemptService, payoutAttemptService } from "./payout-attempt.service";
 import { PayoutNotificationService, payoutNotificationService } from "./payout-notification.service";
+import { notificationService as sharedNotificationService } from "../notification/notification.service";
+import { publishNotificationCreatedInBackground } from "../notification/realtime";
 import { koraClient } from "../payment/kora.client";
 import { jobService } from "../workers/job.service";
 import {
@@ -51,9 +53,32 @@ export class PayoutProcessorService {
       earningRecord.driverId,
     );
     if (!payoutDriver) {
-      throw new Error(
-        `Payout failed. Your bank account or KYC verification may be incomplete. Please check your account details and KYC status, then try again.`,
-      );
+      await db.transaction(async (tx) => {
+        const notification = await sharedNotificationService.createForDriverInTransaction(
+          tx,
+          earningRecord.driverId,
+          {
+            notificationKey: "account-setup-pending",
+            kind: "state",
+            type: "bank_setup_pending",
+            title: "Bank account setup needed",
+            message:
+              "Your bank account information is incomplete. Please update your bank details in your profile to receive payouts.",
+            href: "/settings/bank-details",
+            tag: "Action needed",
+            tone: "attention",
+            metadata: {
+              earningId: earningRecord.id,
+              tripId: earningRecord.tripId,
+            },
+            occurredAt: new Date(),
+          },
+        );
+        if (notification) {
+          publishNotificationCreatedInBackground(notification);
+        }
+      });
+      return;
     }
 
     const recipient = await this.recipientService.getRecipient(payoutDriver);
