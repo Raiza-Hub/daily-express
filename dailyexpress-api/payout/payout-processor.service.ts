@@ -52,7 +52,7 @@ export class PayoutProcessorService {
     );
     if (!payoutDriver) {
       throw new Error(
-        `Payout failed — your bank account or KYC verification may be incomplete. Please check your account details and KYC status, then try again. (earning: ${earningId})`,
+        `Payout failed. Your bank account or KYC verification may be incomplete. Please check your account details and KYC status, then try again.`,
       );
     }
 
