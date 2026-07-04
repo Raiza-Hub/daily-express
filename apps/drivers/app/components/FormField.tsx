@@ -327,9 +327,7 @@ export function CountryField({
                               shouldValidate: true,
                               shouldDirty: true,
                             });
-                            setValue("state", "", {
-                              shouldDirty: true,
-                            });
+                            setValue("state", "");
                             onOpenChange(false);
                           }}
                         >

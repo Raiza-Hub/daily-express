@@ -75,7 +75,7 @@ export class DriverProfileService {
               await notificationService.createBankVerificationStateInTransaction(
                 tx,
                 createdDriver.id,
-                this.getBankVerificationPendingNotification(),
+                this.getAccountSetupPendingNotification(),
               );
 
             await jobService.enqueueDriverVerification(
@@ -231,6 +231,11 @@ export class DriverProfileService {
             typeof notificationService.createBankVerificationStateInTransaction
           >
         > | null = null;
+        let kycNotification: Awaited<
+          ReturnType<
+            typeof notificationService.createKycVerificationStateInTransaction
+          >
+        > | null = null;
         if (bankDetailsChanged) {
           bankNotification =
             await notificationService.createBankVerificationStateInTransaction(
@@ -254,6 +259,13 @@ export class DriverProfileService {
         }
 
         if (kycData) {
+          kycNotification =
+            await notificationService.createKycVerificationStateInTransaction(
+              tx,
+              record.id,
+              this.getKycVerificationPendingNotification(),
+            );
+
           await jobService.enqueueDriverVerification(
             tx,
             {
@@ -276,7 +288,7 @@ export class DriverProfileService {
             })
           : null;
 
-        return { driver: record, bankNotification, profilePictureUpload };
+        return { driver: record, bankNotification, kycNotification, profilePictureUpload };
       });
 
       if (
@@ -285,6 +297,15 @@ export class DriverProfileService {
       ) {
         publishNotificationCreatedInBackground(
           result.bankNotification.notification,
+        );
+      }
+
+      if (
+        result.kycNotification?.notification &&
+        result.kycNotification.shouldDeliver
+      ) {
+        publishNotificationCreatedInBackground(
+          result.kycNotification.notification,
         );
       }
 
@@ -321,6 +342,21 @@ export class DriverProfileService {
     return stats;
   }
 
+  private getAccountSetupPendingNotification() {
+    return {
+      notificationKey: "account-setup-pending",
+      kind: "state" as const,
+      type: "account_setup_pending",
+      title: "Setting up your account",
+      message:
+        "We're verifying your bank and identity details. You'll be notified once everything is ready.",
+      href: "/settings/bank-details",
+      tag: "Verification",
+      tone: "attention" as const,
+      occurredAt: new Date(),
+    };
+  }
+
   private getBankVerificationPendingNotification() {
     return {
       notificationKey: "bank-verification-pending",
@@ -328,7 +364,21 @@ export class DriverProfileService {
       type: "bank_verification_pending",
       title: "Bank verification in progress",
       message:
-        "We are still verifying your payout account. Automatic payouts stay on hold until verification finishes.",
+        "We are still verifying your payout account. Payouts stay on hold until verification finishes.",
+      href: "/settings/bank-details",
+      tag: "Verification",
+      tone: "attention" as const,
+      occurredAt: new Date(),
+    };
+  }
+
+  private getKycVerificationPendingNotification() {
+    return {
+      notificationKey: "kyc-verification-pending",
+      kind: "state" as const,
+      type: "kyc_verification_pending",
+      title: "Identity verification in progress",
+      message: "We're verifying your identity. You'll be notified once it's complete.",
       href: "/settings/bank-details",
       tag: "Verification",
       tone: "attention" as const,

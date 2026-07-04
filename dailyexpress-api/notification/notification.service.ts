@@ -31,10 +31,18 @@ interface UpsertNotificationResult {
 type NotificationTransaction = Parameters<Parameters<typeof db.transaction>[0]>[0];
 
 const MAX_LIMIT = 50;
-const BANK_VERIFICATION_NOTIFICATION_KEYS = [
+const BANK_VERIFICATION_STATE_KEYS = [
+  "account-setup-pending",
   "bank-verification-failed",
   "bank-verification-pending",
   "bank-verification-verified",
+] as const;
+
+const KYC_VERIFICATION_STATE_KEYS = [
+  "account-setup-pending",
+  "kyc-verification-failed",
+  "kyc-verification-pending",
+  "kyc-verification-verified",
 ] as const;
 
 export class NotificationService {
@@ -225,7 +233,66 @@ export class NotificationService {
   ): Promise<UpsertNotificationResult> {
     const now = new Date();
     const contentHash = this.hashContent(descriptor);
-    const staleKeys = BANK_VERIFICATION_NOTIFICATION_KEYS.filter(
+    const staleKeys = BANK_VERIFICATION_STATE_KEYS.filter(
+      (key) => key !== descriptor.notificationKey,
+    );
+
+    await this.repo.archiveNotificationsByKeys(tx, driverId, [...staleKeys]);
+
+    const existing = await this.repo.findNotificationByDriverAndKey(
+      tx,
+      driverId,
+      descriptor.notificationKey,
+    );
+
+    if (!existing) {
+      const created = await this.createForDriverInTransaction(
+        tx,
+        driverId,
+        descriptor,
+      );
+      return { notification: created, shouldDeliver: true };
+    }
+
+    const contentChanged =
+      existing.contentHash !== contentHash || existing.archivedAt !== null;
+
+    const updated = await this.repo.updateNotificationInTransaction(
+      tx,
+      existing.id,
+      {
+        kind: descriptor.kind,
+        type: descriptor.type,
+        title: descriptor.title,
+        message: descriptor.message,
+        href: descriptor.href || null,
+        tag: descriptor.tag,
+        tone: descriptor.tone,
+        metadata: descriptor.metadata || null,
+        contentHash,
+        archivedAt: null,
+        occurredAt: contentChanged
+          ? descriptor.occurredAt || now
+          : existing.occurredAt,
+        readAt: contentChanged ? null : existing.readAt,
+        updatedAt: now,
+      },
+    );
+
+    return {
+      notification: this.mapRecordToNotification(updated),
+      shouldDeliver: contentChanged,
+    };
+  }
+
+  async createKycVerificationStateInTransaction(
+    tx: NotificationTransaction,
+    driverId: string,
+    descriptor: NotificationInput,
+  ): Promise<UpsertNotificationResult> {
+    const now = new Date();
+    const contentHash = this.hashContent(descriptor);
+    const staleKeys = KYC_VERIFICATION_STATE_KEYS.filter(
       (key) => key !== descriptor.notificationKey,
     );
 
