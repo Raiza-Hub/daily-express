@@ -84,8 +84,8 @@ export default function ClaimTripCardItem({
             </span>
           </div>
           <p className="text-sm text-muted-foreground">
-            {trip.route.pickup_location_title} ({trip.route.pickup_location_locality}) –{" "}
-            {trip.route.dropoff_location_title} ({trip.route.dropoff_location_locality})
+            {trip.route.pickup_location_label} ({trip.route.pickup_location_locality}) –{" "}
+            {trip.route.dropoff_location_label} ({trip.route.dropoff_location_locality})
           </p>
         </div>
 

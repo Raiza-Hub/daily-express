@@ -65,10 +65,12 @@ export default function RouteCard({
         capacity: trip.capacity,
         departureCity: {
           title: trip.route.pickup_location_title,
+          label: trip.route.pickup_location_label,
           locality: trip.route.pickup_location_locality,
         },
         arrivalCity: {
           title: trip.route.dropoff_location_title,
+          label: trip.route.dropoff_location_label,
           locality: trip.route.dropoff_location_locality,
         },
       };

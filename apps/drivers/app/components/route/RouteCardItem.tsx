@@ -78,8 +78,8 @@ const RouteCardItem = ({ route }: { route: RouteWithTrips }) => {
             </span>
           </div>
           <p className="text-sm text-muted-foreground">
-            {route.departureCity.title} ({route.departureCity.locality}) –{" "}
-            {route.arrivalCity.title} ({route.arrivalCity.locality})
+            {route.departureCity.label} ({route.departureCity.locality}) –{" "}
+            {route.arrivalCity.label} ({route.arrivalCity.locality})
           </p>
         </div>
 

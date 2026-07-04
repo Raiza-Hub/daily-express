@@ -77,8 +77,10 @@ export interface TripsSummaryRange {
     route: {
       id: string;
       pickup_location_title: string;
+      pickup_location_label: string;
       pickup_location_locality: string;
       dropoff_location_title: string;
+      dropoff_location_label: string;
       dropoff_location_locality: string;
       price: number;
       departure_time: Date;

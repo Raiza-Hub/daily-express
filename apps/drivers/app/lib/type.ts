@@ -20,6 +20,6 @@ export interface RouteWithTrips {
   arrivalCode: string;
   bookedSeats: number;
   capacity: number;
-  departureCity: { title: string; locality: string };
-  arrivalCity: { title: string; locality: string };
+  departureCity: { title: string; label: string; locality: string };
+  arrivalCity: { title: string; label: string; locality: string };
 }

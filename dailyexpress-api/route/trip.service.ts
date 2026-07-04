@@ -163,8 +163,10 @@ export class TripService {
       route: {
         id: row.route.id,
         pickup_location_title: row.route.pickup_location_title,
+        pickup_location_label: row.route.pickup_location_label,
         pickup_location_locality: row.route.pickup_location_locality,
         dropoff_location_title: row.route.dropoff_location_title,
+        dropoff_location_label: row.route.dropoff_location_label,
         dropoff_location_locality: row.route.dropoff_location_locality,
         priceCar: row.route.priceCar,
         priceBus: row.route.priceBus,
