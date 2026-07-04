@@ -1,14 +1,13 @@
 "use client";
 
-import { CalendarSlashIcon, MagnifyingGlassIcon } from "@phosphor-icons/react";
+import { CalendarSlashIcon, MagnifyingGlassIcon, SpinnerIcon } from "@phosphor-icons/react";
 import { useGetAvailableTripsCountByDate, useGetAvailableTripsInfinite } from "@repo/api";
-import { Button } from "@repo/ui/components/button";
 import DriverCalendar from "@repo/ui/components/driver-calendar";
 import { Input } from "@repo/ui/components/input";
 import { useDebouncedCallback } from "@repo/ui/hooks/use-debounced-callback";
 import dayjs from "dayjs";
 import { parseAsString, useQueryState } from "nuqs";
-import { useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { useStreamLiveTrips } from "~/hooks/useStreamLiveTrips";
 import Loader from "../Loader";
 import ClaimTripCardItem from "./ClaimTripCardItem";
@@ -46,6 +45,24 @@ export default function AvailableTripsList() {
     date: selectedDate,
     search: activeSearch || undefined,
   });
+
+  const sentinelRef = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    if (!sentinelRef.current || !hasNextPage || isFetchingNextPage) return;
+
+    const observer = new IntersectionObserver(
+      (entries) => {
+        const entry = entries[0];
+        if (entry?.isIntersecting) fetchNextPage();
+      },
+      { threshold: 0.1 },
+    );
+
+    observer.observe(sentinelRef.current);
+
+    return () => observer.disconnect();
+  }, [hasNextPage, isFetchingNextPage, fetchNextPage]);
 
   const trips = data?.pages.flatMap((page) => page.trips) ?? [];
 
@@ -121,15 +138,12 @@ export default function AvailableTripsList() {
               />
             ))}
           </div>
-          {hasNextPage && (
+          {hasNextPage && !isFetchingNextPage && (
+            <div ref={sentinelRef} className="h-px" />
+          )}
+          {isFetchingNextPage && (
             <div className="flex justify-center py-8">
-              <Button
-                onClick={() => fetchNextPage()}
-                disabled={isFetchingNextPage}
-                className="bg-blue-600 hover:bg-blue-700 text-white gap-2 font-medium disabled:opacity-60"
-              >
-                {isFetchingNextPage ? "Loading more..." : "Load More"}
-              </Button>
+              <SpinnerIcon className="h-5 w-5 animate-spin text-muted-foreground" />
             </div>
           )}
         </>

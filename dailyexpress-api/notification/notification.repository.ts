@@ -25,6 +25,20 @@ export class NotificationRepository {
     });
   }
 
+  async countUnreadByDriver(driverId: string): Promise<number> {
+    const [result] = await db
+      .select({ count: sql<number>`count(*)` })
+      .from(notification)
+      .where(
+        and(
+          eq(notification.driverId, driverId),
+          isNull(notification.archivedAt),
+          isNull(notification.readAt),
+        ),
+      );
+    return Number(result?.count ?? 0);
+  }
+
   async findNotificationByIdAndDriver(id: string, driverId: string) {
     return db.query.notification.findFirst({
       where: and(

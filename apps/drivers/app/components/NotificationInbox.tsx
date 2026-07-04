@@ -18,7 +18,7 @@ import { cn } from "@repo/ui/lib/utils";
 import type { DriverNotification } from "@shared/types";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { useEffect, useRef, useState } from "react";
+import { useCallback, useRef, useState } from "react";
 import { NotificationTab } from "~/lib/type";
 import { formatRelativeTime, getToneClasses } from "~/lib/utils";
 
@@ -45,7 +45,7 @@ const NotificationInbox = () => {
 
   useBodyScrollLock(open);
 
-  const unreadCount = notifications.filter((item) => !item.readAt).length;
+  const unreadCount = data?.pages[0]?.unreadCount ?? 0;
   const filteredNotifications =
     tab === "unread"
       ? notifications.filter((item) => !item.readAt)
@@ -70,30 +70,35 @@ const NotificationInbox = () => {
     setOpen(isOpen);
   };
 
-  const sentinelRef = useRef<HTMLDivElement>(null);
   const scrollContainerRef = useRef<HTMLDivElement>(null);
+  const observerRef = useRef<IntersectionObserver | null>(null);
+  const fetchNextPageRef = useRef(fetchNextPage);
+  fetchNextPageRef.current = fetchNextPage;
 
-  useEffect(() => {
-    if (!sentinelRef.current || !hasNextPage || isFetchingNextPage) return;
+  const sentinelRef = useCallback(
+    (node: HTMLDivElement | null) => {
+      if (observerRef.current) {
+        observerRef.current.disconnect();
+        observerRef.current = null;
+      }
+      if (!node) return;
 
-    const observer = new IntersectionObserver(
-      (entries) => {
-        const entry = entries[0];
-        if (entry?.isIntersecting) {
-          fetchNextPage();
-        }
-      },
-      {
-        root: scrollContainerRef.current,
-        rootMargin: "200px",
-        threshold: 0,
-      },
-    );
-
-    observer.observe(sentinelRef.current);
-
-    return () => observer.disconnect();
-  }, [hasNextPage, isFetchingNextPage, fetchNextPage]);
+      observerRef.current = new IntersectionObserver(
+        (entries) => {
+          const entry = entries[0];
+          if (!entry?.isIntersecting) return;
+          fetchNextPageRef.current();
+        },
+        {
+          root: scrollContainerRef.current,
+          rootMargin: "200px",
+          threshold: 0,
+        },
+      );
+      observerRef.current.observe(node);
+    },
+    [],
+  );
 
   return (
     <Popover open={open} onOpenChange={handleOpenChange}>
@@ -107,7 +112,7 @@ const NotificationInbox = () => {
           {unreadCount > 0 && (
             <Badge
               variant="default"
-              className="bg-red-600 h-4 w-4 absolute -top-[-4px] -right-[-4px] text-xs px-1.5 py-0"
+              className="absolute -top-1 -right-1 h-4 min-w-4 items-center justify-center rounded-full bg-red-600 px-1 text-[10px] leading-none text-white"
             >
               {unreadCount > 99 ? "99+" : unreadCount}
             </Badge>
@@ -255,16 +260,15 @@ const NotificationInbox = () => {
                 );
               })}
 
+              {hasNextPage && !isFetchingNextPage && (
+                <div ref={sentinelRef} className="h-px" />
+              )}
               {isFetchingNextPage && (
                 <div className="flex items-center justify-center gap-2 px-4 py-3 text-sm text-muted-foreground">
                   <SpinnerIcon className="h-4 w-4 animate-spin" />
                   Loading more...
                 </div>
               )}
-              {hasNextPage && !isFetchingNextPage && (
-                <div ref={sentinelRef} className="h-px" />
-              )}
-
             </>
           )}
         </div>

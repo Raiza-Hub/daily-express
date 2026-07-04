@@ -11,6 +11,7 @@ import { handleApiError } from "../utils";
 interface NotificationsResponse {
   notifications: DriverNotification[];
   nextCursor: string | null;
+  unreadCount: number;
 }
 
 export const getDriverNotificationsFn = async (params?: {
