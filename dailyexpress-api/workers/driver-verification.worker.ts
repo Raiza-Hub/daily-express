@@ -36,8 +36,8 @@ function bankVerifiedNotification() {
     notificationKey: "bank:verification:verified",
     kind: "state" as const,
     type: "bank_verification_verified",
-    title: "Payout account verified",
-    message: "Your bank account is verified and ready for automatic payouts.",
+      title: "Payout account verified",
+    message: "Your bank account is verified and ready for payouts.",
     href: "/settings/bank-details",
     tag: "Verified",
     tone: "positive" as const,
@@ -166,10 +166,9 @@ function kycVerifiedNotification() {
     type: "kyc_verification_verified",
     title: "Identity verified",
     message: "Your identity has been verified successfully. You can now claim trips.",
-    href: "/settings/kyc",
+    href: "/settings/bank-details",
     tag: "Verified",
     tone: "positive" as const,
-    occurredAt: new Date(),
   };
 }
 
@@ -180,7 +179,7 @@ function kycFailedNotification(reason: string) {
     type: "kyc_verification_failed",
     title: "Identity verification failed",
     message: reason || "Your identity could not be verified. Please resubmit your details.",
-    href: "/settings/kyc",
+    href: "/settings/bank-details",
     tag: "KYC issue",
     tone: "critical" as const,
     metadata: { reason },
@@ -232,7 +231,7 @@ async function processKycVerification(
         })
         .where(eq(driver.id, data.driverId));
 
-      return notificationService.createForDriverInTransaction(
+      return notificationService.createKycVerificationStateInTransaction(
         tx,
         data.driverId,
         kycVerifiedNotification(),
@@ -243,8 +242,8 @@ async function processKycVerification(
     // NOTE: If Redis is down here, the catch block sets kycStatus="failed" despite
     // Kora having already verified and charged. The driver retries when Redis recovers.    
 
-    if (kycNotification) {
-      await publishNotificationCreated(kycNotification);
+    if (kycNotification?.notification && kycNotification.shouldDeliver) {
+      await publishNotificationCreated(kycNotification.notification);
     }
 
     logger.info("worker.verification.kyc_completed", {
@@ -281,15 +280,15 @@ async function processKycVerification(
         })
         .where(eq(driver.id, data.driverId));
 
-      return notificationService.createForDriverInTransaction(
+      return notificationService.createKycVerificationStateInTransaction(
         tx,
         data.driverId,
         kycFailedNotification(reason),
       );
     });
 
-    if (kycNotification) {
-      await publishNotificationCreated(kycNotification);
+    if (kycNotification?.notification && kycNotification.shouldDeliver) {
+      await publishNotificationCreated(kycNotification.notification);
     }
 
     logger.warn("worker.verification.kyc_failed", {

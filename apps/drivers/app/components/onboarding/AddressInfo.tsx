@@ -100,9 +100,7 @@ const AddressInfoForm = () => {
                                   setValue("currency", country.currency, {
                                     shouldValidate: true,
                                   });
-                                  setValue("state", "", {
-                                    shouldValidate: true,
-                                  });
+                                  setValue("state", "");
                                   setOpenCountry(false);
                                 }}
                               >
