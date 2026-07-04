@@ -3,7 +3,7 @@
 import type { DriverNotification } from "@shared/types";
 import { useGetDriver, useQueryClient } from "@repo/api";
 import { toast } from "@repo/ui/components/sonner";
-import { useEffect, useRef } from "react";
+import { useEffect } from "react";
 
 const DAILYEXPRESS_API_URL =
   process.env.NEXT_PUBLIC_DAILYEXPRESS_API_URL || "http://localhost:8000";
@@ -131,7 +131,6 @@ function invalidateDriverDashboardQueries(
 export function useDriverNotificationsSSE() {
   const queryClient = useQueryClient();
   const { data: driver } = useGetDriver();
-  const isFirstOpen = useRef(true);
 
   useEffect(() => {
     if (!driver?.id) return;
@@ -139,12 +138,9 @@ export function useDriverNotificationsSSE() {
     const es = new EventSource(SSE_URL, { withCredentials: true });
 
     es.addEventListener("open", () => {
-      if (!isFirstOpen.current) {
-        void queryClient.invalidateQueries({
-          queryKey: DRIVER_NOTIFICATIONS_QUERY_KEY,
-        });
-      }
-      isFirstOpen.current = false;
+      void queryClient.invalidateQueries({
+        queryKey: DRIVER_NOTIFICATIONS_QUERY_KEY,
+      });
     });
 
     es.addEventListener("notification.created", (event: MessageEvent) => {
