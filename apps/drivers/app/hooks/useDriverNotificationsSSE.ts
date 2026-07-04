@@ -311,7 +311,6 @@ export function useDriverNotificationsSSE() {
 
     return () => {
       es.close();
-      isFirstOpen.current = true;
     };
   }, [driver?.id, queryClient]);
 }
