@@ -4,6 +4,7 @@ import { PlaneDots } from "@repo/ui/PlaneDots";
 import { formatPrice } from "@repo/ui/lib/utils";
 import dayjs from "dayjs";
 import duration from "dayjs/plugin/duration";
+import { preload } from "react-dom";
 import { useState } from "react";
 import { TripStatusItem } from "~/lib/type";
 import TripDetailsSheet from "./TripDetailsSheet";
@@ -35,7 +36,11 @@ const TripStatusCardItem = ({ item }: { item: TripStatusItem }) => {
                 : `${minutes}m`;
 
     const openSheet = () => setSheetOpen(true);
-    
+    const preloadDriverImages = () => {
+        preload("/driver-not-found.webp", { as: "image", fetchPriority: "low" });
+        preload("/awaiting-driver.webp", { as: "image", fetchPriority: "low" });
+    };
+
     return (
         <>
             <div className="relative w-full bg-white rounded-2xl overflow-hidden px-1">
@@ -70,6 +75,7 @@ const TripStatusCardItem = ({ item }: { item: TripStatusItem }) => {
 
                         <button
                             onClick={openSheet}
+                            onMouseEnter={preloadDriverImages}
                             className="mt-4 text-sm font-medium text-neutral-800 underline underline-offset-2 hover:text-black cursor-pointer"
                         >
                             Trip details
