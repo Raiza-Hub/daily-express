@@ -146,6 +146,7 @@ const TripStatusCardItem = ({ item }: { item: TripStatusItem }) => {
                     tripDate: item.tripDate,
                     remainingSeats: item.remainingSeats,
                 }}
+                driverStatus={item.driverStatus}
                 showDriverDetails={true}
                 driver={item.driver}
                 displayMessage={item.displayMessage}
