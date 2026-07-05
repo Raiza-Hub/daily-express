@@ -217,7 +217,6 @@ export class KoraClient {
             },
             ...(payload.narration ? { narration: payload.narration } : {}),
           },
-          merchant_bears_cost: false,
         }),
       },
     );
