@@ -104,19 +104,34 @@ export class PayoutProcessorService {
       payoutRecord = updated;
     }
 
-    const balanceResult = await this.kora.getBalance();
-    const availableBalance = Number.parseFloat(
-      balanceResult.data?.NGN?.available_balance || "0",
-    );
-    const availableMinor = Math.round(availableBalance * 100);
-    if (
-      availableMinor <
-      payoutRecord.amountMinor + this.config.MINIMUM_PAYOUT_BUFFER_MINOR
-    ) {
-      await this.scheduleRetry(
-        payoutRecord,
-        KORA_ERROR_CODES.INSUFFICIENT_BALANCE,
-      );
+    if (payoutRecord.amountMinor < this.config.MINIMUM_PAYOUT_AMOUNT_MINOR) {
+      await db.transaction(async (tx) => {
+        const notification =
+          await sharedNotificationService.createForDriverInTransaction(
+            tx,
+            earningRecord.driverId,
+            {
+              notificationKey: "payout-too-small",
+              kind: "state",
+              type: "payout_too_small",
+              title: "Minimum payout not met",
+              message:
+                "Your earnings are below the ₦1,000 minimum payout threshold. Funds will be held until you reach the minimum.",
+              href: "/",
+              tag: "Info",
+              tone: "info",
+              metadata: {
+                earningId: earningRecord.id,
+                tripId: earningRecord.tripId,
+                amountMinor: payoutRecord.amountMinor,
+              },
+              occurredAt: new Date(),
+            },
+          );
+        if (notification) {
+          publishNotificationCreatedInBackground(notification);
+        }
+      });
       return;
     }
 
@@ -270,8 +285,14 @@ export class PayoutProcessorService {
         },
       );
 
-      if (errorCode === KORA_ERROR_CODES.INSUFFICIENT_BALANCE) {
-        await this.scheduleRetry(payoutRecord, errorCode);
+      if (
+        errorCode === KORA_ERROR_CODES.INSUFFICIENT_BALANCE ||
+        errorCode === "conflict"
+      ) {
+        await this.scheduleRetry(
+          payoutRecord,
+          KORA_ERROR_CODES.INSUFFICIENT_BALANCE,
+        );
         return;
       }
       if (errorCode && isFatalKoraError(errorCode)) {

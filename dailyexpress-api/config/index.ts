@@ -79,11 +79,11 @@ const envSchema = z.object({
     .positive()
     .default(30 * 60 * 1000),
   PAYOUT_JOB_EXPIRE_MINUTES: z.coerce.number().int().positive().default(15),
-  MINIMUM_PAYOUT_BUFFER_MINOR: z.coerce
+  MINIMUM_PAYOUT_AMOUNT_MINOR: z.coerce
     .number()
     .int()
     .nonnegative()
-    .default(50000),
+    .default(100000),
 
   // Database
   DATABASE_URL: z.string().min(1),
