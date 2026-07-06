@@ -24,7 +24,7 @@ export function DashboardRoutes({ urlDate }: { urlDate?: string }) {
     return dayjs();
   }, []);
 
-  const [viewDate, setViewDate] = useState(() => dayjs());
+  const [viewDate, setViewDate] = useState(() => initialDate);
   const [selectedDate, setSelectedDate] = useState(() => initialDate);
 
   const startDateStr = useMemo(
