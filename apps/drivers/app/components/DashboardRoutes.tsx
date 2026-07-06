@@ -22,7 +22,7 @@ export function DashboardRoutes({ urlDate }: { urlDate?: string }) {
       if (parsed.isValid()) return parsed;
     }
     return dayjs();
-  }, []);
+  }, [urlDate]);
 
   const [viewDate, setViewDate] = useState(() => initialDate);
   const [selectedDate, setSelectedDate] = useState(() => initialDate);
