@@ -96,7 +96,7 @@ export class KoraClient {
             .join("; ")})`
         : "";
       const error = new Error(`${baseMessage}${detailMessage}`);
-      (error as any).koraErrorCode = errorBody.error_code;
+      (error as any).koraErrorCode = errorBody.error_code || errorBody.error;
       (error as any).koraHttpStatus = response.status;
       (error as any).koraResponseData = errorBody;
       throw error;
@@ -110,7 +110,7 @@ export class KoraClient {
           "Payment provider request failed",
         ),
       );
-      (error as any).koraErrorCode = raw.error_code;
+      (error as any).koraErrorCode = raw.error_code || raw.error;
       (error as any).koraResponseData = raw;
       throw error;
     }
