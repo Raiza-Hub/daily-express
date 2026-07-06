@@ -113,7 +113,9 @@ const TripDetailsSheet = ({
 
   return (
     <Drawer open={open} onOpenChange={onOpenChange}>
-      <DrawerContent className="w-full p-0 flex flex-col max-h-[90vh]">
+      <DrawerContent
+        className="w-full p-0 flex flex-col max-h-[90vh]"
+      >
         <div className="relative w-full max-w-md mx-auto flex flex-col flex-1 min-h-0">
           <DrawerHeader className="sr-only">
             <DrawerTitle>Trip details</DrawerTitle>
