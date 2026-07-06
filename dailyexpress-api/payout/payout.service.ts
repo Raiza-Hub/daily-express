@@ -121,12 +121,16 @@ export class PayoutService {
     if (query.cursor) {
       const [createdAtStr, id] = query.cursor.split("|");
       const cursorDate = new Date(createdAtStr);
-      clauses.push(
-        or(
-          lt(payout.createdAt, cursorDate),
-          and(eq(payout.createdAt, cursorDate), lt(payout.id, id)),
-        ),
-      );
+      if (id) {
+        clauses.push(
+          or(
+            lt(payout.createdAt, cursorDate),
+            and(eq(payout.createdAt, cursorDate), lt(payout.id, id)),
+          ),
+        );
+      } else {
+        clauses.push(lt(payout.createdAt, cursorDate));
+      }
     }
 
     const rows = await this.repo.findPayoutHistory(and(...clauses), limit + 1);

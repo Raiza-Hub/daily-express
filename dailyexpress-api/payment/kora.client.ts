@@ -18,6 +18,7 @@ interface KoraErrorResponse {
   message: string;
   errors?: unknown;
   error_code?: string;
+  error?: string;
   data?: Record<string, { message?: string }>;
 }
 
