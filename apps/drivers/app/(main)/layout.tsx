@@ -49,7 +49,12 @@ const Layout = async ({ children }: { children: ReactNode }) => {
                 cache: "no-store",
             },
         );
-        shouldRedirectToSignIn = !profileResponse.ok;
+        if (profileResponse.ok) {
+            const data = await profileResponse.json();
+            shouldRedirectToSignIn = !data.success || !data.data;
+        } else {
+            shouldRedirectToSignIn = true;
+        }
     } catch {
         shouldRedirectToSignIn = true;
     }

@@ -8,13 +8,13 @@ import type {
 } from "@shared/types";
 import { handleApiError } from "../utils";
 
-export const getDriverFn = async (): Promise<Driver> => {
+export const getDriverFn = async (): Promise<Driver | null> => {
   try {
-    const response = await driverApi.get<ApiResponse<Driver>>("/profile");
-    if (!response.data.success || !response.data.data) {
+    const response = await driverApi.get<ApiResponse<Driver | null>>("/profile");
+    if (!response.data.success) {
       throw new Error(response.data.error || "Failed to get driver profile");
     }
-    return response.data.data;
+    return response.data.data ?? null;
   } catch (err) {
     return handleApiError(err, "Failed to get driver profile") as never;
   }

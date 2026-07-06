@@ -213,7 +213,7 @@ const DriverInfo = () => {
           <ProfileImageField
             control={control}
             currentFile={currentFile}
-            driver={driver}
+            driver={driver ?? undefined}
             isDragging={isDragging}
             errors={errors}
             uploadActions={uploadActions}
