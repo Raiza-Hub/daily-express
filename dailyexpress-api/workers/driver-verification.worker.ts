@@ -238,6 +238,8 @@ async function processKycVerification(
       verified = await koraIdentityClient.verifyNIN(data.kycId, validation);
     }
 
+    await kycDedupClient.markVerified(data.kycId, data.driverId, data.kycType);
+
     const kycNotification = await db.transaction(async (tx) => {
       const current = await tx.query.driver.findFirst({
         where: eq(driver.id, data.driverId),
@@ -265,10 +267,6 @@ async function processKycVerification(
         kycVerifiedNotification(),
       );
     });
-
-    await kycDedupClient.markVerified(data.kycId, data.driverId, data.kycType);
-    // NOTE: If Redis is down here, the catch block sets kycStatus="failed" despite
-    // Kora having already verified and charged. The driver retries when Redis recovers.    
 
     if (kycNotification?.notification && kycNotification.shouldDeliver) {
       await publishNotificationCreated(kycNotification.notification);
