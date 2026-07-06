@@ -1,5 +1,9 @@
+CREATE EXTENSION IF NOT EXISTS pgcrypto WITH SCHEMA public;
+CREATE EXTENSION IF NOT EXISTS pg_trgm WITH SCHEMA public;
+--> statement-breakpoint
 CREATE TYPE "public"."bank_verification_status" AS ENUM('pending', 'active', 'failed');--> statement-breakpoint
 CREATE TYPE "public"."driver_profile_image_upload_status" AS ENUM('pending', 'processing', 'succeeded', 'failed');--> statement-breakpoint
+CREATE TYPE "public"."kyc_status" AS ENUM('none', 'pending', 'active', 'failed');--> statement-breakpoint
 CREATE TYPE "public"."notification_kind" AS ENUM('event', 'state');--> statement-breakpoint
 CREATE TYPE "public"."notification_tone" AS ENUM('critical', 'attention', 'positive', 'info');--> statement-breakpoint
 CREATE TYPE "public"."payment_provider" AS ENUM('kora');--> statement-breakpoint
@@ -11,7 +15,6 @@ CREATE TYPE "public"."payout_recipient_status" AS ENUM('active', 'stale', 'faile
 CREATE TYPE "public"."payout_status" AS ENUM('pending', 'processing', 'success', 'failed', 'permanent_failed');--> statement-breakpoint
 CREATE TYPE "public"."status" AS ENUM('inactive', 'pending', 'active');--> statement-breakpoint
 CREATE TYPE "public"."trip_status" AS ENUM('pending', 'confirmed', 'cancelled', 'completed', 'awaiting_driver');--> statement-breakpoint
-CREATE TYPE "public"."vehicle_status" AS ENUM('available', 'in_use');--> statement-breakpoint
 CREATE TYPE "public"."vehicle_type" AS ENUM('car', 'bus');--> statement-breakpoint
 CREATE TABLE "admin_audit_log" (
 	"id" uuid PRIMARY KEY DEFAULT gen_random_uuid() NOT NULL,
@@ -92,6 +95,12 @@ CREATE TABLE "driver" (
 	"bank_verification_failure_reason" text,
 	"bank_verification_requested_at" timestamp,
 	"bank_verified_at" timestamp,
+	"kyc_status" "kyc_status" DEFAULT 'none' NOT NULL,
+	"kyc_type" text,
+	"kyc_verification_reference" text,
+	"kyc_failure_reason" text,
+	"kyc_requested_at" timestamp,
+	"kyc_verified_at" timestamp,
 	"is_active" boolean DEFAULT true NOT NULL,
 	"deleted_at" timestamp,
 	"created_at" timestamp DEFAULT now() NOT NULL,
@@ -127,7 +136,6 @@ CREATE TABLE "driver_stats" (
 	"pending_payments" bigint DEFAULT 0 NOT NULL,
 	"in_review_payments" bigint DEFAULT 0 NOT NULL,
 	"total_passengers" integer DEFAULT 0 NOT NULL,
-	"active_routes" integer DEFAULT 0 NOT NULL,
 	"created_at" timestamp DEFAULT now() NOT NULL,
 	"updated_at" timestamp DEFAULT now() NOT NULL,
 	CONSTRAINT "driver_stats_driver_id_unique" UNIQUE("driver_id")
@@ -342,6 +350,10 @@ CREATE TABLE "external_driver" (
 	"trip_id" uuid NOT NULL,
 	"name" text NOT NULL,
 	"phone" text NOT NULL,
+	"first_name" text NOT NULL,
+	"last_name" text NOT NULL,
+	"country" text,
+	"state" text,
 	"vehicle_make" text,
 	"vehicle_model" text,
 	"vehicle_plate_number" text,
@@ -366,8 +378,8 @@ CREATE TABLE "route" (
 	"meeting_point" text NOT NULL,
 	"price_car" bigint NOT NULL,
 	"price_bus" bigint NOT NULL,
-	"departure_time" timestamp NOT NULL,
-	"arrival_time" timestamp NOT NULL,
+	"departure_time" time NOT NULL,
+	"arrival_time" time NOT NULL,
 	"status" "status" DEFAULT 'active' NOT NULL,
 	"created_at" timestamp DEFAULT now() NOT NULL,
 	"updated_at" timestamp DEFAULT now() NOT NULL
@@ -397,13 +409,13 @@ CREATE TABLE "vehicle" (
 	"model" text NOT NULL,
 	"capacity" integer NOT NULL,
 	"color" text NOT NULL,
-	"status" "vehicle_status" DEFAULT 'available' NOT NULL,
 	"created_at" timestamp DEFAULT now() NOT NULL,
 	"updated_at" timestamp DEFAULT now() NOT NULL
 );
 --> statement-breakpoint
 ALTER TABLE "password_reset_tokens" ADD CONSTRAINT "password_reset_tokens_user_id_users_id_fk" FOREIGN KEY ("user_id") REFERENCES "public"."users"("id") ON DELETE cascade ON UPDATE no action;--> statement-breakpoint
 ALTER TABLE "user_providers" ADD CONSTRAINT "user_providers_user_id_users_id_fk" FOREIGN KEY ("user_id") REFERENCES "public"."users"("id") ON DELETE cascade ON UPDATE no action;--> statement-breakpoint
+ALTER TABLE "driver" ADD CONSTRAINT "driver_user_id_users_id_fk" FOREIGN KEY ("user_id") REFERENCES "public"."users"("id") ON DELETE restrict ON UPDATE no action;--> statement-breakpoint
 ALTER TABLE "driver_profile_image_upload" ADD CONSTRAINT "driver_profile_image_upload_driver_id_driver_id_fk" FOREIGN KEY ("driver_id") REFERENCES "public"."driver"("id") ON DELETE cascade ON UPDATE no action;--> statement-breakpoint
 ALTER TABLE "driver_stats" ADD CONSTRAINT "driver_stats_driver_id_driver_id_fk" FOREIGN KEY ("driver_id") REFERENCES "public"."driver"("id") ON DELETE cascade ON UPDATE no action;--> statement-breakpoint
 ALTER TABLE "notification" ADD CONSTRAINT "notification_driver_id_driver_id_fk" FOREIGN KEY ("driver_id") REFERENCES "public"."driver"("id") ON DELETE cascade ON UPDATE no action;--> statement-breakpoint

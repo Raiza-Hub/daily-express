@@ -1,5 +1,5 @@
 {
-  "id": "51997961-4729-46e3-a7ce-f9bfebf1b298",
+  "id": "b9df82d3-305b-4bd8-8e5d-7eaf1841e838",
   "prevId": "00000000-0000-0000-0000-000000000000",
   "version": "7",
   "dialect": "postgresql",
@@ -607,6 +607,44 @@
           "primaryKey": false,
           "notNull": false
         },
+        "kyc_status": {
+          "name": "kyc_status",
+          "type": "kyc_status",
+          "typeSchema": "public",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "'none'"
+        },
+        "kyc_type": {
+          "name": "kyc_type",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "kyc_verification_reference": {
+          "name": "kyc_verification_reference",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "kyc_failure_reason": {
+          "name": "kyc_failure_reason",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "kyc_requested_at": {
+          "name": "kyc_requested_at",
+          "type": "timestamp",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "kyc_verified_at": {
+          "name": "kyc_verified_at",
+          "type": "timestamp",
+          "primaryKey": false,
+          "notNull": false
+        },
         "is_active": {
           "name": "is_active",
           "type": "boolean",
@@ -636,7 +674,21 @@
         }
       },
       "indexes": {},
-      "foreignKeys": {},
+      "foreignKeys": {
+        "driver_user_id_users_id_fk": {
+          "name": "driver_user_id_users_id_fk",
+          "tableFrom": "driver",
+          "tableTo": "users",
+          "columnsFrom": [
+            "user_id"
+          ],
+          "columnsTo": [
+            "id"
+          ],
+          "onDelete": "restrict",
+          "onUpdate": "no action"
+        }
+      },
       "compositePrimaryKeys": {},
       "uniqueConstraints": {
         "driver_user_id_unique": {
@@ -879,13 +931,6 @@
         },
         "total_passengers": {
           "name": "total_passengers",
-          "type": "integer",
-          "primaryKey": false,
-          "notNull": true,
-          "default": 0
-        },
-        "active_routes": {
-          "name": "active_routes",
           "type": "integer",
           "primaryKey": false,
           "notNull": true,
@@ -3177,6 +3222,30 @@
           "primaryKey": false,
           "notNull": true
         },
+        "first_name": {
+          "name": "first_name",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "last_name": {
+          "name": "last_name",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "country": {
+          "name": "country",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "state": {
+          "name": "state",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false
+        },
         "vehicle_make": {
           "name": "vehicle_make",
           "type": "text",
@@ -3336,13 +3405,13 @@
         },
         "departure_time": {
           "name": "departure_time",
-          "type": "timestamp",
+          "type": "time",
           "primaryKey": false,
           "notNull": true
         },
         "arrival_time": {
           "name": "arrival_time",
-          "type": "timestamp",
+          "type": "time",
           "primaryKey": false,
           "notNull": true
         },
@@ -3773,14 +3842,6 @@
           "primaryKey": false,
           "notNull": true
         },
-        "status": {
-          "name": "status",
-          "type": "vehicle_status",
-          "typeSchema": "public",
-          "primaryKey": false,
-          "notNull": true,
-          "default": "'available'"
-        },
         "created_at": {
           "name": "created_at",
           "type": "timestamp",
@@ -3852,6 +3913,16 @@
         "pending",
         "processing",
         "succeeded",
+        "failed"
+      ]
+    },
+    "public.kyc_status": {
+      "name": "kyc_status",
+      "schema": "public",
+      "values": [
+        "none",
+        "pending",
+        "active",
         "failed"
       ]
     },
@@ -3962,14 +4033,6 @@
         "cancelled",
         "completed",
         "awaiting_driver"
-      ]
-    },
-    "public.vehicle_status": {
-      "name": "vehicle_status",
-      "schema": "public",
-      "values": [
-        "available",
-        "in_use"
       ]
     },
     "public.vehicle_type": {
