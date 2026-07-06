@@ -32,7 +32,10 @@ const Page = async () => {
         headers: { cookie: cookieHeader },
         cache: "no-store",
       });
-      shouldRedirect = res.ok;
+      if (res.ok) {
+        const body = await res.json();
+        shouldRedirect = Boolean(body?.data);
+      }
     } catch {
       // API unreachable — render the form; client-side query handles it
     }
