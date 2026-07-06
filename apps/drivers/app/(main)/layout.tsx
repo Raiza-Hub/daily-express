@@ -38,7 +38,8 @@ const Layout = async ({ children }: { children: ReactNode }) => {
         .join("; ");
     const dailyExpressApiUrl = env.NEXT_PUBLIC_DAILYEXPRESS_API_URL;
 
-    let shouldRedirectToSignIn = false;
+    let needsOnboarding = false;
+    let authError = false;
     try {
         const profileResponse = await fetch(
             `${dailyExpressApiUrl}/api/v1/driver/profile`,
@@ -51,14 +52,15 @@ const Layout = async ({ children }: { children: ReactNode }) => {
         );
         if (profileResponse.ok) {
             const data = await profileResponse.json();
-            shouldRedirectToSignIn = !data.success || !data.data;
+            needsOnboarding = !data.success || !data.data;
         } else {
-            shouldRedirectToSignIn = true;
+            authError = true;
         }
     } catch {
-        shouldRedirectToSignIn = true;
+        authError = true;
     }
-    if (shouldRedirectToSignIn) redirect(signInUrl.toString());
+    if (authError) redirect(signInUrl.toString());
+    if (needsOnboarding) redirect("/sign-up");
 
     return (
         <div className="w-full min-h-screen flex flex-col">
