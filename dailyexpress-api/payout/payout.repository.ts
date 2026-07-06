@@ -306,7 +306,7 @@ export class PayoutRepository {
   ) {
     return db.query.payout.findMany({
       where: whereClause,
-      orderBy: [desc(payout.createdAt)],
+      orderBy: [desc(payout.createdAt), desc(payout.id)],
       limit,
     });
   }

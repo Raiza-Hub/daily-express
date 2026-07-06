@@ -42,7 +42,6 @@ const Profile = () => {
     onSuccess: () => {
       posthog.capture(posthogEvents.profile_update_succeeded);
       refetchUser();
-      // toast.success("Profile updated successfully");
     },
     onError: (err) => {
       applyApiFieldErrors<keyof TProfileSchema>(err, setError);

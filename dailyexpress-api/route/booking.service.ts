@@ -169,7 +169,13 @@ export class BookingService {
       notInArray(booking.paymentStatus, ["failed", "cancelled", "expired"]),
     );
     const cursorCondition = decodedCursor
-      ? lt(booking.createdAt, new Date(decodedCursor.createdAt))
+      ? or(
+          lt(booking.tripDate, new Date(decodedCursor.tripDate)),
+          and(
+            eq(booking.tripDate, new Date(decodedCursor.tripDate)),
+            lt(booking.id, decodedCursor.id),
+          ),
+        )
       : undefined;
     const bookingRows = await timeAsync(
       "route.get_user_bookings.query_bookings",
@@ -200,7 +206,7 @@ export class BookingService {
               cursorCondition,
             ),
           )
-          .orderBy(desc(booking.createdAt))
+          .orderBy(desc(booking.tripDate), desc(booking.id))
           .limit(parsedLimit + 1),
     );
     const pageBookingRows = bookingRows.slice(0, parsedLimit);
@@ -318,12 +324,12 @@ export class BookingService {
 
     return {
       bookings,
-      nextCursor:
-        nextBookingRow && lastBookingRow
-          ? encodeCursor({
-              createdAt: lastBookingRow.booking.createdAt.toISOString(),
-            })
-          : null,
+      nextCursor: nextBookingRow && lastBookingRow
+        ? encodeCursor({
+            tripDate: lastBookingRow.booking.tripDate.toISOString(),
+            id: lastBookingRow.booking.id,
+          })
+        : null,
     };
   }
 

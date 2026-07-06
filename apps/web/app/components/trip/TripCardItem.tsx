@@ -72,10 +72,6 @@ const TripCardItem = ({
                 channels: ["bank_transfer"],
                 productName: `${item.pickupLocationTitle} to ${item.dropoffLocationTitle}`,
                 productDescription: `Trip booking for ${dayjs(bookingDate).format("ddd, D MMM YYYY")}`,
-                // metadata: {
-                //     routeId: item.routeId,
-                //     tripDate: bookingDate,
-                // },
             });
 
             if (!checkout.paymentReference || !checkout.checkoutUrl) {

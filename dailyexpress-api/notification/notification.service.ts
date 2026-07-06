@@ -130,7 +130,7 @@ export class NotificationService {
     );
 
     if (options?.cursor) {
-      const [occurredAt, createdAt] = options.cursor.split("|");
+      const [occurredAt, createdAt, id] = options.cursor.split("|");
       const occurredAtDate = new Date(occurredAt);
       const createdAtDate = new Date(createdAt);
 
@@ -141,6 +141,11 @@ export class NotificationService {
           and(
             eq(notification.occurredAt, occurredAtDate),
             lt(notification.createdAt, createdAtDate),
+          ),
+          and(
+            eq(notification.occurredAt, occurredAtDate),
+            eq(notification.createdAt, createdAtDate),
+            lt(notification.id, id),
           ),
         ),
       );
@@ -155,7 +160,7 @@ export class NotificationService {
     let nextCursor: string | null = null;
     if (notifications.length > limit) {
       const nextItem = notifications[limit];
-      nextCursor = `${nextItem.occurredAt.toISOString()}|${nextItem.createdAt.toISOString()}`;
+      nextCursor = `${nextItem.occurredAt.toISOString()}|${nextItem.createdAt.toISOString()}|${nextItem.id}`;
     }
 
     const result = notifications

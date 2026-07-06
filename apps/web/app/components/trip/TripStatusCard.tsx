@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useRef } from "react";
+import { useEffect, useMemo, useRef } from "react";
 import { CircleNotchIcon, ReceiptIcon } from "@phosphor-icons/react";
 import { useGetUserBookingsInfinite } from "@repo/api";
 import { groupByDate, transformToTripStatusItem } from "~/lib/utils";
@@ -8,7 +8,11 @@ import { TripStatusItem } from "~/lib/type";
 import TripStatusCardItem from "./TripStatusCardItem";
 
 
-const TripStatusCard = () => {
+const TripStatusCard = ({
+    scrollToBookingId,
+}: {
+    scrollToBookingId?: string | null;
+}) => {
     const {
         data,
         fetchNextPage,
@@ -19,7 +23,10 @@ const TripStatusCard = () => {
         error,
     } = useGetUserBookingsInfinite();
 
-    const allBookings = data?.pages?.flatMap((page) => page.bookings) ?? [];
+    const allBookings = useMemo(
+        () => data?.pages?.flatMap((page) => page.bookings) ?? [],
+        [data],
+    );
     const tripStatusItems: TripStatusItem[] = allBookings
         .map(transformToTripStatusItem)
         .filter((item): item is TripStatusItem => item !== null);
@@ -44,6 +51,16 @@ const TripStatusCard = () => {
 
         return () => observer.disconnect();
     }, [hasNextPage, isFetchingNextPage, fetchNextPage]);
+
+    useEffect(() => {
+        if (!scrollToBookingId) return;
+
+        const exists = allBookings.some((b) => b.id === scrollToBookingId);
+
+        if (!exists && hasNextPage && !isFetchingNextPage) {
+            fetchNextPage();
+        }
+    }, [scrollToBookingId, allBookings, hasNextPage, isFetchingNextPage, fetchNextPage]);
 
     return (
         <div className="flex flex-col gap-8 pt-6">
@@ -71,7 +88,11 @@ const TripStatusCard = () => {
                             </h3>
 
                             {items.map((item) => (
-                                <TripStatusCardItem key={item.id} item={item} />
+                                <TripStatusCardItem
+                                    key={item.id}
+                                    item={item}
+                                    scrollToBookingId={scrollToBookingId ?? undefined}
+                                />
                             ))}
                         </div>
                     ))}

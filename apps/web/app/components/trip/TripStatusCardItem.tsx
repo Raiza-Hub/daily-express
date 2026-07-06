@@ -5,7 +5,7 @@ import { formatPrice } from "@repo/ui/lib/utils";
 import dayjs from "dayjs";
 import duration from "dayjs/plugin/duration";
 import { useQueryClient } from "@repo/api";
-import { useState } from "react";
+import { useLayoutEffect, useRef, useState } from "react";
 import { TripStatusItem } from "~/lib/type";
 import TripDetailsSheet from "./TripDetailsSheet";
 
@@ -13,9 +13,28 @@ dayjs.extend(duration);
 
 const TRANSACTION_FEE = 1000;
 
-const TripStatusCardItem = ({ item }: { item: TripStatusItem }) => {
+const TripStatusCardItem = ({
+    item,
+    scrollToBookingId,
+}: {
+    item: TripStatusItem;
+    scrollToBookingId?: string;
+}) => {
     const [sheetOpen, setSheetOpen] = useState(false);
+    const [isHighlighted, setIsHighlighted] = useState(false);
+    const cardRef = useRef<HTMLDivElement>(null);
     const queryClient = useQueryClient();
+
+    useLayoutEffect(() => {
+        if (scrollToBookingId === item.id) {
+            requestAnimationFrame(() => {
+                cardRef.current?.scrollIntoView({ behavior: "smooth", block: "center" });
+            });
+            setIsHighlighted(true);
+            const timer = setTimeout(() => setIsHighlighted(false), 2000);
+            return () => clearTimeout(timer);
+        }
+    }, [scrollToBookingId, item.id]);
 
     const departure = dayjs(item.trip.departureTime);
     const arrival = dayjs(item.trip.estimatedArrivalTime);
@@ -59,7 +78,12 @@ const TripStatusCardItem = ({ item }: { item: TripStatusItem }) => {
 
     return (
         <>
-            <div className="relative w-full bg-white rounded-2xl overflow-hidden px-1">
+            <div
+                ref={cardRef}
+                className={`relative w-full bg-white rounded-2xl overflow-hidden px-1 transition-all duration-700 ${
+                    isHighlighted ? "ring-2 ring-blue-500" : "ring-0"
+                }`}
+            >
                 <div className="flex flex-col lg:flex-row lg:items-start px-2 py-5 gap-6">
                     {/* Left Section */}
                     <div className="flex-1 min-w-0">

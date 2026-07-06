@@ -45,21 +45,6 @@ export function formatLocalDate(date: Date): string {
   return `${year}-${month}-${day}`;
 }
 
-export function formatDateTime(value: string | Date) {
-  return new Intl.DateTimeFormat("en-NG", {
-    dateStyle: "medium",
-    timeStyle: "short",
-  }).format(new Date(value));
-}
-
-export function formatCurrency(amountMajor: number, currency: string) {
-  return new Intl.NumberFormat("en-NG", {
-    style: "currency",
-    currency,
-    minimumFractionDigits: 0,
-    maximumFractionDigits: 0,
-  }).format(amountMajor);
-}
 
 export function parseLocalDate(date: string): Date {
   if (!isValidDateString(date)) {
@@ -116,7 +101,6 @@ export function transformToTripStatusItem(
 
   return {
     id: booking.id,
-    createdAt: booking.createdAt,
     driver: booking.driverInfo
       ? {
           firstName: booking.driverInfo.firstName,
@@ -162,19 +146,8 @@ export function transformToTripStatusItem(
 export function groupByDate(
   items: TripStatusItem[],
 ): Map<string, TripStatusItem[]> {
-  const decorated = items.map((item) => ({
-    item,
-    day: dayjs(item.trip.departureTime).startOf("day").valueOf(),
-    time: item.trip.departureTime.getTime(),
-  }));
-
-  decorated.sort((a, b) => {
-    if (a.day !== b.day) return b.day - a.day;
-    return a.time - b.time;
-  });
-
   const groups = new Map<string, TripStatusItem[]>();
-  for (const { item } of decorated) {
+  for (const item of items) {
     const key = dayjs(item.trip.departureTime).format("MMM D, YYYY");
     const group = groups.get(key);
     if (group) {
@@ -183,6 +156,5 @@ export function groupByDate(
       groups.set(key, [item]);
     }
   }
-
   return groups;
 }
