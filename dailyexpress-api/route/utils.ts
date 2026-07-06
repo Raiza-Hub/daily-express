@@ -60,12 +60,13 @@ export async function resolveDriverId(user: JWTPayload): Promise<string> {
   return driverRecord.id;
 }
 
-export function isValidUserBookingsCursor(value: unknown): value is { createdAt: string } {
+export function isValidUserBookingsCursor(value: unknown): value is { tripDate: string; id: string } {
   if (!value || typeof value !== "object") return false;
   const cursor = value as Record<string, unknown>;
   return (
-    typeof cursor.createdAt === "string" &&
-    !Number.isNaN(new Date(cursor.createdAt).getTime())
+    typeof cursor.tripDate === "string" &&
+    !Number.isNaN(new Date(cursor.tripDate).getTime()) &&
+    typeof cursor.id === "string"
   );
 }
 

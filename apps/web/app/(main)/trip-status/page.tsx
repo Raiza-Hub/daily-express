@@ -1,6 +1,5 @@
 import type { Metadata } from "next";
-import TripStatusCard from "~/components/trip/TripStatusCard";
-import TripStatusFilter from "~/components/trip/TripStatusFilter";
+import TripStatusPageClient from "./TripStatusPageClient";
 import { buildWebMetadata } from "../../lib/seo";
 
 export const metadata: Metadata = buildWebMetadata({
@@ -11,14 +10,10 @@ export const metadata: Metadata = buildWebMetadata({
     noIndex: true,
 });
 
-
 const Page = () => {
     return (
         <div className="w-full max-w-3xl mx-auto">
-            <div className="mb-8">
-                <TripStatusFilter />
-            </div>
-            <TripStatusCard />
+            <TripStatusPageClient />
         </div>
     );
 };

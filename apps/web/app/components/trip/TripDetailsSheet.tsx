@@ -287,7 +287,7 @@ const TripDetailsSheet = ({
                         exit="exit"
                         transition={{ duration: 0.22, ease: "easeInOut" }}
                       >
-                        <div className="px-6 pt-5 pb-6">
+                        <div className="px-6">
                           {driver ? (
                             <DriverInfo {...driver} />
                           ) : (

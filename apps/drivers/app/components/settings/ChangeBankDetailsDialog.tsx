@@ -308,7 +308,13 @@ export default function ChangeBankDetailsDialog() {
       accountNumber: driver?.accountNumber || "",
       bankName: driver?.bankName || "",
       bankCode: driver?.bankCode || "",
-      kycType: driver?.kycType || "",
+      // Only pre-fill kycType when KYC fields are visible (i.e. not active/pending).
+      // If we pre-fill it while the fields are hidden, superRefine will require kycId
+      // and block form submission.
+      kycType:
+        driver?.kycStatus === "active" || driver?.kycStatus === "pending"
+          ? ""
+          : driver?.kycType || "",
       kycId: "",
     },
   });
@@ -337,7 +343,10 @@ export default function ChangeBankDetailsDialog() {
       accountNumber: driver?.accountNumber || "",
       bankName: driver?.bankName || "",
       bankCode: driver?.bankCode || "",
-      kycType: driver?.kycType || "",
+      kycType:
+        driver?.kycStatus === "active" || driver?.kycStatus === "pending"
+          ? ""
+          : driver?.kycType || "",
       kycId: "",
     });
   }, [driver, open, reset]);
@@ -385,7 +394,10 @@ export default function ChangeBankDetailsDialog() {
       accountNumber: driver?.accountNumber || "",
       bankName: driver?.bankName || "",
       bankCode: driver?.bankCode || "",
-      kycType: driver?.kycType || "",
+      kycType:
+        driver?.kycStatus === "active" || driver?.kycStatus === "pending"
+          ? ""
+          : driver?.kycType || "",
       kycId: "",
     });
   };

@@ -1,4 +1,4 @@
-import { and, desc, eq, gte, lt } from "drizzle-orm";
+import { and, desc, eq, gte, lt, or } from "drizzle-orm";
 import type {
   DriverPayoutBalance,
   DriverPayoutHistoryItem,
@@ -118,13 +118,22 @@ export class PayoutService {
     const limit = this.normalizeLimit(query.limit);
     const clauses = [eq(payout.driverId, currentDriver.id)];
     if (query.status) clauses.push(eq(payout.status, query.status));
-    if (query.cursor) clauses.push(lt(payout.createdAt, new Date(query.cursor)));
+    if (query.cursor) {
+      const [createdAtStr, id] = query.cursor.split("|");
+      const cursorDate = new Date(createdAtStr);
+      clauses.push(
+        or(
+          lt(payout.createdAt, cursorDate),
+          and(eq(payout.createdAt, cursorDate), lt(payout.id, id)),
+        ),
+      );
+    }
 
     const rows = await this.repo.findPayoutHistory(and(...clauses), limit + 1);
 
     let nextCursor: string | null = null;
     if (rows.length > limit) {
-      nextCursor = rows[limit].createdAt.toISOString();
+      nextCursor = `${rows[limit].createdAt.toISOString()}|${rows[limit].id}`;
     }
 
     const payouts = rows.slice(0, limit).map((row) => ({

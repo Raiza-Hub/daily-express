@@ -20,7 +20,7 @@ export class NotificationRepository {
   ) {
     return db.query.notification.findMany({
       where: whereClause,
-      orderBy: [desc(notification.occurredAt), desc(notification.createdAt)],
+      orderBy: [desc(notification.occurredAt), desc(notification.createdAt), desc(notification.id)],
       limit,
     });
   }

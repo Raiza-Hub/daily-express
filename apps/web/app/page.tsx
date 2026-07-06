@@ -1,6 +1,5 @@
 import type { Metadata } from "next";
 import Navbar from "~/components/Navbar";
-// import SettingNavTabs from "~/components/NavTabs";
 import TripSearchSection from "./components/trip/TripSearchSection";
 import Footer from "@repo/ui/Footer";
 import { buildHomeMetadataFromSearchParams } from "./lib/seo";

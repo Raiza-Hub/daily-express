@@ -34,7 +34,6 @@ export interface BookingContext {
 
 export interface TripStatusItem {
   id: string;
-  createdAt: Date | string;
   trip: TRoute;
   driver?: DriverInfoProps;
   routeId: string;
