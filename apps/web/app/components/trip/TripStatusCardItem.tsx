@@ -5,7 +5,6 @@ import { formatPrice } from "@repo/ui/lib/utils";
 import dayjs from "dayjs";
 import duration from "dayjs/plugin/duration";
 import { useQueryClient } from "@repo/api";
-import { preload } from "react-dom";
 import { useState } from "react";
 import { TripStatusItem } from "~/lib/type";
 import TripDetailsSheet from "./TripDetailsSheet";
@@ -37,13 +36,25 @@ const TripStatusCardItem = ({ item }: { item: TripStatusItem }) => {
                 ? `${totalHours}h`
                 : `${minutes}m`;
 
-    const openSheet = () => {
+    const openSheet = (e: React.MouseEvent<HTMLButtonElement>) => {
+        e.currentTarget.blur();
         queryClient.invalidateQueries({ queryKey: ["userBookings"] });
         setSheetOpen(true);
     };
+
     const preloadDriverImages = () => {
-        preload("/driver-not-found.webp", { as: "image", fetchPriority: "low" });
-        preload("/awaiting-driver.webp", { as: "image", fetchPriority: "low" });
+        const images = [
+            "/driver-not-found.webp",
+            "/awaiting-driver.webp",
+            "/refund-stamp.png",
+            "/refund-fail-stamp.png",
+        ];
+
+        images.forEach((src) => {
+            const img = new Image();
+            img.decoding = "async";
+            img.src = src;
+        });
     };
 
     return (
