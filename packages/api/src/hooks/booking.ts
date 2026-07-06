@@ -264,7 +264,6 @@ export const useGetTripsSummaryRange = (
     queryFn: () => getTripsSummaryRangeFn(startDate, endDate),
     retry: false,
     enabled: options?.enabled ?? (!!startDate && !!endDate),
-    placeholderData: keepPreviousData,
   });
 };
 
