@@ -51,7 +51,7 @@ export class KycDedupClient {
       claimedAt: new Date().toISOString(),
     };
 
-    const ttl = driverId ? 7200 : 3600;
+    const ttl = 300;
     const ok = await redis.set(this.key(hash), JSON.stringify(entry), {
       nx: true,
       ex: ttl,
