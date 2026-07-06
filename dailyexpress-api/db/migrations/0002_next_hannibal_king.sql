@@ -1,1 +1,0 @@
-ALTER TABLE "driver_stats" DROP COLUMN "active_routes";

@@ -5,29 +5,8 @@
     {
       "idx": 0,
       "version": "7",
-      "when": 1781781195320,
-      "tag": "0000_mature_silver_samurai",
-      "breakpoints": true
-    },
-    {
-      "idx": 1,
-      "version": "7",
-      "when": 1781824076893,
-      "tag": "0001_woozy_ken_ellis",
-      "breakpoints": true
-    },
-    {
-      "idx": 2,
-      "version": "7",
-      "when": 1781957414128,
-      "tag": "0002_next_hannibal_king",
-      "breakpoints": true
-    },
-    {
-      "idx": 3,
-      "version": "7",
-      "when": 1782293319813,
-      "tag": "0003_colossal_wallop",
+      "when": 1783364951607,
+      "tag": "0000_complete_black_widow",
       "breakpoints": true
     }
   ]
