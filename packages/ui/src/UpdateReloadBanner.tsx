@@ -7,17 +7,11 @@ import { Button } from "./components/button";
 import { cn } from "./lib/utils";
 
 const DISMISSED_PREFIX = "dailyexpress-update-banner-dismissed-";
-const BASE_INTERVAL_MS = 60_000;
-const MAX_INTERVAL_MS = 300_000;
 const CHANNEL_NAME = "dailyexpress-deployment-version";
 
 type UpdateReloadBannerProps = {
   initialVersion: string;
   appName?: "web" | "driver";
-};
-
-type VersionResponse = {
-  version?: string;
 };
 
 function isVersionDismissed(version: string) {
@@ -55,8 +49,7 @@ export function UpdateReloadBanner({
       return;
     }
 
-    let timer: ReturnType<typeof setTimeout> | null = null;
-    let intervalMs = BASE_INTERVAL_MS;
+    let registration: ServiceWorkerRegistration | null = null;
     let channel: BroadcastChannel | null = null;
     let stopped = false;
 
@@ -77,60 +70,61 @@ export function UpdateReloadBanner({
       }
     }
 
-    async function fetchVersion() {
-      try {
-        const response = await fetch(`/api/version?ts=${Date.now()}`, {
-          cache: "no-store",
-          credentials: "omit",
-          headers: {
-            "Cache-Control": "no-cache",
-            Pragma: "no-cache",
-          },
+    function handleVersionMessage(event: MessageEvent) {
+      if (event.data?.type === "VERSION") {
+        handleNewVersion(event.data.version);
+        channel?.postMessage({
+          type: "NEW_VERSION",
+          version: event.data.version,
         });
+      }
+    }
 
-        if (!response.ok) {
-          throw new Error(`Failed to fetch app version: ${response.status}`);
+    async function checkForUpdates() {
+      if (registration) {
+        try {
+          await registration.update();
+        } catch {
+          // Registration update failed; next interval retries.
+        }
+      }
+    }
+
+    async function registerSW() {
+      if (!("serviceWorker" in navigator)) {
+        return;
+      }
+
+      try {
+        const reg = await navigator.serviceWorker.register("/api/sw");
+        registration = reg;
+
+        navigator.serviceWorker.addEventListener(
+          "message",
+          handleVersionMessage,
+        );
+
+        if (reg.waiting) {
+          reg.waiting.postMessage({ type: "GET_VERSION" });
+          return;
         }
 
-        const data = (await response.json()) as VersionResponse;
-        const version = data.version;
+        reg.onupdatefound = () => {
+          const installing = reg.installing;
+          if (!installing) return;
 
-        if (version && version !== initialVersion) {
-          handleNewVersion(version);
-          channel?.postMessage({
-            type: "NEW_VERSION",
-            version,
-          });
-        }
-
-        intervalMs = BASE_INTERVAL_MS;
+          installing.onstatechange = () => {
+            if (
+              installing.state === "installed" &&
+              navigator.serviceWorker.controller
+            ) {
+              installing.postMessage({ type: "GET_VERSION" });
+            }
+          };
+        };
       } catch {
-        intervalMs = Math.min(intervalMs * 2, MAX_INTERVAL_MS);
+        // ServiceWorker not supported or registration failed.
       }
-    }
-
-    function scheduleNextCheck() {
-      if (stopped) {
-        return;
-      }
-
-      timer = setTimeout(() => {
-        void fetchVersion().finally(scheduleNextCheck);
-      }, intervalMs);
-    }
-
-    function handleVisibilityChange() {
-      if (document.visibilityState !== "visible") {
-        return;
-      }
-
-      intervalMs = BASE_INTERVAL_MS;
-
-      if (timer) {
-        clearTimeout(timer);
-      }
-
-      void fetchVersion().finally(scheduleNextCheck);
     }
 
     if (typeof BroadcastChannel !== "undefined") {
@@ -142,15 +136,27 @@ export function UpdateReloadBanner({
       };
     }
 
-    void fetchVersion().finally(scheduleNextCheck);
+    void registerSW();
+
+    function handleVisibilityChange() {
+      if (document.visibilityState === "visible") {
+        void checkForUpdates();
+      }
+    }
     document.addEventListener("visibilitychange", handleVisibilityChange);
 
     return () => {
       stopped = true;
-      document.removeEventListener("visibilitychange", handleVisibilityChange);
+      document.removeEventListener(
+        "visibilitychange",
+        handleVisibilityChange,
+      );
 
-      if (timer) {
-        clearTimeout(timer);
+      if (navigator.serviceWorker) {
+        navigator.serviceWorker.removeEventListener(
+          "message",
+          handleVersionMessage,
+        );
       }
 
       channel?.close();
@@ -188,7 +194,7 @@ export function UpdateReloadBanner({
         "border-b border-[#BFDBFE]",
         "flex items-center justify-between gap-3 px-4 py-2.5",
         "bg-[#F8FBFF] text-sm font-medium text-[#1E40AF]",
-        "animate-in slide-in-from-top duration-300 ease-out"
+        "animate-in slide-in-from-top duration-300 ease-out",
       )}
     >
       <span className="flex min-w-0 items-center gap-2">
@@ -209,7 +215,7 @@ export function UpdateReloadBanner({
           className={cn(
             "h-7 cursor-pointer gap-1.5 rounded-sm px-2.5",
             "bg-[#EFF6FF] text-[#1E40AF] hover:bg-[#DBEAFE] hover:text-[#1E40AF]",
-            "focus-visible:ring-[#1E40AF]"
+            "focus-visible:ring-[#1E40AF]",
           )}
           onClick={handleReload}
         >
@@ -224,7 +230,7 @@ export function UpdateReloadBanner({
           className={cn(
             "size-7 cursor-pointer rounded-sm",
             "text-[#1E40AF] hover:bg-[#DBEAFE] hover:text-[#1E40AF]",
-            "focus-visible:ring-[#1E40AF]"
+            "focus-visible:ring-[#1E40AF]",
           )}
           onClick={handleDismiss}
           aria-label="Dismiss update notification"
