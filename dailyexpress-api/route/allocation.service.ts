@@ -5,7 +5,7 @@ import { booking, earning, payment, route, trip, VEHICLE_CAPACITY } from "../db/
 import { driverStats } from "../db/driver-schema";
 import { getConfig } from "../config/index";
 import { logger } from "../utils/logger";
-import { formatAmountMinor } from "../utils/payout";
+import { formatAmountMajor } from "../utils/payout";
 import { toMinorAmount } from "../utils/payment";
 import { formatBusinessDate } from "../utils/route";
 import { jobService } from "../workers/job.service";
@@ -33,7 +33,6 @@ export class AllocationService {
       return;
     }
 
-    let routeRecord: { id: string; departure_time: string; priceCar: number; priceBus: number; pickup_location_title: string; dropoff_location_title: string; meeting_point: string } | undefined;
     const found = await db.query.route.findFirst({
       where: eq(route.id, bookingRecord.routeId),
     });
@@ -45,7 +44,7 @@ export class AllocationService {
       });
       return;
     }
-    routeRecord = found;
+    const routeRecord = found;
 
     const passengerUser = bookingRecord.userId ? await this.repo.findUserById(bookingRecord.userId) : null;
     let emailHtml: string | null = null;
@@ -58,7 +57,7 @@ export class AllocationService {
         frontendUrl: config.FRONTEND_URL,
         passengerName: `${bookingRecord.firstName ?? ""} ${bookingRecord.lastName ?? ""}`.trim() || null,
         paymentReference: reference,
-        pricePaid: formatAmountMinor(bookingRecord.fareAmount, "NGN"),
+        pricePaid: formatAmountMajor(bookingRecord.fareAmount, "NGN"),
         pickupTitle: routeRecord.pickup_location_title,
         dropoffTitle: routeRecord.dropoff_location_title,
         tripDate: formatBusinessDate(bookingRecord.tripDate),
@@ -185,10 +184,12 @@ export class AllocationService {
         const minor = toMinorAmount(bookingRecord.fareAmount);
         await tx.execute(sql`
           INSERT INTO ${earning} (driver_id, booking_id, trip_id, route_id, trip_date,
+            pickup_title, dropoff_title,
             gross_amount_minor, fee_amount_minor, net_amount_minor,
             currency, status, source_event_id, created_at, updated_at)
           VALUES (${tripDriverId}, ${bookingId}, ${tripId}, ${bookingRecord.routeId},
-            ${tripDateStr}, ${minor}, 0, ${minor},
+            ${tripDateStr}, ${routeRecord.pickup_location_title}, ${routeRecord.dropoff_location_title},
+            ${minor}, 0, ${minor},
             'NGN', 'pending_trip_completion', ${`payment:${reference}:allocation-driver-present`}, now(), now())
         `);
         await tx.execute(sql`

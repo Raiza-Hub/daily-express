@@ -47,3 +47,10 @@ export function formatAmountMinor(amountMinor: number, currency: string) {
     currency,
   }).format(amountMinor / 100);
 }
+
+export function formatAmountMajor(amountMajor: number, currency: string) {
+  return new Intl.NumberFormat("en-NG", {
+    style: "currency",
+    currency,
+  }).format(amountMajor);
+}
