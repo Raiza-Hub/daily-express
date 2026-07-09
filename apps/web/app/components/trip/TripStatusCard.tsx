@@ -71,7 +71,7 @@ const TripStatusCard = ({
             ) : isError ? (
                 <div className="flex flex-col items-center justify-center gap-4 py-20">
                     <p className="text-red-500">Failed to load bookings</p>
-                    <p className="text-sm text-gray-500">{(error as Error)?.message}</p>
+                    <p className="text-sm text-gray-500">Something went wrong</p>
                 </div>
             ) : tripStatusItems.length === 0 ? (
                 <div className="flex flex-col items-center justify-center gap-2 py-20">

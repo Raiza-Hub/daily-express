@@ -99,6 +99,8 @@ export const useDriverNotifications = (params?: {
       }),
     retry: false,
     enabled: params?.enabled ?? true,
+    staleTime: 30_000,
+    refetchOnMount: false,
   });
 };
 
@@ -119,6 +121,8 @@ export const useDriverNotificationsInfinite = (params?: {
     getNextPageParam: (lastPage) => lastPage.nextCursor,
     retry: false,
     enabled: params?.enabled ?? true,
+    staleTime: 30_000,
+    refetchOnMount: false,
   });
 };
 

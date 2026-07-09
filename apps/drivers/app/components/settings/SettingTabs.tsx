@@ -21,6 +21,7 @@ const SettingNavTabs = () => {
                         <Link
                             key={tab.name}
                             href={tab.href}
+                            prefetch={true}
                             className={`
                                 whitespace-nowrap border-b-2 py-4 px-1 text-sm font-medium transition-colors duration-200
                                 ${isActive
