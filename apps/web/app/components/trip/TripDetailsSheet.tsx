@@ -134,7 +134,7 @@ const TripDetailsSheet = ({
                   : "/refund-fail-stamp.png"
               }
               alt=""
-              className="absolute right-2 top-14 w-20 h-20 sm:-right-16 sm:top-16 sm:w-32 sm:h-32 object-contain pointer-events-none select-none z-10"
+              className="absolute right-2 top-14 w-20 h-20 sm:-right-32 sm:top-16 sm:w-32 sm:h-32 object-contain pointer-events-none select-none z-10"
             />
           ) : null}
 

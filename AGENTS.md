@@ -26,36 +26,22 @@ npx opensrc <owner>/<repo>      # GitHub repo (e.g., npx opensrc vercel/ai)
 <!-- opensrc:end -->
 
 ## Goal
-- Fix payout FK violation where recipient_id was set to driver.id instead of payout_recipient.id, causing the payout worker to crash silently
+- Fix slow tab switching in settings pages and reduce unnecessary network requests from navbar-mounted hooks in the drivers app.
 
 ## Constraints & Preferences
-- Use booking firstName/lastName (not users table or paymentRecord.customerName) for email name lookup
-- tx is always passed at call sites, so make it required
-- Const capture (const pending = pendingRefund) to fix TS closure narrowing, not null assertions
-- Tab content should animate on switch without unmounting; use forceMount with AnimatePresence
-- For image preloading, use React 19 preload() from react-dom on mouse enter (intent-based), not head preload links
-- Do not include seed scripts in commits
-- When driver is not payout-ready, create a notification for the driver instead of throwing
+- Route-based navigation (separate URLs per settings tab) must be preserved; no conversion to client-side tabs.
+- Use the existing `Loader` component (SpinnerIcon from @phosphor-icons/react) for loading states — not plain text.
+- Use TanStack Query (React Query v5) options `staleTime` and `refetchOnMount` to prevent unnecessary refetches.
+- Changes to shared hooks in `packages/api` affect both `apps/drivers` and `apps/web`.
 
 ## Progress
 ### Done
-- Added Framer Motion animation (fade+slide, 150ms) on tab switch in TripDetailsSheet.tsx using single AnimatePresence mode="wait" replacing TabsContent
-- Refactored tab animation to use directional slide with Variants, useMeasure for height smoothing, and scroll container ref
-- Changed TripCancelledEmail.tsx and RefundFailedEmail.tsx greeting fallback: customerName || customerEmail → customerName || "Valued Customer"
-- Added booking name lookup (firstName + lastName) in sendRefundFailureEmail and sendTripCancelledEmail via tx.query.booking.findFirst
-- Made tx: PaymentTransaction required in both methods and removed dead if (tx)/else branches
-- Fixed TS error "pendingRefund is possibly null" in refundConfirmedBooking by capturing const pending = pendingRefund
-- Fixed cancelled-trip bookings hidden on trip-status page: changed ne(trip.status, "cancelled") to or(ne(trip.status, "cancelled"), inArray(booking.paymentStatus, ["refund_pending", "refunded", "refund_failed"]))
-- Fixed driver status image not showing in TripDetailsSheet: added driverStatus prop to TripDetailsSheet call in TripStatusCardItem.tsx
-- Added intent-based image preloading in TripStatusCardItem.tsx: preload() from react-dom on onMouseEnter with fetchPriority: "low"
-- Fixed SSE notifications not streaming on first connect: removed isFirstOpen guard in useDriverNotificationsSSE.ts
-- Added KYC verification notification support: renamed BANK_VERIFICATION_NOTIFICATION_KEYS to BANK_VERIFICATION_STATE_KEYS, added KYC_VERIFICATION_STATE_KEYS
-- Added IntersectionObserver infinite scroll to NotificationInbox.tsx, PayoutTable.tsx, TripStatusCard.tsx
-- Changed payout backend to cursor-based pagination
-- Fixed missing lt import in payout.repository.ts
-- Fixed payout FK violation: restructured processEarningPayout to get driver/recipient before creating payout, removed fallback recipient creation
-- Replaced throw on incomplete driver profile with a driver notification via notificationService
-- Added auto-retry of blocked payout on bank verification success: driver-verification.worker.ts queries the archived "account-setup-pending" notification for earningId metadata and enqueues a payout for that specific earning
+1. **Created `apps/drivers/app/(main)/settings/loading.tsx`** — uses the existing `Loader` component with `SpinnerIcon`. Shows instantly during navigation between settings tabs (Next.js Suspense boundary for the layout's children).
+2. **Added `prefetch={true}` to `SettingTabs.tsx`** — each `<Link>` now prefetches the full page shell (RSC payload + JS bundles) on hover, making navigation near-instant.
+3. **Added `staleTime: 5 * 60 * 1000` + `refetchOnMount: false` to `useGetDriver`** in `packages/api/src/hooks/driver.ts` — prevents unnecessary refetches from always-mounted navbar components (UserAccountNav, NotificationInbox, PostHogProviders).
+4. **Added `staleTime: 5 * 60 * 1000` + `refetchOnMount: false` to `useGetMe`** in `packages/api/src/hooks/auth.ts` — prevents refetches from always-mounted web Navbar.
+5. **Added `staleTime: 30_000` + `refetchOnMount: false` to `useDriverNotifications` and `useDriverNotificationsInfinite`** in `packages/api/src/hooks/notification.ts` — prevents refetches on tab switch for the notification inbox.
+6. **Typecheck passed for `@repo/api`** — `npm run check-types` confirms all changes compile (only pre-existing error in `@repo/ui` unrelated).
 
 ### In Progress
 - (none)
@@ -64,16 +50,21 @@ npx opensrc <owner>/<repo>      # GitHub repo (e.g., npx opensrc vercel/ai)
 - (none)
 
 ## Key Decisions
-- Tab animation: single AnimatePresence mode="wait" with keyed motion.div; directional slide + height smoothing via useMeasure
-- Email name source: query booking.firstName + booking.lastName via tx (not users table)
-- Make tx required since all call sites always pass it
-- Cancelled-trip booking visibility: or() condition to show refund-related payment statuses
-- Image preloading: React 19 preload() on hover intent vs head preload links
-- SSE first-connect invalidation: always invalidate on open
-- Infinite scroll: IntersectionObserver with sentinel element
-- Payout pagination: cursor-based (not offset)
-- Incomplete driver: notification instead of throw/silent fail
+- **Use `loading.tsx` at `settings/` level (not per-page)** — A single `loading.tsx` at the same segment as `settings/layout.tsx` provides a Suspense boundary for all settings sub-routes (profile, accounts, bank-details). Layout persists during navigation, tabs stay interactive.
+- **`prefetch={true}` on all 3 tab links** — Prefetches dynamic page content (not just app shell), eliminates the remaining delay between click and content display.
+- **`staleTime: 5 * 60 * 1000` for `useGetDriver` and `useGetMe`** — Driver and user profile data changes infrequently. 5-minute freshness prevents refetches on tab switch and window focus while the user is actively using the app.
+- **`staleTime: 30_000` for notification hooks** — Unread badge count needs reasonable freshness but doesn't need refetching on every window focus. 30-second threshold is a good balance.
+- **`refetchOnMount: false` for all 4 hooks** — Safe because: (1) mutations that need fresh data call `refetch()`/`invalidateQueries()` directly which bypasses this option, (2) `refetchInterval: 5000` for pending bank verification still fires regardless, (3) once `staleTime` expires, the next mount/window-focus triggers a normal refetch.
+- **Did NOT convert to client-side tabs** — Team already has the `AnimatePresence` pattern in `TripDetailsSheet.tsx` (apps/web), but the `loading.tsx` + prefetch approach is simpler and matches the preference to keep route-based navigation.
+- **Did NOT implement Parallel Routes** — Overengineered for 3 simple tabs; requires `default.tsx` slots at every URL, all 3 slots mount on initial load (3x data), and adds URL routing complexity.
 
 ## Next Steps
-- Deploy the fix to Railway
-- Re-enqueue the stuck payout job 883a56ce (earning cf14630c, trip dcaa2950-0d3d-4494-a1bb-d44fc14f454a) or delete the DLQ job
+- Monitor for any lingering slow tab switches in production
+- Consider adding `staleTime` to other frequently-remounting query hooks if needed
+
+## Relevant Files
+- `apps/drivers/app/(main)/settings/loading.tsx` — **CREATED** — Loading spinner shown during settings tab navigation.
+- `apps/drivers/app/components/settings/SettingTabs.tsx` — **EDITED** — Added `prefetch={true}` to all 3 tab `<Link>` components.
+- `packages/api/src/hooks/driver.ts` — **EDITED** — `useGetDriver`: added `staleTime: 5 * 60 * 1000` + `refetchOnMount: false`.
+- `packages/api/src/hooks/auth.ts` — **EDITED** — `useGetMe`: added `staleTime: 5 * 60 * 1000` + `refetchOnMount: false`.
+- `packages/api/src/hooks/notification.ts` — **EDITED** — `useDriverNotifications` and `useDriverNotificationsInfinite`: added `staleTime: 30_000` + `refetchOnMount: false`.

@@ -162,6 +162,8 @@ export const useGetMe = (options?: { enabled?: boolean }) => {
     queryKey: ["user"],
     queryFn: getMeFn,
     enabled: options?.enabled ?? true,
+    staleTime: 5 * 60 * 1000,
+    refetchOnMount: false,
   });
 };
 
