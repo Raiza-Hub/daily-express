@@ -1,29 +1,26 @@
 import {
-    Body,
-    Container,
-    Head,
-    Hr,
-    Html,
-    Img,
-    Link,
-    Preview,
-    Section,
-    Text,
+  Body,
+  Container,
+  Head,
+  Hr,
+  Html,
+  Img,
+  Link,
+  Preview,
+  Section,
+  Text,
 } from "@react-email/components";
 import { getEmailLogoSrc } from "../assets";
 
-export type CancellationReason = "driver_deactivated" | "no_driver_found" | "admin_cancelled";
-
-export interface TripCancelledEmailProps {
+export interface RefundSuccessfulEmailProps {
   frontendUrl: string;
   customerName: string | null;
   customerEmail: string;
   paymentReference: string;
-  productName: string;
+  bookingId?: string | null;
   amountMinor: number;
   currency?: string;
-  refundReference: string;
-  reason?: CancellationReason;
+  productName: string;
   supportEmail?: string;
   supportPhone?: string;
 }
@@ -36,32 +33,16 @@ function formatCurrency(amountMinor: number, currency: string = "NGN") {
   }).format(amountMinor / 100);
 }
 
-function getCancellationText(reason: TripCancelledEmailProps["reason"], productName: string) {
-  switch (reason) {
-    case "no_driver_found":
-      return `We were unable to assign a driver to your trip, ${productName}. Your booking has been cancelled and a refund is being processed. We sincerely apologise for the inconvenience.`;
-    case "driver_deactivated":
-      return `We're sorry to let you know that your trip, ${productName} has been cancelled. Unfortunately, this occurred because the assigned driver is no longer available on our platform. We understand how inconvenient this can be, and we sincerely apologise.`;
-    default:
-      return `We're sorry to let you know that your trip, ${productName} has been cancelled. A refund is being processed. We sincerely apologise for the inconvenience.`;
-  }
-}
-
-const TripCancelledEmail = ({
+const RefundSuccessfulEmail = ({
   customerName,
-  customerEmail,
-  paymentReference,
-  productName,
   amountMinor,
   currency = "NGN",
-  refundReference,
-  reason,
+  productName,
   supportEmail = "support@dailyexpress.app",
   supportPhone = "+234 9063611541",
-}: TripCancelledEmailProps) => {
+}: RefundSuccessfulEmailProps) => {
   const greetingName = customerName || "Valued Customer";
-  const previewText = "Your trip has been cancelled and a refund is being processed";
-  const cancellationText = getCancellationText(reason, productName);
+  const previewText = "Your refund has been successfully processed";
 
   return (
     <Html>
@@ -82,42 +63,18 @@ const TripCancelledEmail = ({
           <Container style={card}>
             <Text style={greeting}>Dear {greetingName},</Text>
 
-            <Text style={summary}>{cancellationText}</Text>
-
             <Text style={summary}>
-              We have initiated a full refund of{" "}
+              Your refund of{" "}
               <strong style={strong}>{formatCurrency(amountMinor, currency)}</strong>{" "}
-              to your original payment method. You'll receive a confirmation once the
-              refund has been completed.
+              for your <strong style={strong}>{productName}</strong> booking has been
+              successfully processed.
             </Text>
-
-            <Hr style={divider} />
-
-            <Text style={sectionTitle}>Refund Details</Text>
-            <Text style={detail}>
-              Payment reference:{" "}
-              <strong style={strong}>{paymentReference}</strong>
-            </Text>
-            <Text style={detail}>
-              Refund reference:{" "}
-              <strong style={strong}>{refundReference}</strong>
-            </Text>
-            <Text style={detail}>
-              Amount:{" "}
-              <strong style={strong}>
-                {formatCurrency(amountMinor, currency)}
-              </strong>
-            </Text>
-            {/* <Text style={detail}>
-              Status:{" "}
-              <strong style={strong}>Processing</strong>
-            </Text> */}
 
             <Hr style={divider} />
 
             <Text style={supportText}>
-              Our support team is available to assist you should you have any questions about 
-your refund or your next booking. You can reach us through:
+              If you have any questions about this refund or need further assistance,
+              please contact our support team:
             </Text>
             <Text style={supportText}>
               Phone: <strong style={strong}>{supportPhone}</strong>
@@ -132,9 +89,7 @@ your refund or your next booking. You can reach us through:
             <Hr style={divider} />
 
             <Text style={footerText}>
-              We truly regret the disruption to your travel plans and appreciate your 
-understanding. We remain committed to providing you with a reliable and 
-seamless experience on every journey.
+              Thank you for choosing Daily Express.
             </Text>
             <Text style={footerText}>The Daily Express Team</Text>
           </Container>
@@ -194,20 +149,6 @@ const divider = {
   margin: "24px 0",
 };
 
-const sectionTitle = {
-  color: "#111",
-  fontSize: "14px",
-  fontWeight: "bold" as const,
-  marginBottom: "12px",
-};
-
-const detail = {
-  color: "#333",
-  fontSize: "13px",
-  lineHeight: "20px",
-  margin: "0 0 8px",
-};
-
 const supportText = {
   color: "#333",
   fontSize: "13px",
@@ -231,18 +172,17 @@ const footerText = {
   textAlign: "center" as const,
 };
 
-TripCancelledEmail.PreviewProps = {
+RefundSuccessfulEmail.PreviewProps = {
   frontendUrl: "",
-  customerName: "Ada Okafor",
-  customerEmail: "ada@example.com",
+  customerName: "Chioma Nwosu",
+  customerEmail: "chioma@example.com",
   paymentReference: "PAY-REF-2026-001",
-  productName: "Lagos to Abuja Trip",
+  bookingId: "booking_01JXYZ",
   amountMinor: 1250000,
   currency: "NGN",
-  refundReference: "RFD-PAY-REF-2026-001",
-  reason: "no_driver_found",
+  productName: "Lagos to Abuja Trip",
   supportEmail: "support@dailyexpress.app",
   supportPhone: "+234 9063611541",
-} as TripCancelledEmailProps;
+} as RefundSuccessfulEmailProps;
 
-export default TripCancelledEmail;
+export default RefundSuccessfulEmail;

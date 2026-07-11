@@ -3,6 +3,7 @@ import { render } from "@react-email/render";
 import BookingConfirmedEmail from "./emails/BookingConfirmedEmail";
 import DriverAssignedEmail from "./emails/DriverAssignedEmail";
 import RefundFailedEmail from "./emails/RefundFailedEmail";
+import RefundSuccessfulEmail from "./emails/RefundSuccessfulEmail";
 import ResetPasswordEmail from "./emails/ResetPasswordEmail";
 import VerifyOtpEmail from "./emails/VerifyOtpEmail";
 import PayoutFailedEmail from "./emails/PayoutFailedEmail";
@@ -12,6 +13,7 @@ export const templates = {
   BookingConfirmedEmail: BookingConfirmedEmail,
   DriverAssignedEmail: DriverAssignedEmail,
   RefundFailedEmail: RefundFailedEmail,
+  RefundSuccessfulEmail: RefundSuccessfulEmail,
   ResetPasswordEmail: ResetPasswordEmail,
   VerifyOtpEmail: VerifyOtpEmail,
   PayoutFailedEmail: PayoutFailedEmail,
@@ -44,6 +46,8 @@ export function getEmailSubject(
       return `Driver Assigned - ${props.pickupTitle} to ${props.dropoffTitle}`;
     case "RefundFailedEmail":
       return `Refund could not be completed yet`;
+    case "RefundSuccessfulEmail":
+      return `Your refund has been processed`;
     case "ResetPasswordEmail":
       return `Reset Password`;
     case "VerifyOtpEmail":
