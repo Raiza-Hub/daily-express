@@ -127,7 +127,7 @@ export async function registerTripRefundWorker() {
           where: eq(payment.reference, paymentReference),
         });
         if (paymentRecord) {
-          await paymentPayoutRefundService.sendRefundFailureEmail(paymentRecord, refundReason, tx);
+          await paymentPayoutRefundService.sendRefundFailureEmail(paymentRecord, refundReason, lockedRefund.amount, tx);
         }
       });
     },

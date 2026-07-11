@@ -16,6 +16,7 @@ import { PaymentRepository, paymentRepository } from "./payment.repository";
 import type {
     InitializePaymentInput,
     KoraChannel,
+    KoraInitializeResponse,
     PaymentTransaction,
 } from "./payment.types";
 import type { PaymentRecord } from "../db/index";
@@ -181,7 +182,7 @@ export class PaymentInitService {
     }
 
     // 3. call Kora checkout API outside the transaction
-    let initializeResponse;
+    let initializeResponse: { data: KoraInitializeResponse; raw: unknown };
     try {
       initializeResponse = await this.createKoraCheckoutSession({
         email: authenticatedEmail.trim(),
@@ -351,7 +352,7 @@ export class PaymentInitService {
       return enrichWithExpiry(reloaded || existingPayment, expiresAt);
     }
 
-    let initializeResponse;
+    let initializeResponse: { data: KoraInitializeResponse; raw: unknown };
     try {
       initializeResponse = await this.createKoraCheckoutSession({
         email: authenticatedEmail.trim(),

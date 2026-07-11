@@ -30,6 +30,8 @@ export class PaymentPayoutRefundService {
   ) {}
 
   private async getBankCode(bankName: string): Promise<string | null> {
+    const normalized = bankName.toLowerCase().replace(/\s+/g, "");
+
     try {
       if (
         !this.banksCache ||
@@ -39,7 +41,6 @@ export class PaymentPayoutRefundService {
         this.banksCache = { timestamp: Date.now(), banks: response.data };
       }
 
-      const normalized = bankName.toLowerCase().replace(/\s+/g, "");
       for (const bank of this.banksCache.banks) {
         const candidate = bank.name.toLowerCase().replace(/\s+/g, "");
         if (candidate.includes(normalized) || normalized.includes(candidate)) {
@@ -96,6 +97,21 @@ export class PaymentPayoutRefundService {
       return enrichWithExpiry(existingPayment);
     }
 
+    if (!existingPayment.bookingId) {
+      logger.error("payout_refund.missing_booking_id", { reference });
+      return enrichWithExpiry(existingPayment);
+    }
+
+    const bookingRecord = await db.query.booking.findFirst({
+      where: eq(booking.id, existingPayment.bookingId),
+      columns: { fareAmount: true },
+    });
+    if (!bookingRecord) {
+      logger.error("payout_refund.booking_not_found", { reference, bookingId: existingPayment.bookingId });
+      return enrichWithExpiry(existingPayment);
+    }
+    const refundAmount = bookingRecord.fareAmount;
+
     const pendingRefund = await db.transaction(async (tx) => {
       const [locked] = await tx
         .select()
@@ -119,7 +135,7 @@ export class PaymentPayoutRefundService {
         paymentId: existingPayment.id,
         bookingId: existingPayment.bookingId,
         reference: generateReference(),
-        amount: existingPayment.amount,
+        amount: refundAmount,
         currency: existingPayment.currency,
         reason,
         status: "pending",
@@ -155,7 +171,7 @@ export class PaymentPayoutRefundService {
     try {
       await this.kora.initiatePayout({
         reference: payoutRef,
-        amount: typeof verification.amount === "string" ? parseInt(verification.amount, 10) : verification.amount,
+        amount: refundAmount,
         currency: verification.currency,
         bankCode,
         accountNumber,
@@ -252,6 +268,21 @@ export class PaymentPayoutRefundService {
       return;
     }
 
+    if (!paymentRecord.bookingId) {
+      logger.error("payout_refund.missing_booking_id", { reference: paymentRecord.reference });
+      return;
+    }
+
+    const bookingRecord = await db.query.booking.findFirst({
+      where: eq(booking.id, paymentRecord.bookingId),
+      columns: { fareAmount: true },
+    });
+    if (!bookingRecord) {
+      logger.error("payout_refund.booking_not_found", { reference: paymentRecord.reference, bookingId: paymentRecord.bookingId });
+      return;
+    }
+    const refundAmount = bookingRecord.fareAmount;
+
     let pendingRefund: RefundRecord | null = null;
 
     if (existingRefundReference) {
@@ -281,7 +312,7 @@ export class PaymentPayoutRefundService {
           paymentId: paymentRecord.id,
           bookingId: paymentRecord.bookingId,
           reference: generateReference(),
-          amount: paymentRecord.amount,
+          amount: refundAmount,
           currency: paymentRecord.currency,
           reason,
           status: "pending",
@@ -293,6 +324,7 @@ export class PaymentPayoutRefundService {
 
     if (!pendingRefund) return;
 
+    const resolvedRefund: RefundRecord = pendingRefund;
     let accountNumber: string;
     let accountName: string;
     try {
@@ -316,7 +348,7 @@ export class PaymentPayoutRefundService {
     try {
       await this.kora.initiatePayout({
         reference: payoutRef,
-        amount: paymentRecord.amount,
+        amount: refundAmount,
         currency: paymentRecord.currency,
         bankCode,
         accountNumber,
@@ -326,7 +358,7 @@ export class PaymentPayoutRefundService {
       });
     } catch (error) {
       await db.transaction(async (tx) => {
-        await this.repo.updateRefundStatus(tx, pendingRefund.id, {
+        await this.repo.updateRefundStatus(tx, resolvedRefund.id, {
           status: "failed",
           failureReason: error instanceof Error ? error.message : String(error),
           completedAt: new Date(),
@@ -336,7 +368,7 @@ export class PaymentPayoutRefundService {
     }
 
     await db.transaction(async (tx) => {
-      await this.repo.updateRefundStatus(tx, pendingRefund.id, {
+      await this.repo.updateRefundStatus(tx, resolvedRefund.id, {
         status: "successful",
         providerRefundReference: payoutRef,
         providerStatus: "processing",
@@ -397,8 +429,9 @@ export class PaymentPayoutRefundService {
 
       await this.sendTripCancelledEmail(
         paymentRecord,
-        pendingRefund.reference,
+        resolvedRefund.reference,
         emailReason,
+        refundAmount,
         tx,
       );
     });
@@ -489,6 +522,7 @@ export class PaymentPayoutRefundService {
   async sendRefundFailureEmail(
     paymentRecord: PaymentRecord,
     failureReason: string,
+    refundAmount: number,
     tx: PaymentTransaction,
   ) {
     if (!paymentRecord.customerEmail) return;
@@ -510,7 +544,7 @@ export class PaymentPayoutRefundService {
       customerEmail: paymentRecord.customerEmail,
       paymentReference: paymentRecord.reference,
       bookingId: paymentRecord.bookingId,
-      amountMinor: toMinorAmount(paymentRecord.amount),
+      amountMinor: toMinorAmount(refundAmount),
       currency: paymentRecord.currency,
       productName: paymentRecord.productName,
       failureReason,
@@ -531,11 +565,12 @@ export class PaymentPayoutRefundService {
     paymentRecord: PaymentRecord,
     refundReference: string,
     reason: "driver_deactivated" | "no_driver_found" | "admin_cancelled" | undefined,
+    refundAmount: number,
     tx: PaymentTransaction,
   ) {
     if (!paymentRecord.customerEmail) return;
 
-    const amountMinor = toMinorAmount(paymentRecord.amount);
+    const amountMinor = toMinorAmount(refundAmount);
 
     let customerName: string | null = null;
     if (paymentRecord.bookingId) {
