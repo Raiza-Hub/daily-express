@@ -178,12 +178,16 @@ function formatTripDate(value: string | Date, timeZone: string) {
 function formatTripTime(value: string | Date, timeZone: string) {
   const parsed = parseDateInput(value);
   if (!parsed) return String(value);
-
-  return new Intl.DateTimeFormat("en-NG", {
+  const parts = new Intl.DateTimeFormat("en-NG", {
     timeZone,
-    hour: "2-digit",
+    hour: "numeric",
     minute: "2-digit",
-  }).format(parsed);
+    hour12: true,
+  }).formatToParts(parsed);
+  const hour = parts.find(p => p.type === "hour")?.value ?? "";
+  const minute = parts.find(p => p.type === "minute")?.value ?? "";
+  const dayPeriod = parts.find(p => p.type === "dayPeriod")?.value?.toLowerCase() ?? "";
+  return `${hour}:${minute}${dayPeriod}`;
 }
 
 const main = {
