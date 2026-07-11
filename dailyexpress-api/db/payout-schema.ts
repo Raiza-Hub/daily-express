@@ -110,7 +110,6 @@ export const payout = pgTable(
     providerTransferCode: varchar("provider_transfer_code", { length: 128 }),
     providerTransferId: varchar("provider_transfer_id", { length: 128 }),
     amountMinor: bigint("amount_minor", { mode: "number" }).notNull(),
-    koraFeeAmount: bigint("kora_fee_amount", { mode: "number" }),
     currency: varchar("currency", { length: 8 }).default("NGN").notNull(),
     earningsCount: integer("earnings_count").notNull(),
     status: payoutStatusEnum("status").default("processing").notNull(),
@@ -177,7 +176,6 @@ export const payoutAttempt = pgTable(
       .unique(),
     status: varchar("status", { length: 32 }).default("pending").notNull(),
     failureReason: text("failure_reason"),
-    koraFeeAmount: bigint("kora_fee_amount", { mode: "number" }),
     initiatedAt: timestamp("initiated_at", { mode: "date" })
       .defaultNow()
       .notNull(),

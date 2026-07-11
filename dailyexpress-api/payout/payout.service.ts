@@ -141,7 +141,6 @@ export class PayoutService {
       driverId: row.driverId,
       reference: row.reference,
       amountMinor: row.amountMinor,
-      koraFeeAmount: row.koraFeeAmount,
       currency: row.currency,
       earningsCount: row.earningsCount,
       status: row.status === "pending" ? "processing" : row.status,

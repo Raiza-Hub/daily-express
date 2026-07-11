@@ -6,7 +6,7 @@ import { PayoutRepository, payoutRepository } from "./payout.repository";
 import { driverService as sharedDriverService } from "../driver/driver.service";
 import { notificationService as sharedNotificationService } from "../notification/notification.service";
 import { publishNotificationCreatedInBackground } from "../notification/realtime";
-import { parseMajorCurrencyToMinor, formatAmountMinor } from "../utils/payout";
+import { formatAmountMinor } from "../utils/payout";
 import type { KoraPayoutHistoryItem } from "../payment/payment.types";
 import type { DriverNotification } from "@shared/types";
 
@@ -52,7 +52,6 @@ export class PayoutAttemptService {
           payout,
           attempt,
           verification.raw,
-          parseMajorCurrencyToMinor(verifiedPayout.fee || 0),
         );
         return "settled";
       }
@@ -107,7 +106,6 @@ export class PayoutAttemptService {
     payout: PayoutRecord,
     attempt: PayoutAttemptRecord,
     rawPayload: unknown,
-    koraFeeAmount: number,
   ) {
     let notificationRecord: DriverNotification | null = null;
     const settledAt = new Date();
@@ -133,7 +131,6 @@ export class PayoutAttemptService {
 
       await this.repo.updatePayoutAttempt(tx, lockedAttempt.id, {
         status: "settled",
-        koraFeeAmount,
         settledAt,
         rawWebhook: rawPayload,
       });
@@ -142,7 +139,6 @@ export class PayoutAttemptService {
         .update(payoutTable)
         .set({
           status: "success",
-          koraFeeAmount,
           settledAt,
           nextRetryAt: null,
           failureCode: null,

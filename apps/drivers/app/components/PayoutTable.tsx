@@ -80,9 +80,6 @@ const PayoutTable = () => {
                 <th className="py-4 px-4 font-semibold text-gray-500 text-sm">
                   Payout Amount
                 </th>
-                <th className="py-4 px-4 font-semibold text-gray-500 text-sm">
-                  Settled Amount
-                </th>
                 <th className="py-4 pl-4 font-semibold text-gray-500 text-sm text-right">
                   Status
                 </th>
@@ -93,17 +90,13 @@ const PayoutTable = () => {
                 <tr>
                   <td
                     className="py-12 text-sm text-muted-foreground"
-                    colSpan={5}
+                    colSpan={4}
                   >
                     No payouts yet.
                   </td>
                 </tr>
               )}
               {payouts.map((payout) => {
-                const settledAmount = payout.koraFeeAmount
-                  ? payout.amountMinor - payout.koraFeeAmount
-                  : payout.amountMinor;
-
                 const getStatusDisplay = () => {
                   if (payout.status === "success") {
                     return {
@@ -172,11 +165,6 @@ const PayoutTable = () => {
                     <td className="py-6 px-4 text-gray-600 font-normal text-sm">
                       {formatCurrency(payout.amountMinor, payout.currency)}
                     </td>
-                    <td className="py-6 px-4 text-gray-600 font-bold text-sm">
-                      {payout.status === "success"
-                        ? formatCurrency(settledAmount, payout.currency)
-                        : "-"}
-                    </td>
                     <td className="py-6 pl-4 text-right">
                       <Badge
                         variant="secondary"
@@ -191,14 +179,14 @@ const PayoutTable = () => {
               })}
               {isFetchingNextPage && (
                 <tr>
-                  <td colSpan={5} className="py-4 text-center">
+                  <td colSpan={4} className="py-4 text-center">
                     <SpinnerIcon className="animate-spin mx-auto" />
                   </td>
                 </tr>
               )}
               {hasNextPage && !isFetchingNextPage && (
                 <tr ref={sentinelRef}>
-                  <td colSpan={5} className="h-px" />
+                  <td colSpan={4} className="h-px" />
                 </tr>
               )}
             </tbody>
