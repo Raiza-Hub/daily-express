@@ -5,11 +5,11 @@ import { logger } from "../utils/logger";
 import { PaymentRepository, paymentRepository } from "./payment.repository";
 import type { PaymentStatus } from "./payment.types";
 import { koraClient } from "./kora.client";
-import { paymentRefundService } from "./payment-refund.service";
+import { paymentPayoutRefundService } from "./payment-payout-refund.service";
 
 export class PaymentExpiryService {
   private readonly kora = koraClient;
-  private readonly refundService = paymentRefundService;
+  private readonly refundService = paymentPayoutRefundService;
 
   constructor(private repo: PaymentRepository) {}
 

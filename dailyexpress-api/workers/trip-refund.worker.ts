@@ -3,12 +3,12 @@ import { logger } from "../utils/logger";
 import { db } from "../db/connection";
 import { booking, payment, refund } from "../db/index";
 import { paymentRepository } from "../payment/payment.repository";
-import { paymentRefundService } from "../payment/payment-refund.service";
+import { paymentPayoutRefundService } from "../payment/payment-payout-refund.service";
 import { generateReference } from "../utils/payment";
 import { getBoss, QUEUES, type TripRefundJobData } from "./boss";
 
 const paymentRepo = paymentRepository;
-const refundService = paymentRefundService;
+const refundService = paymentPayoutRefundService;
 
 export async function registerTripRefundWorker() {
   const boss = await getBoss();
@@ -127,7 +127,7 @@ export async function registerTripRefundWorker() {
           where: eq(payment.reference, paymentReference),
         });
         if (paymentRecord) {
-          await refundService.sendRefundFailureEmail(paymentRecord, refundReason, tx);
+          await paymentPayoutRefundService.sendRefundFailureEmail(paymentRecord, refundReason, tx);
         }
       });
     },

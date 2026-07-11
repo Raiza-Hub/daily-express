@@ -5,7 +5,7 @@ import { logger } from "../utils/logger";
 import { jobService } from "../workers/job.service";
 import { koraClient } from "./kora.client";
 import { PaymentRepository } from "./payment.repository";
-import { PaymentRefundService } from "./payment-refund.service";
+import { paymentPayoutRefundService } from "./payment-payout-refund.service";
 import type { PayoutService } from "../payout/payout.service";
 import type { KoraVerifyResponse } from "./payment.types";
 
@@ -54,8 +54,7 @@ export class PaymentConfirmService {
         providerStatus: "success",
       });
 
-      const refundService = new PaymentRefundService(this.repo);
-      await refundService.refundPayment(
+      await paymentPayoutRefundService.refundPayment(
         reference,
         verification.data,
         rawResponse,
@@ -64,9 +63,22 @@ export class PaymentConfirmService {
       return;
     }
 
+    const paymentMethod = verification.data.payment_method;
+    const payerAccount = verification.data.bank_transfer?.payer_bank_account;
+
     await db.transaction(async (tx) => {
       await tx.update(payment)
-        .set({ status: "successful", paidAt: new Date(), providerStatus: "success", lastStatusCheckAt: new Date(), updatedAt: new Date() })
+        .set({
+          status: "successful",
+          paidAt: new Date(),
+          paymentMethod: paymentMethod ?? null,
+          payerBankName: payerAccount?.bank_name ?? null,
+          payerAccountNumber: payerAccount?.account_number ?? null,
+          payerAccountName: payerAccount?.account_name ?? null,
+          providerStatus: "success",
+          lastStatusCheckAt: new Date(),
+          updatedAt: new Date(),
+        })
         .where(and(eq(payment.reference, reference), eq(payment.status, "processing")));
 
       await jobService.enqueue(tx, "allocation.process", {
