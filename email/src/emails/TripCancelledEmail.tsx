@@ -87,9 +87,8 @@ const TripCancelledEmail = ({
             <Text style={summary}>
               We have initiated a full refund of{" "}
               <strong style={strong}>{formatCurrency(amountMinor, currency)}</strong>{" "}
-              to your original payment method. You can expect this to reflect in your account within 
-              3–5 business days, though processing times may vary depending on your bank or 
-              card provider.
+              to your original payment method. You'll receive a confirmation once the
+              refund has been completed.
             </Text>
 
             <Hr style={divider} />

@@ -6,6 +6,8 @@ export { default as DriverAssignedEmail } from "./emails/DriverAssignedEmail";
 export type { DriverAssignedEmailProps } from "./emails/DriverAssignedEmail";
 export { default as RefundFailedEmail } from "./emails/RefundFailedEmail";
 export type { RefundFailedEmailProps } from "./emails/RefundFailedEmail";
+export { default as RefundSuccessfulEmail } from "./emails/RefundSuccessfulEmail";
+export type { RefundSuccessfulEmailProps } from "./emails/RefundSuccessfulEmail";
 export { default as ResetPasswordEmail } from "./emails/ResetPasswordEmail";
 export type { ResetPasswordEmailProps } from "./emails/ResetPasswordEmail";
 export { default as VerifyOtpEmail } from "./emails/VerifyOtpEmail";

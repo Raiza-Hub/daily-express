@@ -474,6 +474,16 @@ export class PaymentPayoutRefundService {
         completedAt: new Date(),
       });
 
+      if (status === "refunded" && existingPayment.customerEmail) {
+        await this.sendRefundSuccessEmail(
+          existingPayment,
+          pendingRefund.amount,
+          pendingRefund.reference,
+          existingPayment.productName ?? "your trip",
+          tx,
+        );
+      }
+
       const [bookingRecord] = await tx
         .update(booking)
         .set({ paymentStatus: status, updatedAt: new Date() })
@@ -600,6 +610,50 @@ export class PaymentPayoutRefundService {
     const subject = getEmailSubject("TripCancelledEmail", propsJson);
 
     await jobService.enqueueEmail(tx, "email.trip_cancelled_refund", {
+      to: paymentRecord.customerEmail,
+      subject,
+      html,
+    });
+  }
+
+  async sendRefundSuccessEmail(
+    paymentRecord: PaymentRecord,
+    refundAmount: number,
+    refundReference: string,
+    productName: string,
+    tx: PaymentTransaction,
+  ) {
+    if (!paymentRecord.customerEmail) return;
+
+    const amountMinor = toMinorAmount(refundAmount);
+
+    let customerName: string | null = null;
+    if (paymentRecord.bookingId) {
+      const bk = await tx.query.booking.findFirst({
+        where: eq(booking.id, paymentRecord.bookingId),
+        columns: { firstName: true, lastName: true },
+      });
+      if (bk?.firstName) {
+        customerName = `${bk.firstName} ${bk.lastName ?? ""}`.trim();
+      }
+    }
+
+    const propsJson = JSON.stringify({
+      frontendUrl: this.config.FRONTEND_URL,
+      customerName,
+      customerEmail: paymentRecord.customerEmail,
+      paymentReference: paymentRecord.reference,
+      bookingId: paymentRecord.bookingId,
+      amountMinor,
+      currency: paymentRecord.currency,
+      productName,
+      supportEmail: "support@dailyexpress.app",
+      supportPhone: this.config.SUPPORT_PHONE,
+    });
+    const html = await renderEmail("RefundSuccessfulEmail", propsJson);
+    const subject = getEmailSubject("RefundSuccessfulEmail", propsJson);
+
+    await jobService.enqueueEmail(tx, "email.refund_successful", {
       to: paymentRecord.customerEmail,
       subject,
       html,
