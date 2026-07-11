@@ -7,7 +7,7 @@ import { PayoutAttemptService, payoutAttemptService } from "./payout-attempt.ser
 import { PayoutProcessorService, payoutProcessorService } from "./payout-processor.service";
 import { PayoutNotificationService, payoutNotificationService } from "./payout-notification.service";
 import { koraClient } from "../payment/kora.client";
-import { parseMajorCurrencyToMinor, KORA_ERROR_CODES } from "../utils/payout";
+import { KORA_ERROR_CODES } from "../utils/payout";
 import type { KoraPayoutWebhookPayload } from "../payment/payment.types";
 
 const WEBHOOK_RETRYABLE_PATTERNS = [
@@ -82,7 +82,6 @@ export class PayoutWebhookService {
         payoutRecord,
         attempt,
         input.event,
-        parseMajorCurrencyToMinor(input.event.data.fee),
       );
       await this.repo.updateWebhookProcessedAt(webhookRecord.id);
       return { processed: true, signatureValid };

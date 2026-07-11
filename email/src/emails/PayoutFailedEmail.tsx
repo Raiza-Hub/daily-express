@@ -20,7 +20,6 @@ export interface PayoutFailedEmailProps {
   driverName: string | null;
   driverEmail: string;
   amountMinor: number;
-  koraFeeAmount: number;
   reference: string;
   failureReason: string;
   bankName: string;
@@ -39,7 +38,6 @@ const PayoutFailedEmail = ({
   driverName,
   driverEmail,
   amountMinor,
-  koraFeeAmount,
   reference,
   failureReason,
   bankName,
@@ -108,14 +106,6 @@ const PayoutFailedEmail = ({
                 </Column>
                 <Column style={valueCol}>
                   <Text style={value}>{formatCurrency(amountMinor)}</Text>
-                </Column>
-              </Row>
-              <Row style={row}>
-                <Column style={labelCol}>
-                  <Text style={label}>Fee:</Text>
-                </Column>
-                <Column style={valueCol}>
-                  <Text style={value}>-{formatCurrency(koraFeeAmount)}</Text>
                 </Column>
               </Row>
               <Row style={row}>
@@ -305,7 +295,6 @@ PayoutFailedEmail.PreviewProps = {
   driverName: "Ibrahim Musa",
   driverEmail: "ibrahim@example.com",
   amountMinor: 8450000,
-  koraFeeAmount: 50000,
   reference: "PO-2026-7781",
   failureReason: "Destination account is temporarily restricted",
   bankName: "Access Bank",

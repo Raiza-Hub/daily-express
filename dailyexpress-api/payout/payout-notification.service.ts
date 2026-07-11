@@ -44,7 +44,6 @@ export class PayoutNotificationService {
         driverName,
         driverEmail: payoutRecord.driverEmail,
         amountMinor: payoutRecord.amountMinor,
-        koraFeeAmount: payoutRecord.koraFeeAmount ?? 0,
         reference: payoutRecord.reference,
         failureReason: reason,
         bankName: recipientRecord.bankName,

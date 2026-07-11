@@ -484,7 +484,6 @@ export interface DriverPayout {
   driverId: string;
   reference: string;
   amountMinor: number;
-  koraFeeAmount?: number | null;
   currency: string;
   earningsCount: number;
   status: PayoutStatus;
