@@ -7,18 +7,62 @@ import { driverService as sharedDriverService } from "../driver/driver.service";
 import { logger } from "../utils/logger";
 import { generateReference, toMinorAmount } from "../utils/payment";
 import { jobService } from "../workers/job.service";
-import { koraClient } from "./kora.client";
+import { koraClient, KoraClient } from "./kora.client";
 import { PaymentRepository, paymentRepository } from "./payment.repository";
 import type { PaymentRecord, BookingRecord, RefundRecord } from "../db/index";
 import { enrichWithExpiry } from "./payment.utils";
-import type { KoraVerifyResponse, PaymentTransaction } from "./payment.types";
+import type { KoraBank, KoraVerifyResponse, PaymentTransaction } from "./payment.types";
+import bankNames from "./bank-name.json";
 
-export class PaymentRefundService {
+interface BanksCache {
+  timestamp: number;
+  banks: KoraBank[];
+}
+
+export class PaymentPayoutRefundService {
   private readonly config = getConfig();
-  private readonly kora = koraClient;
-  private readonly driverService = sharedDriverService;
+  private banksCache: BanksCache | null = null;
+  private readonly BANKS_CACHE_TTL_MS = 86_400_000;
 
-  constructor(private repo = paymentRepository) {}
+  constructor(
+    private repo: PaymentRepository,
+    private kora: KoraClient,
+  ) {}
+
+  private async getBankCode(bankName: string): Promise<string | null> {
+    try {
+      if (
+        !this.banksCache ||
+        Date.now() - this.banksCache.timestamp > this.BANKS_CACHE_TTL_MS
+      ) {
+        const response = await this.kora.listBanks("NG");
+        this.banksCache = { timestamp: Date.now(), banks: response.data };
+      }
+
+      const normalized = bankName.toLowerCase().replace(/\s+/g, "");
+      for (const bank of this.banksCache.banks) {
+        const candidate = bank.name.toLowerCase().replace(/\s+/g, "");
+        if (candidate.includes(normalized) || normalized.includes(candidate)) {
+          return bank.code;
+        }
+      }
+    } catch (error) {
+      logger.warn("payout_refund.list_banks_failed_falling_back", {
+        bankName,
+        error: error instanceof Error ? error.message : String(error),
+      });
+    }
+
+    for (const entry of bankNames) {
+      const candidate = entry.bank_name.toLowerCase().replace(/\s+/g, "");
+      if (candidate.includes(normalized) || normalized.includes(candidate)) {
+        logger.info("payout_refund.bank_names_match", { bankName, matchedName: entry.bank_name, code: entry.code });
+        return entry.code;
+      }
+    }
+
+    return null;
+  }
 
   async refundPayment(
     reference: string,
@@ -31,13 +75,27 @@ export class PaymentRefundService {
   ) {
     const existingPayment = await this.repo.findPaymentByReference(reference);
     if (!existingPayment || existingPayment.status !== "expired") {
-      return existingPayment
-        ? enrichWithExpiry(existingPayment)
-        : null;
+      return existingPayment ? enrichWithExpiry(existingPayment) : null;
     }
 
-    // Prevents double refund: only one request creates the pending refund
-    // inside the lock. The Kora API call runs after the lock is released.
+    if (
+      !existingPayment.payerBankName ||
+      !existingPayment.payerAccountNumber ||
+      !existingPayment.payerAccountName
+    ) {
+      logger.error("payout_refund.missing_payer_details", { reference });
+      return enrichWithExpiry(existingPayment);
+    }
+
+    const bankCode = await this.getBankCode(existingPayment.payerBankName);
+    if (!bankCode) {
+      logger.error("payout_refund.bank_code_not_found", {
+        reference,
+        bankName: existingPayment.payerBankName,
+      });
+      return enrichWithExpiry(existingPayment);
+    }
+
     const pendingRefund = await db.transaction(async (tx) => {
       const [locked] = await tx
         .select()
@@ -74,13 +132,36 @@ export class PaymentRefundService {
       return existingPayment ? enrichWithExpiry(existingPayment) : null;
     }
 
-    let refundResult: Awaited<ReturnType<typeof this.kora.initiateRefund>>;
+    let accountNumber: string;
+    let accountName: string;
     try {
-      refundResult = await this.kora.initiateRefund({
-        reference: pendingRefund.reference,
-        payment_reference: existingPayment.reference,
-        amount: existingPayment.amount,
-        reason,
+      const resolvedAccount = await this.kora.resolveAccountNumber(
+        bankCode,
+        existingPayment.payerAccountNumber,
+        existingPayment.currency,
+      );
+      accountNumber = resolvedAccount.data.account_number;
+      accountName = resolvedAccount.data.account_name;
+    } catch (error) {
+      logger.warn("payout_refund.account_resolve_failed_proceeding", {
+        reference,
+        error: error instanceof Error ? error.message : String(error),
+      });
+      accountNumber = existingPayment.payerAccountNumber;
+      accountName = existingPayment.payerAccountName;
+    }
+
+    const payoutRef = `REF-${reference}`;
+    try {
+      await this.kora.initiatePayout({
+        reference: payoutRef,
+        amount: typeof verification.amount === "string" ? parseInt(verification.amount, 10) : verification.amount,
+        currency: verification.currency,
+        bankCode,
+        accountNumber,
+        accountName,
+        customerEmail: existingPayment.customerEmail ?? "",
+        narration: reason,
       });
     } catch (error) {
       await db.transaction(async (tx) => {
@@ -89,26 +170,15 @@ export class PaymentRefundService {
           failureReason: error instanceof Error ? error.message : String(error),
           completedAt: new Date(),
         });
-
-        if (existingPayment.bookingId) {
-          await tx
-            .update(booking)
-            .set({ paymentStatus: "refund_failed", updatedAt: new Date() })
-            .where(eq(booking.id, existingPayment.bookingId));
-        }
-
-        await this.sendRefundFailureEmail(existingPayment, reason, tx);
       });
-
       throw error;
     }
 
     await db.transaction(async (tx) => {
       await this.repo.updateRefundStatus(tx, pendingRefund.id, {
         status: "successful",
-        providerRefundReference: refundResult.data.reference,
-        providerStatus: refundResult.data.status,
-        rawProviderResponse: refundResult.raw,
+        providerRefundReference: payoutRef,
+        providerStatus: "processing",
         completedAt: new Date(),
       });
 
@@ -136,7 +206,7 @@ export class PaymentRefundService {
           earningRecord,
         );
       } else if (earningRecord) {
-        await this.driverService.adjustPaymentCountersForStatusChange(tx, {
+        await sharedDriverService.adjustPaymentCountersForStatusChange(tx, {
           driverId: earningRecord.driverId,
           amountMinor: earningRecord.netAmountMinor,
           previousStatus: earningRecord.status,
@@ -145,12 +215,193 @@ export class PaymentRefundService {
       }
     });
 
-    logger.info("payment.auto_refund_initiated", {
+    logger.info("payment.payout_refund_initiated", {
       reference,
       amount: existingPayment.amount,
+      payoutRef,
     });
 
     return enrichWithExpiry(existingPayment);
+  }
+
+  async refundConfirmedBooking(
+    paymentRecord: PaymentRecord,
+    reason = "Trip cancelled because driver deactivated their account",
+    emailReason?: "driver_deactivated" | "no_driver_found" | "admin_cancelled",
+    existingRefundReference?: string,
+  ): Promise<void> {
+    if (paymentRecord.status !== "successful") return;
+
+    if (
+      !paymentRecord.payerBankName ||
+      !paymentRecord.payerAccountNumber ||
+      !paymentRecord.payerAccountName
+    ) {
+      logger.error("payout_refund.missing_payer_details", {
+        reference: paymentRecord.reference,
+      });
+      return;
+    }
+
+    const bankCode = await this.getBankCode(paymentRecord.payerBankName);
+    if (!bankCode) {
+      logger.error("payout_refund.bank_code_not_found", {
+        reference: paymentRecord.reference,
+        bankName: paymentRecord.payerBankName,
+      });
+      return;
+    }
+
+    let pendingRefund: RefundRecord | null = null;
+
+    if (existingRefundReference) {
+      pendingRefund = (await this.repo.findRefundByReference(existingRefundReference)) ?? null;
+    }
+
+    if (!pendingRefund) {
+      pendingRefund = await db.transaction(async (tx) => {
+        const [locked] = await tx
+          .select()
+          .from(payment)
+          .where(eq(payment.id, paymentRecord.id))
+          .for("update")
+          .limit(1);
+
+        if (!locked || locked.status !== "successful") return null;
+
+        const existing = await tx.query.refund.findFirst({
+          where: and(
+            eq(refund.paymentId, locked.id),
+            eq(refund.status, "pending"),
+          ),
+        });
+        if (existing) return existing;
+
+        const [row] = await this.repo.insertRefund(tx, {
+          paymentId: paymentRecord.id,
+          bookingId: paymentRecord.bookingId,
+          reference: generateReference(),
+          amount: paymentRecord.amount,
+          currency: paymentRecord.currency,
+          reason,
+          status: "pending",
+          initiatedBy: "auto",
+        });
+        return row;
+      });
+    }
+
+    if (!pendingRefund) return;
+
+    let accountNumber: string;
+    let accountName: string;
+    try {
+      const resolvedAccount = await this.kora.resolveAccountNumber(
+        bankCode,
+        paymentRecord.payerAccountNumber,
+        paymentRecord.currency,
+      );
+      accountNumber = resolvedAccount.data.account_number;
+      accountName = resolvedAccount.data.account_name;
+    } catch (error) {
+      logger.warn("payout_refund.account_resolve_failed_proceeding", {
+        reference: paymentRecord.reference,
+        error: error instanceof Error ? error.message : String(error),
+      });
+      accountNumber = paymentRecord.payerAccountNumber;
+      accountName = paymentRecord.payerAccountName;
+    }
+
+    const payoutRef = `REF-${paymentRecord.reference}`;
+    try {
+      await this.kora.initiatePayout({
+        reference: payoutRef,
+        amount: paymentRecord.amount,
+        currency: paymentRecord.currency,
+        bankCode,
+        accountNumber,
+        accountName,
+        customerEmail: paymentRecord.customerEmail ?? "",
+        narration: reason,
+      });
+    } catch (error) {
+      await db.transaction(async (tx) => {
+        await this.repo.updateRefundStatus(tx, pendingRefund.id, {
+          status: "failed",
+          failureReason: error instanceof Error ? error.message : String(error),
+          completedAt: new Date(),
+        });
+      });
+      throw error;
+    }
+
+    await db.transaction(async (tx) => {
+      await this.repo.updateRefundStatus(tx, pendingRefund.id, {
+        status: "successful",
+        providerRefundReference: payoutRef,
+        providerStatus: "processing",
+        completedAt: new Date(),
+      });
+
+      if (paymentRecord.bookingId) {
+        const bookingRecord = await tx.query.booking.findFirst({
+          where: eq(booking.id, paymentRecord.bookingId),
+        });
+
+        if (bookingRecord) {
+          const wasConfirmed = bookingRecord.status === "confirmed";
+
+          await tx
+            .update(booking)
+            .set({
+              paymentStatus: "refund_pending",
+              seatNumber: null,
+              updatedAt: new Date(),
+            })
+            .where(eq(booking.id, paymentRecord.bookingId));
+
+          if (wasConfirmed && bookingRecord.tripId) {
+            await tx
+              .update(trip)
+              .set({ bookedSeats: sql`GREATEST(${trip.bookedSeats} - 1, 0)` })
+              .where(
+                and(eq(trip.id, bookingRecord.tripId), gt(trip.bookedSeats, 0)),
+              );
+          }
+
+          const earningRecord = await tx.query.earning.findFirst({
+            where: eq(earning.bookingId, paymentRecord.bookingId),
+          });
+
+          await tx
+            .update(earning)
+            .set({ status: "cancelled", updatedAt: new Date() })
+            .where(eq(earning.bookingId, paymentRecord.bookingId));
+
+          if (wasConfirmed) {
+            await this.resolveAndCancelBookingStats(
+              tx,
+              bookingRecord,
+              earningRecord,
+            );
+          } else if (earningRecord) {
+            await sharedDriverService.adjustPaymentCountersForStatusChange(tx, {
+              driverId: earningRecord.driverId,
+              amountMinor: earningRecord.netAmountMinor,
+              previousStatus: earningRecord.status,
+              nextStatus: "cancelled",
+            });
+          }
+        }
+      }
+
+      await this.sendTripCancelledEmail(
+        paymentRecord,
+        pendingRefund.reference,
+        emailReason,
+        tx,
+      );
+    });
   }
 
   async finalizeRefund(
@@ -162,8 +413,6 @@ export class PaymentRefundService {
     );
     if (!existingPayment) return;
 
-    // Prevents two finalize calls from processing the same refund concurrently.
-    // Re-reading under lock ensures only the first sees "pending" status.
     await db.transaction(async (tx) => {
       const [lockedPayment] = await tx
         .select()
@@ -181,7 +430,7 @@ export class PaymentRefundService {
         orderBy: (ref, { desc }) => [desc(ref.createdAt)],
       });
       if (!pendingRefund) {
-        logger.warn("payment.finalize_refund_no_pending_row", {
+        logger.info("payout_refund.webhook_already_processed", {
           paymentReference,
         });
         return;
@@ -219,7 +468,7 @@ export class PaymentRefundService {
             earningRecord,
           );
         } else if (earningRecord) {
-          await this.driverService.adjustPaymentCountersForStatusChange(tx, {
+          await sharedDriverService.adjustPaymentCountersForStatusChange(tx, {
             driverId: earningRecord.driverId,
             amountMinor: earningRecord.netAmountMinor,
             previousStatus: earningRecord.status,
@@ -322,140 +571,6 @@ export class PaymentRefundService {
     });
   }
 
-  async refundConfirmedBooking(
-    paymentRecord: PaymentRecord,
-    reason = "Trip cancelled because driver deactivated their account",
-    emailReason?: "driver_deactivated" | "no_driver_found" | "admin_cancelled",
-    existingRefundReference?: string,
-  ): Promise<void> {
-    if (paymentRecord.status !== "successful") return;
-
-    let pendingRefund: RefundRecord | null = null;
-
-    if (existingRefundReference) {
-      pendingRefund = (await this.repo.findRefundByReference(existingRefundReference)) ?? null;
-    }
-
-    if (!pendingRefund) {
-      // Prevents double refund for the same payment. Same short-lock pattern
-      // as refundPayment above — Kora API call is outside the lock.
-      pendingRefund = await db.transaction(async (tx) => {
-        const [locked] = await tx
-          .select()
-          .from(payment)
-          .where(eq(payment.id, paymentRecord.id))
-          .for("update")
-          .limit(1);
-
-        if (!locked || locked.status !== "successful") return null;
-
-        const existing = await tx.query.refund.findFirst({
-          where: and(
-            eq(refund.paymentId, locked.id),
-            eq(refund.status, "pending"),
-          ),
-        });
-        if (existing) return existing;
-
-        const [row] = await this.repo.insertRefund(tx, {
-          paymentId: paymentRecord.id,
-          bookingId: paymentRecord.bookingId,
-          reference: generateReference(),
-          amount: paymentRecord.amount,
-          currency: paymentRecord.currency,
-          reason,
-          status: "pending",
-          initiatedBy: "auto",
-        });
-        return row;
-      });
-    }
-
-    if (!pendingRefund) return;
-    const pending = pendingRefund;
-
-    const refundResult = await this.kora.initiateRefund({
-      reference: pending.reference,
-      payment_reference: paymentRecord.reference,
-      amount: paymentRecord.amount,
-      reason,
-    });
-
-    await db.transaction(async (tx) => {
-      await this.repo.updateRefundStatus(tx, pending.id, {
-        status: "successful",
-        providerRefundReference: refundResult.data.reference,
-        providerStatus: refundResult.data.status,
-        rawProviderResponse: refundResult.raw,
-        completedAt: new Date(),
-      });
-
-      if (paymentRecord.bookingId) {
-        const bookingRecord = await tx.query.booking.findFirst({
-          where: eq(booking.id, paymentRecord.bookingId),
-        });
-
-        if (bookingRecord) {
-          const wasConfirmed = bookingRecord.status === "confirmed";
-
-          await tx
-            .update(booking)
-            .set({
-              paymentStatus: "refund_pending",
-              seatNumber: null,
-              updatedAt: new Date(),
-            })
-            .where(eq(booking.id, paymentRecord.bookingId));
-
-          if (wasConfirmed && bookingRecord.tripId) {
-            await tx
-              .update(trip)
-              .set({ bookedSeats: sql`GREATEST(${trip.bookedSeats} - 1, 0)` })
-              .where(
-                and(eq(trip.id, bookingRecord.tripId), gt(trip.bookedSeats, 0)),
-              );
-          }
-
-          const earningRecord = await tx.query.earning.findFirst({
-            where: eq(earning.bookingId, paymentRecord.bookingId),
-          });
-
-          await tx
-            .update(earning)
-            .set({ status: "cancelled", updatedAt: new Date() })
-            .where(eq(earning.bookingId, paymentRecord.bookingId));
-
-          if (wasConfirmed) {
-            await this.resolveAndCancelBookingStats(
-              tx,
-              bookingRecord,
-              earningRecord,
-            );
-          } else if (earningRecord) {
-            await this.driverService.adjustPaymentCountersForStatusChange(tx, {
-              driverId: earningRecord.driverId,
-              amountMinor: earningRecord.netAmountMinor,
-              previousStatus: earningRecord.status,
-              nextStatus: "cancelled",
-            });
-          }
-        }
-      }
-
-      await this.sendTripCancelledEmail(
-        paymentRecord,
-        pending.reference,
-        emailReason,
-        tx,
-      );
-    });
-
-    logger.info("payment.driver_deactivation_refund_initiated", {
-      reference: paymentRecord.reference,
-      amount: paymentRecord.amount,
-    });
-  }
-
   private async resolveAndCancelBookingStats(
     tx: PaymentTransaction,
     bookingRecord: BookingRecord,
@@ -479,14 +594,16 @@ export class PaymentRefundService {
 
     if (!driverId) return;
 
-    await this.driverService.decrementStatsForCancelledBooking(tx, {
+    await sharedDriverService.decrementStatsForCancelledBooking(tx, {
       driverId,
       amountMinor:
         earningRecord?.netAmountMinor ?? toMinorAmount(bookingRecord.fareAmount),
       previousEarningStatus: earningRecord?.status ?? null,
     });
   }
-
 }
 
-export const paymentRefundService = new PaymentRefundService();
+export const paymentPayoutRefundService = new PaymentPayoutRefundService(
+  paymentRepository,
+  koraClient,
+);

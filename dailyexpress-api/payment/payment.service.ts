@@ -8,7 +8,7 @@ import { PaymentRepository } from "./payment.repository";
 import { enrichWithExpiry } from "./payment.utils";
 import { PaymentInitService } from "./payment-init.service";
 import { PaymentConfirmService } from "./payment-confirm.service";
-import { PaymentRefundService } from "./payment-refund.service";
+import { PaymentPayoutRefundService } from "./payment-payout-refund.service";
 import { PaymentWebhookService } from "./payment-webhook.service";
 import { PaymentExpiryService } from "./payment-expiry.service";
 import { PayoutService } from "../payout/payout.service";
@@ -37,12 +37,12 @@ const payoutService = new PayoutService();
 export class PaymentService {
   private readonly config = getConfig();
   private readonly repo = new PaymentRepository();
+  private readonly kora = new KoraClient();
   private readonly confirmService = new PaymentConfirmService(this.repo, payoutService);
-  private readonly refundService = new PaymentRefundService(this.repo);
-  private readonly webhookService = new PaymentWebhookService(this.repo, this.refundService);
+  private readonly payoutRefundService = new PaymentPayoutRefundService(this.repo, this.kora);
+  private readonly webhookService = new PaymentWebhookService(this.repo, this.payoutRefundService);
   private readonly expiryService = new PaymentExpiryService(this.repo);
   private readonly initService = new PaymentInitService(this.repo);
-  private readonly kora = new KoraClient();
 
   async initializePayment(
     userId: string,

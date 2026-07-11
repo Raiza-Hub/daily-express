@@ -4,7 +4,7 @@ import { booking, payment, type PaymentRecord } from "../db/index";
 import { logger } from "../utils/logger";
 import { jobService } from "../workers/job.service";
 import { koraClient } from "./kora.client";
-import { PaymentRefundService, paymentRefundService } from "./payment-refund.service";
+import { PaymentPayoutRefundService, paymentPayoutRefundService } from "./payment-payout-refund.service";
 import { PaymentRepository, paymentRepository } from "./payment.repository";
 import type { PaymentStatus } from "./payment.types";
 
@@ -23,7 +23,7 @@ export class PaymentZombieSweeperService {
 
   constructor(
     private repo: PaymentRepository,
-    private refundService: PaymentRefundService,
+    private refundService: PaymentPayoutRefundService,
   ) {}
 
   async sweep(): Promise<SweepResult> {
@@ -216,4 +216,4 @@ export class PaymentZombieSweeperService {
   }
 }
 
-export const paymentZombieSweeperService = new PaymentZombieSweeperService(paymentRepository, paymentRefundService);
+export const paymentZombieSweeperService = new PaymentZombieSweeperService(paymentRepository, paymentPayoutRefundService);

@@ -3,6 +3,7 @@ import CircuitBreaker from "opossum";
 import { getConfig } from "../config/index";
 import { logger } from "../utils/logger";
 import type {
+  KoraBank,
   KoraInitializeRequest,
   KoraInitializeResponse,
   KoraVerifyResponse,
@@ -40,12 +41,15 @@ function getKoraErrorMessage(
 export class KoraClient {
   private baseUrl: string;
   private secretKey: string;
+  private publicKey: string;
   private breaker: CircuitBreaker;
+  private publicBreaker: CircuitBreaker;
 
   constructor() {
     const config = getConfig();
     this.baseUrl = config.KORA_BASE_URL;
     this.secretKey = config.KORA_SECRET_KEY;
+    this.publicKey = config.KORA_PUBLIC_KEY;
 
     this.breaker = new CircuitBreaker(
       async (path: string, options: RequestInit = {}) =>
@@ -59,9 +63,25 @@ export class KoraClient {
       },
     );
 
+    this.publicBreaker = new CircuitBreaker(
+      async (path: string, options: RequestInit = {}) =>
+        this.rawPublicRequest(path, options),
+      {
+        timeout: config.KORA_TIMEOUT_MS,
+        errorThresholdPercentage: 50,
+        resetTimeout: 30000,
+        volumeThreshold: 10,
+        name: "kora-public-api",
+      },
+    );
+
     this.breaker.on("open", () => logger.warn("kora.circuit_open"));
     this.breaker.on("halfOpen", () => logger.info("kora.circuit_half_open"));
     this.breaker.on("close", () => logger.info("kora.circuit_closed"));
+
+    this.publicBreaker.on("open", () => logger.warn("kora.public_circuit_open"));
+    this.publicBreaker.on("halfOpen", () => logger.info("kora.public_circuit_half_open"));
+    this.publicBreaker.on("close", () => logger.info("kora.public_circuit_closed"));
   }
 
   private async rawRequest<T>(
@@ -130,6 +150,77 @@ export class KoraClient {
     raw: KoraApiEnvelope<T>;
   }> {
     return this.breaker.fire(path, options) as Promise<{
+      data: T;
+      raw: KoraApiEnvelope<T>;
+    }>;
+  }
+
+  private async rawPublicRequest<T>(
+    path: string,
+    options: RequestInit = {},
+  ): Promise<{
+    data: T;
+    raw: KoraApiEnvelope<T>;
+  }> {
+    const config = getConfig();
+    const url = `${this.baseUrl}${path}`;
+    const response = await fetch(url, {
+      ...options,
+      signal: AbortSignal.timeout(config.KORA_TIMEOUT_MS),
+      headers: {
+        Authorization: `Bearer ${this.publicKey}`,
+        "Content-Type": "application/json",
+        ...options.headers,
+      },
+    });
+
+    if (!response.ok) {
+      const errorBody = (await response.json().catch(() => ({
+        message: response.statusText,
+      }))) as KoraErrorResponse;
+      const baseMessage = getKoraErrorMessage(
+        errorBody.message || response.statusText,
+        "Payment provider request failed",
+      );
+      const detailMessage = errorBody.data
+        ? ` (${Object.entries(errorBody.data)
+            .map(([field, err]) => `${field}: ${err?.message || "invalid"}`)
+            .join("; ")})`
+        : "";
+      const error = new Error(`${baseMessage}${detailMessage}`);
+      (error as any).koraErrorCode = errorBody.error_code || errorBody.error;
+      (error as any).koraHttpStatus = response.status;
+      (error as any).koraResponseData = errorBody;
+      throw error;
+    }
+
+    const raw = (await response.json()) as KoraApiEnvelope<T>;
+    if (raw.status === false || !raw.data) {
+      const error = new Error(
+        getKoraErrorMessage(
+          raw.message || raw.error,
+          "Payment provider request failed",
+        ),
+      );
+      (error as any).koraErrorCode = raw.error_code || raw.error;
+      (error as any).koraResponseData = raw;
+      throw error;
+    }
+
+    return {
+      data: raw.data,
+      raw,
+    };
+  }
+
+  private async publicRequest<T>(
+    path: string,
+    options: RequestInit = {},
+  ): Promise<{
+    data: T;
+    raw: KoraApiEnvelope<T>;
+  }> {
+    return this.publicBreaker.fire(path, options) as Promise<{
       data: T;
       raw: KoraApiEnvelope<T>;
     }>;
@@ -220,6 +311,12 @@ export class KoraClient {
           },
         }),
       },
+    );
+  }
+
+  async listBanks(countryCode: string = "NG") {
+    return this.publicRequest<KoraBank[]>(
+      `/merchant/api/v1/misc/banks?countryCode=${encodeURIComponent(countryCode)}`,
     );
   }
 

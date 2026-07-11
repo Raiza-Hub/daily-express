@@ -69,6 +69,7 @@ const envSchema = z.object({
   TOKEN_BUCKET_DRIVER_REFILL_INTERVAL_SEC: z.coerce.number().int().positive().default(30),
 
   KORA_SECRET_KEY: z.string().min(1),
+  KORA_PUBLIC_KEY: z.string().min(1),
   KORA_BASE_URL: z.string().url().default("https://api.korapay.com"),
   KORA_WEBHOOK_URL: z.string().url().optional(),
   FRONTEND_URL: z.string().url().default("http://localhost:3000"),

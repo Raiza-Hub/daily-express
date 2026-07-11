@@ -61,6 +61,20 @@ export interface KoraVerifyResponse {
   customer?: {
     email?: string | null;
   };
+  bank_transfer?: {
+    payer_bank_account?: {
+      bank_name: string;
+      account_number: string;
+      account_name: string;
+    };
+  };
+}
+
+export interface KoraBank {
+  name: string;
+  slug: string;
+  code: string;
+  country: string;
 }
 
 export interface KoraWebhookPayload {

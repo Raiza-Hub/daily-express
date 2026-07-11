@@ -6,9 +6,11 @@ import { getPaymentReference } from "../utils/payment";
 import { jobService } from "../workers/job.service";
 import type { WebhookJobData } from "../workers/boss";
 import { koraClient } from "./kora.client";
-import { PaymentRefundService, paymentRefundService } from "./payment-refund.service";
 import { PaymentRepository, paymentRepository } from "./payment.repository";
+import { PaymentPayoutRefundService } from "./payment-payout-refund.service";
+import { payoutWebhookService } from "../payout/payout-webhook.service";
 import type {
+    KoraPayoutWebhookPayload,
     KoraWebhookPayload,
 } from "./payment.types";
 
@@ -17,10 +19,54 @@ export class PaymentWebhookService {
 
   constructor(
     private repo: PaymentRepository,
-    private refundService: PaymentRefundService,
+    private payoutRefundService: PaymentPayoutRefundService,
   ) {}
 
   async processWebhook(webhook: KoraWebhookPayload, signature?: string) {
+    if (webhook.event.startsWith("transfer.")) {
+      if (webhook.data.reference?.startsWith("REF-")) {
+        const signatureValid = this.kora.verifyWebhookSignature(
+          webhook.data,
+          signature,
+        );
+
+        const actualRef = webhook.data.reference.slice(4);
+
+        const dedupKey = `${webhook.event}:${webhook.data.reference}`;
+        await db.transaction(async (tx) => {
+          const [claimed] = await tx
+            .insert(webhookProcessed)
+            .values({ eventType: webhook.event, eventReference: dedupKey })
+            .onConflictDoNothing()
+            .returning({ id: webhookProcessed.id });
+
+          if (!claimed) return;
+
+          await this.repo.insertWebhook(tx, {
+            provider: "kora",
+            paymentReference: actualRef,
+            eventType: webhook.event,
+            signatureValid,
+            payload: webhook as unknown as Record<string, unknown>,
+            verificationNote: signatureValid
+              ? "Refund payout webhook verified"
+              : "Refund payout webhook signature invalid",
+          });
+
+          if (signatureValid) {
+            const targetStatus = webhook.event === "transfer.success" ? "refunded" : "refund_failed";
+            await this.payoutRefundService.finalizeRefund(actualRef, targetStatus);
+          }
+        });
+      } else {
+        await payoutWebhookService.processWebhook({
+          signature,
+          event: webhook as KoraPayoutWebhookPayload,
+        });
+      }
+      return;
+    }
+
     const signatureValid = this.kora.verifyWebhookSignature(
       webhook.data,
       signature,
@@ -90,10 +136,10 @@ export class PaymentWebhookService {
         await this.processChargeFailure(reference);
         return;
       case "refund.success":
-        await this.refundService.finalizeRefund(reference, "refunded");
+        await this.payoutRefundService.finalizeRefund(reference, "refunded");
         return;
       case "refund.failed":
-        await this.refundService.finalizeRefund(reference, "refund_failed");
+        await this.payoutRefundService.finalizeRefund(reference, "refund_failed");
         return;
       default:
         logger.info("payment.webhook_ignored", { event: job.event, reference });
@@ -115,7 +161,7 @@ export class PaymentWebhookService {
           const verification = await this.kora.verifyTransaction(reference);
           if (verification.data.status.toLowerCase() === "success") {
             try {
-              await this.refundService.refundPayment(
+              await this.payoutRefundService.refundPayment(
                 reference,
                 {
                   amount: verification.data.amount,
@@ -167,7 +213,7 @@ export class PaymentWebhookService {
         providerStatus: "success",
       });
 
-      await this.refundService.refundPayment(
+      await this.payoutRefundService.refundPayment(
         reference,
         verification.data,
         verification.raw,
@@ -176,9 +222,22 @@ export class PaymentWebhookService {
       return;
     }
 
+    const paymentMethod = verification.data.payment_method;
+    const payerAccount = verification.data.bank_transfer?.payer_bank_account;
+
     await db.transaction(async (tx) => {
       await tx.update(payment)
-        .set({ status: "successful", paidAt: new Date(), providerStatus: "success", lastStatusCheckAt: new Date(), updatedAt: new Date() })
+        .set({
+          status: "successful",
+          paidAt: new Date(),
+          paymentMethod: paymentMethod ?? null,
+          payerBankName: payerAccount?.bank_name ?? null,
+          payerAccountNumber: payerAccount?.account_number ?? null,
+          payerAccountName: payerAccount?.account_name ?? null,
+          providerStatus: "success",
+          lastStatusCheckAt: new Date(),
+          updatedAt: new Date(),
+        })
         .where(and(eq(payment.reference, reference), eq(payment.status, "processing")));
 
       await jobService.enqueue(tx, "allocation.process", {
@@ -210,4 +269,7 @@ export class PaymentWebhookService {
   }
 }
 
-export const paymentWebhookService = new PaymentWebhookService(paymentRepository, paymentRefundService);
+export const paymentWebhookService = new PaymentWebhookService(
+  paymentRepository,
+  new PaymentPayoutRefundService(paymentRepository, koraClient),
+);
