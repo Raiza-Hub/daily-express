@@ -113,26 +113,19 @@ export class PaymentZombieSweeperService {
         return;
       }
 
-      try {
-        await this.refundService.refundPayment(
-          p.reference,
-          {
-            amount: verification.data.amount,
-            currency: verification.data.currency,
-            paid_at: verification.data.paid_at,
-            payment_reference: verification.data.payment_reference,
-            reference: verification.data.reference,
-            status: verification.data.status,
-          },
-          verification.raw,
-          "Payment completed after booking hold expired (zombie sweep)",
-        );
-      } catch (refundErr: unknown) {
-        logger.error("payment.zombie_sweep.refund_failed", {
-          reference: p.reference,
-          error: refundErr instanceof Error ? refundErr.message : String(refundErr),
-        });
-      }
+      await this.refundService.refundPayment(
+        p.reference,
+        {
+          amount: verification.data.amount,
+          currency: verification.data.currency,
+          paid_at: verification.data.paid_at,
+          payment_reference: verification.data.payment_reference,
+          reference: verification.data.reference,
+          status: verification.data.status,
+        },
+        verification.raw,
+        "Payment completed after booking hold expired (zombie sweep)",
+      );
       return;
     }
 

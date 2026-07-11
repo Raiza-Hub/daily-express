@@ -180,14 +180,21 @@ export class PaymentPayoutRefundService {
         narration: reason,
       });
     } catch (error) {
+      const failureReason = error instanceof Error ? error.message : String(error);
       await db.transaction(async (tx) => {
         await this.repo.updateRefundStatus(tx, pendingRefund.id, {
           status: "failed",
-          failureReason: error instanceof Error ? error.message : String(error),
+          failureReason,
           completedAt: new Date(),
         });
+        await this.sendRefundFailureEmail(
+          existingPayment,
+          failureReason,
+          refundAmount,
+          tx,
+        );
       });
-      throw error;
+      return;
     }
 
     await db.transaction(async (tx) => {

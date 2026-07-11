@@ -52,26 +52,19 @@ export class PaymentExpiryService {
         providerStatus: "success",
       });
 
-      try {
-        await this.refundService.refundPayment(
-          reference,
-          {
-            amount: verification.data.amount,
-            currency: verification.data.currency,
-            paid_at: verification.data.paid_at,
-            payment_reference: verification.data.payment_reference,
-            reference: verification.data.reference,
-            status: verification.data.status,
-          },
-          verification.raw,
-          "Payment completed after booking hold expired",
-        );
-      } catch (refundErr: unknown) {
-        logger.error("payment.expiry_job.refund_failed", {
-          reference,
-          error: refundErr instanceof Error ? refundErr.message : String(refundErr),
-        });
-      }
+      await this.refundService.refundPayment(
+        reference,
+        {
+          amount: verification.data.amount,
+          currency: verification.data.currency,
+          paid_at: verification.data.paid_at,
+          payment_reference: verification.data.payment_reference,
+          reference: verification.data.reference,
+          status: verification.data.status,
+        },
+        verification.raw,
+        "Payment completed after booking hold expired",
+      );
       return;
     }
 

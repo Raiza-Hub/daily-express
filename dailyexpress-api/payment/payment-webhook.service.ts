@@ -160,7 +160,6 @@ export class PaymentWebhookService {
           logger.warn("payment.webhook.expired_without_refund", { reference, bookingId: existing.bookingId });
           const verification = await this.kora.verifyTransaction(reference);
           if (verification.data.status.toLowerCase() === "success") {
-            try {
               await this.payoutRefundService.refundPayment(
                 reference,
                 {
@@ -174,12 +173,6 @@ export class PaymentWebhookService {
                 verification.raw,
                 "Payment completed after booking hold expired (webhook fallback)",
               );
-            } catch (refundErr: unknown) {
-              logger.error("payment.webhook.fallback_refund_failed", {
-                reference,
-                error: refundErr instanceof Error ? refundErr.message : String(refundErr),
-              });
-            }
           }
         }
       }
