@@ -44,12 +44,18 @@ export class KoraClient {
   private publicKey: string;
   private breaker: CircuitBreaker;
   private publicBreaker: CircuitBreaker;
+  private proxyUrl?: string;
 
   constructor() {
     const config = getConfig();
     this.baseUrl = config.KORA_BASE_URL;
     this.secretKey = config.KORA_SECRET_KEY;
     this.publicKey = config.KORA_PUBLIC_KEY;
+
+    if (config.PROXY_URL) {
+      this.proxyUrl = config.PROXY_URL;
+      logger.info("kora.proxy_enabled", { url: this.proxyUrl });
+    }
 
     this.breaker = new CircuitBreaker(
       async (path: string, options: RequestInit = {}) =>
@@ -93,14 +99,16 @@ export class KoraClient {
   }> {
     const config = getConfig();
     const url = `${this.baseUrl}${path}`;
+    const { _useProxy, ...fetchOptions } = options as RequestInit & { _useProxy?: boolean };
     const response = await fetch(url, {
-      ...options,
+      ...fetchOptions,
       signal: AbortSignal.timeout(config.KORA_TIMEOUT_MS),
       headers: {
         Authorization: `Bearer ${this.secretKey}`,
         "Content-Type": "application/json",
-        ...options.headers,
+        ...fetchOptions.headers,
       },
+      ...(this.proxyUrl && _useProxy ? { proxy: this.proxyUrl } : {}),
     });
 
     if (!response.ok) {
@@ -310,7 +318,8 @@ export class KoraClient {
             ...(payload.narration ? { narration: payload.narration } : {}),
           },
         }),
-      },
+        _useProxy: true,
+      } as RequestInit & { _useProxy?: boolean },
     );
   }
 

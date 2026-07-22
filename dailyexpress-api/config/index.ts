@@ -111,6 +111,7 @@ const envSchema = z.object({
   // Payment
   PAYMENT_PUBLIC_BASE_URL: optionalUrl(),
   KORA_TIMEOUT_MS: z.coerce.number().int().positive().default(15000),
+  PROXY_URL: z.string().url().optional(),
   CLOUDINARY_TIMEOUT_MS: z.coerce.number().int().positive().default(30000),
 
   // Route
