@@ -26,7 +26,7 @@ npx opensrc <owner>/<repo>      # GitHub repo (e.g., npx opensrc vercel/ai)
 <!-- opensrc:end -->
 
 ## Goal
-- Fix slow tab switching in settings pages and reduce unnecessary network requests from navbar-mounted hooks in the drivers app.
+- Implement zone-based dynamic transaction fees: different departure terminals have different fees, replacing the hardcoded ₦1,000 flat fee.
 
 ## Constraints & Preferences
 - Route-based navigation (separate URLs per settings tab) must be preserved; no conversion to client-side tabs.
@@ -36,12 +36,11 @@ npx opensrc <owner>/<repo>      # GitHub repo (e.g., npx opensrc vercel/ai)
 
 ## Progress
 ### Done
-1. **Created `apps/drivers/app/(main)/settings/loading.tsx`** — uses the existing `Loader` component with `SpinnerIcon`. Shows instantly during navigation between settings tabs (Next.js Suspense boundary for the layout's children).
-2. **Added `prefetch={true}` to `SettingTabs.tsx`** — each `<Link>` now prefetches the full page shell (RSC payload + JS bundles) on hover, making navigation near-instant.
-3. **Added `staleTime: 5 * 60 * 1000` + `refetchOnMount: false` to `useGetDriver`** in `packages/api/src/hooks/driver.ts` — prevents unnecessary refetches from always-mounted navbar components (UserAccountNav, NotificationInbox, PostHogProviders).
-4. **Added `staleTime: 5 * 60 * 1000` + `refetchOnMount: false` to `useGetMe`** in `packages/api/src/hooks/auth.ts` — prevents refetches from always-mounted web Navbar.
-5. **Added `staleTime: 30_000` + `refetchOnMount: false` to `useDriverNotifications` and `useDriverNotificationsInfinite`** in `packages/api/src/hooks/notification.ts` — prevents refetches on tab switch for the notification inbox.
-6. **Typecheck passed for `@repo/api`** — `npm run check-types` confirms all changes compile (only pre-existing error in `@repo/ui` unrelated).
+1. **Zone-based transaction fee feature implemented** — full-stack, end-to-end.
+2. **Zone CRUD API** at `/api/v1/admin/zones` — GET, POST, PUT, DELETE with admin auth.
+3. **Database**: new `zone` table, `zone_id` FK on `route`, `feeAmount` column on `booking`.
+4. **Backend**: booking creation stores zone fee, payment charges fare + fee, refunds include fee.
+5. **Frontend**: `TRANSACTION_FEE = 1000` constant removed, replaced by zone fee from API.
 
 ### In Progress
 - (none)
@@ -50,21 +49,37 @@ npx opensrc <owner>/<repo>      # GitHub repo (e.g., npx opensrc vercel/ai)
 - (none)
 
 ## Key Decisions
-- **Use `loading.tsx` at `settings/` level (not per-page)** — A single `loading.tsx` at the same segment as `settings/layout.tsx` provides a Suspense boundary for all settings sub-routes (profile, accounts, bank-details). Layout persists during navigation, tabs stay interactive.
-- **`prefetch={true}` on all 3 tab links** — Prefetches dynamic page content (not just app shell), eliminates the remaining delay between click and content display.
-- **`staleTime: 5 * 60 * 1000` for `useGetDriver` and `useGetMe`** — Driver and user profile data changes infrequently. 5-minute freshness prevents refetches on tab switch and window focus while the user is actively using the app.
-- **`staleTime: 30_000` for notification hooks** — Unread badge count needs reasonable freshness but doesn't need refetching on every window focus. 30-second threshold is a good balance.
-- **`refetchOnMount: false` for all 4 hooks** — Safe because: (1) mutations that need fresh data call `refetch()`/`invalidateQueries()` directly which bypasses this option, (2) `refetchInterval: 5000` for pending bank verification still fires regardless, (3) once `staleTime` expires, the next mount/window-focus triggers a normal refetch.
-- **Did NOT convert to client-side tabs** — Team already has the `AnimatePresence` pattern in `TripDetailsSheet.tsx` (apps/web), but the `loading.tsx` + prefetch approach is simpler and matches the preference to keep route-based navigation.
-- **Did NOT implement Parallel Routes** — Overengineered for 3 simple tabs; requires `default.tsx` slots at every URL, all 3 slots mount on initial load (3x data), and adds URL routing complexity.
-
-## Next Steps
-- Monitor for any lingering slow tab switches in production
-- Consider adding `staleTime` to other frequently-remounting query hooks if needed
+- **Zone = departure terminal** — Each zone represents a physical departure point (e.g., "Funaab Terminal", "Asero Park"). Single fee per zone, not per vehicle type.
+- **`feeAmount` stored on `booking`** — Captures the fee at booking time so historical bookings aren't affected by later zone fee changes. Enables accurate refunds and display before payment.
+- **`calculateTrustedChargeAmount(fareAmount, feeAmount)`** — Updated signature takes fee as second param (was hardcoded to 0).
+- **Earnings unchanged** — Driver still gets 100% of `fareAmount`. The fee is an additional charge on the passenger, not deducted from the driver.
+- **Zone routes under admin** — `/api/v1/admin/zones` inherits admin auth middleware from the existing admin router.
+- **Relational queries for `findTripWithRoute`** — Uses Drizzle's `db.query.trip.findFirst({ with: { route: { with: { zone: true } } } })` with manual reshaping to `{ trip, route }` to match existing caller expectations.
+- **No seed script** — Zones are created via admin API. Initial zones should be set up by the admin.
 
 ## Relevant Files
-- `apps/drivers/app/(main)/settings/loading.tsx` — **CREATED** — Loading spinner shown during settings tab navigation.
-- `apps/drivers/app/components/settings/SettingTabs.tsx` — **EDITED** — Added `prefetch={true}` to all 3 tab `<Link>` components.
-- `packages/api/src/hooks/driver.ts` — **EDITED** — `useGetDriver`: added `staleTime: 5 * 60 * 1000` + `refetchOnMount: false`.
-- `packages/api/src/hooks/auth.ts` — **EDITED** — `useGetMe`: added `staleTime: 5 * 60 * 1000` + `refetchOnMount: false`.
-- `packages/api/src/hooks/notification.ts` — **EDITED** — `useDriverNotifications` and `useDriverNotificationsInfinite`: added `staleTime: 30_000` + `refetchOnMount: false`.
+### Created
+- `dailyexpress-api/db/zone-schema.ts` — Zone Drizzle schema + relations.
+- `dailyexpress-api/db/migrations/0002_add_zone_booking_fee.sql` — Migration: zone table, route.zone_id, booking.fee_amount.
+- `dailyexpress-api/zone/zone.service.ts` — Zone CRUD service.
+- `dailyexpress-api/zone/zone.api.ts` — Zone API routes (admin-only).
+
+### Edited
+- `dailyexpress-api/db/route-schema.ts` — Added `zoneId` to route, `feeAmount` to booking, zone relation.
+- `dailyexpress-api/db/index.ts` — Exports zone schema.
+- `dailyexpress-api/route/route.repository.ts` — `findRouteById`/`findAllRoutes` include zone via relational query. `findTripWithRoute` uses `db.query.trip.findFirst` with nested zone.
+- `dailyexpress-api/route/route-crud.service.ts` — Accepts `zoneId` in route updates.
+- `dailyexpress-api/route/search.service.ts` — Joins zone table, returns zone fee with search results.
+- `dailyexpress-api/route/booking.service.ts` — Looks up zone fee on booking creation, stores `feeAmount`, returns it in responses.
+- `dailyexpress-api/utils/payment.ts` — `calculateTrustedChargeAmount(fareAmount, feeAmount)` signature updated.
+- `dailyexpress-api/payment/payment.repository.ts` — `findBookingFareByBookingId` returns `feeAmount`.
+- `dailyexpress-api/payment/payment-init.service.ts` — Passes `feeAmount` to charge calculation.
+- `dailyexpress-api/payment/payment-payout-refund.service.ts` — Refunds `fareAmount + feeAmount`.
+- `dailyexpress-api/admin/admin.routes.ts` — Mounts zone routes under `/zones`.
+- `shared/types/index.ts` — Added `Zone` interface, `zoneId`/`zone` on Route, `feeAmount` on Booking.
+- `packages/types/routeSchema.ts` — Added optional `zoneId` to route schema.
+- `packages/api/src/hooks/booking.ts` — Added `feeAmount` to `UserBookingWithTrip`.
+- `apps/web/app/lib/type.ts` — Added `zoneFee` to `SearchTrip`, `feeAmount` to `TripStatusItem`.
+- `apps/web/app/lib/utils.ts` — `toSearchTrip` maps `zone.fee` to `zoneFee`. `transformToTripStatusItem` maps `feeAmount`.
+- `apps/web/app/components/trip/TripCardItem.tsx` — Removed `TRANSACTION_FEE = 1000`, uses `item.zoneFee`.
+- `apps/web/app/components/trip/TripStatusCardItem.tsx` — Removed `TRANSACTION_FEE = 1000`, uses `item.feeAmount`.

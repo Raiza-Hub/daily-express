@@ -5,6 +5,7 @@ import { notification } from "./notification-schema";
 import { paymentSchema } from "./payment-schema";
 import { payoutSchema } from "./payout-schema";
 import { routeSchema } from "./route-schema";
+import { zoneSchema } from "./zone-schema";
 
 export const schema = {
   ...adminSchema,
@@ -14,6 +15,7 @@ export const schema = {
   ...paymentSchema,
   ...payoutSchema,
   ...routeSchema,
+  ...zoneSchema,
 };
 
 export * from "./admin-schema";
@@ -23,6 +25,7 @@ export * from "./notification-schema";
 export * from "./payment-schema";
 export * from "./payout-schema";
 export * from "./route-schema";
+export * from "./zone-schema";
 
 export type { PaymentRecord, RefundRecord, PaymentWebhookRecord } from "./payment-schema";
 export type { BookingRecord, TripRecord, RouteRecord, VehicleRecord, ExternalDriverRecord } from "./route-schema";
@@ -31,3 +34,4 @@ export type { DriverRecord, DriverStatsRecord } from "./driver-schema";
 export type { UserRecord, OtpRecord, UserProviderRecord, PasswordResetTokenRecord } from "./auth-schema";
 export type { NotificationRecord } from "./notification-schema";
 export type { AdminAuditLogRecord } from "./admin-schema";
+export type { ZoneRecord } from "./zone-schema";

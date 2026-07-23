@@ -4,7 +4,6 @@ import type { KoraCheckoutChannel } from "@shared/types";
 import type { WebhookJobData } from "../workers/boss";
 
 type KoraChannel = KoraCheckoutChannel;
-const TRANSACTION_FEE = 0;
 const MAX_CHECKOUT_AMOUNT = 200_000;
 
 export function dedupeChannels(channels?: KoraChannel[]) {
@@ -45,8 +44,8 @@ export function parseDate(value?: string | Date | null) {
   return Number.isNaN(parsed.getTime()) ? null : parsed;
 }
 
-export function calculateTrustedChargeAmount(fareAmount: number) {
-  return fareAmount + TRANSACTION_FEE;
+export function calculateTrustedChargeAmount(fareAmount: number, feeAmount: number = 0) {
+  return fareAmount + feeAmount;
 }
 
 export function assertCheckoutAmountWithinLimit(amount: number) {

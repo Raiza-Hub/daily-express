@@ -1,7 +1,7 @@
 import { createServiceError } from "@shared/utils";
 import { and, asc, desc, eq, getTableColumns, gt, gte, lt, or, sql } from "drizzle-orm";
 import { db } from "../db/connection";
-import { route } from "../db/index";
+import { route, zone } from "../db/index";
 import {
     createNormalizedSearchScore,
     getBusinessDayWindow,
@@ -153,15 +153,18 @@ export class SearchService {
     }
 
     const routeColumns = getTableColumns(route);
+    const zoneColumns = getTableColumns(zone);
 
     const routesResult = await db
       .select({
         route: routeColumns,
+        zone: zoneColumns,
         pickupScore,
         dropoffScore,
         combinedScore,
       })
       .from(route)
+      .leftJoin(zone, eq(route.zoneId, zone.id))
       .where(
         and(
           ...conditions,
@@ -183,7 +186,7 @@ export class SearchService {
     }
 
     const visibleRoutes = routesResult.map((record) => ({
-      route: record.route,
+      route: { ...record.route, zone: record.zone },
       cursor: {
         combinedScore: record.combinedScore,
         pickupScore: record.pickupScore,

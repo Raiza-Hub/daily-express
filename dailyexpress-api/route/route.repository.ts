@@ -8,12 +8,14 @@ import {
   route,
   trip,
   users,
+  zone,
   type RouteRecord,
   type TripRecord,
   type BookingRecord,
   type DriverRecord,
   type ExternalDriverRecord,
 } from "../db/index";
+import type { ZoneRecord } from "../db/zone-schema";
 import type { DbTransaction } from "../db/connection";
 
 type RouteTransaction = DbTransaction;
@@ -21,7 +23,7 @@ type ExternalDriverInsert = typeof externalDriver.$inferInsert;
 
 type TripWithRoute = {
   trip: TripRecord;
-  route: RouteRecord;
+  route: RouteRecord & { zone?: ZoneRecord | null };
 };
 
 type TripWithRouteAndBookings = TripWithRoute & {
@@ -29,13 +31,18 @@ type TripWithRouteAndBookings = TripWithRoute & {
 };
 
 export class RouteRepository {
-  async findRouteById(id: string): Promise<RouteRecord | null> {
-    return (await db.query.route.findFirst({ where: eq(route.id, id) })) ?? null;
+  async findRouteById(id: string): Promise<RouteRecord & { zone?: ZoneRecord | null } | null> {
+    const result = await db.query.route.findFirst({
+      where: eq(route.id, id),
+      with: { zone: true },
+    });
+    return result ?? null;
   }
 
-  async findAllRoutes(): Promise<RouteRecord[]> {
+  async findAllRoutes(): Promise<(RouteRecord & { zone?: ZoneRecord | null })[]> {
     return db.query.route.findMany({
       orderBy: [desc(route.createdAt)],
+      with: { zone: true },
     });
   }
 
@@ -158,16 +165,20 @@ export class RouteRepository {
     return record ?? null;
   }
 
-  async findTripWithRoute(tripId: string) {
-    const [result] = await db
-      .select({
-        trip: trip,
-        route: route,
-      })
-      .from(trip)
-      .innerJoin(route, eq(route.id, trip.routeId))
-      .where(eq(trip.id, tripId));
-    return result ?? null;
+  async findTripWithRoute(tripId: string): Promise<TripWithRoute | null> {
+    const result = await db.query.trip.findFirst({
+      where: eq(trip.id, tripId),
+      with: {
+        route: {
+          with: {
+            zone: true,
+          },
+        },
+      },
+    });
+    if (!result) return null;
+    const { route: routeWithZone, ...tripRecord } = result;
+    return { trip: tripRecord as TripRecord, route: routeWithZone as TripWithRoute["route"] };
   }
 
   async findBookingById(id: string): Promise<BookingRecord | null> {

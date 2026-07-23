@@ -104,7 +104,7 @@ export class PaymentPayoutRefundService {
 
     const bookingRecord = await db.query.booking.findFirst({
       where: eq(booking.id, existingPayment.bookingId),
-      columns: { fareAmount: true },
+      columns: { fareAmount: true, feeAmount: true },
     });
     if (!bookingRecord) {
       logger.error("payout_refund.booking_not_found", { reference, bookingId: existingPayment.bookingId });
@@ -282,7 +282,7 @@ export class PaymentPayoutRefundService {
 
     const bookingRecord = await db.query.booking.findFirst({
       where: eq(booking.id, paymentRecord.bookingId),
-      columns: { fareAmount: true },
+      columns: { fareAmount: true, feeAmount: true },
     });
     if (!bookingRecord) {
       logger.error("payout_refund.booking_not_found", { reference: paymentRecord.reference, bookingId: paymentRecord.bookingId });

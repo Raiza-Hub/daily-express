@@ -60,7 +60,8 @@ export class RouteCrudService {
         routeData.pickup_location_locality ??
         existingRoute.pickup_location_locality,
       pickup_location_label:
-        routeData.pickup_location_label ?? existingRoute.pickup_location_label,
+        routeData.pickup_location_label ??
+        existingRoute.pickup_location_label,
       dropoff_location_title:
         routeData.dropoff_location_title ??
         existingRoute.dropoff_location_title,
@@ -72,6 +73,7 @@ export class RouteCrudService {
         existingRoute.dropoff_location_label,
       departure_time:
         routeData.departure_time ?? existingRoute.departure_time,
+      zoneId: routeData.zoneId !== undefined ? routeData.zoneId : existingRoute.zoneId,
     };
 
     const conflictingRoute = await this.repo.findRouteConflict({

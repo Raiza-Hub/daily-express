@@ -11,8 +11,6 @@ import TripDetailsSheet from "./TripDetailsSheet";
 
 dayjs.extend(duration);
 
-const TRANSACTION_FEE = 1000;
-
 const TripStatusCardItem = ({
     item,
     scrollToBookingId,
@@ -175,7 +173,7 @@ const TripStatusCardItem = ({
                                 {formatPrice(
                                     (item.trip.vehicleType === "bus"
                                         ? item.trip.priceBus
-                                        : item.trip.priceCar) + TRANSACTION_FEE
+                                        : item.trip.priceCar) + (item.feeAmount ?? 0)
                                 )}
                             </p>
                         </div>

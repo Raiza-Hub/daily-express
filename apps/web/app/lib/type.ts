@@ -21,6 +21,7 @@ export interface SearchTrip {
   dropoffLocationLabel: string;
   priceCar: number;
   priceBus: number;
+  zoneFee?: number;
   departureTime: Date;
   estimatedArrivalTime: Date;
   meetingPoint: string;
@@ -42,6 +43,7 @@ export interface TripStatusItem {
   paymentStatus: string;
   driverStatus: string;
   displayMessage?: string | null;
+  feeAmount?: number;
 }
 
 

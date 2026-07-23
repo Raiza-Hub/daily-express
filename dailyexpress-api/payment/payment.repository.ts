@@ -55,6 +55,7 @@ export class PaymentRepository {
 
     return {
       fareAmount: bookingRecord.fareAmount,
+      feeAmount: bookingRecord.feeAmount ?? 0,
       currency: bookingRecord.currency.toUpperCase(),
     };
   }

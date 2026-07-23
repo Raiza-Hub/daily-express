@@ -51,6 +51,7 @@ export class BookingService {
 
     const fareAmount =
       input.vehicleType === "car" ? routeRecord.priceCar : routeRecord.priceBus;
+    const feeAmount = routeRecord.zone?.fee ?? 0;
 
     const existingBooking = await db.query.booking.findFirst({
       where: and(
@@ -68,7 +69,7 @@ export class BookingService {
       if (existingBooking.status === "confirmed" || notExpired) {
         await db
           .update(booking)
-          .set({ fareAmount, updatedAt: new Date() })
+          .set({ fareAmount, feeAmount, updatedAt: new Date() })
           .where(eq(booking.id, existingBooking.id));
 
         logger.info("booking.reused", {
@@ -77,8 +78,9 @@ export class BookingService {
           userId,
         });
         return {
-          booking: { ...existingBooking, fareAmount },
+          booking: { ...existingBooking, fareAmount, feeAmount },
           fareAmount,
+          feeAmount,
           currency: existingBooking.currency,
           expiresAt: existingBooking.expiresAt,
         };
@@ -112,6 +114,7 @@ export class BookingService {
         firstName: passengerRecord.firstName,
         lastName: passengerRecord.lastName,
         fareAmount,
+        feeAmount,
         currency: "NGN",
         status: "pending",
         expiresAt,
@@ -136,6 +139,7 @@ export class BookingService {
           return {
             booking: existing,
             fareAmount: existing.fareAmount,
+            feeAmount: existing.feeAmount,
             currency: existing.currency,
             expiresAt: existing.expiresAt,
           };
@@ -149,12 +153,14 @@ export class BookingService {
       routeId: newBooking.routeId,
       vehicleType: newBooking.vehicleType,
       fareAmount: newBooking.fareAmount,
+      feeAmount: newBooking.feeAmount,
       expiresAt: newBooking.expiresAt?.toISOString(),
     });
 
     return {
       booking: newBooking,
       fareAmount: newBooking.fareAmount,
+      feeAmount: newBooking.feeAmount,
       currency: newBooking.currency,
       expiresAt: newBooking.expiresAt,
     };
@@ -278,6 +284,7 @@ export class BookingService {
         id: row.booking.id,
         seatNumber: row.booking.seatNumber ?? 0,
         fareAmount: row.booking.fareAmount,
+        feeAmount: row.booking.feeAmount ?? 0,
         currency: row.booking.currency,
         status: row.booking.status,
         paymentReference: row.booking.paymentReference ?? null,

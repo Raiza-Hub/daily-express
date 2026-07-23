@@ -15,6 +15,7 @@ import {
 } from "drizzle-orm/pg-core";
 import { driver } from "./driver-schema";
 import { users } from "./auth-schema";
+import { zone } from "./zone-schema";
 
 export const statusEnum = pgEnum("status", ["inactive", "pending", "active"]);
 export const vehicleTypeEnum = pgEnum("vehicle_type", [
@@ -55,6 +56,7 @@ export const route = pgTable(
     departure_time: time("departure_time").notNull(),
     arrival_time: time("arrival_time").notNull(),
     status: statusEnum("status").default("active").notNull(),
+    zoneId: uuid("zone_id").references(() => zone.id, { onDelete: "set null" }),
     createdAt: timestamp("created_at", { mode: "date" }).defaultNow().notNull(),
     updatedAt: timestamp("updated_at", { mode: "date" }).defaultNow().notNull(),
   },
@@ -134,6 +136,7 @@ export const booking = pgTable(
     firstName: text("first_name"),
     lastName: text("last_name"),
     fareAmount: bigint("fare_amount", { mode: "number" }).default(0).notNull(),
+    feeAmount: bigint("fee_amount", { mode: "number" }).default(0).notNull(),
     currency: varchar("currency", { length: 8 }).default("NGN").notNull(),
     status: tripStatusEnum("status").default("pending").notNull(),
     expiresAt: timestamp("expires_at", { mode: "date" }),
@@ -203,8 +206,12 @@ export const externalDriver = pgTable("external_driver", {
   assignedAt: timestamp("assigned_at", { mode: "date" }).defaultNow().notNull(),
 });
 
-export const routeRelations = relations(route, ({ many }) => ({
+export const routeRelations = relations(route, ({ many, one }) => ({
   trips: many(trip),
+  zone: one(zone, {
+    fields: [route.zoneId],
+    references: [zone.id],
+  }),
 }));
 
 export const tripRelations = relations(trip, ({ one, many }) => ({
