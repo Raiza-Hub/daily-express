@@ -1,11 +1,11 @@
 import { adminSchema } from "./admin-schema";
 import { authSchema } from "./auth-schema";
-import { driverSchema } from "./driver-schema";
+import { driverSchema, driverRelations, driverStatsRelations } from "./driver-schema";
 import { notification } from "./notification-schema";
 import { paymentSchema } from "./payment-schema";
 import { payoutSchema } from "./payout-schema";
-import { routeSchema } from "./route-schema";
-import { zoneSchema } from "./zone-schema";
+import { routeSchema, routeRelations, tripRelations, bookingRelations, vehicleRelations, externalDriverRelations } from "./route-schema";
+import { zoneSchema, zoneRelations } from "./zone-schema";
 
 export const schema = {
   ...adminSchema,
@@ -16,6 +16,14 @@ export const schema = {
   ...payoutSchema,
   ...routeSchema,
   ...zoneSchema,
+  routeRelations,
+  tripRelations,
+  bookingRelations,
+  vehicleRelations,
+  externalDriverRelations,
+  zoneRelations,
+  driverRelations,
+  driverStatsRelations,
 };
 
 export * from "./admin-schema";
