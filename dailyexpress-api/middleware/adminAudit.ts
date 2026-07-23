@@ -6,7 +6,6 @@ export interface AdminAuditInput {
   action: string;
   adminEmail: string;
   target?: string;
-  ip?: string;
   details?: string;
 }
 
@@ -15,7 +14,6 @@ export async function recordAdminAudit(input: AdminAuditInput) {
     action: input.action,
     adminEmail: input.adminEmail,
     target: input.target,
-    ip: input.ip,
     details: input.details,
   });
 
@@ -23,7 +21,6 @@ export async function recordAdminAudit(input: AdminAuditInput) {
     action: input.action,
     adminEmail: input.adminEmail,
     target: input.target ?? null,
-    ip: input.ip ?? null,
     details: input.details ?? null,
   });
 }

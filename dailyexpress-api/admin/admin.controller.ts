@@ -35,7 +35,7 @@ export const createRoute: RequestHandler = asyncHandler(
       action: "create_route",
       adminEmail: req.adminUser?.email ?? "unknown",
       target: route.id,
-      ip: req.ip,
+
       details: JSON.stringify(req.body),
     });
     return res
@@ -61,7 +61,7 @@ export const updateRoute: RequestHandler = asyncHandler(
       action: "update_route",
       adminEmail: req.adminUser?.email ?? "unknown",
       target: routeId,
-      ip: req.ip,
+
       details: JSON.stringify(req.body),
     });
     return res
@@ -87,7 +87,7 @@ export const deleteRoute: RequestHandler = asyncHandler(
       action: "delete_route",
       adminEmail: req.adminUser?.email ?? "unknown",
       target: routeId,
-      ip: req.ip,
+
     });
     return res
       .status(200)
@@ -154,7 +154,7 @@ export const assignPlatformDriver: RequestHandler = asyncHandler(
       action: "assign_platform_driver",
       adminEmail,
       target: tripId,
-      ip: req.ip,
+
       details: JSON.stringify({ driverId }),
     });
     return res
@@ -196,7 +196,7 @@ export const assignExternalDriver: RequestHandler = asyncHandler(
       action: "assign_external_driver",
       adminEmail,
       target: tripId,
-      ip: req.ip,
+
       details: JSON.stringify({ firstName, lastName, phone }),
     });
     return res
@@ -231,7 +231,7 @@ export const refundTripPassengers: RequestHandler = asyncHandler(
       action: "refund_trip_passengers",
       adminEmail,
       target: tripId,
-      ip: req.ip,
+
       details: JSON.stringify({ reason }),
     });
     return res

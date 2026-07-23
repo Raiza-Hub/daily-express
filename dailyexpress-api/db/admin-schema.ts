@@ -5,7 +5,6 @@ export const adminAuditLog = pgTable("admin_audit_log", {
   action: text("action").notNull(),
   adminEmail: text("admin_email").notNull(),
   target: text("target"),
-  ip: text("ip"),
   details: text("details"),
   createdAt: timestamp("created_at", { mode: "date" }).defaultNow().notNull(),
 }, (table) => [
