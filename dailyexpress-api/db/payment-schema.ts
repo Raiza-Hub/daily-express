@@ -82,7 +82,6 @@ export const paymentWebhook = pgTable(
     signatureValid: boolean("signature_valid").default(false).notNull(),
     payload: jsonb("payload").notNull(),
     verificationNote: text("verification_note"),
-    processedAt: timestamp("processed_at", { mode: "date" }),
     createdAt: timestamp("created_at", { mode: "date" }).defaultNow().notNull(),
   },
   (table) => [
