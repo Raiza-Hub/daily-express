@@ -20,7 +20,6 @@ export class PaymentConfirmService {
   async confirmPayment(
     reference: string,
     verificationData: KoraVerifyResponse,
-    rawResponse: unknown,
   ) {
     const [claimed] = await this.repo.claimPayment(reference);
     if (!claimed) {
@@ -57,13 +56,11 @@ export class PaymentConfirmService {
       await paymentPayoutRefundService.refundPayment(
         reference,
         verification.data,
-        rawResponse,
         "Payment completed after booking hold expired",
       );
       return;
     }
 
-    const paymentMethod = verification.data.payment_method;
     const payerAccount = verification.data.bank_transfer?.payer_bank_account;
 
     await db.transaction(async (tx) => {
@@ -71,7 +68,6 @@ export class PaymentConfirmService {
         .set({
           status: "successful",
           paidAt: new Date(),
-          paymentMethod: paymentMethod ?? null,
           payerBankName: payerAccount?.bank_name ?? null,
           payerAccountNumber: payerAccount?.account_number ?? null,
           payerAccountName: payerAccount?.account_name ?? null,

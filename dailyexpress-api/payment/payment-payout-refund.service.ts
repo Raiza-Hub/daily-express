@@ -71,7 +71,6 @@ export class PaymentPayoutRefundService {
       KoraVerifyResponse,
       "amount" | "currency" | "paid_at" | "payment_reference" | "reference" | "status"
     >,
-    rawVerificationResponse: unknown,
     reason = "Seat reservation expired before payment was completed",
   ) {
     const existingPayment = await this.repo.findPaymentByReference(reference);
@@ -199,10 +198,9 @@ export class PaymentPayoutRefundService {
 
     await db.transaction(async (tx) => {
       await this.repo.updateRefundStatus(tx, pendingRefund.id, {
-        status: "successful",
+        status: "pending",
         providerRefundReference: payoutRef,
         providerStatus: "processing",
-        completedAt: new Date(),
       });
 
       if (!existingPayment.bookingId) return;
@@ -376,10 +374,9 @@ export class PaymentPayoutRefundService {
 
     await db.transaction(async (tx) => {
       await this.repo.updateRefundStatus(tx, resolvedRefund.id, {
-        status: "successful",
+        status: "pending",
         providerRefundReference: payoutRef,
         providerStatus: "processing",
-        completedAt: new Date(),
       });
 
       if (paymentRecord.bookingId) {

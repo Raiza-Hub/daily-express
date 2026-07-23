@@ -353,7 +353,6 @@ export interface Payment {
   bookingId?: string | null;
   provider: "kora";
   reference: string;
-  providerTransactionId?: string | null;
   amount: number;
   currency: string;
   productName: string;
@@ -369,8 +368,6 @@ export interface Payment {
   cancelUrl?: string | null;
   channels?: KoraCheckoutChannel[] | null;
   rawInitializeResponse?: unknown;
-  rawVerificationResponse?: unknown;
-  metadata?: Record<string, unknown> | null;
   lastStatusCheckAt?: Date | null;
   paidAt?: Date | null;
   failedAt?: Date | null;

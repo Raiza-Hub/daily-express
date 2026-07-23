@@ -170,7 +170,6 @@ export class PaymentWebhookService {
                   reference: verification.data.reference,
                   status: verification.data.status,
                 },
-                verification.raw,
                 "Payment completed after booking hold expired (webhook fallback)",
               );
           }
@@ -209,13 +208,11 @@ export class PaymentWebhookService {
       await this.payoutRefundService.refundPayment(
         reference,
         verification.data,
-        verification.raw,
         "Payment completed after booking hold expired",
       );
       return;
     }
 
-    const paymentMethod = verification.data.payment_method;
     const payerAccount = verification.data.bank_transfer?.payer_bank_account;
 
     await db.transaction(async (tx) => {
@@ -223,7 +220,6 @@ export class PaymentWebhookService {
         .set({
           status: "successful",
           paidAt: new Date(),
-          paymentMethod: paymentMethod ?? null,
           payerBankName: payerAccount?.bank_name ?? null,
           payerAccountNumber: payerAccount?.account_number ?? null,
           payerAccountName: payerAccount?.account_name ?? null,
