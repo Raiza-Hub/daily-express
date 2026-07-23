@@ -85,7 +85,6 @@ export class PaymentService {
       failureCode?: string;
       failedAt?: Date | null;
       providerStatus?: string | null;
-      rawVerificationResponse?: unknown;
     },
   ) {
     const existingPayment = await this.repo.findPaymentByReference(reference);
@@ -101,9 +100,6 @@ export class PaymentService {
           status: nextStatus,
           providerStatus:
             options?.providerStatus || existingPayment.providerStatus,
-          rawVerificationResponse:
-            options?.rawVerificationResponse ??
-            existingPayment.rawVerificationResponse,
           lastStatusCheckAt: new Date(),
           failedAt: options?.failedAt ?? existingPayment.failedAt ?? new Date(),
           failureCode: options?.failureCode || existingPayment.failureCode,
@@ -158,7 +154,6 @@ export class PaymentService {
         await this.confirmService.confirmPayment(
           reference,
           verification.data,
-          verification.raw,
         );
         return tripStatusUrl;
       }
@@ -174,7 +169,6 @@ export class PaymentService {
             failureCode:
               providerStatus === "failed" ? "PAYMENT_FAILED" : "USER_CANCELLED",
             providerStatus: verification.data.status,
-            rawVerificationResponse: verification.raw,
           },
         );
         return tripStatusUrl;
@@ -214,7 +208,6 @@ export class PaymentService {
         {
           failureCode: "PAYMENT_EXPIRED",
           providerStatus: verification.data.status,
-          rawVerificationResponse: verification.raw,
         },
       );
     } catch (error) {

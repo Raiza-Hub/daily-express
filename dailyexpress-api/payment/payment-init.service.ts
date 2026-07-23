@@ -22,7 +22,7 @@ import type {
 import type { PaymentRecord } from "../db/index";
 import { enrichWithExpiry } from "./payment.utils";
 
-const KORA_METADATA_KEY_REGEX = /^[A-Za-z0-9-]{1,20}$/;
+
 
 export class PaymentInitService {
   private readonly config = getConfig();
@@ -82,7 +82,6 @@ export class PaymentInitService {
 
     const reference = this.buildReference(input.reference);
     const channels = dedupeChannels(input.channels);
-    const metadata = this.buildMetadata(input);
     const productName = sanitizeInput(input.productName);
     const bookingFare = await this.repo.findBookingFareByBookingId(
       input.bookingId,
@@ -143,7 +142,6 @@ export class PaymentInitService {
           status: "initialized",
           providerStatus: "pending",
           channels,
-          metadata,
         })
         .onConflictDoNothing({ target: payment.bookingId })
         .returning();
@@ -184,7 +182,6 @@ export class PaymentInitService {
         reference,
         currency: trustedCurrency,
         channels,
-        metadata,
       });
     } catch (koraError) {
       await db.transaction(async (tx) => {
@@ -294,7 +291,6 @@ export class PaymentInitService {
   ) {
     const reference = this.buildReference();
     const channels = dedupeChannels(input.channels);
-    const metadata = this.buildMetadata(input);
     const productName = sanitizeInput(input.productName);
     const bookingFare = await this.repo.findBookingFareByBookingId(
       input.bookingId,
@@ -354,7 +350,6 @@ export class PaymentInitService {
         reference,
         currency: trustedCurrency,
         channels,
-        metadata,
       });
     } catch (koraError) {
       await db
@@ -382,12 +377,10 @@ export class PaymentInitService {
           customerEmail: authenticatedEmail.trim(),
           status: "pending",
           providerStatus: "pending",
-          providerTransactionId: null,
           checkoutUrl: initializeResponse.data.checkout_url,
           checkoutToken: initializeResponse.data.reference,
           channels,
           rawInitializeResponse: initializeResponse.raw,
-          rawVerificationResponse: null,
           lastStatusCheckAt: new Date(),
           paidAt: null,
           failedAt: null,
@@ -421,7 +414,6 @@ export class PaymentInitService {
     reference: string;
     currency: string;
     channels?: KoraChannel[] | null;
-    metadata?: Record<string, string | number | boolean> | undefined;
   }) {
     return this.kora.initializeTransaction({
       customer: {
@@ -435,7 +427,6 @@ export class PaymentInitService {
       notification_url: this.getWebhookUrl(),
       merchant_bears_cost: false,
       ...(params.channels ? { channels: params.channels } : {}),
-      ...(params.metadata ? { metadata: params.metadata } : {}),
     });
   }
 
@@ -446,37 +437,6 @@ export class PaymentInitService {
   private sanitizeOptional(value?: string | null) {
     if (!value) return null;
     return sanitizeInput(value);
-  }
-
-  private buildMetadata(input: InitializePaymentInput) {
-    const entries: Array<[string, unknown]> = [["bookingId", input.bookingId]];
-    if (input.metadata) {
-      entries.push(...Object.entries(input.metadata));
-    }
-
-    const metadata: Record<string, string | number | boolean> = {};
-    for (const [key, value] of entries) {
-      if (
-        Object.keys(metadata).length >= 5 ||
-        key in metadata ||
-        !KORA_METADATA_KEY_REGEX.test(key)
-      ) {
-        continue;
-      }
-
-      if (typeof value === "string") {
-        const sanitized = sanitizeInput(value);
-        if (sanitized) {
-          metadata[key] = sanitized;
-        }
-      } else if (typeof value === "number" && Number.isFinite(value)) {
-        metadata[key] = value;
-      } else if (typeof value === "boolean") {
-        metadata[key] = value;
-      }
-    }
-
-    return Object.keys(metadata).length > 0 ? metadata : undefined;
   }
 
   private getPaymentPublicBaseUrl() {

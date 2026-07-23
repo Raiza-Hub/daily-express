@@ -62,7 +62,6 @@ export class PaymentExpiryService {
           reference: verification.data.reference,
           status: verification.data.status,
         },
-        verification.raw,
         "Payment completed after booking hold expired",
       );
       return;

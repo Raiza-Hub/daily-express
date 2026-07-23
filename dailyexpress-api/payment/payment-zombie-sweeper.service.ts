@@ -123,7 +123,6 @@ export class PaymentZombieSweeperService {
           reference: verification.data.reference,
           status: verification.data.status,
         },
-        verification.raw,
         "Payment completed after booking hold expired (zombie sweep)",
       );
       return;

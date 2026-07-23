@@ -21,7 +21,6 @@ export interface InitializePaymentInput {
   channels?: KoraChannel[];
   productName: string;
   customerName?: string;
-  metadata?: Record<string, unknown>;
 }
 
 
