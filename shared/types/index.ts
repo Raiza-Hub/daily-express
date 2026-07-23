@@ -357,13 +357,11 @@ export interface Payment {
   currency: string;
   productName: string;
   productDescription: string;
-  customerName?: string | null;
   customerEmail?: string | null;
   customerMobile?: string | null;
   status: PaymentStatus;
   providerStatus?: string | null;
   checkoutUrl?: string | null;
-  checkoutToken?: string | null;
   redirectUrl: string;
   cancelUrl?: string | null;
   channels?: KoraCheckoutChannel[] | null;
