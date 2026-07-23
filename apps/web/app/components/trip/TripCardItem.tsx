@@ -16,8 +16,6 @@ import { Spinner } from "@phosphor-icons/react";
 
 dayjs.extend(duration);
 
-const TRANSACTION_FEE = 1000;
-
 const TripCardItem = ({
     item,
     bookingDate,
@@ -174,7 +172,7 @@ const TripCardItem = ({
                             </p>
 
                             <p className="mt-2 text-xl font-medium text-neutral-900">
-                                {hasDeparted ? <span className="text-sm text-muted-foreground font-normal">Not available</span> : formatPrice(item.priceCar + TRANSACTION_FEE)}
+                                {hasDeparted ? <span className="text-sm text-muted-foreground font-normal">Not available</span> : formatPrice(item.priceCar + (item.zoneFee ?? 0))}
                             </p>
                         </div>
 
@@ -193,7 +191,7 @@ const TripCardItem = ({
                             </p>
 
                             <p className="mt-2 text-xl font-medium text-neutral-900">
-                                {hasDeparted ? <span className="text-sm text-muted-foreground font-normal">Not available</span> : formatPrice(item.priceBus + TRANSACTION_FEE)}
+                                {hasDeparted ? <span className="text-sm text-muted-foreground font-normal">Not available</span> : formatPrice(item.priceBus + (item.zoneFee ?? 0))}
                             </p>
                         </div>
                     </div>

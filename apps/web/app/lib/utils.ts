@@ -63,7 +63,7 @@ export function parseLocalDate(date: string): Date {
   return new Date(year, month - 1, day);
 }
 
-export function toSearchTrip(item: Route, tripDate?: string): SearchTrip {
+export function toSearchTrip(item: Route & { zone?: { fee: number } | null }, tripDate?: string): SearchTrip {
   const baseDate = tripDate ? parseLocalDate(tripDate) : new Date();
   return {
     searchResultId: item.id,
@@ -76,6 +76,7 @@ export function toSearchTrip(item: Route, tripDate?: string): SearchTrip {
     dropoffLocationLabel: item.dropoff_location_label,
     priceCar: item.priceCar,
     priceBus: item.priceBus,
+    zoneFee: item.zone?.fee ?? 0,
     departureTime: parseTimeString(item.departure_time, baseDate),
     estimatedArrivalTime: parseTimeString(item.arrival_time, baseDate),
     meetingPoint: item.meeting_point,
@@ -121,6 +122,7 @@ export function transformToTripStatusItem(
     remainingSeats: trip.availableSeats,
     paymentStatus: booking.paymentStatus,
     driverStatus: booking.driverStatus,
+    feeAmount: booking.feeAmount ?? 0,
     trip: {
       departureCity: {
         title: route.pickup_location_title,

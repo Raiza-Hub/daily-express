@@ -27,6 +27,7 @@ export const routeSchema = z.object({
     .string()
     .min(5, { error: "Meeting point is required" })
     .max(200, { error: "Meeting point is too long" }),
+  zoneId: z.string().uuid().nullable().optional(),
 }).refine(
   data => data.estimatedArrivalTime > data.departureTime,
   {

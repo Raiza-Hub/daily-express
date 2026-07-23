@@ -89,14 +89,7 @@ export class PaymentInitService {
       userId,
     );
     const trustedCurrency = bookingFare.currency;
-    const trustedAmount = calculateTrustedChargeAmount(bookingFare.fareAmount);
-
-    if (input.currency && input.currency.toUpperCase() !== trustedCurrency) {
-      throw createServiceError(
-        "Payment currency does not match booking currency",
-        400,
-      );
-    }
+    const trustedAmount = calculateTrustedChargeAmount(bookingFare.fareAmount, bookingFare.feeAmount);
 
     assertCheckoutAmountWithinLimit(trustedAmount);
 
@@ -262,7 +255,7 @@ export class PaymentInitService {
         existingPayment.bookingId,
         existingPayment.userId,
       );
-      const expectedAmount = calculateTrustedChargeAmount(bookingFare.fareAmount);
+      const expectedAmount = calculateTrustedChargeAmount(bookingFare.fareAmount, bookingFare.feeAmount);
 
       if (expectedAmount !== existingPayment.amount) {
         return this.reinitializePayment(
@@ -308,7 +301,7 @@ export class PaymentInitService {
       existingPayment.userId,
     );
     const trustedCurrency = bookingFare.currency;
-    const trustedAmount = calculateTrustedChargeAmount(bookingFare.fareAmount);
+    const trustedAmount = calculateTrustedChargeAmount(bookingFare.fareAmount, bookingFare.feeAmount);
 
     if (input.currency && input.currency.toUpperCase() !== trustedCurrency) {
       throw createServiceError(

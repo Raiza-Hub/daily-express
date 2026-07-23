@@ -72,6 +72,7 @@ export const createRouteSchema = Joi.object({
     .messages({
       "any.only": "Status must be one of: inactive, pending, active",
     }),
+  zoneId: Joi.string().uuid().allow(null).optional(),
 });
 
 export const updateRouteSchema = Joi.object({
@@ -94,4 +95,5 @@ export const updateRouteSchema = Joi.object({
     .pattern(/^\d{2}:\d{2}(:\d{2})?$/)
     .optional(),
   status: Joi.string().valid("inactive", "pending", "active").optional(),
+  zoneId: Joi.string().uuid().allow(null).optional(),
 }).min(1);

@@ -22,6 +22,7 @@ export interface UserBookingWithTrip {
   paymentReference: string | null;
   paymentStatus: string;
   fareAmount: number;
+  feeAmount: number;
   currency: string;
   createdAt: Date;
   updatedAt: Date;

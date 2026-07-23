@@ -179,6 +179,14 @@ export function logError(error: Error, context?: Record<string, any>): void {
   });
 }
 
+export interface Zone {
+  id: string;
+  name: string;
+  fee: number;
+  createdAt: Date;
+  updatedAt: Date;
+}
+
 export interface Route {
   id: string;
   pickup_location_title: string;
@@ -196,6 +204,8 @@ export interface Route {
   departure_time: string;
   arrival_time: string;
   status: "inactive" | "pending" | "active";
+  zoneId: string | null;
+  zone?: Zone | null;
   createdAt: Date;
   updatedAt: Date;
 }
@@ -216,6 +226,7 @@ export interface CreateRoute {
   departure_time: string;
   arrival_time: string;
   status: "inactive" | "pending" | "active";
+  zoneId?: string | null;
 }
 
 export interface SearchRoutesRequest {
@@ -241,6 +252,7 @@ export interface updateRouteRequest {
   departure_time?: string;
   arrival_time?: string;
   status?: "inactive" | "pending" | "active";
+  zoneId?: string | null;
 }
 
 export type TripStatus = "pending" | "confirmed" | "cancelled" | "completed" | "awaiting_driver";
@@ -286,6 +298,7 @@ export interface Booking {
   userId: string;
   seatNumber: number | null;
   fareAmount: number;
+  feeAmount: number;
   currency: string;
   status: TripStatus;
   expiresAt?: Date | null;
