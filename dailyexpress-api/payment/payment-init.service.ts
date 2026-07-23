@@ -137,7 +137,6 @@ export class PaymentInitService {
           amount: trustedAmount,
           currency: trustedCurrency,
           productName,
-          customerName: this.sanitizeOptional(input.customerName),
           customerEmail: authenticatedEmail.trim(),
           status: "initialized",
           providerStatus: "pending",
@@ -199,7 +198,6 @@ export class PaymentInitService {
         .set({
           status: "pending",
           checkoutUrl: initializeResponse.data.checkout_url,
-          checkoutToken: initializeResponse.data.reference,
           rawInitializeResponse: initializeResponse.raw,
           updatedAt: new Date(),
         })
@@ -345,7 +343,7 @@ export class PaymentInitService {
     try {
       initializeResponse = await this.createKoraCheckoutSession({
         email: authenticatedEmail.trim(),
-        customerName: input.customerName || existingPayment.customerName || undefined,
+        customerName: input.customerName,
         amount: trustedAmount,
         reference,
         currency: trustedCurrency,
@@ -371,14 +369,10 @@ export class PaymentInitService {
           amount: trustedAmount,
           currency: trustedCurrency,
           productName,
-          customerName: this.sanitizeOptional(
-            input.customerName || existingPayment.customerName,
-          ),
           customerEmail: authenticatedEmail.trim(),
           status: "pending",
           providerStatus: "pending",
           checkoutUrl: initializeResponse.data.checkout_url,
-          checkoutToken: initializeResponse.data.reference,
           channels,
           rawInitializeResponse: initializeResponse.raw,
           lastStatusCheckAt: new Date(),
