@@ -13,14 +13,16 @@ import {
 import { onboardingSchema, TonboardingSchema } from "@repo/types";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod/v4";
+import { toast } from "@repo/ui/components/sonner";
 import { useRouter } from "next/navigation";
-import { useState } from "react";
+import { useRef, useState } from "react";
 import {
   applyApiFieldErrors,
   getApiErrorMessage,
   useCreateDriver,
   presignProfileUploadFn,
   uploadToR2Fn,
+  confirmProfileUploadFn,
 } from "@repo/api";
 import { FormProvider, useForm } from "react-hook-form";
 import { Button } from "@repo/ui/components/button";
@@ -107,11 +109,27 @@ const OnboardingForm = () => {
   });
 
   const { handleSubmit, trigger } = methods;
+  const pendingFileRef = useRef<File | null>(null);
   const [uploading, setUploading] = useState(false);
 
   const { mutate: createDriver, isPending } = useCreateDriver({
-    onSuccess: () => {
+    onSuccess: async () => {
       posthog.capture(posthogEvents.driver_onboarding_completed);
+
+      const file = pendingFileRef.current;
+      if (file) {
+        setUploading(true);
+        pendingFileRef.current = null;
+        try {
+              const presign = await presignProfileUploadFn(file.type, file.size);
+          await uploadToR2Fn(presign.uploadUrl, file);
+          await confirmProfileUploadFn(presign.key);
+        } catch {
+          toast.error("Profile picture upload failed. You can update it later in settings.");
+        }
+        setUploading(false);
+      }
+
       router.push("/");
     },
     onError: (error: Error) => {
@@ -128,24 +146,10 @@ const OnboardingForm = () => {
   const currentStepData = STEPS[currentStep - 1];
   const CurrentStepComponent = currentStepData?.Component || (() => null);
 
-  const onSubmit = async (data: TonboardingSchema) => {
+  const onSubmit = (data: TonboardingSchema) => {
     setOnboardError(null);
 
-    let profile_pic = "";
-
-    if (data.file instanceof File) {
-      setUploading(true);
-      try {
-        const presign = await presignProfileUploadFn(data.file.type, data.file.size);
-        await uploadToR2Fn(presign.uploadUrl, data.file);
-        profile_pic = presign.publicUrl;
-      } catch {
-        setOnboardError("Failed to upload profile image. Please try again.");
-        setUploading(false);
-        return;
-      }
-      setUploading(false);
-    }
+    pendingFileRef.current = data.file instanceof File ? data.file : null;
 
     const selectedBank = (BankList as Bank[]).find(
       (bank) => bank.name === data.bankName,
@@ -169,7 +173,7 @@ const OnboardingForm = () => {
       kycType: data.kycType,
       kycId: data.kycId,
       kycConsent: true,
-      profile_pic,
+      profile_pic: "",
     });
   };
 
@@ -273,7 +277,7 @@ const OnboardingForm = () => {
               className="w-32 cursor-pointer"
               type="button"
               variant="secondary"
-              disabled={isPending}
+              disabled={isPending || uploading}
               onClick={async () => {
                 if (currentStep === STEPS.length) {
                   const step3Fields = STEPS[2]

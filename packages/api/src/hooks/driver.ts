@@ -55,6 +55,20 @@ export const uploadToR2Fn = async (uploadUrl: string, file: File): Promise<void>
   }
 };
 
+export const confirmProfileUploadFn = async (key: string): Promise<void> => {
+  try {
+    const response = await driverApi.post<ApiResponse<{ profile_pic: string }>>(
+      "/profile/confirm",
+      { key },
+    );
+    if (!response.data.success) {
+      throw new Error(response.data.error || "Failed to confirm profile upload");
+    }
+  } catch (err) {
+    return handleApiError(err, "Failed to confirm profile upload") as never;
+  }
+};
+
 export const createDriverFn = async (
   data: CreateDriverRequest,
 ): Promise<Driver> => {
