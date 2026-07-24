@@ -20,20 +20,46 @@ export const getDriverFn = async (): Promise<Driver | null> => {
   }
 };
 
-export const createDriverFn = async (
-  data: CreateDriverRequest | FormData,
-): Promise<Driver> => {
-  const isFormData = data instanceof FormData;
+export interface PresignResponse {
+  uploadUrl: string;
+  key: string;
+  publicUrl: string;
+}
+
+export const presignProfileUploadFn = async (
+  contentType: string,
+  contentLength: number,
+): Promise<PresignResponse> => {
   try {
-    const response = await driverApi.post<ApiResponse<Driver>>(
-      "/create",
-      data,
-      {
-        headers: isFormData
-          ? { "Content-Type": undefined }
-          : undefined,
-      },
+    const response = await driverApi.post<ApiResponse<PresignResponse>>(
+      "/profile/presign",
+      { contentType, contentLength },
     );
+    if (!response.data.success || !response.data.data) {
+      throw new Error(response.data.error || "Failed to generate upload URL");
+    }
+    return response.data.data;
+  } catch (err) {
+    return handleApiError(err, "Failed to generate upload URL") as never;
+  }
+};
+
+export const uploadToR2Fn = async (uploadUrl: string, file: File): Promise<void> => {
+  const response = await fetch(uploadUrl, {
+    method: "PUT",
+    body: file,
+    headers: { "Content-Type": file.type },
+  });
+  if (!response.ok) {
+    throw new Error(`Upload failed with status ${response.status}`);
+  }
+};
+
+export const createDriverFn = async (
+  data: CreateDriverRequest,
+): Promise<Driver> => {
+  try {
+    const response = await driverApi.post<ApiResponse<Driver>>("/create", data);
     if (!response.data.success || !response.data.data) {
       throw new Error(response.data.error || "Failed to create driver profile");
     }
@@ -44,19 +70,10 @@ export const createDriverFn = async (
 };
 
 export const updateDriverFn = async (
-  data: UpdateProfileRequest | FormData,
+  data: UpdateProfileRequest,
 ): Promise<Driver> => {
-  const isFormData = data instanceof FormData;
   try {
-    const response = await driverApi.put<ApiResponse<Driver>>(
-      "/update",
-      data,
-      {
-        headers: isFormData
-          ? { "Content-Type": undefined }
-          : undefined,
-      },
-    );
+    const response = await driverApi.put<ApiResponse<Driver>>("/update", data);
     if (!response.data.success || !response.data.data) {
       throw new Error(response.data.error || "Failed to update driver profile");
     }
@@ -109,6 +126,13 @@ export const useUpdateDriver = (options?: {
   return useMutation({
     mutationFn: updateDriverFn,
     ...options,
+  });
+};
+
+export const usePresignProfileUpload = () => {
+  return useMutation({
+    mutationFn: ({ contentType, contentLength }: { contentType: string; contentLength: number }) =>
+      presignProfileUploadFn(contentType, contentLength),
   });
 };
 

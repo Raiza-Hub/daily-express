@@ -89,10 +89,12 @@ const envSchema = z.object({
   // Database
   DATABASE_URL: z.string().min(1),
 
-  // Cloudinary
-  CLOUDINARY_CLOUD_NAME: z.string().min(1),
-  CLOUDINARY_API_KEY: z.string().min(1),
-  CLOUDINARY_API_SECRET: z.string().min(1),
+  // R2 (profile image uploads)
+  R2_ENDPOINT: z.string().url(),
+  R2_ACCESS_KEY_ID: z.string().min(1),
+  R2_SECRET_ACCESS_KEY: z.string().min(1),
+  R2_BUCKET: z.string().min(1),
+  R2_PUBLIC_URL: z.string().url(),
 
   // Email (Amazon SES API)
   AWS_REGION: z.string().min(1),
@@ -112,7 +114,7 @@ const envSchema = z.object({
   PAYMENT_PUBLIC_BASE_URL: optionalUrl(),
   KORA_TIMEOUT_MS: z.coerce.number().int().positive().default(15000),
   PROXY_URL: z.string().url().optional(),
-  CLOUDINARY_TIMEOUT_MS: z.coerce.number().int().positive().default(30000),
+
 
   // Route
   ROUTE_SERVICE_TIMEZONE: z.string().min(1),

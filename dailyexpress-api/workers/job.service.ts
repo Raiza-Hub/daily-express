@@ -1,7 +1,6 @@
 import { sql, type SQL } from "drizzle-orm";
 import {
   QUEUES,
-  type DriverProfileImageUploadJobData,
   type DriverVerificationJobData,
   type PaymentExpireJobData,
   type PayoutProcessJobData,
@@ -84,15 +83,6 @@ export class JobService {
     payload: DriverVerificationJobData,
   ) {
     await this.enqueue(tx, QUEUES.DRIVER_VERIFICATION, payload);
-  }
-
-  async enqueueDriverProfileImageUpload(
-    tx: JobExecutor,
-    payload: DriverProfileImageUploadJobData,
-  ) {
-    await this.enqueue(tx, QUEUES.DRIVER_PROFILE_IMAGE_UPLOAD, payload, {
-      singletonKey: payload.uploadId,
-    });
   }
 
   async enqueuePaymentWebhook(tx: JobExecutor, payload: WebhookJobData) {

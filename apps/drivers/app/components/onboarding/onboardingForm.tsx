@@ -19,6 +19,8 @@ import {
   applyApiFieldErrors,
   getApiErrorMessage,
   useCreateDriver,
+  presignProfileUploadFn,
+  uploadToR2Fn,
 } from "@repo/api";
 import { FormProvider, useForm } from "react-hook-form";
 import { Button } from "@repo/ui/components/button";
@@ -105,6 +107,8 @@ const OnboardingForm = () => {
   });
 
   const { handleSubmit, trigger } = methods;
+  const [uploading, setUploading] = useState(false);
+
   const { mutate: createDriver, isPending } = useCreateDriver({
     onSuccess: () => {
       posthog.capture(posthogEvents.driver_onboarding_completed);
@@ -124,34 +128,49 @@ const OnboardingForm = () => {
   const currentStepData = STEPS[currentStep - 1];
   const CurrentStepComponent = currentStepData?.Component || (() => null);
 
-  const onSubmit = (data: TonboardingSchema) => {
-    const formData = new FormData();
+  const onSubmit = async (data: TonboardingSchema) => {
+    setOnboardError(null);
+
+    let profile_pic = "";
+
+    if (data.file instanceof File) {
+      setUploading(true);
+      try {
+        const presign = await presignProfileUploadFn(data.file.type, data.file.size);
+        await uploadToR2Fn(presign.uploadUrl, data.file);
+        profile_pic = presign.publicUrl;
+      } catch {
+        setOnboardError("Failed to upload profile image. Please try again.");
+        setUploading(false);
+        return;
+      }
+      setUploading(false);
+    }
+
     const selectedBank = (BankList as Bank[]).find(
       (bank) => bank.name === data.bankName,
     );
     const bankCode = selectedBank?.code || "";
 
-    if (data.file instanceof File) {
-      formData.append("file", data.file);
-    }
-    formData.append("firstName", data.firstName);
-    formData.append("lastName", data.lastName);
-    formData.append("email", data.email);
-    formData.append("phone", data.phoneNumber);
-    formData.append("address", data.address);
-    formData.append("country", data.country);
-    formData.append("currency", data.currency);
-    formData.append("state", data.state);
-    formData.append("city", data.city);
-    formData.append("bankName", data.bankName);
-    formData.append("bankCode", bankCode);
-    formData.append("accountNumber", data.accountNumber);
-    formData.append("accountName", data.accountName);
-    formData.append("kycType", data.kycType);
-    formData.append("kycId", data.kycId);
-    formData.append("kycConsent", "true");
-
-    createDriver(formData);
+    createDriver({
+      firstName: data.firstName,
+      lastName: data.lastName,
+      email: data.email,
+      phone: data.phoneNumber,
+      address: data.address,
+      country: data.country,
+      currency: data.currency,
+      state: data.state,
+      city: data.city,
+      bankName: data.bankName,
+      bankCode,
+      accountNumber: data.accountNumber,
+      accountName: data.accountName,
+      kycType: data.kycType,
+      kycId: data.kycId,
+      kycConsent: true,
+      profile_pic,
+    });
   };
 
   const onNext = async () => {

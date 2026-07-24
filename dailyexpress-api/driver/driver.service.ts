@@ -3,14 +3,9 @@ import { createServiceError } from "@shared/utils";
 import { DriverRepository } from "./driver.repository";
 import { DriverProfileService } from "./driver-profile.service";
 import { DriverStatsService } from "./driver-stats.service";
-import type { DriverProfileImageUploadFile } from "./cloudinary";
 import { db } from "../db/connection";
 import { paymentRepository } from "../payment/payment.repository";
 import { getStartOfTodayInRouteTimezone } from "../utils/timezone";
-
-type DriverMutationResult = Driver & {
-  profilePictureUpload?: { id: string; status: "pending" };
-};
 type DriverTransaction = Parameters<Parameters<typeof import("../db/connection").db.transaction>[0]>[0];
 type EarningStatus =
   | "pending_trip_completion"
@@ -34,10 +29,9 @@ export class DriverService {
   async createDriver(
     userId: string,
     driverData: Partial<UpdateProfileRequest>,
-    profileImageUpload?: DriverProfileImageUploadFile,
     kycData?: { kycType: "bvn" | "nin"; kycId: string },
-  ): Promise<DriverMutationResult> {
-    return this.profileService.createDriver(userId, driverData, profileImageUpload, kycData);
+  ): Promise<Driver> {
+    return this.profileService.createDriver(userId, driverData, kycData);
   }
 
   async getProfile(userId: string): Promise<Driver | null> {
@@ -47,10 +41,9 @@ export class DriverService {
   async updateDriver(
     userId: string,
     driverData: Partial<UpdateProfileRequest>,
-    profileImageUpload?: DriverProfileImageUploadFile,
     kycData?: { kycType: "bvn" | "nin"; kycId: string },
-  ): Promise<DriverMutationResult> {
-    return this.profileService.updateDriver(userId, driverData, profileImageUpload, kycData);
+  ): Promise<Driver> {
+    return this.profileService.updateDriver(userId, driverData, kycData);
   }
 
   async deactivateDriver(userId: string): Promise<void> {

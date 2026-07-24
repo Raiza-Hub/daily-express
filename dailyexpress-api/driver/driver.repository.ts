@@ -1,10 +1,9 @@
 import { and, desc, eq, notInArray } from "drizzle-orm";
 import { db } from "../db/connection";
-import { driver, driverStats, driverProfileImageUpload, trip, vehicle, type DriverRecord, type DriverStatsRecord, type VehicleRecord } from "../db/index";
+import { driver, driverStats, trip, vehicle, type DriverRecord, type DriverStatsRecord, type VehicleRecord } from "../db/index";
 import type { DbTransaction } from "../db/connection";
 
 type DriverTransaction = DbTransaction;
-type InsertDriverImage = typeof driverProfileImageUpload.$inferInsert;
 type VehicleInsert = typeof vehicle.$inferInsert;
 
 export class DriverRepository {
@@ -71,17 +70,6 @@ export class DriverRepository {
       .update(driver)
       .set({ isActive: false, deletedAt: now, updatedAt: now })
       .where(eq(driver.id, driverId));
-  }
-
-  async insertProfileImageUpload(
-    tx: DriverTransaction,
-    values: InsertDriverImage,
-  ): Promise<{ id: string }> {
-    const [upload] = await tx
-      .insert(driverProfileImageUpload)
-      .values(values)
-      .returning({ id: driverProfileImageUpload.id });
-    return upload;
   }
 
   // --- Vehicle ---
