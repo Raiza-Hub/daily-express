@@ -119,8 +119,6 @@ export const refund = pgTable(
     currency: varchar("currency", { length: 8 }).default("NGN").notNull(),
     reason: text("reason"),
     status: refundStatusEnum("status").default("pending").notNull(),
-    providerStatus: varchar("provider_status", { length: 32 }),
-    rawProviderResponse: jsonb("raw_provider_response"),
     failureReason: text("failure_reason"),
     initiatedBy: varchar("initiated_by", { length: 32 })
       .default("auto")
