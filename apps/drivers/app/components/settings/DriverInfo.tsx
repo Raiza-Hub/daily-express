@@ -6,6 +6,8 @@ import {
   getApiErrorMessage,
   useGetDriver,
   useUpdateDriver,
+  presignProfileUploadFn,
+  uploadToR2Fn,
 } from "@repo/api";
 import { onboardingSchema } from "@repo/types/index";
 import { Button } from "@repo/ui/components/button";
@@ -176,27 +178,36 @@ const DriverInfo = () => {
 
   const onSubmit = async (data: TDriverInfoSchema) => {
     setDriverInfoError(null);
-    const formData = new FormData();
     const selectedCountryCurrency =
       countries.find((country) => country.name === data.country)?.currency ||
       driver?.currency ||
       "";
 
+    let profile_pic = typeof data.file === "string" ? data.file : "";
+
     if (data.file instanceof File) {
-      formData.append("file", data.file);
+      try {
+        const presign = await presignProfileUploadFn(data.file.type, data.file.size);
+        await uploadToR2Fn(presign.uploadUrl, data.file);
+        profile_pic = presign.publicUrl;
+      } catch {
+        setDriverInfoError("Failed to upload profile image. Please try again.");
+        return;
+      }
     }
 
-    formData.append("firstName", data.firstName);
-    formData.append("lastName", data.lastName);
-    formData.append("email", data.email);
-    formData.append("phone", data.phoneNumber);
-    formData.append("address", data.address || "");
-    formData.append("country", data.country);
-    formData.append("currency", selectedCountryCurrency);
-    formData.append("state", data.state);
-    formData.append("city", data.city);
-
-    await updateDriver(formData);
+    await updateDriver({
+      firstName: data.firstName,
+      lastName: data.lastName,
+      email: data.email,
+      phone: data.phoneNumber,
+      address: data.address || "",
+      country: data.country,
+      currency: selectedCountryCurrency,
+      state: data.state,
+      city: data.city,
+      profile_pic,
+    });
   };
 
   return (

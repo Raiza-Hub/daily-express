@@ -2,15 +2,12 @@ import { relations } from "drizzle-orm";
 import {
   bigint,
   boolean,
-  index,
   integer,
-  jsonb,
   pgEnum,
   pgTable,
   text,
   timestamp,
   uuid,
-  varchar,
 } from "drizzle-orm/pg-core";
 import { users } from "./auth-schema";
 
@@ -26,11 +23,6 @@ export const kycStatusEnum = pgEnum("kyc_status", [
   "active",
   "failed",
 ]);
-
-export const driverProfileImageUploadStatusEnum = pgEnum(
-  "driver_profile_image_upload_status",
-  ["pending", "processing", "succeeded", "failed"],
-);
 
 export const driver = pgTable("driver", {
   id: uuid("id").defaultRandom().primaryKey(),
@@ -92,38 +84,6 @@ export const driverStats = pgTable("driver_stats", {
   updatedAt: timestamp("updated_at", { mode: "date" }).defaultNow().notNull(),
 });
 
-export const driverProfileImageUpload = pgTable(
-  "driver_profile_image_upload",
-  {
-    id: uuid("id").defaultRandom().primaryKey(),
-    driverId: uuid("driver_id")
-      .references(() => driver.id, { onDelete: "cascade" })
-      .notNull(),
-    userId: uuid("user_id").notNull(),
-    status: driverProfileImageUploadStatusEnum("status")
-      .default("pending")
-      .notNull(),
-    fileName: text("file_name"),
-    mimeType: varchar("mime_type", { length: 128 }).notNull(),
-    size: integer("size").notNull(),
-    fileBase64: text("file_base64").notNull(),
-    oldProfilePictureUrl: text("old_profile_picture_url"),
-    secureUrl: text("secure_url"),
-    publicId: text("public_id"),
-    errorMessage: text("error_message"),
-    attempts: integer("attempts").default(0).notNull(),
-    metadata: jsonb("metadata"),
-    createdAt: timestamp("created_at", { mode: "date" }).defaultNow().notNull(),
-    updatedAt: timestamp("updated_at", { mode: "date" }).defaultNow().notNull(),
-    processedAt: timestamp("processed_at", { mode: "date" }),
-  },
-  (table) => [
-    index("driver_profile_image_upload_driver_id_idx").on(table.driverId),
-    index("driver_profile_image_upload_status_idx").on(table.status),
-    index("driver_profile_image_upload_user_id_idx").on(table.userId),
-  ],
-);
-
 export const driverRelations = relations(driver, ({ one }) => ({
   stats: one(driverStats, {
     relationName: "driver_stats",
@@ -143,12 +103,10 @@ export const driverStatsRelations = relations(driverStats, ({ one }) => ({
 export const driverSchema = {
   driver,
   driverStats,
-  driverProfileImageUpload,
 };
 
 export type Driver = typeof driver.$inferSelect;
 export type DriverRecord = Driver;
 export type DriverStats = typeof driverStats.$inferSelect;
 export type DriverStatsRecord = DriverStats;
-export type DriverProfileImageUpload =
-  typeof driverProfileImageUpload.$inferSelect;
+

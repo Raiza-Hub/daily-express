@@ -7,16 +7,11 @@ import { publishNotificationCreatedInBackground } from "../notification/realtime
 import { jobService } from "../workers/job.service";
 import { kycDedupClient } from "../kyc/kyc-dedup.client";
 import { timeAsync } from "../utils/timing";
-import type { DriverProfileImageUploadFile } from "./cloudinary";
 import { DriverRepository, driverRepository } from "./driver.repository";
 
 import type { DbTransaction } from "../db/connection";
 import type { DriverRecord } from "../db/index";
 type DriverTransaction = DbTransaction;
-
-type DriverMutationResult = Driver & {
-  profilePictureUpload?: { id: string; status: "pending" };
-};
 
 export class DriverProfileService {
   constructor(private repo: DriverRepository) {}
@@ -24,9 +19,8 @@ export class DriverProfileService {
   async createDriver(
     userId: string,
     driverData: Partial<UpdateProfileRequest>,
-    profileImageUpload?: DriverProfileImageUploadFile,
     kycData?: { kycType: "bvn" | "nin"; kycId: string },
-  ): Promise<DriverMutationResult> {
+  ): Promise<Driver> {
     const existingDriver = await this.repo.findDriverByUserId(userId);
     if (existingDriver) {
       throw createServiceError("Driver profile already exists", 400);
@@ -44,9 +38,6 @@ export class DriverProfileService {
 
     try {
       const sanitizeData = this.sanitizeProfileData(driverData);
-      if (profileImageUpload) {
-        delete sanitizeData.profile_pic;
-      }
 
       const result = await timeAsync(
         "driver.create.transaction",
@@ -105,19 +96,9 @@ export class DriverProfileService {
               );
             }
 
-            const profilePictureUpload = profileImageUpload
-              ? await this.enqueueProfileImageUpload(tx, {
-                  driverId: createdDriver.id,
-                  userId,
-                  oldProfilePictureUrl: null,
-                  file: profileImageUpload,
-                })
-              : null;
-
             return {
               driver: createdDriver,
               bankNotification,
-              profilePictureUpload,
             };
           }),
       );
@@ -131,10 +112,7 @@ export class DriverProfileService {
         );
       }
 
-      return this.withProfilePictureUpload(
-        result.driver,
-        result.profilePictureUpload,
-      );
+      return result.driver;
     } catch (error) {
       if (kycData) {
         await kycDedupClient.releaseClaim(kycData.kycId).catch(() => {});
@@ -151,9 +129,8 @@ export class DriverProfileService {
   async updateDriver(
     userId: string,
     driverData: Partial<UpdateProfileRequest>,
-    profileImageUpload?: DriverProfileImageUploadFile,
     kycData?: { kycType: "bvn" | "nin"; kycId: string },
-  ): Promise<DriverMutationResult> {
+  ): Promise<Driver> {
     const existingDriver = await this.repo.findDriverByUserId(userId);
     if (!existingDriver) {
       throw createServiceError("Driver not found", 404);
@@ -188,9 +165,6 @@ export class DriverProfileService {
 
     try {
       const sanitizedData = this.sanitizeProfileData(driverData);
-      if (profileImageUpload) {
-        delete sanitizedData.profile_pic;
-      }
 
       const bankDetailsChanged =
       (sanitizedData.bankName !== undefined &&
@@ -279,16 +253,7 @@ export class DriverProfileService {
           );
         }
 
-        const profilePictureUpload = profileImageUpload
-          ? await this.enqueueProfileImageUpload(tx, {
-              driverId: record.id,
-              userId,
-              oldProfilePictureUrl: existingDriver.profile_pic ?? null,
-              file: profileImageUpload,
-            })
-          : null;
-
-        return { driver: record, bankNotification, kycNotification, profilePictureUpload };
+        return { driver: record, bankNotification, kycNotification };
       });
 
       if (
@@ -309,10 +274,7 @@ export class DriverProfileService {
         );
       }
 
-      return this.withProfilePictureUpload(
-        result.driver,
-        result.profilePictureUpload,
-      );
+      return result.driver;
     } catch (error) {
       if (kycData) {
         await kycDedupClient.releaseClaim(kycData.kycId).catch(() => {});
@@ -384,41 +346,6 @@ export class DriverProfileService {
       tone: "attention" as const,
       occurredAt: new Date(),
     };
-  }
-
-  private async enqueueProfileImageUpload(
-    tx: DriverTransaction,
-    input: {
-      driverId: string;
-      userId: string;
-      oldProfilePictureUrl: string | null;
-      file: DriverProfileImageUploadFile;
-    },
-  ) {
-    const upload = await this.repo.insertProfileImageUpload(tx, {
-      driverId: input.driverId,
-      userId: input.userId,
-      fileName: input.file.fileName,
-      mimeType: input.file.mimeType,
-      size: input.file.size,
-      fileBase64: input.file.fileBase64,
-      oldProfilePictureUrl: input.oldProfilePictureUrl,
-      metadata: { source: "driver-profile" },
-    });
-
-    await jobService.enqueueDriverProfileImageUpload(tx, {
-      uploadId: upload.id,
-    });
-
-    return { id: upload.id, status: "pending" as const };
-  }
-
-  private withProfilePictureUpload(
-    record: Driver,
-    profilePictureUpload: { id: string; status: "pending" } | null,
-  ): DriverMutationResult {
-    if (!profilePictureUpload) return record;
-    return { ...record, profilePictureUpload };
   }
 
   private sanitizeProfileData(

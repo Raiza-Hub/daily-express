@@ -3,11 +3,11 @@ import { asyncHandler } from "@shared/middleware";
 import { driverService } from "./driver.service";
 import { vehicleService } from "./vehicle.service";
 import { driverRepository } from "./driver.repository";
+import { r2ProfileService } from "./r2-profile.service";
 import { createSuccessResponse } from "@shared/utils";
 import { getAuthenticatedUser } from "../middleware/auth";
 import { sendErrorResponse } from "../middleware/apiResponses";
 import { timeAsync } from "../utils/timing";
-import type { DriverProfileImageUploadRequest } from "./cloudinary";
 
 function getParam(value: string | string[] | undefined): string | null {
   return typeof value === "string" ? value : (value?.[0] ?? null);
@@ -47,7 +47,7 @@ export const getDriver: RequestHandler = asyncHandler(
 );
 
 export const createDriver: RequestHandler = asyncHandler(
-  async (req: DriverProfileImageUploadRequest, res: Response) => {
+  async (req: Request, res: Response) => {
     const { kycType, kycId, kycConsent: _, ...driverData } = req.body;
     const gatewayUser = getAuthenticatedUser(req);
     const userId = gatewayUser?.userId;
@@ -58,7 +58,7 @@ export const createDriver: RequestHandler = asyncHandler(
       });
     }
 
-    if (!req.profileImageUpload && !driverData.profile_pic) {
+    if (!driverData.profile_pic) {
       return sendErrorResponse(res, 400, "Profile photo is required.", {
         code: "MISSING_PROFILE_PHOTO",
       });
@@ -67,7 +67,7 @@ export const createDriver: RequestHandler = asyncHandler(
     const kycData = kycType && kycId ? { kycType: kycType as "bvn" | "nin", kycId } : undefined;
 
     const driver = await timeAsync("driver.create.service", { userId }, () =>
-      driverService.createDriver(userId, driverData, req.profileImageUpload, kycData),
+      driverService.createDriver(userId, driverData, kycData),
     );
 
     return res
@@ -79,7 +79,7 @@ export const createDriver: RequestHandler = asyncHandler(
 );
 
 export const updateDriver: RequestHandler = asyncHandler(
-  async (req: DriverProfileImageUploadRequest, res: Response) => {
+  async (req: Request, res: Response) => {
     const { kycType, kycId, kycConsent: _, ...driverData } = req.body;
     const gatewayUser = getAuthenticatedUser(req);
     const userId = gatewayUser?.userId;
@@ -93,7 +93,7 @@ export const updateDriver: RequestHandler = asyncHandler(
     const kycData = kycType && kycId ? { kycType: kycType as "bvn" | "nin", kycId } : undefined;
 
     const driver = await timeAsync("driver.update.service", { userId }, () =>
-      driverService.updateDriver(userId, driverData, req.profileImageUpload, kycData),
+      driverService.updateDriver(userId, driverData, kycData),
     );
 
     return res
@@ -163,6 +163,53 @@ export const getDriverStats: RequestHandler = asyncHandler(
       .json(
         createSuccessResponse(stats, "Driver stats retrieved successfully"),
       );
+  },
+);
+
+// --- Profile Picture (R2 presigned URL) ---
+
+export const presignProfileUpload: RequestHandler = asyncHandler(
+  async (req: Request, res: Response) => {
+    const gatewayUser = getAuthenticatedUser(req);
+    if (!gatewayUser) {
+      return sendErrorResponse(res, 401, "Please sign in again.", { code: "AUTHENTICATION_REQUIRED" });
+    }
+
+    const { contentType, contentLength } = req.body;
+    if (!contentType || !contentLength) {
+      return sendErrorResponse(res, 400, "contentType and contentLength are required.", { code: "MISSING_FIELDS" });
+    }
+
+    const driverRecord = await driverRepository.findDriverByUserId(gatewayUser.userId);
+    const id = driverRecord?.id ?? gatewayUser.userId;
+
+    const result = await r2ProfileService.generateUploadUrl(id, contentType, contentLength);
+    return res.status(200).json(createSuccessResponse(result));
+  },
+);
+
+export const confirmProfileUpload: RequestHandler = asyncHandler(
+  async (req: Request, res: Response) => {
+    const gatewayUser = getAuthenticatedUser(req);
+    if (!gatewayUser) {
+      return sendErrorResponse(res, 401, "Please sign in again.", { code: "AUTHENTICATION_REQUIRED" });
+    }
+
+    const { key } = req.body;
+    if (!key) {
+      return sendErrorResponse(res, 400, "key is required.", { code: "MISSING_KEY" });
+    }
+
+    const { publicUrl } = await r2ProfileService.confirmUpload(key);
+
+    await driverRepository.updateDriverStandalone(gatewayUser.userId, {
+      profile_pic: publicUrl,
+      updatedAt: new Date(),
+    });
+
+    return res.status(200).json(
+      createSuccessResponse({ profile_pic: publicUrl }, "Profile picture updated successfully"),
+    );
   },
 );
 

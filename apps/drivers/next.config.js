@@ -22,7 +22,7 @@ const nextConfig = {
     remotePatterns: [
       {
         protocol: "https",
-        hostname: "res.cloudinary.com",
+        hostname: process.env.NEXT_PUBLIC_R2_HOSTNAME,
       },
     ],
   },

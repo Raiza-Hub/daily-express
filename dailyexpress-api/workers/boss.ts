@@ -8,8 +8,7 @@ export const QUEUES = {
   PAYOUT_PROCESS_DLQ: "payout.process.dlq",
   DRIVER_VERIFICATION: "driver.verification",
   DRIVER_VERIFICATION_DLQ: "driver.verification.dlq",
-  DRIVER_PROFILE_IMAGE_UPLOAD: "driver.profile_image.upload",
-  DRIVER_PROFILE_IMAGE_UPLOAD_DLQ: "driver.profile_image.upload.dlq",
+
   PAYMENT_EXPIRE: "payment.expire",
   PAYMENT_EXPIRE_DLQ: "payment.expire.dlq",
   WEBHOOK_PROCESS: "webhook.process",
@@ -55,10 +54,6 @@ export interface DriverKycVerificationPayload {
 export type DriverVerificationJobData =
   | { type: "bank_verification" } & DriverBankVerificationPayload
   | { type: "kyc_verification" } & DriverKycVerificationPayload;
-
-export interface DriverProfileImageUploadJobData {
-  uploadId: string;
-}
 
 export interface PayoutProcessJobData {
   earningId: string;
@@ -122,7 +117,7 @@ async function createQueues(instance: PgBoss) {
   await instance.createQueue(QUEUES.EMAIL_SEND_DLQ, { retryLimit: 0 });
   await instance.createQueue(QUEUES.PAYOUT_PROCESS_DLQ, { retryLimit: 0 });
   await instance.createQueue(QUEUES.DRIVER_VERIFICATION_DLQ, {  retryLimit: 0 });
-  await instance.createQueue(QUEUES.DRIVER_PROFILE_IMAGE_UPLOAD_DLQ, {  retryLimit: 0 });
+
   await instance.createQueue(QUEUES.PAYMENT_EXPIRE_DLQ, { retryLimit: 0 });
   await instance.createQueue(QUEUES.WEBHOOK_PROCESS_DLQ, { retryLimit: 0 });
   await instance.createQueue(QUEUES.TRIP_REFUND_DLQ, { retryLimit: 0 });
@@ -146,15 +141,6 @@ async function createQueues(instance: PgBoss) {
     retryDelayMax: 300,
     deleteAfterSeconds: 86400,
     deadLetter: QUEUES.DRIVER_VERIFICATION_DLQ,
-  });
-
-  await instance.createQueue(QUEUES.DRIVER_PROFILE_IMAGE_UPLOAD, {
-    retryLimit: 3,
-    retryDelay: 30,
-    retryBackoff: true,
-    retryDelayMax: 300,
-    deleteAfterSeconds: 86400,
-    deadLetter: QUEUES.DRIVER_PROFILE_IMAGE_UPLOAD_DLQ,
   });
 
   await instance.createQueue(QUEUES.PAYOUT_PROCESS, {

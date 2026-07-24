@@ -5,7 +5,6 @@ import { createTokenBucketLimiter } from "../middleware/tokenBucket";
 import { getConfig } from "../config/index";
 import { validateRequest } from "../middleware/requestValidation";
 import { createDriverSchema, updateDriverSchema } from "./validation";
-import { cloudinaryMiddleware } from "./cloudinary";
 
 const config = getConfig();
 
@@ -26,10 +25,23 @@ router.get(
 );
 
 router.post(
+  "/profile/presign",
+  authenticateVerifiedGatewayRequest,
+  driverActionLimiter,
+  driverController.presignProfileUpload,
+);
+
+router.post(
+  "/profile/confirm",
+  authenticateVerifiedGatewayRequest,
+  driverActionLimiter,
+  driverController.confirmProfileUpload,
+);
+
+router.post(
   "/create",
   authenticateVerifiedGatewayRequest,
   driverActionLimiter,
-  cloudinaryMiddleware,
   validateRequest(createDriverSchema),
   driverController.createDriver,
 );
@@ -38,7 +50,6 @@ router.put(
   "/update",
   authenticateVerifiedGatewayRequest,
   driverActionLimiter,
-  cloudinaryMiddleware,
   validateRequest(updateDriverSchema),
   driverController.updateDriver,
 );
