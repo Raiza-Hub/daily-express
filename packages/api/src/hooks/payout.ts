@@ -92,7 +92,7 @@ export const useDriverPayoutBalance = (options?: { enabled?: boolean }) => {
     retry: false,
     enabled: options?.enabled ?? true,
     refetchInterval: (query) =>
-      query.state.data?.processingAmountMinor ? 15000 : false,
+      query.state.data?.processingAmount ? 15000 : false,
   });
 };
 

@@ -5,8 +5,7 @@ import { booking, earning, payment, route, trip, VEHICLE_CAPACITY } from "../db/
 import { driverStats } from "../db/driver-schema";
 import { getConfig } from "../config/index";
 import { logger } from "../utils/logger";
-import { formatAmountMajor } from "../utils/payout";
-import { toMinorAmount } from "../utils/payment";
+import { formatAmount } from "../utils/payout";
 import { formatBusinessDate } from "../utils/route";
 import { jobService } from "../workers/job.service";
 
@@ -57,7 +56,7 @@ export class AllocationService {
         frontendUrl: config.FRONTEND_URL,
         passengerName: `${bookingRecord.firstName ?? ""} ${bookingRecord.lastName ?? ""}`.trim() || null,
         paymentReference: reference,
-        pricePaid: formatAmountMajor(bookingRecord.fareAmount, "NGN"),
+        pricePaid: formatAmount(bookingRecord.fareAmount, "NGN"),
         pickupTitle: routeRecord.pickup_location_title,
         dropoffTitle: routeRecord.dropoff_location_title,
         tripDate: formatBusinessDate(bookingRecord.tripDate),
@@ -181,20 +180,19 @@ export class AllocationService {
       const newBookedSeats = (bestTripRow.length > 0 ? bestTripRow[0].booked_seats : 0) + 1;
 
       if (tripDriverId) {
-        const minor = toMinorAmount(bookingRecord.fareAmount);
         await tx.execute(sql`
           INSERT INTO ${earning} (driver_id, booking_id, trip_id, route_id, trip_date,
             pickup_title, dropoff_title,
-            gross_amount_minor, fee_amount_minor, net_amount_minor,
+            gross_amount, fee_amount, net_amount,
             currency, status, source_event_id, created_at, updated_at)
           VALUES (${tripDriverId}, ${bookingId}, ${tripId}, ${bookingRecord.routeId},
             ${tripDateStr}, ${routeRecord.pickup_location_title}, ${routeRecord.dropoff_location_title},
-            ${minor}, 0, ${minor},
+            ${bookingRecord.fareAmount}, 0, ${bookingRecord.fareAmount},
             'NGN', 'pending_trip_completion', ${`payment:${reference}:allocation-driver-present`}, now(), now())
         `);
         await tx.execute(sql`
           UPDATE ${driverStats}
-          SET pending_payments = pending_payments + ${minor},
+          SET pending_payments = pending_payments + ${bookingRecord.fareAmount},
               total_passengers = total_passengers + 1,
               updated_at = now()
           WHERE driver_id = ${tripDriverId}

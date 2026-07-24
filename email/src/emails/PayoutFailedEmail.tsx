@@ -19,25 +19,25 @@ export interface PayoutFailedEmailProps {
   frontendUrl: string;
   driverName: string | null;
   driverEmail: string;
-  amountMinor: number;
+  amount: number;
   reference: string;
   failureReason: string;
   bankName: string;
   accountLast4: string;
 }
 
-function formatCurrency(amountMinor: number, currency: string = "NGN") {
+function formatCurrency(amount: number, currency: string = "NGN") {
   return new Intl.NumberFormat("en-NG", {
     style: "currency",
     currency,
     minimumFractionDigits: 2,
-  }).format(amountMinor / 100);
+  }).format(amount);
 }
 
 const PayoutFailedEmail = ({
   driverName,
   driverEmail,
-  amountMinor,
+  amount,
   reference,
   failureReason,
   bankName,
@@ -69,7 +69,7 @@ const PayoutFailedEmail = ({
 
             <Text style={summary}>
               We're sorry to inform you that your payout of{" "}
-              <strong style={strong}>{formatCurrency(amountMinor)}</strong> to{" "}
+              <strong style={strong}>{formatCurrency(amount)}</strong> to{" "}
               <strong style={strong}>{bankName} ****{accountLast4}</strong> was
               unsuccessful. Despite multiple attempts, we were unable to complete the
               transfer to your bank account.
@@ -105,7 +105,7 @@ const PayoutFailedEmail = ({
                   <Text style={label}>Payout Amount:</Text>
                 </Column>
                 <Column style={valueCol}>
-                  <Text style={value}>{formatCurrency(amountMinor)}</Text>
+                  <Text style={value}>{formatCurrency(amount)}</Text>
                 </Column>
               </Row>
               <Row style={row}>
@@ -294,7 +294,7 @@ PayoutFailedEmail.PreviewProps = {
   frontendUrl: "",
   driverName: "Ibrahim Musa",
   driverEmail: "ibrahim@example.com",
-  amountMinor: 8450000,
+  amount: 84500,
   reference: "PO-2026-7781",
   failureReason: "Destination account is temporarily restricted",
   bankName: "Access Bank",

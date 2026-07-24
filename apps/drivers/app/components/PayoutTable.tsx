@@ -163,7 +163,7 @@ const PayoutTable = () => {
                       {payout.reference}
                     </td>
                     <td className="py-6 px-4 text-gray-600 font-normal text-sm">
-                      {formatCurrency(payout.amountMinor, payout.currency)}
+                      {formatCurrency(payout.amount, payout.currency)}
                     </td>
                     <td className="py-6 pl-4 text-right">
                       <Badge

@@ -24,13 +24,13 @@ export class DriverStatsService {
     tx: DriverTransaction,
     input: {
       driverId: string;
-      fareAmountMinor: number;
+      fareAmount: number;
     },
   ): Promise<void> {
     await tx
       .update(driverStats)
       .set({
-        pendingPayments: sql`${driverStats.pendingPayments} + ${input.fareAmountMinor}`,
+        pendingPayments: sql`${driverStats.pendingPayments} + ${input.fareAmount}`,
         totalPassengers: sql`${driverStats.totalPassengers} + 1`,
         updatedAt: new Date(),
       })
@@ -41,14 +41,14 @@ export class DriverStatsService {
     tx: DriverTransaction,
     input: {
       driverId: string;
-      amountMinor: number;
+      amount: number;
       previousEarningStatus?: EarningStatus | null;
     },
   ): Promise<void> {
     const pendingDelta =
       input.previousEarningStatus &&
       PENDING_PAYMENT_STATUSES.has(input.previousEarningStatus)
-        ? input.amountMinor
+        ? input.amount
         : 0;
 
     await tx
@@ -65,13 +65,13 @@ export class DriverStatsService {
     tx: DriverTransaction,
     input: {
       driverId: string;
-      amountMinor: number;
+      amount: number;
     },
   ): Promise<void> {
     await tx
       .update(driverStats)
       .set({
-        totalEarnings: sql`${driverStats.totalEarnings} + ${input.amountMinor}`,
+        totalEarnings: sql`${driverStats.totalEarnings} + ${input.amount}`,
         updatedAt: new Date(),
       })
       .where(eq(driverStats.driverId, input.driverId));
@@ -81,7 +81,7 @@ export class DriverStatsService {
     tx: DriverTransaction,
     input: {
       driverId: string;
-      amountMinor: number;
+      amount: number;
       previousStatus: EarningStatus;
       nextStatus: EarningStatus;
     },
@@ -99,14 +99,14 @@ export class DriverStatsService {
 
     if (wasPendingPayment !== isPendingPayment) {
       updates.pendingPayments = wasPendingPayment
-        ? sql`GREATEST(${driverStats.pendingPayments} - ${input.amountMinor}, 0)`
-        : sql`${driverStats.pendingPayments} + ${input.amountMinor}`;
+        ? sql`GREATEST(${driverStats.pendingPayments} - ${input.amount}, 0)`
+        : sql`${driverStats.pendingPayments} + ${input.amount}`;
     }
 
     if (wasInReview !== isInReview) {
       updates.inReviewPayments = wasInReview
-        ? sql`GREATEST(${driverStats.inReviewPayments} - ${input.amountMinor}, 0)`
-        : sql`${driverStats.inReviewPayments} + ${input.amountMinor}`;
+        ? sql`GREATEST(${driverStats.inReviewPayments} - ${input.amount}, 0)`
+        : sql`${driverStats.inReviewPayments} + ${input.amount}`;
     }
 
     await tx

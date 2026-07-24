@@ -22,9 +22,9 @@ export interface EarningsReconciliation {
   isReconciled: boolean;
   driverId: string | null;
   bookingCount: number;
-  bookingAmountMinor: number;
+  bookingAmount: number;
   earningCount: number;
-  earningAmountMinor: number;
+  earningAmount: number;
 }
 
 export class PayoutRepository {
@@ -86,7 +86,7 @@ export class PayoutRepository {
       .returning({
         id: earning.id,
         driverId: earning.driverId,
-        netAmountMinor: earning.netAmountMinor,
+        netAmount: earning.netAmount,
       });
   }
 
@@ -112,8 +112,8 @@ export class PayoutRepository {
     const [bookingTotals] = await tx
       .select({
         count: sql<number>`count(*)::int`,
-        amountMinor:
-          sql<number>`coalesce(sum(${booking.fareAmount} * 100), 0)::bigint`.mapWith(
+        amount:
+          sql<number>`coalesce(sum(${booking.fareAmount}), 0)::bigint`.mapWith(
             Number,
           ),
       })
@@ -132,8 +132,8 @@ export class PayoutRepository {
     const [earningTotals] = await tx
       .select({
         count: sql<number>`count(*)::int`,
-        amountMinor:
-          sql<number>`coalesce(sum(${earning.grossAmountMinor}), 0)::bigint`.mapWith(
+        amount:
+          sql<number>`coalesce(sum(${earning.grossAmount}), 0)::bigint`.mapWith(
             Number,
           ),
       })
@@ -146,20 +146,20 @@ export class PayoutRepository {
       );
 
     const bookingCount = bookingTotals?.count ?? 0;
-    const bookingAmountMinor = bookingTotals?.amountMinor ?? 0;
+    const bookingAmount = bookingTotals?.amount ?? 0;
     const earningCount = earningTotals?.count ?? 0;
-    const earningAmountMinor = earningTotals?.amountMinor ?? 0;
+    const earningAmount = earningTotals?.amount ?? 0;
     const isReconciled =
       bookingCount === earningCount &&
-      bookingAmountMinor === earningAmountMinor;
+      bookingAmount === earningAmount;
 
     return {
       isReconciled,
       driverId: tripRecord?.driverId ?? null,
       bookingCount,
-      bookingAmountMinor,
+      bookingAmount,
       earningCount,
-      earningAmountMinor,
+      earningAmount,
     };
   }
 
@@ -263,7 +263,7 @@ export class PayoutRepository {
   findDriverEarnings(driverId: string) {
     return db.query.earning.findMany({
       where: eq(earning.driverId, driverId),
-      columns: { status: true, netAmountMinor: true },
+      columns: { status: true, netAmount: true },
     });
   }
 

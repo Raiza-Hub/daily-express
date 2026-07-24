@@ -18,7 +18,7 @@ export interface RefundFailedEmailProps {
   customerEmail: string;
   paymentReference: string;
   bookingId?: string | null;
-  amountMinor: number;
+  amount: number;
   currency?: string;
   productName: string;
   failureReason: string;
@@ -26,12 +26,12 @@ export interface RefundFailedEmailProps {
   supportPhone?: string;
 }
 
-function formatCurrency(amountMinor: number, currency: string = "NGN") {
+function formatCurrency(amount: number, currency: string = "NGN") {
   return new Intl.NumberFormat("en-NG", {
     style: "currency",
     currency,
     minimumFractionDigits: 2,
-  }).format(amountMinor / 100);
+  }).format(amount);
 }
 
 const RefundFailedEmail = ({
@@ -39,7 +39,7 @@ const RefundFailedEmail = ({
   customerEmail,
   paymentReference,
   bookingId,
-  amountMinor,
+  amount,
   currency = "NGN",
   productName,
   failureReason,
@@ -73,7 +73,7 @@ const RefundFailedEmail = ({
             <Text style={summary}>
               We sincerely apologize for the inconvenience. We attempted to process
               your refund of{" "}
-              <strong style={strong}>{formatCurrency(amountMinor, currency)}</strong>{" "}
+              <strong style={strong}>{formatCurrency(amount, currency)}</strong>{" "}
               for your <strong style={strong}>{productName}</strong> booking, but
               unfortunately we were unable to complete it automatically.
             </Text>
@@ -105,7 +105,7 @@ const RefundFailedEmail = ({
             <Text style={detail}>
               Amount:{" "}
               <strong style={strong}>
-                {formatCurrency(amountMinor, currency)}
+                {formatCurrency(amount, currency)}
               </strong>
             </Text>
             <Text style={detail}>
@@ -257,7 +257,7 @@ RefundFailedEmail.PreviewProps = {
   customerEmail: "chioma@example.com",
   paymentReference: "PAY-REF-2026-001",
   bookingId: "booking_01JXYZ",
-  amountMinor: 1250000,
+  amount: 12500,
   currency: "NGN",
   productName: "Lagos to Abuja Trip",
   failureReason: "Bank reversal timed out",

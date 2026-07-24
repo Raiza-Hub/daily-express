@@ -8,7 +8,7 @@ import { driverService as sharedDriverService } from "../driver/driver.service";
 import { notificationService as sharedNotificationService } from "../notification/notification.service";
 import { publishNotificationCreatedInBackground } from "../notification/realtime";
 import { jobService } from "../workers/job.service";
-import { formatAmountMinor } from "../utils/payout";
+import { formatAmount } from "../utils/payout";
 import type { DriverNotification } from "@shared/types";
 import type { DbTransaction } from "../db/connection";
 
@@ -33,7 +33,7 @@ export class PayoutNotificationService {
         frontendUrl: getConfig().FRONTEND_URL,
         driverName: null,
         driverEmail: payoutRecord.driverEmail,
-        amountMinor: payoutRecord.amountMinor,
+        amount: payoutRecord.amount,
         reference: payoutRecord.reference,
         failureReason: reason,
         bankName: payoutRecord.recipientBankName,
@@ -93,7 +93,7 @@ export class PayoutNotificationService {
         if (earningRecord) {
           await this.driverService.adjustPaymentCountersForStatusChange(tx, {
             driverId: earningRecord.driverId,
-            amountMinor: earningRecord.netAmountMinor,
+            amount: earningRecord.netAmount,
             previousStatus: earningRecord.status,
             nextStatus: "manual_review",
           });
@@ -133,8 +133,8 @@ export class PayoutNotificationService {
         kind: "event",
         type: "payout_completed",
         title: "Payout sent successfully",
-        message: `${formatAmountMinor(
-          payoutRecord.amountMinor,
+        message: `${formatAmount(
+          payoutRecord.amount,
           payoutRecord.currency,
         )} was transferred to your account.`,
         href: "/payouts",
@@ -163,8 +163,8 @@ export class PayoutNotificationService {
         title: "A payout needs review",
         message:
           payoutRecord.failureReason ||
-          `${formatAmountMinor(
-            payoutRecord.amountMinor,
+          `${formatAmount(
+            payoutRecord.amount,
             payoutRecord.currency,
           )} could not be transferred successfully.`,
         href: "/payouts",

@@ -27,7 +27,7 @@ export class EarningService {
       tripDate: Date | string;
       pickupTitle: string;
       dropoffTitle: string;
-      fareAmountMinor: number;
+      fareAmount: number;
       currency: string;
       sourceEventId: string;
     },
@@ -40,9 +40,9 @@ export class EarningService {
       tripDate: new Date(input.tripDate),
       pickupTitle: input.pickupTitle,
       dropoffTitle: input.dropoffTitle,
-      grossAmountMinor: input.fareAmountMinor,
-      feeAmountMinor: 0,
-      netAmountMinor: input.fareAmountMinor,
+      grossAmount: input.fareAmount,
+      feeAmount: 0,
+      netAmount: input.fareAmount,
       currency: input.currency,
       status: "pending_trip_completion",
       sourceEventId: input.sourceEventId,
@@ -71,7 +71,7 @@ export class EarningService {
       for (const entry of manualReviewEarnings) {
         await this.driverService.adjustPaymentCountersForStatusChange(tx, {
           driverId: entry.driverId,
-          amountMinor: entry.netAmountMinor,
+          amount: entry.netAmount,
           previousStatus: "pending_trip_completion",
           nextStatus: "manual_review",
         });
@@ -90,12 +90,12 @@ export class EarningService {
           tripId: input.tripId,
           driverId: reconciliation.driverId,
           bookingCount: reconciliation.bookingCount,
-          bookingAmountMinor: reconciliation.bookingAmountMinor,
+          bookingAmount: reconciliation.bookingAmount,
           earningCount: reconciliation.earningCount,
-          earningAmountMinor: reconciliation.earningAmountMinor,
-          amountDifferenceMinor:
-            reconciliation.bookingAmountMinor -
-            reconciliation.earningAmountMinor,
+          earningAmount: reconciliation.earningAmount,
+          amountDifference:
+            reconciliation.bookingAmount -
+            reconciliation.earningAmount,
         });
 
         sentryServer.captureException(
@@ -106,12 +106,12 @@ export class EarningService {
             tripId: input.tripId,
             driverId: reconciliation.driverId,
             bookingCount: reconciliation.bookingCount,
-            bookingAmountMinor: reconciliation.bookingAmountMinor,
+            bookingAmount: reconciliation.bookingAmount,
             earningCount: reconciliation.earningCount,
-            earningAmountMinor: reconciliation.earningAmountMinor,
-            amountDifferenceMinor:
-              reconciliation.bookingAmountMinor -
-              reconciliation.earningAmountMinor,
+            earningAmount: reconciliation.earningAmount,
+            amountDifference:
+              reconciliation.bookingAmount -
+              reconciliation.earningAmount,
           },
         );
       }
@@ -140,7 +140,7 @@ export class EarningService {
   private async alertReconciliationFailure(
     tx: PayoutTransaction,
     tripId: string,
-    reconciliation: { driverId: string | null; bookingCount: number; bookingAmountMinor: number; earningCount: number; earningAmountMinor: number },
+    reconciliation: { driverId: string | null; bookingCount: number; bookingAmount: number; earningCount: number; earningAmount: number },
   ) {
     if (!reconciliation.driverId) {
       throw new Error("Cannot notify reconciliation failure without driverId");
@@ -162,12 +162,12 @@ export class EarningService {
         metadata: {
           tripId,
           bookingCount: reconciliation.bookingCount,
-          bookingAmountMinor: reconciliation.bookingAmountMinor,
+          bookingAmount: reconciliation.bookingAmount,
           earningCount: reconciliation.earningCount,
-          earningAmountMinor: reconciliation.earningAmountMinor,
-          amountDifferenceMinor:
-            reconciliation.bookingAmountMinor -
-            reconciliation.earningAmountMinor,
+          earningAmount: reconciliation.earningAmount,
+          amountDifference:
+            reconciliation.bookingAmount -
+            reconciliation.earningAmount,
         },
         occurredAt: new Date(),
       },

@@ -7,7 +7,6 @@ import { routeRepository } from "../route/route.repository";
 import { jobService } from "./job.service";
 import { getBoss, QUEUES, type TripDriverAssignedJobData } from "./boss";
 import { renderEmail, getEmailSubject } from "@repo/email";
-import { toMinorAmount } from "../utils/payment";
 
 const repo = routeRepository;
 
@@ -78,20 +77,18 @@ async function processTripDriverAssigned(data: TripDriverAssignedJobData) {
       });
       if (existing) continue;
 
-      const minor = toMinorAmount(bk.fareAmount);
-
       const insertResult = (await tx.execute(sql`
         INSERT INTO earning (
           driver_id, booking_id, trip_id, route_id, trip_date,
           pickup_title, dropoff_title,
-          gross_amount_minor, fee_amount_minor, net_amount_minor,
+          gross_amount, fee_amount, net_amount,
           currency, status, source_event_id, created_at, updated_at
         ) VALUES (
           ${driverId}, ${bk.id}, ${tripId},
           ${tripWithRoute.route.id}, ${tripWithRoute.trip.date.toISOString()},
           ${tripWithRoute.route.pickup_location_title},
           ${tripWithRoute.route.dropoff_location_title},
-          ${minor}, 0, ${minor},
+          ${bk.fareAmount}, 0, ${bk.fareAmount},
           'NGN', 'pending_trip_completion',
           ${`booking:${bk.id}:driver-assigned`},
           now(), now()
@@ -107,7 +104,7 @@ async function processTripDriverAssigned(data: TripDriverAssignedJobData) {
       await tx.execute(sql`
         UPDATE driver_stats
         SET
-          pending_payments = pending_payments + ${minor},
+          pending_payments = pending_payments + ${bk.fareAmount},
           total_passengers = total_passengers + 1,
           updated_at = now()
         WHERE driver_id = ${driverId}

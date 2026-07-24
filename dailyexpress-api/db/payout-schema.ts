@@ -44,11 +44,11 @@ export const earning = pgTable(
     tripDate: timestamp("trip_date", { mode: "date" }).notNull(),
     pickupTitle: text("pickup_title").notNull(),
     dropoffTitle: text("dropoff_title").notNull(),
-    grossAmountMinor: bigint("gross_amount_minor", {
+    grossAmount: bigint("gross_amount", {
       mode: "number",
     }).notNull(),
-    feeAmountMinor: bigint("fee_amount_minor", { mode: "number" }).notNull(),
-    netAmountMinor: bigint("net_amount_minor", { mode: "number" }).notNull(),
+    feeAmount: bigint("fee_amount", { mode: "number" }).notNull(),
+    netAmount: bigint("net_amount", { mode: "number" }).notNull(),
     currency: varchar("currency", { length: 8 }).default("NGN").notNull(),
     status: earningStatusEnum("status")
       .default("pending_trip_completion")
@@ -83,7 +83,7 @@ export const payout = pgTable(
     provider: payoutProviderEnum("provider").default("kora").notNull(),
     providerTransferCode: varchar("provider_transfer_code", { length: 128 }),
     providerTransferId: varchar("provider_transfer_id", { length: 128 }),
-    amountMinor: bigint("amount_minor", { mode: "number" }).notNull(),
+    amount: bigint("amount", { mode: "number" }).notNull(),
     currency: varchar("currency", { length: 8 }).default("NGN").notNull(),
     earningsCount: integer("earnings_count").notNull(),
     status: payoutStatusEnum("status").default("processing").notNull(),

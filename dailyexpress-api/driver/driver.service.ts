@@ -75,28 +75,28 @@ export class DriverService {
 
   async recordNewBookingForDriver(
     tx: DriverTransaction,
-    input: { driverId: string; fareAmountMinor: number },
+    input: { driverId: string; fareAmount: number },
   ): Promise<void> {
     return this.statsService.recordNewBookingForDriver(tx, input);
   }
 
   async decrementStatsForCancelledBooking(
     tx: DriverTransaction,
-    input: { driverId: string; amountMinor: number; previousEarningStatus?: EarningStatus | null },
+    input: { driverId: string; amount: number; previousEarningStatus?: EarningStatus | null },
   ): Promise<void> {
     return this.statsService.decrementStatsForCancelledBooking(tx, input);
   }
 
   async recordPayoutForDriver(
     tx: DriverTransaction,
-    input: { driverId: string; amountMinor: number },
+    input: { driverId: string; amount: number },
   ): Promise<void> {
     return this.statsService.recordPayoutForDriver(tx, input);
   }
 
   async adjustPaymentCountersForStatusChange(
     tx: DriverTransaction,
-    input: { driverId: string; amountMinor: number; previousStatus: EarningStatus; nextStatus: EarningStatus },
+    input: { driverId: string; amount: number; previousStatus: EarningStatus; nextStatus: EarningStatus },
   ): Promise<void> {
     return this.statsService.adjustPaymentCountersForStatusChange(tx, input);
   }

@@ -6,7 +6,7 @@ import { PayoutRepository, payoutRepository } from "./payout.repository";
 import { driverService as sharedDriverService } from "../driver/driver.service";
 import { notificationService as sharedNotificationService } from "../notification/notification.service";
 import { publishNotificationCreatedInBackground } from "../notification/realtime";
-import { formatAmountMinor } from "../utils/payout";
+import { formatAmount } from "../utils/payout";
 import type { KoraPayoutHistoryItem } from "../payment/payment.types";
 import type { DriverNotification } from "@shared/types";
 
@@ -169,7 +169,7 @@ export class PayoutAttemptService {
       if (earningRecord) {
         await this.driverService.adjustPaymentCountersForStatusChange(tx, {
           driverId: payout.driverId,
-          amountMinor: earningRecord.netAmountMinor,
+          amount: earningRecord.netAmount,
           previousStatus: earningRecord.status,
           nextStatus: "paid",
         });
@@ -177,7 +177,7 @@ export class PayoutAttemptService {
 
       await this.driverService.recordPayoutForDriver(tx, {
         driverId: payout.driverId,
-        amountMinor: payout.amountMinor,
+        amount: payout.amount,
       });
 
       if (updated) {
@@ -215,8 +215,8 @@ export class PayoutAttemptService {
         kind: "event",
         type: "payout_completed",
         title: "Payout sent successfully",
-        message: `${formatAmountMinor(
-          payoutRecord.amountMinor,
+        message: `${formatAmount(
+          payoutRecord.amount,
           payoutRecord.currency,
         )} was transferred to your account.`,
         href: "/payouts",

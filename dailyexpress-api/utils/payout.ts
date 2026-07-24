@@ -20,19 +20,6 @@ export function parseDelayString(value: string): number[] {
     .filter((item) => Number.isFinite(item) && item > 0);
 }
 
-export function parseMajorCurrencyToMinor(
-  value: number | string | null | undefined,
-): number {
-  if (typeof value === "number") {
-    return Math.round(value * 100);
-  }
-  if (typeof value === "string") {
-    const parsed = Number.parseFloat(value);
-    return Number.isFinite(parsed) ? Math.round(parsed * 100) : 0;
-  }
-  return 0;
-}
-
 export function isRetryableKoraError(errorCode?: string): boolean {
   return errorCode ? RETRYABLE_KORA_ERRORS.has(errorCode) : false;
 }
@@ -41,16 +28,9 @@ export function isFatalKoraError(errorCode?: string): boolean {
   return errorCode ? FATAL_KORA_ERRORS.has(errorCode) : false;
 }
 
-export function formatAmountMinor(amountMinor: number, currency: string) {
+export function formatAmount(amount: number, currency: string) {
   return new Intl.NumberFormat("en-NG", {
     style: "currency",
     currency,
-  }).format(amountMinor / 100);
-}
-
-export function formatAmountMajor(amountMajor: number, currency: string) {
-  return new Intl.NumberFormat("en-NG", {
-    style: "currency",
-    currency,
-  }).format(amountMajor);
+  }).format(amount);
 }
