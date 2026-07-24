@@ -33,12 +33,6 @@ export const payoutStatusEnum = pgEnum("payout_status", [
   "permanent_failed",
 ]);
 
-export const payoutRecipientStatusEnum = pgEnum("payout_recipient_status", [
-  "active",
-  "stale",
-  "failed",
-]);
-
 export const earning = pgTable(
   "earning",
   {
@@ -77,34 +71,14 @@ export const earning = pgTable(
   ],
 );
 
-export const payoutRecipient = pgTable("payout_recipient", {
-  id: uuid("id").defaultRandom().primaryKey(),
-  driverId: uuid("driver_id").references(() => driver.id, { onDelete: "restrict" }).notNull().unique(),
-  provider: payoutProviderEnum("provider").default("kora").notNull(),
-  recipientCode: varchar("recipient_code", { length: 128 }).notNull(),
-  providerRecipientId: varchar("provider_recipient_id", { length: 128 }),
-  bankCode: varchar("bank_code", { length: 32 }).notNull(),
-  bankName: text("bank_name").notNull(),
-  accountName: text("account_name").notNull(),
-  accountNumberLast4: varchar("account_number_last4", {
-    length: 4,
-  }).notNull(),
-  detailsFingerprint: varchar("details_fingerprint", {
-    length: 128,
-  }).notNull(),
-  status: payoutRecipientStatusEnum("status").default("active").notNull(),
-  rawResponse: jsonb("raw_response"),
-  createdAt: timestamp("created_at", { mode: "date" }).defaultNow().notNull(),
-  updatedAt: timestamp("updated_at", { mode: "date" }).defaultNow().notNull(),
-});
-
 export const payout = pgTable(
   "payout",
   {
     id: uuid("id").defaultRandom().primaryKey(),
     driverId: uuid("driver_id").references(() => driver.id, { onDelete: "restrict" }).notNull(),
     earningId: uuid("earning_id").references(() => earning.id, { onDelete: "restrict" }).notNull(),
-    recipientId: uuid("recipient_id").references(() => payoutRecipient.id, { onDelete: "restrict" }).notNull(),
+    recipientBankName: text("recipient_bank_name"),
+    recipientAccountLast4: varchar("recipient_account_last4", { length: 4 }),
     reference: varchar("reference", { length: 128 }).notNull().unique(),
     provider: payoutProviderEnum("provider").default("kora").notNull(),
     providerTransferCode: varchar("provider_transfer_code", { length: 128 }),
@@ -194,7 +168,6 @@ export const payoutAttempt = pgTable(
 export const payoutSchema = {
   earning,
   payout,
-  payoutRecipient,
   payoutWebhook,
   payoutAttempt,
 };
@@ -203,7 +176,5 @@ export type Earning = typeof earning.$inferSelect;
 export type EarningRecord = Earning;
 export type Payout = typeof payout.$inferSelect;
 export type PayoutRecord = Payout;
-export type PayoutRecipient = typeof payoutRecipient.$inferSelect;
-export type PayoutRecipientRecord = PayoutRecipient;
 export type PayoutAttempt = typeof payoutAttempt.$inferSelect;
 export type PayoutAttemptRecord = PayoutAttempt;

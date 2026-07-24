@@ -506,7 +506,8 @@ export interface DriverPayout {
 }
 
 export interface DriverPayoutHistoryItem extends DriverPayout {
-  recipientId?: string | null;
+  recipientBankName?: string | null;
+  recipientAccountLast4?: string | null;
 }
 
 export interface DriverPayoutSummaryDay {

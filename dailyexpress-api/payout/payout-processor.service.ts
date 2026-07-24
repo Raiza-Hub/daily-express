@@ -5,7 +5,6 @@ import { driver, earning, payout, payoutAttempt, type PayoutRecord, type Earning
 import { getConfig } from "../config/index";
 import { generateReference } from "../utils/payment";
 import { PayoutRepository, payoutRepository } from "./payout.repository";
-import { PayoutRecipientService, payoutRecipientService } from "./payout-recipient.service";
 import { PayoutAttemptService, payoutAttemptService } from "./payout-attempt.service";
 import { PayoutNotificationService, payoutNotificationService } from "./payout-notification.service";
 import { notificationService as sharedNotificationService } from "../notification/notification.service";
@@ -34,7 +33,6 @@ export class PayoutProcessorService {
 
   constructor(
     private repo: PayoutRepository,
-    private recipientService: PayoutRecipientService,
     private attemptService: PayoutAttemptService,
     private notificationService: PayoutNotificationService,
   ) {}
@@ -81,27 +79,12 @@ export class PayoutProcessorService {
       return;
     }
 
-    const recipient = await this.recipientService.getRecipient(payoutDriver);
-
-    let payoutRecord = await this.getOrCreatePayout(earningRecord, recipient.id);
+    let payoutRecord = await this.getOrCreatePayout(earningRecord, payoutDriver);
     if (
       payoutRecord.status === "success" ||
       payoutRecord.status === "permanent_failed"
     ) {
       return;
-    }
-
-    if (payoutRecord.recipientId !== recipient.id) {
-      const [updated] = await db
-        .update(payout)
-        .set({
-          recipientId: recipient.id,
-          driverEmail: payoutDriver.email,
-          updatedAt: new Date(),
-        })
-        .where(eq(payout.id, payoutRecord.id))
-        .returning();
-      payoutRecord = updated;
     }
 
     if (payoutRecord.amountMinor < this.config.MINIMUM_PAYOUT_AMOUNT_MINOR) {
@@ -426,7 +409,7 @@ export class PayoutProcessorService {
 
   private async getOrCreatePayout(
     earningRecord: EarningRecord,
-    recipientId: string,
+    payoutDriver: ActivePayoutDriver,
   ): Promise<PayoutRecord> {
     return db.transaction(async (tx) => {
       const existingPayout = await this.repo.findPayoutByEarningId(
@@ -446,7 +429,8 @@ export class PayoutProcessorService {
 
       const [createdPayout] = await this.repo.insertPayout(tx, {
         driverId: earningRecord.driverId,
-        recipientId,
+        recipientBankName: payoutDriver.bankName,
+        recipientAccountLast4: payoutDriver.accountNumber.slice(-4),
         earningId: earningRecord.id,
         reference: this.buildPayoutReference(),
         amountMinor: earningRecord.netAmountMinor,
@@ -530,7 +514,6 @@ export class PayoutProcessorService {
 
 export const payoutProcessorService = new PayoutProcessorService(
   payoutRepository,
-  payoutRecipientService,
   payoutAttemptService,
   payoutNotificationService,
 );
