@@ -424,11 +424,20 @@ export class PayoutProcessorService {
             .set({ payoutId: existingPayout.id, updatedAt: new Date() })
             .where(eq(earning.id, earningRecord.id));
         }
+        if (!existingPayout.driverEmail) {
+          const [updated] = await tx
+            .update(payout)
+            .set({ driverEmail: payoutDriver.email, updatedAt: new Date() })
+            .where(eq(payout.id, existingPayout.id))
+            .returning();
+          return updated;
+        }
         return existingPayout;
       }
 
       const [createdPayout] = await this.repo.insertPayout(tx, {
         driverId: earningRecord.driverId,
+        driverEmail: payoutDriver.email,
         recipientBankName: payoutDriver.bankName,
         recipientAccountLast4: payoutDriver.accountNumber.slice(-4),
         earningId: earningRecord.id,
