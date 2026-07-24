@@ -194,16 +194,40 @@ const DriverAssignedEmail = ({
   );
 };
 
-function parseDateInput(value: string | Date) {
+function parseDateInput(value: string | Date, timeZone?: string) {
   if (value instanceof Date) {
     return Number.isNaN(value.getTime()) ? null : value;
   }
+
+  if (/^\d{2}:\d{2}(:\d{2})?$/.test(value)) {
+    const naive = new Date(`1970-01-01T${value}Z`);
+    if (Number.isNaN(naive.getTime())) return null;
+    if (timeZone) {
+      const localParts = new Intl.DateTimeFormat("en-US", {
+        timeZone,
+        hour: "numeric",
+        minute: "numeric",
+        hour12: false,
+        year: "numeric",
+        month: "numeric",
+        day: "numeric",
+      }).formatToParts(naive);
+      const lh = Number(localParts.find(p => p.type === "hour")?.value ?? 0);
+      const lm = Number(localParts.find(p => p.type === "minute")?.value ?? 0);
+      const localMinutes = lh * 60 + lm;
+      const utcMinutes = naive.getUTCHours() * 60 + naive.getUTCMinutes();
+      const offsetMinutes = localMinutes - utcMinutes;
+      return new Date(naive.getTime() - offsetMinutes * 60_000);
+    }
+    return naive;
+  }
+
   const parsed = new Date(value);
   return Number.isNaN(parsed.getTime()) ? null : parsed;
 }
 
 function formatTripDate(value: string | Date, timeZone: string) {
-  const parsed = parseDateInput(value);
+  const parsed = parseDateInput(value, timeZone);
   if (!parsed) return String(value);
   return new Intl.DateTimeFormat("en-NG", {
     timeZone,
@@ -214,7 +238,7 @@ function formatTripDate(value: string | Date, timeZone: string) {
 }
 
 function formatTripTime(value: string | Date, timeZone: string) {
-  const parsed = parseDateInput(value);
+  const parsed = parseDateInput(value, timeZone);
   if (!parsed) return String(value);
   const parts = new Intl.DateTimeFormat("en-NG", {
     timeZone,

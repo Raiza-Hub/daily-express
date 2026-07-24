@@ -1,14 +1,14 @@
 import {
-    Body,
-    Container,
-    Head,
-    Hr,
-    Html,
-    Img,
-    Link,
-    Preview,
-    Section,
-    Text,
+  Body,
+  Container,
+  Head,
+  Hr,
+  Html,
+  Img,
+  Link,
+  Preview,
+  Section,
+  Text,
 } from "@react-email/components";
 import { getEmailLogoSrc } from "../assets";
 
@@ -49,12 +49,9 @@ function getCancellationText(reason: TripCancelledEmailProps["reason"], productN
 
 const TripCancelledEmail = ({
   customerName,
-  customerEmail,
-  paymentReference,
   productName,
   amountMinor,
   currency = "NGN",
-  refundReference,
   reason,
   supportEmail = "support@dailyexpress.app",
   supportPhone = "+234 9063611541",
@@ -93,31 +90,9 @@ const TripCancelledEmail = ({
 
             <Hr style={divider} />
 
-            <Text style={sectionTitle}>Refund Details</Text>
-            <Text style={detail}>
-              Payment reference:{" "}
-              <strong style={strong}>{paymentReference}</strong>
-            </Text>
-            <Text style={detail}>
-              Refund reference:{" "}
-              <strong style={strong}>{refundReference}</strong>
-            </Text>
-            <Text style={detail}>
-              Amount:{" "}
-              <strong style={strong}>
-                {formatCurrency(amountMinor, currency)}
-              </strong>
-            </Text>
-            {/* <Text style={detail}>
-              Status:{" "}
-              <strong style={strong}>Processing</strong>
-            </Text> */}
-
-            <Hr style={divider} />
-
             <Text style={supportText}>
-              Our support team is available to assist you should you have any questions about 
-your refund or your next booking. You can reach us through:
+              Our support team is available to assist you should you have any questions about
+              your refund or your next booking. You can reach us through:
             </Text>
             <Text style={supportText}>
               Phone: <strong style={strong}>{supportPhone}</strong>
@@ -132,9 +107,9 @@ your refund or your next booking. You can reach us through:
             <Hr style={divider} />
 
             <Text style={footerText}>
-              We truly regret the disruption to your travel plans and appreciate your 
-understanding. We remain committed to providing you with a reliable and 
-seamless experience on every journey.
+              We truly regret the disruption to your travel plans and appreciate your
+              understanding. We remain committed to providing you with a reliable and
+              seamless experience on every journey.
             </Text>
             <Text style={footerText}>The Daily Express Team</Text>
           </Container>
@@ -194,19 +169,7 @@ const divider = {
   margin: "24px 0",
 };
 
-const sectionTitle = {
-  color: "#111",
-  fontSize: "14px",
-  fontWeight: "bold" as const,
-  marginBottom: "12px",
-};
 
-const detail = {
-  color: "#333",
-  fontSize: "13px",
-  lineHeight: "20px",
-  margin: "0 0 8px",
-};
 
 const supportText = {
   color: "#333",

@@ -39,7 +39,6 @@
     "joi": "^18.2.1",
     "jsonwebtoken": "^9.0.3",
     "multer": "^2.1.1",
-    "opossum": "^9.0.0",
     "pg-boss": "^12.18.2",
     "postgres": "^3.4.9",
     "rate-limit-redis": "^5.0.0",
@@ -53,7 +52,6 @@
     "@types/jsonwebtoken": "^9.0.10",
     "@types/multer": "^2.1.0",
     "@types/node": "^25.7.0",
-    "@types/opossum": "^8.1.9",
     "drizzle-kit": "^0.31.10",
     "typescript": "^6.0.3"
   }

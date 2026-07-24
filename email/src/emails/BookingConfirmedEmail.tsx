@@ -154,9 +154,39 @@ const BookingConfirmedEmail = ({
   );
 };
 
-function parseDateInput(value: string | Date) {
+function parseDateInput(value: string | Date, timeZone?: string) {
   if (value instanceof Date) {
     return Number.isNaN(value.getTime()) ? null : value;
+  }
+
+  if (/^\d{2}:\d{2}(:\d{2})?$/.test(value)) {
+    // The time string (e.g. "23:10") is already in the target timezone.
+    // We need to create a UTC Date that, when formatted in that timezone,
+    // displays the original time. To do this, we figure out the timezone's
+    // UTC offset and subtract it so Intl.DateTimeFormat's conversion cancels out.
+    const naive = new Date(`1970-01-01T${value}Z`); // treat as UTC
+    if (Number.isNaN(naive.getTime())) return null;
+    if (timeZone) {
+      // Get the offset by formatting the naive date in the target timezone
+      // and comparing with the UTC interpretation.
+      const localParts = new Intl.DateTimeFormat("en-US", {
+        timeZone,
+        hour: "numeric",
+        minute: "numeric",
+        hour12: false,
+        year: "numeric",
+        month: "numeric",
+        day: "numeric",
+      }).formatToParts(naive);
+      const lh = Number(localParts.find(p => p.type === "hour")?.value ?? 0);
+      const lm = Number(localParts.find(p => p.type === "minute")?.value ?? 0);
+      const localMinutes = lh * 60 + lm;
+      const utcMinutes = naive.getUTCHours() * 60 + naive.getUTCMinutes();
+      const offsetMinutes = localMinutes - utcMinutes;
+      // Subtract the offset so that when Intl adds it back, we get the original time
+      return new Date(naive.getTime() - offsetMinutes * 60_000);
+    }
+    return naive;
   }
 
   const parsed = new Date(value);
@@ -164,7 +194,7 @@ function parseDateInput(value: string | Date) {
 }
 
 function formatTripDate(value: string | Date, timeZone: string) {
-  const parsed = parseDateInput(value);
+  const parsed = parseDateInput(value, timeZone);
   if (!parsed) return String(value);
 
   return new Intl.DateTimeFormat("en-NG", {
@@ -176,7 +206,7 @@ function formatTripDate(value: string | Date, timeZone: string) {
 }
 
 function formatTripTime(value: string | Date, timeZone: string) {
-  const parsed = parseDateInput(value);
+  const parsed = parseDateInput(value, timeZone);
   if (!parsed) return String(value);
   const parts = new Intl.DateTimeFormat("en-NG", {
     timeZone,

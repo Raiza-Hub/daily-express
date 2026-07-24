@@ -362,12 +362,9 @@ export class PaymentPayoutRefundService {
         narration: reason,
       });
     } catch (error) {
-      await db.transaction(async (tx) => {
-        await this.repo.updateRefundStatus(tx, resolvedRefund.id, {
-          status: "failed",
-          failureReason: error instanceof Error ? error.message : String(error),
-          completedAt: new Date(),
-        });
+      logger.error("payout_refund.initiate_failed", {
+        reference: paymentRecord.reference,
+        error: error instanceof Error ? error.message : String(error),
       });
       throw error;
     }
