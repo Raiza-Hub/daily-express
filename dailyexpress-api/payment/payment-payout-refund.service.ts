@@ -200,7 +200,6 @@ export class PaymentPayoutRefundService {
       await this.repo.updateRefundStatus(tx, pendingRefund.id, {
         status: "pending",
         providerRefundReference: payoutRef,
-        providerStatus: "processing",
       });
 
       if (!existingPayment.bookingId) return;
@@ -373,7 +372,6 @@ export class PaymentPayoutRefundService {
       await this.repo.updateRefundStatus(tx, resolvedRefund.id, {
         status: "pending",
         providerRefundReference: payoutRef,
-        providerStatus: "processing",
       });
 
       if (paymentRecord.bookingId) {
