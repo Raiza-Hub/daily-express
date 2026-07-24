@@ -5,7 +5,7 @@ import { db } from "../db/connection";
 import { booking, earning, payment, refund, trip } from "../db/index";
 import { driverService as sharedDriverService } from "../driver/driver.service";
 import { logger } from "../utils/logger";
-import { generateReference, toMinorAmount } from "../utils/payment";
+import { generateReference } from "../utils/payment";
 import { jobService } from "../workers/job.service";
 import { koraClient, KoraClient } from "./kora.client";
 import { PaymentRepository, paymentRepository } from "./payment.repository";
@@ -228,7 +228,7 @@ export class PaymentPayoutRefundService {
       } else if (earningRecord) {
         await sharedDriverService.adjustPaymentCountersForStatusChange(tx, {
           driverId: earningRecord.driverId,
-          amountMinor: earningRecord.netAmountMinor,
+          amount: earningRecord.netAmount,
           previousStatus: earningRecord.status,
           nextStatus: "cancelled",
         });
@@ -418,7 +418,7 @@ export class PaymentPayoutRefundService {
           } else if (earningRecord) {
             await sharedDriverService.adjustPaymentCountersForStatusChange(tx, {
               driverId: earningRecord.driverId,
-              amountMinor: earningRecord.netAmountMinor,
+              amount: earningRecord.netAmount,
               previousStatus: earningRecord.status,
               nextStatus: "cancelled",
             });
@@ -512,7 +512,7 @@ export class PaymentPayoutRefundService {
         } else if (earningRecord) {
           await sharedDriverService.adjustPaymentCountersForStatusChange(tx, {
             driverId: earningRecord.driverId,
-            amountMinor: earningRecord.netAmountMinor,
+            amount: earningRecord.netAmount,
             previousStatus: earningRecord.status,
             nextStatus: "cancelled",
           });
@@ -553,7 +553,7 @@ export class PaymentPayoutRefundService {
       customerEmail: paymentRecord.customerEmail,
       paymentReference: paymentRecord.reference,
       bookingId: paymentRecord.bookingId,
-      amountMinor: toMinorAmount(refundAmount),
+      amount: refundAmount,
       currency: paymentRecord.currency,
       productName: paymentRecord.productName,
       failureReason,
@@ -579,7 +579,7 @@ export class PaymentPayoutRefundService {
   ) {
     if (!paymentRecord.customerEmail) return;
 
-    const amountMinor = toMinorAmount(refundAmount);
+    const amount = refundAmount;
 
     let customerName: string | null = null;
     if (paymentRecord.bookingId) {
@@ -598,7 +598,7 @@ export class PaymentPayoutRefundService {
       customerEmail: paymentRecord.customerEmail,
       paymentReference: paymentRecord.reference,
       productName: paymentRecord.productName,
-      amountMinor,
+      amount,
       currency: paymentRecord.currency,
       refundReference,
       reason,
@@ -624,7 +624,7 @@ export class PaymentPayoutRefundService {
   ) {
     if (!paymentRecord.customerEmail) return;
 
-    const amountMinor = toMinorAmount(refundAmount);
+    const amount = refundAmount;
 
     let customerName: string | null = null;
     if (paymentRecord.bookingId) {
@@ -643,7 +643,7 @@ export class PaymentPayoutRefundService {
       customerEmail: paymentRecord.customerEmail,
       paymentReference: paymentRecord.reference,
       bookingId: paymentRecord.bookingId,
-      amountMinor,
+      amount,
       currency: paymentRecord.currency,
       productName,
       supportEmail: "support@dailyexpress.app",
@@ -684,8 +684,8 @@ export class PaymentPayoutRefundService {
 
     await sharedDriverService.decrementStatsForCancelledBooking(tx, {
       driverId,
-      amountMinor:
-        earningRecord?.netAmountMinor ?? toMinorAmount(bookingRecord.fareAmount),
+      amount:
+        earningRecord?.netAmount ?? bookingRecord.fareAmount,
       previousEarningStatus: earningRecord?.status ?? null,
     });
   }

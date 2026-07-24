@@ -53,7 +53,7 @@ export class PayoutService {
       tripDate: Date | string;
       pickupTitle: string;
       dropoffTitle: string;
-      fareAmountMinor: number;
+      fareAmount: number;
       currency: string;
       sourceEventId: string;
     },
@@ -72,10 +72,10 @@ export class PayoutService {
     const currentDriver = await this.getCurrentDriver(user);
     if (!currentDriver) {
       return {
-        pendingAmountMinor: 0,
-        availableAmountMinor: 0,
-        processingAmountMinor: 0,
-        paidAmountMinor: 0,
+        pendingAmount: 0,
+        availableAmount: 0,
+        processingAmount: 0,
+        paidAmount: 0,
         nextAutoPayoutAt: null,
       };
     }
@@ -84,21 +84,21 @@ export class PayoutService {
     const totals = earnings.reduce(
       (acc, item) => {
         if (item.status === "pending_trip_completion") {
-          acc.pendingAmountMinor += item.netAmountMinor;
+          acc.pendingAmount += item.netAmount;
         } else if (item.status === "available") {
-          acc.availableAmountMinor += item.netAmountMinor;
+          acc.availableAmount += item.netAmount;
         } else if (item.status === "paid") {
-          acc.paidAmountMinor += item.netAmountMinor;
+          acc.paidAmount += item.netAmount;
         } else if (item.status === "processing") {
-          acc.processingAmountMinor += item.netAmountMinor;
+          acc.processingAmount += item.netAmount;
         }
         return acc;
       },
       {
-        pendingAmountMinor: 0,
-        availableAmountMinor: 0,
-        processingAmountMinor: 0,
-        paidAmountMinor: 0,
+        pendingAmount: 0,
+        availableAmount: 0,
+        processingAmount: 0,
+        paidAmount: 0,
       },
     );
 
@@ -137,7 +137,7 @@ export class PayoutService {
       id: row.id,
       driverId: row.driverId,
       reference: row.reference,
-      amountMinor: row.amountMinor,
+      amount: row.amount,
       currency: row.currency,
       earningsCount: row.earningsCount,
       status: row.status === "pending" ? "processing" : row.status,
@@ -197,7 +197,7 @@ export class PayoutService {
       const key = formatDateKey(row.settledAt || row.createdAt);
       const current = byDate.get(key);
       if (!current) continue;
-      current.totalPaidAmountMinor += row.amountMinor;
+      current.totalPaidAmount += row.amount;
       current.payoutsCount += 1;
     }
 
@@ -236,7 +236,7 @@ export class PayoutService {
   private emptySummaryDays(weekStartDateKey: string): DriverPayoutSummaryDay[] {
     return Array.from({ length: 7 }, (_, index) => ({
       date: addDaysToDateKey(weekStartDateKey, index),
-      totalPaidAmountMinor: 0,
+      totalPaidAmount: 0,
       payoutsCount: 0,
     }));
   }

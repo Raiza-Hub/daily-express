@@ -20,7 +20,7 @@ export interface TripCancelledEmailProps {
   customerEmail: string;
   paymentReference: string;
   productName: string;
-  amountMinor: number;
+  amount: number;
   currency?: string;
   refundReference: string;
   reason?: CancellationReason;
@@ -28,12 +28,12 @@ export interface TripCancelledEmailProps {
   supportPhone?: string;
 }
 
-function formatCurrency(amountMinor: number, currency: string = "NGN") {
+function formatCurrency(amount: number, currency: string = "NGN") {
   return new Intl.NumberFormat("en-NG", {
     style: "currency",
     currency,
     minimumFractionDigits: 2,
-  }).format(amountMinor / 100);
+  }).format(amount);
 }
 
 function getCancellationText(reason: TripCancelledEmailProps["reason"], productName: string) {
@@ -50,7 +50,7 @@ function getCancellationText(reason: TripCancelledEmailProps["reason"], productN
 const TripCancelledEmail = ({
   customerName,
   productName,
-  amountMinor,
+  amount,
   currency = "NGN",
   reason,
   supportEmail = "support@dailyexpress.app",
@@ -83,7 +83,7 @@ const TripCancelledEmail = ({
 
             <Text style={summary}>
               We have initiated a full refund of{" "}
-              <strong style={strong}>{formatCurrency(amountMinor, currency)}</strong>{" "}
+              <strong style={strong}>{formatCurrency(amount, currency)}</strong>{" "}
               to your original payment method. You'll receive a confirmation once the
               refund has been completed.
             </Text>
@@ -200,7 +200,7 @@ TripCancelledEmail.PreviewProps = {
   customerEmail: "ada@example.com",
   paymentReference: "PAY-REF-2026-001",
   productName: "Lagos to Abuja Trip",
-  amountMinor: 1250000,
+  amount: 12500,
   currency: "NGN",
   refundReference: "RFD-PAY-REF-2026-001",
   reason: "no_driver_found",

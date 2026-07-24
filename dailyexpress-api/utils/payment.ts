@@ -54,10 +54,6 @@ export function assertCheckoutAmountWithinLimit(amount: number) {
   }
 }
 
-export function toMinorAmount(amount: number) {
-  return Math.round(amount * 100);
-}
-
 export function getPaymentReference(job: WebhookJobData) {
   if (job.event.startsWith("refund.")) {
     return (

@@ -92,8 +92,8 @@ function getCurrencyFormatter(currency: string) {
   return fmt;
 }
 
-export function formatCurrency(amountMinor: number, currency: string = "NGN") {
-  return getCurrencyFormatter(currency).format(amountMinor / 100);
+export function formatCurrency(amount: number, currency: string = "NGN") {
+  return getCurrencyFormatter(currency).format(amount);
 }
 
 export function formatRelativeTime(timestamp: Date | string) {

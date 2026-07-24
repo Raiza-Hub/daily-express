@@ -78,7 +78,7 @@ const PayoutSettings = () => {
             {isPayoutBalanceError
               ? "Unavailable right now"
               : formatCurrency(
-                  payoutBalance?.availableAmountMinor || 0,
+                  payoutBalance?.availableAmount || 0,
                   driver?.currency,
                 )}
           </p>

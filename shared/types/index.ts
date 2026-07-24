@@ -470,10 +470,10 @@ export interface DriverNotificationRealtimeEvents {
 }
 
 export interface DriverPayoutBalance {
-  pendingAmountMinor: number;
-  availableAmountMinor: number;
-  processingAmountMinor: number;
-  paidAmountMinor: number;
+  pendingAmount: number;
+  availableAmount: number;
+  processingAmount: number;
+  paidAmount: number;
   nextAutoPayoutAt: string | null;
 }
 
@@ -483,7 +483,7 @@ export interface DriverPendingPayoutTrip {
   tripDate: string;
   pickupTitle: string;
   dropoffTitle: string;
-  pendingAmountMinor: number;
+  pendingAmount: number;
   currency: string;
 }
 
@@ -491,7 +491,7 @@ export interface DriverPayout {
   id: string;
   driverId: string;
   reference: string;
-  amountMinor: number;
+  amount: number;
   currency: string;
   earningsCount: number;
   status: PayoutStatus;
@@ -512,7 +512,7 @@ export interface DriverPayoutHistoryItem extends DriverPayout {
 
 export interface DriverPayoutSummaryDay {
   date: string;
-  totalPaidAmountMinor: number;
+  totalPaidAmount: number;
   payoutsCount: number;
 }
 

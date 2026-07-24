@@ -87,7 +87,7 @@ export class PayoutProcessorService {
       return;
     }
 
-    if (payoutRecord.amountMinor < this.config.MINIMUM_PAYOUT_AMOUNT_MINOR) {
+    if (payoutRecord.amount < this.config.MINIMUM_PAYOUT_AMOUNT) {
       await db.transaction(async (tx) => {
         const notification =
           await sharedNotificationService.createForDriverInTransaction(
@@ -106,7 +106,7 @@ export class PayoutProcessorService {
               metadata: {
                 earningId: earningRecord.id,
                 tripId: earningRecord.tripId,
-                amountMinor: payoutRecord.amountMinor,
+                amount: payoutRecord.amount,
               },
               occurredAt: new Date(),
             },
@@ -231,7 +231,7 @@ export class PayoutProcessorService {
     try {
       const result = await this.kora.initiatePayout({
         reference,
-        amount: payoutRecord.amountMinor / 100,
+        amount: payoutRecord.amount,
         currency: payoutRecord.currency,
         bankCode: payoutDriver.bankCode,
         accountNumber: payoutDriver.accountNumber,
@@ -434,7 +434,7 @@ export class PayoutProcessorService {
         recipientAccountLast4: payoutDriver.accountNumber.slice(-4),
         earningId: earningRecord.id,
         reference: this.buildPayoutReference(),
-        amountMinor: earningRecord.netAmountMinor,
+        amount: earningRecord.netAmount,
         currency: earningRecord.currency || "NGN",
         earningsCount: 1,
         status: "pending",

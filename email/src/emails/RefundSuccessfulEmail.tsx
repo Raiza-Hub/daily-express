@@ -18,24 +18,24 @@ export interface RefundSuccessfulEmailProps {
   customerEmail: string;
   paymentReference: string;
   bookingId?: string | null;
-  amountMinor: number;
+  amount: number;
   currency?: string;
   productName: string;
   supportEmail?: string;
   supportPhone?: string;
 }
 
-function formatCurrency(amountMinor: number, currency: string = "NGN") {
+function formatCurrency(amount: number, currency: string = "NGN") {
   return new Intl.NumberFormat("en-NG", {
     style: "currency",
     currency,
     minimumFractionDigits: 2,
-  }).format(amountMinor / 100);
+  }).format(amount);
 }
 
 const RefundSuccessfulEmail = ({
   customerName,
-  amountMinor,
+  amount,
   currency = "NGN",
   productName,
   supportEmail = "support@dailyexpress.app",
@@ -65,7 +65,7 @@ const RefundSuccessfulEmail = ({
 
             <Text style={summary}>
               Your refund of{" "}
-              <strong style={strong}>{formatCurrency(amountMinor, currency)}</strong>{" "}
+              <strong style={strong}>{formatCurrency(amount, currency)}</strong>{" "}
               for your <strong style={strong}>{productName}</strong> booking has been
               successfully processed.
             </Text>
@@ -178,7 +178,7 @@ RefundSuccessfulEmail.PreviewProps = {
   customerEmail: "chioma@example.com",
   paymentReference: "PAY-REF-2026-001",
   bookingId: "booking_01JXYZ",
-  amountMinor: 1250000,
+  amount: 12500,
   currency: "NGN",
   productName: "Lagos to Abuja Trip",
   supportEmail: "support@dailyexpress.app",
