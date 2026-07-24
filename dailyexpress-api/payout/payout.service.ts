@@ -13,7 +13,6 @@ import { db } from "../db/connection";
 import { driver, payout } from "../db/index";
 import { PayoutRepository } from "./payout.repository";
 import { EarningService } from "./earning.service";
-import { PayoutRecipientService } from "./payout-recipient.service";
 import { PayoutAttemptService } from "./payout-attempt.service";
 import { PayoutProcessorService } from "./payout-processor.service";
 import { PayoutWebhookService } from "./payout-webhook.service";
@@ -30,12 +29,10 @@ export class PayoutService {
 
   private readonly repo = new PayoutRepository();
   private readonly earningService = new EarningService(this.repo);
-  private readonly recipientService = new PayoutRecipientService(this.repo);
   private readonly attemptService = new PayoutAttemptService(this.repo);
   private readonly notificationService = new PayoutNotificationService(this.repo);
   private readonly processorService = new PayoutProcessorService(
     this.repo,
-    this.recipientService,
     this.attemptService,
     this.notificationService,
   );
@@ -152,7 +149,8 @@ export class PayoutService {
       failedAt: row.failedAt,
       createdAt: row.createdAt,
       updatedAt: row.updatedAt,
-      recipientId: row.recipientId,
+      recipientBankName: row.recipientBankName,
+      recipientAccountLast4: row.recipientAccountLast4,
     }));
 
     return { payouts, nextCursor };

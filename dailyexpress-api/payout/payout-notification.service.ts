@@ -26,28 +26,18 @@ export class PayoutNotificationService {
     rawPayload: unknown,
     shouldNotify = false,
   ) {
-    const [failureEmailDetails] = payoutRecord.driverEmail
-      ? await this.repo.findRecipientWithDriver(payoutRecord.recipientId)
-      : [];
-    const recipientRecord = failureEmailDetails?.recipient ?? null;
-    const driverRecord = failureEmailDetails?.driver ?? null;
-
-    const driverName = driverRecord
-      ? `${driverRecord.firstName} ${driverRecord.lastName}`.trim()
-      : null;
-
     let emailHtml: string | null = null;
     let emailSubject: string | null = null;
-    if (payoutRecord.driverEmail && recipientRecord) {
+    if (payoutRecord.driverEmail && payoutRecord.recipientBankName && payoutRecord.recipientAccountLast4) {
       const propsJson = JSON.stringify({
         frontendUrl: getConfig().FRONTEND_URL,
-        driverName,
+        driverName: null,
         driverEmail: payoutRecord.driverEmail,
         amountMinor: payoutRecord.amountMinor,
         reference: payoutRecord.reference,
         failureReason: reason,
-        bankName: recipientRecord.bankName,
-        accountLast4: recipientRecord.accountNumberLast4,
+        bankName: payoutRecord.recipientBankName,
+        accountLast4: payoutRecord.recipientAccountLast4,
       });
       emailHtml = await renderEmail("PayoutFailedEmail", propsJson);
       emailSubject = getEmailSubject("PayoutFailedEmail", propsJson);

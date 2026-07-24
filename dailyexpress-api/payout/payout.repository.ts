@@ -6,13 +6,11 @@ import {
   earning,
   payout,
   payoutAttempt,
-  payoutRecipient,
   payoutWebhook,
   trip,
   type EarningRecord,
   type PayoutRecord,
   type PayoutAttemptRecord,
-  type PayoutRecipientRecord,
   type DriverRecord,
 } from "../db/index";
 import { HIDDEN_BOOKING_PAYMENT_STATUSES } from "../utils/route";
@@ -245,37 +243,6 @@ export class PayoutRepository {
       );
   }
 
-  findRecipientByDriverId(driverId: string) {
-    return db.query.payoutRecipient.findFirst({
-      where: eq(payoutRecipient.driverId, driverId),
-    });
-  }
-
-  upsertRecipient(
-    driverId: string,
-    values: typeof payoutRecipient.$inferInsert,
-  ) {
-    const existingQuery = db.query.payoutRecipient.findFirst({
-      where: eq(payoutRecipient.driverId, driverId),
-    });
-
-    return existingQuery.then(async (existing) => {
-      if (existing) {
-        const [updated] = await db
-          .update(payoutRecipient)
-          .set(values)
-          .where(eq(payoutRecipient.id, existing.id))
-          .returning();
-        return updated;
-      }
-      const [created] = await db
-        .insert(payoutRecipient)
-        .values(values)
-        .returning();
-      return created;
-    });
-  }
-
   findDriverById(driverId: string) {
     return db.query.driver.findFirst({
       where: eq(driver.id, driverId),
@@ -323,33 +290,6 @@ export class PayoutRepository {
     });
   }
 
-  findRecipientWithDriver(recipientId: string) {
-    return db
-      .select({
-        recipient: payoutRecipient,
-        driver,
-      })
-      .from(payoutRecipient)
-      .leftJoin(driver, eq(driver.id, payoutRecipient.driverId))
-      .where(eq(payoutRecipient.id, recipientId));
-  }
-
-  updatePayoutRecipient(
-    tx: PayoutTransaction,
-    payoutId: string,
-    recipientId: string,
-    driverEmail: string,
-  ) {
-    return tx
-      .update(payout)
-      .set({
-        recipientId,
-        driverEmail,
-        updatedAt: new Date(),
-      })
-      .where(eq(payout.id, payoutId))
-      .returning();
-  }
 }
 
 export const payoutRepository = new PayoutRepository();
