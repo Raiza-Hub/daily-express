@@ -425,12 +425,11 @@ export class PayoutProcessorService {
             .where(eq(earning.id, earningRecord.id));
         }
         if (!existingPayout.driverEmail) {
-          const [updated] = await tx
+          await tx
             .update(payout)
             .set({ driverEmail: payoutDriver.email, updatedAt: new Date() })
-            .where(eq(payout.id, existingPayout.id))
-            .returning();
-          return updated;
+            .where(eq(payout.id, existingPayout.id));
+          existingPayout.driverEmail = payoutDriver.email;
         }
         return existingPayout;
       }
