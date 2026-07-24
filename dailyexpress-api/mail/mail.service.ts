@@ -43,8 +43,7 @@ function createRawEmail(input: {
   subject: string;
   html: string;
 }) {
-  const mixedBoundary = createBoundary("mixed");
-  const relatedBoundary = createBoundary("related");
+  const boundary = createBoundary("related");
   const logoBase64 = readFileSync(getEmailLogoAttachmentPath()).toString("base64");
   const htmlBase64 = Buffer.from(input.html, "utf8").toString("base64");
 
@@ -53,18 +52,15 @@ function createRawEmail(input: {
     `To: ${input.to}`,
     `Subject: ${encodeHeader(input.subject)}`,
     "MIME-Version: 1.0",
-    `Content-Type: multipart/mixed; boundary="${mixedBoundary}"`,
+    `Content-Type: multipart/related; boundary="${boundary}"`,
     "",
-    `--${mixedBoundary}`,
-    `Content-Type: multipart/related; boundary="${relatedBoundary}"`,
-    "",
-    `--${relatedBoundary}`,
+    `--${boundary}`,
     'Content-Type: text/html; charset="UTF-8"',
     "Content-Transfer-Encoding: base64",
     "",
     htmlBase64,
     "",
-    `--${relatedBoundary}`,
+    `--${boundary}`,
     'Content-Type: image/png; name="email-logo.png"',
     "Content-Transfer-Encoding: base64",
     `Content-ID: <${EMAIL_LOGO_CONTENT_ID}>`,
@@ -72,9 +68,7 @@ function createRawEmail(input: {
     "",
     logoBase64,
     "",
-    `--${relatedBoundary}--`,
-    "",
-    `--${mixedBoundary}--`,
+    `--${boundary}--`,
     "",
   ];
 

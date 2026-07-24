@@ -4,7 +4,6 @@ import { db } from "../db/connection";
 import { booking, payment, refund } from "../db/index";
 import { paymentRepository } from "../payment/payment.repository";
 import { paymentPayoutRefundService } from "../payment/payment-payout-refund.service";
-import { generateReference } from "../utils/payment";
 import { getBoss, QUEUES, type TripRefundJobData } from "./boss";
 
 const paymentRepo = paymentRepository;
@@ -93,28 +92,13 @@ export async function registerTripRefundWorker() {
           return;
         }
 
-        // Prevents duplicate refund creation on retry: skips if a concurrent
-        // retry already processed or failed this refund.
-        if (lockedRefund.status !== "pending") return;
-
-        const newRefundRef = generateReference();
-
-        await paymentRepo.updateRefundStatus(tx, lockedRefund.id, {
-          status: "failed",
-          failureReason: "All 3 pg-boss retry attempts exhausted",
-          completedAt: new Date(),
-        });
-
-        await paymentRepo.insertRefund(tx, {
-          paymentId: lockedRefund.paymentId,
-          bookingId,
-          reference: newRefundRef,
-          amount: lockedRefund.amount,
-          currency: lockedRefund.currency,
-          reason: lockedRefund.reason,
-          status: "pending",
-          initiatedBy: "auto",
-        });
+        if (lockedRefund.status === "pending") {
+          await paymentRepo.updateRefundStatus(tx, lockedRefund.id, {
+            status: "failed",
+            failureReason: "All 3 pg-boss retry attempts exhausted",
+            completedAt: new Date(),
+          });
+        }
 
         if (bookingId) {
           await tx

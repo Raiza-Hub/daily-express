@@ -207,7 +207,7 @@ export class BookingService {
               visibleBookingConditions,
               or(
                 ne(trip.status, "cancelled"),
-                inArray(booking.paymentStatus, ["refund_pending", "refunded", "refund_failed"]),
+                inArray(booking.paymentStatus, ["successful", "refund_pending", "refunded", "refund_failed"]),
               ),
               cursorCondition,
             ),
