@@ -205,14 +205,8 @@ export class PaymentInitService {
         .returning();
 
       if (updated) {
-        await jobService.enqueuePaymentExpiry(
-          tx,
-          { bookingId: input.bookingId, reference },
-          bookingRecord.expiresAt!,
-        );
+        return updated || setupResult.payment;
       }
-
-      return updated || setupResult.payment;
     });
 
     logger.info("payment.initialized", {
@@ -386,14 +380,8 @@ export class PaymentInitService {
         .returning();
 
       if (record) {
-        await jobService.enqueuePaymentExpiry(
-          tx,
-          { bookingId: input.bookingId, reference },
-          expiresAt,
-        );
+        return record;
       }
-
-      return record;
     });
 
     return updatedPayment

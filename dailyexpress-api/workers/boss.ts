@@ -9,8 +9,6 @@ export const QUEUES = {
   DRIVER_VERIFICATION: "driver.verification",
   DRIVER_VERIFICATION_DLQ: "driver.verification.dlq",
 
-  PAYMENT_EXPIRE: "payment.expire",
-  PAYMENT_EXPIRE_DLQ: "payment.expire.dlq",
   WEBHOOK_PROCESS: "webhook.process",
   WEBHOOK_PROCESS_DLQ: "webhook.process.dlq",
   TRIP_REFUND: "trip.refund",
@@ -20,11 +18,6 @@ export const QUEUES = {
   TRIP_DRIVER_ASSIGNED: "trip.driver_assigned",
   TRIP_DRIVER_ASSIGNED_DLQ: "trip.driver_assigned.dlq",
 } as const;
-
-export interface PaymentExpireJobData {
-  reference: string;
-  bookingId: string;
-}
 
 export interface WebhookJobData {
   event: string;
@@ -117,7 +110,6 @@ async function createQueues(instance: PgBoss) {
   await instance.createQueue(QUEUES.PAYOUT_PROCESS_DLQ, { retryLimit: 0 });
   await instance.createQueue(QUEUES.DRIVER_VERIFICATION_DLQ, {  retryLimit: 0 });
 
-  await instance.createQueue(QUEUES.PAYMENT_EXPIRE_DLQ, { retryLimit: 0 });
   await instance.createQueue(QUEUES.WEBHOOK_PROCESS_DLQ, { retryLimit: 0 });
   await instance.createQueue(QUEUES.TRIP_REFUND_DLQ, { retryLimit: 0 });
   await instance.createQueue(QUEUES.ALLOCATION_PROCESS_DLQ, { retryLimit: 0 });
@@ -150,15 +142,6 @@ async function createQueues(instance: PgBoss) {
     expireInSeconds: 900,
     deleteAfterSeconds: 86400,
     deadLetter: QUEUES.PAYOUT_PROCESS_DLQ,
-  });
-
-  await instance.createQueue(QUEUES.PAYMENT_EXPIRE, {
-    retryLimit: 2,
-    retryDelay: 30,
-    retryBackoff: true,
-    retryDelayMax: 120,
-    deleteAfterSeconds: 86400,
-    deadLetter: QUEUES.PAYMENT_EXPIRE_DLQ,
   });
 
   await instance.createQueue(QUEUES.WEBHOOK_PROCESS, {

@@ -2,7 +2,6 @@ import { sql, type SQL } from "drizzle-orm";
 import {
   QUEUES,
   type DriverVerificationJobData,
-  type PaymentExpireJobData,
   type PayoutProcessJobData,
   type TripRefundJobData,
   type WebhookJobData,
@@ -87,50 +86,6 @@ export class JobService {
 
   async enqueuePaymentWebhook(tx: JobExecutor, payload: WebhookJobData) {
     await this.enqueue(tx, QUEUES.WEBHOOK_PROCESS, payload);
-  }
-
-  async enqueuePaymentExpiry(
-    tx: JobExecutor,
-    payload: PaymentExpireJobData,
-    startAfter: Date,
-  ) {
-    const startAfterTimestamp = toPgTimestamp(startAfter);
-
-    await tx.execute(sql`
-      INSERT INTO pgboss.job (
-        name,
-        data,
-        priority,
-        start_after,
-        expire_seconds,
-        deletion_seconds,
-        keep_until,
-        retry_limit,
-        retry_delay,
-        retry_backoff,
-        retry_delay_max,
-        policy,
-        dead_letter,
-        heartbeat_seconds
-      )
-      SELECT
-        ${QUEUES.PAYMENT_EXPIRE},
-        ${JSON.stringify(payload)}::jsonb,
-        0,
-        COALESCE(${startAfterTimestamp}::timestamptz, now()),
-        q.expire_seconds,
-        q.deletion_seconds,
-        now() + (q.retention_seconds * interval '1 second'),
-        q.retry_limit,
-        q.retry_delay,
-        q.retry_backoff,
-        q.retry_delay_max,
-        q.policy,
-        q.dead_letter,
-        q.heartbeat_seconds
-      FROM pgboss.queue q
-      WHERE q.name = ${QUEUES.PAYMENT_EXPIRE}
-    `);
   }
 
   async enqueuePayout(

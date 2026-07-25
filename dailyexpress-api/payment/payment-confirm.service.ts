@@ -1,20 +1,14 @@
 import { and, eq } from "drizzle-orm";
 import { db } from "../db/connection";
-import { booking, payment } from "../db/index";
+import { payment } from "../db/index";
 import { logger } from "../utils/logger";
 import { jobService } from "../workers/job.service";
-import { koraClient } from "./kora.client";
 import { PaymentRepository } from "./payment.repository";
-import { paymentPayoutRefundService } from "./payment-payout-refund.service";
-import type { PayoutService } from "../payout/payout.service";
 import type { KoraVerifyResponse } from "./payment.types";
 
 export class PaymentConfirmService {
-  private readonly kora = koraClient;
-
   constructor(
     private repo: PaymentRepository,
-    private payoutService: PayoutService,
   ) {}
 
   async confirmPayment(
@@ -27,41 +21,7 @@ export class PaymentConfirmService {
       return;
     }
 
-    const verification = await this.kora.verifyTransaction(reference);
-    if (verification.data.status.toLowerCase() !== "success") {
-      await this.repo.updateProcessingPayment(reference, "failed", {
-        failureCode: "VERIFICATION_MISMATCH",
-        failureReason: `Confirm verification returned ${verification.data.status}`,
-        providerStatus: verification.data.status,
-      });
-      return;
-    }
-
-    let bookingExpired = true;
-    if (claimed.bookingId) {
-      const bookingRecord = await db.query.booking.findFirst({
-        where: eq(booking.id, claimed.bookingId),
-        columns: { expiresAt: true },
-      });
-      bookingExpired = !bookingRecord?.expiresAt || bookingRecord.expiresAt.getTime() <= Date.now();
-    }
-
-    if (bookingExpired) {
-      await this.repo.updateProcessingPayment(reference, "expired", {
-        failureCode: "BOOKING_EXPIRED",
-        failureReason: "Payment confirmed after booking hold expired",
-        providerStatus: "success",
-      });
-
-      await paymentPayoutRefundService.refundPayment(
-        reference,
-        verification.data,
-        "Payment completed after booking hold expired",
-      );
-      return;
-    }
-
-    const payerAccount = verification.data.bank_transfer?.payer_bank_account;
+    const payerAccount = verificationData.bank_transfer?.payer_bank_account;
 
     await db.transaction(async (tx) => {
       await tx.update(payment)
