@@ -64,45 +64,23 @@ export class BookingService {
     });
 
     if (existingBooking) {
-      const notExpired = existingBooking.expiresAt && existingBooking.expiresAt.getTime() > Date.now();
-
-      if (existingBooking.status === "confirmed" || notExpired) {
-        await db
-          .update(booking)
-          .set({ fareAmount, feeAmount, updatedAt: new Date() })
-          .where(eq(booking.id, existingBooking.id));
-
-        logger.info("booking.reused", {
-          bookingId: existingBooking.id,
-          routeId: existingBooking.routeId,
-          userId,
-        });
-        return {
-          booking: { ...existingBooking, fareAmount, feeAmount },
-          fareAmount,
-          feeAmount,
-          currency: existingBooking.currency,
-          expiresAt: existingBooking.expiresAt,
-        };
-      }
-
       await db
         .update(booking)
-        .set({
-          status: "cancelled",
-          paymentStatus: "expired",
-          updatedAt: new Date(),
-        })
+        .set({ fareAmount, feeAmount, updatedAt: new Date() })
         .where(eq(booking.id, existingBooking.id));
 
-      logger.info("booking.expired_replaced", {
+      logger.info("booking.reused", {
         bookingId: existingBooking.id,
         routeId: existingBooking.routeId,
         userId,
       });
+      return {
+        booking: { ...existingBooking, fareAmount, feeAmount },
+        fareAmount,
+        feeAmount,
+        currency: existingBooking.currency,
+      };
     }
-
-    const expiresAt = new Date(Date.now() + 30 * 60 * 1000);
 
     let newBooking: BookingRecord;
     try {
@@ -117,7 +95,6 @@ export class BookingService {
         feeAmount,
         currency: "NGN",
         status: "pending",
-        expiresAt,
       }).returning();
     } catch (err: any) {
       if (err?.code === "23505") {
@@ -141,7 +118,6 @@ export class BookingService {
             fareAmount: existing.fareAmount,
             feeAmount: existing.feeAmount,
             currency: existing.currency,
-            expiresAt: existing.expiresAt,
           };
         }
       }
@@ -154,7 +130,6 @@ export class BookingService {
       vehicleType: newBooking.vehicleType,
       fareAmount: newBooking.fareAmount,
       feeAmount: newBooking.feeAmount,
-      expiresAt: newBooking.expiresAt?.toISOString(),
     });
 
     return {
@@ -162,7 +137,6 @@ export class BookingService {
       fareAmount: newBooking.fareAmount,
       feeAmount: newBooking.feeAmount,
       currency: newBooking.currency,
-      expiresAt: newBooking.expiresAt,
     };
   }
 

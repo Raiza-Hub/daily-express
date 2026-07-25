@@ -20,7 +20,6 @@ import type {
     PaymentTransaction,
 } from "./payment.types";
 import type { PaymentRecord } from "../db/index";
-import { enrichWithExpiry } from "./payment.utils";
 
 
 
@@ -54,17 +53,7 @@ export class PaymentInitService {
       logger.info("payment.initialize_conflict_skipped", {
         bookingId: input.bookingId,
       });
-      return enrichWithExpiry(existingPayment, bookingRecord.expiresAt);
-    }
-
-    if (
-      !bookingRecord.expiresAt ||
-      bookingRecord.expiresAt.getTime() <= Date.now()
-    ) {
-      throw createServiceError(
-        "Seat reservation has expired - cannot initialize payment",
-        400,
-      );
+      return existingPayment;
     }
 
     if (existingPayment?.status === "pending") {
@@ -72,12 +61,11 @@ export class PaymentInitService {
         existingPayment,
         authenticatedEmail,
         input,
-        bookingRecord.expiresAt,
       );
     }
 
     if (existingPayment) {
-      return enrichWithExpiry(existingPayment, bookingRecord.expiresAt);
+      return existingPayment;
     }
 
     const reference = this.buildReference(input.reference);
@@ -103,16 +91,6 @@ export class PaymentInitService {
 
       if (!lockedBooking) {
         throw createServiceError("Booking not found", 404);
-      }
-
-      if (
-        !lockedBooking.expiresAt ||
-        lockedBooking.expiresAt.getTime() <= Date.now()
-      ) {
-        throw createServiceError(
-          "Seat reservation has expired - cannot initialize payment",
-          400,
-        );
       }
 
       const currentPayment = await tx.query.payment.findFirst({
@@ -163,12 +141,11 @@ export class PaymentInitService {
         setupResult.payment,
         authenticatedEmail,
         input,
-        bookingRecord.expiresAt,
       );
     }
 
     if (setupResult.action === "return_existing") {
-      return enrichWithExpiry(setupResult.payment, bookingRecord.expiresAt);
+      return setupResult.payment;
     }
 
     // 3. call Kora checkout API outside the transaction
@@ -213,14 +190,13 @@ export class PaymentInitService {
       reference,
     });
 
-    return enrichWithExpiry(finalPayment, bookingRecord.expiresAt);
+    return finalPayment;
   }
 
   private async resolveExistingPendingCheckout(
     existingPayment: PaymentRecord,
     authenticatedEmail: string,
     input: InitializePaymentInput,
-    expiresAt: Date,
   ) {
     const verification = await this.kora.verifyTransaction(
       existingPayment.reference,
@@ -234,7 +210,7 @@ export class PaymentInitService {
           reference: existingPayment.reference,
         });
       });
-      return enrichWithExpiry(existingPayment, expiresAt);
+      return existingPayment;
     }
 
     if (["pending", "processing"].includes(providerStatus)) {
@@ -250,12 +226,11 @@ export class PaymentInitService {
           existingPayment,
           authenticatedEmail,
           input,
-          expiresAt,
           providerStatus,
         );
       }
 
-      return enrichWithExpiry(existingPayment, expiresAt);
+      return existingPayment;
     }
 
     if (
@@ -265,19 +240,17 @@ export class PaymentInitService {
         existingPayment,
         authenticatedEmail,
         input,
-        expiresAt,
         providerStatus,
       );
     }
 
-    return enrichWithExpiry(existingPayment, expiresAt);
+    return existingPayment;
   }
 
   private async reinitializePayment(
     existingPayment: PaymentRecord,
     authenticatedEmail: string,
     input: InitializePaymentInput,
-    expiresAt: Date,
     providerStatus: string,
   ) {
     const reference = this.buildReference();
@@ -329,7 +302,7 @@ export class PaymentInitService {
 
     if (!result) {
       const reloaded = await this.repo.findPaymentByBookingId(input.bookingId);
-      return enrichWithExpiry(reloaded || existingPayment, expiresAt);
+      return reloaded || existingPayment;
     }
 
     let initializeResponse: { data: KoraInitializeResponse; raw: unknown };
@@ -382,9 +355,7 @@ export class PaymentInitService {
       }
     });
 
-    return updatedPayment
-      ? enrichWithExpiry(updatedPayment, expiresAt)
-      : enrichWithExpiry(existingPayment, expiresAt);
+    return updatedPayment || existingPayment;
   }
 
   private async createKoraCheckoutSession(params: {

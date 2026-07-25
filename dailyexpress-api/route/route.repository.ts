@@ -1,4 +1,4 @@
-import { and, asc, desc, eq, gte, gt, inArray, isNotNull, isNull, lt, lte, ne, notInArray, or, sql, type SQL } from "drizzle-orm";
+import { and, asc, desc, eq, gte, gt, inArray, isNotNull, isNull, lt, ne, notInArray, or, sql, type SQL } from "drizzle-orm";
 import { db } from "../db/connection";
 import {
   booking,
@@ -410,17 +410,6 @@ export class RouteRepository {
   async findEarningByBookingId(bookingId: string) {
     return db.query.earning.findFirst({
       where: eq(earning.bookingId, bookingId),
-    });
-  }
-
-  async findExpiredPendingBookings(before: Date) {
-    return db.query.booking.findMany({
-      where: and(
-        eq(booking.status, "pending"),
-        eq(booking.paymentStatus, "initialized"),
-        isNotNull(booking.expiresAt),
-        lte(booking.expiresAt, before),
-      ),
     });
   }
 

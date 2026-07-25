@@ -10,17 +10,14 @@ import { handleApiError } from "../utils";
 interface CheckoutBookingResponse {
   booking: {
     id: string;
-    expiresAt?: Date | string | null;
   };
   fareAmount: number;
   currency: string;
-  expiresAt?: Date | string | null;
 }
 
 interface InitializePaymentResponse {
   reference: string;
   checkoutUrl?: string | null;
-  expiresAt?: Date | string | null;
 }
 
 export const createTripCheckoutFn = async (
@@ -65,10 +62,6 @@ export const createTripCheckoutFn = async (
       bookingId: checkoutBooking.booking.id,
       paymentReference: payment.reference,
       checkoutUrl: payment.checkoutUrl,
-      expiresAt:
-        payment.expiresAt ??
-        checkoutBooking.expiresAt ??
-        checkoutBooking.booking.expiresAt,
     };
   } catch (err) {
     return handleApiError(err, "Failed to create trip checkout") as never;
