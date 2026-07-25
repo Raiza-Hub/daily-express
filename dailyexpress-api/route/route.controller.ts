@@ -7,7 +7,6 @@ import { timeAsync } from "../utils/timing";
 import { routeService } from "./route.service";
 import { ALLOWED_VEHICLE_TYPES } from "./utils";
 import { sseManager } from "./sse-manager";
-import { idempotencyService } from "./idempotency";
 const ALLOWED_VEHICLE_TYPES_SET = new Set(ALLOWED_VEHICLE_TYPES);
 const DATE_ONLY_REGEX = /^\d{4}-\d{2}-\d{2}$/;
 const MAX_TRIPS_SUMMARY_RANGE_DAYS = 31;
@@ -294,20 +293,6 @@ export const createCheckoutBooking: RequestHandler = asyncHandler(
       );
     }
 
-    const idempotencyKey = req.headers["idempotency-key"] as string | undefined;
-    if (idempotencyKey) {
-      const requestHash = idempotencyService.computeRequestHash({ routeId, tripDate: parsedTripDate, vehicleType });
-      const cached = await idempotencyService.getCached<unknown>(idempotencyKey, requestHash);
-      if (cached === "MISMATCH") {
-        return sendErrorResponse(res, 422, "Idempotency key reused with different request parameters.", { code: "IDEMPOTENCY_KEY_MISMATCH" });
-      }
-      if (cached) {
-        return res
-          .status(200)
-          .json(createSuccessResponse(cached.response, "Checkout booking created successfully"));
-      }
-    }
-
     const checkoutBooking = await timeAsync(
       "route.create_checkout_booking.service",
       { userId: user.userId, routeId, tripDate: parsedTripDate, vehicleType },
@@ -318,11 +303,6 @@ export const createCheckoutBooking: RequestHandler = asyncHandler(
           vehicleType,
         }),
     );
-
-    if (idempotencyKey) {
-      const requestHash = idempotencyService.computeRequestHash({ routeId, tripDate: parsedTripDate, vehicleType });
-      await idempotencyService.setCache(idempotencyKey, requestHash, checkoutBooking);
-    }
 
     return res
       .status(201)

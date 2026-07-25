@@ -114,21 +114,6 @@ async function createApp(): Promise<Express> {
       }
     }
 
-    if (cfg.LOCATION_UPSTASH_REDIS_REST_URL) {
-      try {
-        const start = Date.now();
-        const redis = new Redis({
-          url: cfg.LOCATION_UPSTASH_REDIS_REST_URL,
-          token: cfg.LOCATION_UPSTASH_REDIS_REST_TOKEN!,
-        });
-        await redis.ping();
-        checks.locationCache = { status: "ok", latencyMs: Date.now() - start };
-      } catch {
-        healthy = false;
-        checks.locationCache = { status: "error", message: "connection failed" };
-      }
-    }
-
     if (cfg.KYC_UPSTASH_REDIS_REST_URL) {
       try {
         const start = Date.now();
