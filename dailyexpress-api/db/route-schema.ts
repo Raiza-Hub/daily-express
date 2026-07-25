@@ -23,12 +23,6 @@ export const vehicleTypeEnum = pgEnum("vehicle_type", [
   "bus",
 ]);
 
-export interface LocationObject {
-  title: string;
-  locality: string;
-  label: string;
-}
-
 export const tripStatusEnum = pgEnum("trip_status", [
   "pending",
   "confirmed",

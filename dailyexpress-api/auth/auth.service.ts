@@ -1,5 +1,5 @@
 import { createHash, randomBytes, randomInt } from "node:crypto";
-import { type EnvConfig } from "../config/index";
+import { getConfig, type EnvConfig } from "../config/index";
 import { db } from "../db/connection";
 import bcrypt from "bcryptjs";
 import { createServiceError } from "@shared/utils";
@@ -23,9 +23,9 @@ const PASSWORD_RESET_EXPIRY_MINUTES = 30;
 const PASSWORD_RESET_TOKEN_BYTES = 32;
 
 async function renderVerifyOtpEmail(storedOtp: string) {
-  const brandName = process.env.EMAIL_BRAND_NAME || "Daily Express";
-  const supportEmail =
-    process.env.SUPPORT_EMAIL || "support@dailyexpress.app";
+  const config = getConfig();
+  const brandName = config.EMAIL_BRAND_NAME;
+  const supportEmail = config.SUPPORT_EMAIL;
 
   const props = {
     otp: storedOtp,
@@ -50,8 +50,9 @@ async function renderVerifyOtpEmail(storedOtp: string) {
 }
 
 async function renderResetPasswordEmail(resetLink: string) {
-  const brandName = process.env.EMAIL_BRAND_NAME || "Daily Express";
-  const supportEmail = process.env.SUPPORT_EMAIL || "support@dailyexpress.app";
+  const config = getConfig();
+  const brandName = config.EMAIL_BRAND_NAME;
+  const supportEmail = config.SUPPORT_EMAIL;
 
   const props = {
     resetUrl: resetLink,

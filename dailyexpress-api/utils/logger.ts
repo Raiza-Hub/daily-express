@@ -1,12 +1,14 @@
 import * as Sentry from "@sentry/bun";
 import { sentryServer, sanitizeForSentry } from "@shared/sentry";
+import { getConfig } from "../config/index";
 
 type LogFields = Record<string, unknown>;
 type LogLevel = "debug" | "info" | "warn" | "error";
 
+const config = getConfig();
 const isDevelopment =
-  process.env.NODE_ENV === "development" ||
-  process.env.DAILYEXPRESS_API_LOG_CONSOLE === "true";
+  config.NODE_ENV === "development" ||
+  config.DAILYEXPRESS_API_LOG_CONSOLE;
 
 function sanitizeFields(fields?: LogFields): LogFields | undefined {
   if (!fields) {

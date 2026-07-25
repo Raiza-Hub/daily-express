@@ -1,7 +1,7 @@
 import { sql } from "drizzle-orm";
 
 import { createServiceError } from "@shared/utils";
-import { booking, type BookingRecord } from "../db/index";
+import type { BookingRecord } from "../db/index";
 import {
   formatDateKey,
   getDateTimeParts,

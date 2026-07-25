@@ -35,11 +35,10 @@ export * from "./payout-schema";
 export * from "./route-schema";
 export * from "./zone-schema";
 
-export type { PaymentRecord, RefundRecord, PaymentWebhookRecord } from "./payment-schema";
+export type { PaymentRecord, RefundRecord } from "./payment-schema";
 export type { BookingRecord, TripRecord, RouteRecord, VehicleRecord, ExternalDriverRecord } from "./route-schema";
 export type { EarningRecord, PayoutRecord, PayoutAttemptRecord } from "./payout-schema";
 export type { DriverRecord, DriverStatsRecord } from "./driver-schema";
 export type { UserRecord, OtpRecord, UserProviderRecord, PasswordResetTokenRecord } from "./auth-schema";
-export type { NotificationRecord } from "./notification-schema";
-export type { AdminAuditLogRecord } from "./admin-schema";
+
 export type { ZoneRecord } from "./zone-schema";

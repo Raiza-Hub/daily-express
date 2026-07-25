@@ -148,7 +148,7 @@ async function createQueues(instance: PgBoss) {
     retryDelay: 30,
     retryBackoff: true,
     retryDelayMax: 300,
-    expireInSeconds: Number(process.env.PAYOUT_JOB_EXPIRE_MINUTES || 15) * 60,
+    expireInSeconds: 900,
     deleteAfterSeconds: 86400,
     deadLetter: QUEUES.PAYOUT_PROCESS_DLQ,
   });
