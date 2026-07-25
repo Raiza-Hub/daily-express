@@ -10,8 +10,7 @@ import { PaymentInitService } from "./payment-init.service";
 import { PaymentConfirmService } from "./payment-confirm.service";
 import { PaymentPayoutRefundService } from "./payment-payout-refund.service";
 import { PaymentWebhookService } from "./payment-webhook.service";
-import { PaymentExpiryService } from "./payment-expiry.service";
-import { PayoutService } from "../payout/payout.service";
+
 import { KoraClient } from "./kora.client";
 import type {
   InitializePaymentInput,
@@ -32,16 +31,13 @@ const TERMINAL_PAYMENT_STATUSES = [
   "refund_failed",
 ] as const;
 
-const payoutService = new PayoutService();
-
 export class PaymentService {
   private readonly config = getConfig();
   private readonly repo = new PaymentRepository();
   private readonly kora = new KoraClient();
-  private readonly confirmService = new PaymentConfirmService(this.repo, payoutService);
+  private readonly confirmService = new PaymentConfirmService(this.repo);
   private readonly payoutRefundService = new PaymentPayoutRefundService(this.repo, this.kora);
   private readonly webhookService = new PaymentWebhookService(this.repo, this.payoutRefundService);
-  private readonly expiryService = new PaymentExpiryService(this.repo);
   private readonly initService = new PaymentInitService(this.repo);
 
   async initializePayment(
@@ -136,10 +132,7 @@ export class PaymentService {
     return this.paymentWithExpiry(updatedPayment);
   }
 
-  async resolveReturnUrl(
-    reference?: string | null,
-    providerReturnStatus?: string | null,
-  ) {
+  async resolveReturnUrl(reference?: string | null) {
     const tripStatusUrl = `${this.config.FRONTEND_URL}/trip-status`;
     if (!reference) return tripStatusUrl;
 
@@ -158,58 +151,16 @@ export class PaymentService {
         return tripStatusUrl;
       }
 
-      if (
-        ["failed", "cancelled", "abandoned", "closed"].includes(providerStatus)
-      ) {
-        await this.transitionPendingPayment(
-          reference,
-          providerStatus === "failed" ? "failed" : "cancelled",
-          verification.data.message || "Payment was not completed",
-          {
-            failureCode:
-              providerStatus === "failed" ? "PAYMENT_FAILED" : "USER_CANCELLED",
-            providerStatus: verification.data.status,
-          },
-        );
-        return tripStatusUrl;
-      }
-
-      const normalizedReturnStatus = providerReturnStatus?.trim().toLowerCase();
-      if (
-        normalizedReturnStatus &&
-        ["failed", "cancelled", "abandoned", "closed"].includes(
-          normalizedReturnStatus,
-        )
-      ) {
-        logger.info("payment.return_status_ignored_after_verification", {
-          reference,
-          providerReturnStatus: normalizedReturnStatus,
-          verifiedStatus: verification.data.status,
-        });
-      }
-
-      let bookingExpiresAt: Date | null | undefined;
-      if (existingPayment.bookingId) {
-        const bookingRecord = await db.query.booking.findFirst({
-          where: eq(booking.id, existingPayment.bookingId),
-          columns: { expiresAt: true },
-        });
-        bookingExpiresAt = bookingRecord?.expiresAt;
-      }
-
-      if (bookingExpiresAt && bookingExpiresAt.getTime() > Date.now()) {
-        return tripStatusUrl;
-      }
-
       await this.transitionPendingPayment(
         reference,
         "expired",
-        "Seat reservation expired before payment was completed",
+        verification.data.message || "Payment was not completed",
         {
-          failureCode: "PAYMENT_EXPIRED",
+          failureCode: "PAYMENT_NOT_COMPLETED",
           providerStatus: verification.data.status,
         },
       );
+      return tripStatusUrl;
     } catch (error) {
       logger.error("payment.return_verification_failed", {
         reference,
@@ -226,10 +177,6 @@ export class PaymentService {
 
   async processWebhookJob(job: WebhookJobData) {
     return this.webhookService.processWebhookJob(job);
-  }
-
-  async handlePaymentExpiry(payload: { bookingId: string; reference: string }) {
-    return this.expiryService.expirePayment(payload.reference);
   }
 
   isTerminalStatus(status: PaymentStatus) {

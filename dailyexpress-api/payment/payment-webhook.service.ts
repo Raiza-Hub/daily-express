@@ -1,6 +1,6 @@
 import { and, eq } from "drizzle-orm";
 import { db } from "../db/connection";
-import { booking, payment, paymentWebhook, refund } from "../db/index";
+import { payment, paymentWebhook } from "../db/index";
 import { logger } from "../utils/logger";
 import { getPaymentReference } from "../utils/payment";
 import { jobService } from "../workers/job.service";
@@ -142,32 +142,6 @@ export class PaymentWebhookService {
   private async processChargeSuccess(reference: string) {
     const [claimed] = await this.repo.claimPayment(reference);
     if (!claimed) {
-      // Defensive check: if the payment is already in 'expired' status, but this webhook got a success callback,
-      // check if a refund has already been created/processed to prevent double refunding.
-      const existing = await this.repo.findPaymentByReference(reference);
-      if (existing?.status === "expired" && existing.bookingId) {
-        const existingRefund = await db.query.refund.findFirst({
-          where: eq(refund.paymentId, existing.id),
-        });
-        if (!existingRefund) {
-          logger.warn("payment.webhook.expired_without_refund", { reference, bookingId: existing.bookingId });
-          const verification = await this.kora.verifyTransaction(reference);
-          if (verification.data.status.toLowerCase() === "success") {
-              await this.payoutRefundService.refundPayment(
-                reference,
-                {
-                  amount: verification.data.amount,
-                  currency: verification.data.currency,
-                  paid_at: verification.data.paid_at,
-                  payment_reference: verification.data.payment_reference,
-                  reference: verification.data.reference,
-                  status: verification.data.status,
-                },
-                "Payment completed after booking hold expired (webhook fallback)",
-              );
-          }
-        }
-      }
       logger.info("payment.webhook_already_claimed", { reference });
       return;
     }
@@ -179,30 +153,6 @@ export class PaymentWebhookService {
         failureReason: `Webhook indicated success but verification returned ${verification.data.status}`,
         providerStatus: verification.data.status,
       });
-      return;
-    }
-
-    let bookingExpired = true;
-    if (claimed.bookingId) {
-      const bookingRecord = await db.query.booking.findFirst({
-        where: eq(booking.id, claimed.bookingId),
-        columns: { expiresAt: true },
-      });
-      bookingExpired = !bookingRecord?.expiresAt || bookingRecord.expiresAt.getTime() <= Date.now();
-    }
-
-    if (bookingExpired) {
-      await this.repo.updateProcessingPayment(reference, "expired", {
-        failureCode: "BOOKING_EXPIRED",
-        failureReason: "Payment completed after booking hold expired",
-        providerStatus: "success",
-      });
-
-      await this.payoutRefundService.refundPayment(
-        reference,
-        verification.data,
-        "Payment completed after booking hold expired",
-      );
       return;
     }
 
