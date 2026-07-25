@@ -12,7 +12,7 @@ import {
 } from "../utils/payment";
 import { jobService } from "../workers/job.service";
 import { koraClient } from "./kora.client";
-import { PaymentRepository, paymentRepository } from "./payment.repository";
+import { PaymentRepository } from "./payment.repository";
 import type {
     InitializePaymentInput,
     KoraChannel,
@@ -416,11 +416,6 @@ export class PaymentInitService {
     return reference?.trim() || generateReference();
   }
 
-  private sanitizeOptional(value?: string | null) {
-    if (!value) return null;
-    return sanitizeInput(value);
-  }
-
   private getPaymentPublicBaseUrl() {
     const configured =
       this.config.PAYMENT_PUBLIC_BASE_URL || this.config.KORA_WEBHOOK_URL;
@@ -449,5 +444,3 @@ export class PaymentInitService {
     return `${this.getPaymentPublicBaseUrl()}/api/v1/payments/webhooks/kora`;
   }
 }
-
-export const paymentInitService = new PaymentInitService(paymentRepository);

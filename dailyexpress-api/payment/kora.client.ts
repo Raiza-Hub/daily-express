@@ -6,10 +6,7 @@ import type {
   KoraInitializeRequest,
   KoraInitializeResponse,
   KoraVerifyResponse,
-  KoraRefundRequest,
-  KoraRefundResponse,
   KoraResolveAccountResponse,
-  KoraBalanceResponse,
   KoraDisburseResponse,
   KoraPayoutHistoryItem,
 } from "./payment.types";
@@ -207,16 +204,6 @@ export class KoraClient {
     );
   }
 
-  async initiateRefund(data: KoraRefundRequest) {
-    return this.request<KoraRefundResponse>(
-      "/merchant/api/v1/refunds/initiate",
-      {
-        method: "POST",
-        body: JSON.stringify(data),
-      },
-    );
-  }
-
   async resolveAccountNumber(
     bankCode: string,
     accountNumber: string,
@@ -286,9 +273,6 @@ export class KoraClient {
     );
   }
 
-  async getBalance() {
-    return this.request<KoraBalanceResponse>("/merchant/api/v1/balances");
-  }
   async findPayoutByReference(reference: string) {
     try {
       const response = await this.request<KoraPayoutHistoryItem>(

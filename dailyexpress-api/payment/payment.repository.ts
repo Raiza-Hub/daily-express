@@ -3,25 +3,14 @@ import { createServiceError } from "@shared/utils";
 import { db } from "../db/connection";
 import {
   booking,
-  driver,
   earning,
   payment,
   refund,
-  route,
   trip,
-  users,
   type PaymentRecord,
   type BookingRecord,
 } from "../db/index";
 import type { PaymentStatus, PaymentTransaction } from "./payment.types";
-
-export interface BookingDetails {
-  booking: typeof booking.$inferSelect;
-  trip: typeof trip.$inferSelect;
-  route: typeof route.$inferSelect;
-  passenger: typeof users.$inferSelect | null;
-  driver: typeof driver.$inferSelect | null;
-}
 
 export class PaymentRepository {
   findPaymentByReference(reference: string) {
@@ -59,17 +48,6 @@ export class PaymentRepository {
     };
   }
 
-  insertPayment(
-    tx: PaymentTransaction,
-    values: typeof payment.$inferInsert,
-  ) {
-    return tx
-      .insert(payment)
-      .values(values)
-      .onConflictDoNothing({ target: payment.bookingId })
-      .returning();
-  }
-
   claimPayment(reference: string) {
     return db
       .update(payment)
@@ -84,24 +62,6 @@ export class PaymentRepository {
       .set({ status, ...fields, updatedAt: new Date() })
       .where(and(eq(payment.reference, reference), eq(payment.status, "processing")))
       .returning();
-  }
-
-  findBookingDetailsByBookingId(bookingId: string): Promise<BookingDetails | undefined> {
-    return db
-      .select({
-        booking,
-        trip,
-        route,
-        passenger: users,
-        driver,
-      })
-      .from(booking)
-      .innerJoin(trip, eq(trip.id, booking.tripId))
-      .innerJoin(route, eq(route.id, trip.routeId))
-      .leftJoin(users, eq(users.id, booking.userId))
-      .leftJoin(driver, eq(driver.id, trip.driverId))
-      .where(eq(booking.id, bookingId))
-      .then((rows) => rows[0] as BookingDetails | undefined);
   }
 
   async updateBookingPaymentStatus(
@@ -206,16 +166,6 @@ export class PaymentRepository {
     });
   }
 
-  cancelEarningByBookingId(
-    tx: PaymentTransaction,
-    bookingId: string,
-  ) {
-    return tx
-      .update(earning)
-      .set({ status: "cancelled", updatedAt: new Date() })
-      .where(eq(earning.bookingId, bookingId));
-  }
-
   async findSuccessfulPaymentsForDriverUpcomingTrips(
     driverId: string,
     startDate: Date,
@@ -240,13 +190,6 @@ export class PaymentRepository {
       );
   }
 
-  findTripDriverId(tripId: string) {
-    return db.query.trip.findFirst({
-      where: eq(trip.id, tripId),
-      columns: { driverId: true },
-    });
-  }
-
   // ── Refund table methods ──
 
   insertRefund(tx: PaymentTransaction, values: typeof refund.$inferInsert) {
@@ -256,19 +199,6 @@ export class PaymentRepository {
   findRefundByReference(ref: string) {
     return db.query.refund.findFirst({
       where: eq(refund.reference, ref),
-    });
-  }
-
-  findRefundByProviderRefundReference(ref: string) {
-    return db.query.refund.findFirst({
-      where: eq(refund.providerRefundReference, ref),
-    });
-  }
-
-  findRefundsByPaymentId(paymentId: string) {
-    return db.query.refund.findMany({
-      where: eq(refund.paymentId, paymentId),
-      orderBy: (ref, { desc }) => [desc(ref.createdAt)],
     });
   }
 

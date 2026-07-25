@@ -12,19 +12,4 @@ export const initializePaymentSchema = Joi.object({
   customerName: Joi.string().max(120).optional(),
 });
 
-export const koraWebhookSchema = Joi.object({
-  event: Joi.string().required(),
-  data: Joi.object({
-    status: Joi.string().required(),
-    reference: Joi.string().optional(),
-    amount: Joi.alternatives().try(Joi.number(), Joi.string()).required(),
-    fee: Joi.alternatives().try(Joi.number(), Joi.string()).optional(),
-    currency: Joi.string().required(),
-    payment_method: Joi.string().optional(),
-    payment_reference: Joi.string().allow(null).optional(),
-    metadata: Joi.object().allow(null).optional(),
-  })
-    .or("reference", "payment_reference")
-    .required()
-    .unknown(true),
-}).unknown(true);
+

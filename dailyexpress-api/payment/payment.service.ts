@@ -1,5 +1,5 @@
 import { and, eq } from "drizzle-orm";
-import { createServiceError } from "@shared/utils";
+
 import { logger } from "../utils/logger";
 import { db } from "../db/connection";
 import { booking, payment } from "../db/index";
@@ -21,16 +21,6 @@ import type { WebhookJobData } from "../workers/boss";
 
 type PaymentRecord = typeof payment.$inferSelect;
 
-const TERMINAL_PAYMENT_STATUSES = [
-  "successful",
-  "failed",
-  "cancelled",
-  "expired",
-  "refund_pending",
-  "refunded",
-  "refund_failed",
-] as const;
-
 export class PaymentService {
   private readonly config = getConfig();
   private readonly repo = new PaymentRepository();
@@ -46,18 +36,6 @@ export class PaymentService {
     input: InitializePaymentInput,
   ) {
     return this.initService.initializePayment(userId, authenticatedEmail, input);
-  }
-
-  async getPaymentRecord(reference: string) {
-    return this.repo.findPaymentByReference(reference);
-  }
-
-  async getPaymentStatus(reference: string) {
-    const record = await this.repo.findPaymentByReference(reference);
-    if (!record) {
-      throw createServiceError("Payment not found", 404);
-    }
-    return this.paymentWithExpiry(record);
   }
 
   private async paymentWithExpiry(paymentRecord: PaymentRecord) {
@@ -177,10 +155,6 @@ export class PaymentService {
 
   async processWebhookJob(job: WebhookJobData) {
     return this.webhookService.processWebhookJob(job);
-  }
-
-  isTerminalStatus(status: PaymentStatus) {
-    return (TERMINAL_PAYMENT_STATUSES as readonly string[]).includes(status);
   }
 
 }
