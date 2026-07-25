@@ -50,8 +50,6 @@ const envSchema = z.object({
   RATE_LIMIT_PUBLIC_AUTH: z.coerce.number().int().positive().default(20),
   RATE_LIMIT_UPSTASH_REDIS_REST_URL: optionalUrl(),
   RATE_LIMIT_UPSTASH_REDIS_REST_TOKEN: optionalString(),
-  LOCATION_UPSTASH_REDIS_REST_URL: optionalUrl(),
-  LOCATION_UPSTASH_REDIS_REST_TOKEN: optionalString(),
 
   KYC_UPSTASH_REDIS_REST_URL: optionalUrl(),
   KYC_UPSTASH_REDIS_REST_TOKEN: optionalString(),
@@ -70,9 +68,9 @@ const envSchema = z.object({
 
   KORA_SECRET_KEY: z.string().min(1),
   KORA_PUBLIC_KEY: z.string().min(1),
-  KORA_BASE_URL: z.string().url().default("https://api.korapay.com"),
-  KORA_WEBHOOK_URL: z.string().url().optional(),
-  FRONTEND_URL: z.string().url().default("http://localhost:3000"),
+  KORA_BASE_URL: z.url().default("https://api.korapay.com"),
+  KORA_WEBHOOK_URL: z.url().optional(),
+  FRONTEND_URL: z.url().default("http://localhost:3000"),
   PAYOUT_RETRY_DELAYS_MS: z.string().default("60000,300000,900000"),
   INSUFFICIENT_BALANCE_RETRY_DELAY_MS: z.coerce
     .number()
@@ -87,14 +85,14 @@ const envSchema = z.object({
     .default(1000),
 
   // Database
-  DATABASE_URL: z.string().min(1),
+  DATABASE_URL: z.url(),
 
   // R2 (profile image uploads)
-  R2_ENDPOINT: z.string().url(),
+  R2_ENDPOINT: z.url(),
   R2_ACCESS_KEY_ID: z.string().min(1),
   R2_SECRET_ACCESS_KEY: z.string().min(1),
   R2_BUCKET: z.string().min(1),
-  R2_PUBLIC_URL: z.string().url(),
+  R2_PUBLIC_URL: z.url(),
 
   // Email (Amazon SES API)
   AWS_REGION: z.string().min(1),
@@ -108,12 +106,11 @@ const envSchema = z.object({
   // Auth
   BCRYPT_ROUNDS: z.coerce.number().int().positive().default(10),
   COOKIE_DOMAIN: optionalString(),
-  DRIVER_APP_URL: z.string().default("http://localhost:3001"),
+  DRIVER_APP_URL: z.url().default("http://localhost:3001"),
 
   // Payment
   PAYMENT_PUBLIC_BASE_URL: optionalUrl(),
-  KORA_TIMEOUT_MS: z.coerce.number().int().positive().default(15000),
-  PROXY_URL: z.string().url().optional(),
+  PROXY_URL: z.url().optional(),
 
 
   // Route
