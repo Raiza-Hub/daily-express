@@ -75,8 +75,8 @@ export const paymentWebhook = pgTable(
   {
     id: uuid("id").defaultRandom().primaryKey(),
     provider: paymentProviderEnum("provider").default("kora").notNull(),
-    paymentReference: varchar("payment_reference", { length: 128 }),
-    eventType: varchar("event_type", { length: 64 }).default("kora.event"),
+    paymentReference: varchar("payment_reference", { length: 128 }).notNull(),
+    eventType: varchar("event_type", { length: 64 }).notNull(),
     signatureValid: boolean("signature_valid").default(false).notNull(),
     payload: jsonb("payload").notNull(),
     verificationNote: text("verification_note"),
@@ -85,21 +85,9 @@ export const paymentWebhook = pgTable(
   (table) => [
     index("payment_webhook_payment_reference_idx").on(table.paymentReference),
     index("payment_webhook_created_at_idx").on(table.createdAt),
+    uniqueIndex("payment_webhook_dedup_idx").on(table.eventType, table.paymentReference),
   ],
 );
-
-export const webhookProcessed = pgTable("webhook_processed", {
-  id: uuid("id").defaultRandom().primaryKey(),
-  eventType: varchar("event_type", { length: 64 }).notNull(),
-  eventReference: varchar("event_reference", { length: 128 })
-    .notNull()
-    .unique(),
-  processedAt: timestamp("processed_at", { mode: "date" })
-    .defaultNow()
-    .notNull(),
-});
-
-
 
 export const refund = pgTable(
   "refund",
@@ -138,7 +126,6 @@ export const refund = pgTable(
 export const paymentSchema = {
   payment,
   paymentWebhook,
-  webhookProcessed,
   refund,
 };
 

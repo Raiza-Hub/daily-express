@@ -6,7 +6,6 @@ import {
   driver,
   earning,
   payment,
-  paymentWebhook,
   refund,
   route,
   trip,
@@ -85,13 +84,6 @@ export class PaymentRepository {
       .set({ status, ...fields, updatedAt: new Date() })
       .where(and(eq(payment.reference, reference), eq(payment.status, "processing")))
       .returning();
-  }
-
-  insertWebhook(
-    tx: PaymentTransaction,
-    values: typeof paymentWebhook.$inferInsert,
-  ) {
-    return tx.insert(paymentWebhook).values(values);
   }
 
   findBookingDetailsByBookingId(bookingId: string): Promise<BookingDetails | undefined> {
