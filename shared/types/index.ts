@@ -358,7 +358,6 @@ export interface Payment {
   productName: string;
   productDescription: string;
   customerEmail?: string | null;
-  customerMobile?: string | null;
   status: PaymentStatus;
   providerStatus?: string | null;
   checkoutUrl?: string | null;
@@ -383,9 +382,6 @@ export interface CreateTripCheckoutRequest {
   channels?: KoraCheckoutChannel[];
   productName: string;
   productDescription: string;
-  customerName?: string;
-  customerMobile?: string;
-  metadata?: Record<string, unknown>;
 }
 
 export interface TripCheckout {

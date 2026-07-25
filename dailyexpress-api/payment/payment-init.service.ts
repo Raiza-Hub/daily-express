@@ -176,7 +176,6 @@ export class PaymentInitService {
     try {
       initializeResponse = await this.createKoraCheckoutSession({
         email: authenticatedEmail.trim(),
-        customerName: input.customerName,
         amount: trustedAmount,
         reference,
         currency: trustedCurrency,
@@ -337,7 +336,6 @@ export class PaymentInitService {
     try {
       initializeResponse = await this.createKoraCheckoutSession({
         email: authenticatedEmail.trim(),
-        customerName: input.customerName,
         amount: trustedAmount,
         reference,
         currency: trustedCurrency,
@@ -391,7 +389,6 @@ export class PaymentInitService {
 
   private async createKoraCheckoutSession(params: {
     email: string;
-    customerName?: string;
     amount: number;
     reference: string;
     currency: string;
@@ -400,7 +397,6 @@ export class PaymentInitService {
     return this.kora.initializeTransaction({
       customer: {
         email: params.email,
-        name: params.customerName,
       },
       amount: params.amount,
       reference: params.reference,
