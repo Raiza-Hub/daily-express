@@ -27,11 +27,6 @@ export class AllocationService {
       return;
     }
 
-    if (bookingRecord.expiresAt && bookingRecord.expiresAt <= new Date()) {
-      logger.warn("allocation.booking_expired", { bookingId, reference });
-      return;
-    }
-
     const found = await db.query.route.findFirst({
       where: eq(route.id, bookingRecord.routeId),
     });

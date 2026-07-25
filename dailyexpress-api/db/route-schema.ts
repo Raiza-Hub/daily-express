@@ -133,7 +133,7 @@ export const booking = pgTable(
     feeAmount: bigint("fee_amount", { mode: "number" }).default(0).notNull(),
     currency: varchar("currency", { length: 8 }).default("NGN").notNull(),
     status: tripStatusEnum("status").default("pending").notNull(),
-    expiresAt: timestamp("expires_at", { mode: "date" }),
+
     paymentReference: varchar("payment_reference", { length: 128 }),
     paymentStatus: varchar("payment_status", { length: 32 })
       .default("initialized")
@@ -146,7 +146,7 @@ export const booking = pgTable(
     index("booking_user_id_idx").on(table.userId),
     index("booking_route_date_vt_idx").on(table.routeId, table.tripDate, table.vehicleType),
     index("booking_payment_reference_idx").on(table.paymentReference),
-    index("booking_expires_at_idx").on(table.expiresAt),
+
     index("booking_user_visible_created_at_idx")
       .on(table.userId, table.createdAt.desc())
       .where(

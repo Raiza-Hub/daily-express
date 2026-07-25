@@ -301,7 +301,6 @@ export interface Booking {
   feeAmount: number;
   currency: string;
   status: TripStatus;
-  expiresAt?: Date | null;
   paymentReference?: string | null;
   paymentStatus?: string | null;
   createdAt: Date;
@@ -370,7 +369,6 @@ export interface Payment {
   failedAt?: Date | null;
   failureCode?: string | null;
   failureReason?: string | null;
-  expiresAt?: Date | null;
   createdAt: Date;
   updatedAt: Date;
 }
@@ -388,7 +386,6 @@ export interface TripCheckout {
   bookingId: string;
   paymentReference: string;
   checkoutUrl?: string | null;
-  expiresAt?: Date | string | null;
 }
 
 export type EarningStatus =

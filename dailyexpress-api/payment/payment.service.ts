@@ -2,10 +2,9 @@ import { and, eq } from "drizzle-orm";
 
 import { logger } from "../utils/logger";
 import { db } from "../db/connection";
-import { booking, payment } from "../db/index";
+import { payment } from "../db/index";
 import { getConfig } from "../config/index";
 import { PaymentRepository } from "./payment.repository";
-import { enrichWithExpiry } from "./payment.utils";
 import { PaymentInitService } from "./payment-init.service";
 import { PaymentConfirmService } from "./payment-confirm.service";
 import { PaymentPayoutRefundService } from "./payment-payout-refund.service";
@@ -18,8 +17,6 @@ import type {
   PaymentStatus,
 } from "./payment.types";
 import type { WebhookJobData } from "../workers/boss";
-
-type PaymentRecord = typeof payment.$inferSelect;
 
 export class PaymentService {
   private readonly config = getConfig();
@@ -38,18 +35,6 @@ export class PaymentService {
     return this.initService.initializePayment(userId, authenticatedEmail, input);
   }
 
-  private async paymentWithExpiry(paymentRecord: PaymentRecord) {
-    let expiresAt: Date | null = null;
-    if (paymentRecord.bookingId) {
-      const bookingRecord = await db.query.booking.findFirst({
-        where: eq(booking.id, paymentRecord.bookingId),
-        columns: { expiresAt: true },
-      });
-      expiresAt = bookingRecord?.expiresAt ?? null;
-    }
-    return enrichWithExpiry(paymentRecord, expiresAt);
-  }
-
   async transitionPendingPayment(
     reference: string,
     nextStatus: Extract<PaymentStatus, "failed" | "cancelled" | "expired">,
@@ -64,7 +49,7 @@ export class PaymentService {
     const existingPayment = await this.repo.findPaymentByReference(reference);
     if (!existingPayment) return null;
     if (existingPayment.status !== "pending") {
-      return this.paymentWithExpiry(existingPayment);
+      return existingPayment;
     }
 
     const [updatedPayment] = await db.transaction(async (tx) => {
@@ -98,7 +83,7 @@ export class PaymentService {
 
     if (!updatedPayment) {
       const latest = await this.repo.findPaymentByReference(reference);
-      return latest ? this.paymentWithExpiry(latest) : null;
+      return latest || null;
     }
 
     logger.info("payment.failed", {
@@ -107,7 +92,7 @@ export class PaymentService {
       status: nextStatus,
     });
 
-    return this.paymentWithExpiry(updatedPayment);
+    return updatedPayment;
   }
 
   async resolveReturnUrl(reference?: string | null) {
