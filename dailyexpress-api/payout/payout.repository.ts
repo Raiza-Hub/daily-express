@@ -6,7 +6,6 @@ import {
   earning,
   payout,
   payoutAttempt,
-  payoutWebhook,
   trip,
   type EarningRecord,
   type PayoutRecord,
@@ -247,17 +246,6 @@ export class PayoutRepository {
     return db.query.driver.findFirst({
       where: eq(driver.id, driverId),
     });
-  }
-
-  insertWebhook(values: typeof payoutWebhook.$inferInsert) {
-    return db.insert(payoutWebhook).values(values).returning();
-  }
-
-  updateWebhookProcessedAt(webhookId: string) {
-    return db
-      .update(payoutWebhook)
-      .set({ processedAt: new Date() })
-      .where(eq(payoutWebhook.id, webhookId));
   }
 
   findDriverEarnings(driverId: string) {

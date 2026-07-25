@@ -38,35 +38,16 @@ export class PayoutWebhookService {
       input.signature,
     );
 
-    const [webhookRecord] = await this.repo.insertWebhook({
-      eventType: input.event.event,
-      reference: input.event.data.reference || null,
-      signatureValid,
-      payload: input.event,
-    });
-
-    if (!signatureValid) {
-      await this.repo.updateWebhookProcessedAt(webhookRecord.id);
-      return { processed: false, signatureValid };
-    }
+    if (!signatureValid) return { processed: false, signatureValid };
 
     const reference = input.event.data.reference;
-    if (!reference) {
-      await this.repo.updateWebhookProcessedAt(webhookRecord.id);
-      return { processed: false, signatureValid };
-    }
+    if (!reference) return { processed: false, signatureValid };
 
     const attempt = await this.repo.findPayoutAttemptByReference(reference);
-    if (!attempt) {
-      await this.repo.updateWebhookProcessedAt(webhookRecord.id);
-      return { processed: false, signatureValid };
-    }
+    if (!attempt) return { processed: false, signatureValid };
 
     const payoutRecord = await this.repo.findPayoutById(attempt.payoutId);
-    if (!payoutRecord) {
-      await this.repo.updateWebhookProcessedAt(webhookRecord.id);
-      return { processed: false, signatureValid };
-    }
+    if (!payoutRecord) return { processed: false, signatureValid };
 
     if (input.event.event === "transfer.success") {
       if (
@@ -74,7 +55,6 @@ export class PayoutWebhookService {
         payoutRecord.status === "success" ||
         attempt.status === "settled"
       ) {
-        await this.repo.updateWebhookProcessedAt(webhookRecord.id);
         return { processed: true, signatureValid };
       }
 
@@ -83,7 +63,6 @@ export class PayoutWebhookService {
         attempt,
         input.event,
       );
-      await this.repo.updateWebhookProcessedAt(webhookRecord.id);
       return { processed: true, signatureValid };
     }
 
@@ -130,10 +109,7 @@ export class PayoutWebhookService {
         return { action: "process" as const, payout: lockedPayout };
       });
 
-      if (result.action === "skip") {
-        await this.repo.updateWebhookProcessedAt(webhookRecord.id);
-        return { processed: true, signatureValid };
-      }
+      if (result.action === "skip") return { processed: true, signatureValid };
 
       const currentPayout = result.payout;
 
@@ -153,11 +129,9 @@ export class PayoutWebhookService {
         );
       }
 
-      await this.repo.updateWebhookProcessedAt(webhookRecord.id);
       return { processed: true, signatureValid };
     }
 
-    await this.repo.updateWebhookProcessedAt(webhookRecord.id);
     return { processed: false, signatureValid };
   }
 
