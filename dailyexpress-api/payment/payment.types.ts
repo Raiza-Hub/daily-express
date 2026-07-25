@@ -23,7 +23,6 @@ export interface InitializePaymentInput {
   customerName?: string;
 }
 
-
 export interface KoraInitializeRequest {
   customer: {
     email: string;
@@ -96,23 +95,6 @@ export interface KoraWebhookPayload {
   [key: string]: unknown;
 }
 
-export interface KoraRefundRequest {
-  reference: string;
-  payment_reference: string;
-  amount: number;
-  reason: string;
-}
-
-export interface KoraRefundResponse {
-  reference: string;
-  payment_reference: string;
-  status: "processing" | "success" | "failed";
-  amount?: number | string;
-  currency?: string;
-  created_at?: string;
-  completed_at?: string | null;
-}
-
 export interface KoraResolveAccountResponse {
   bank_name: string;
   bank_code: string;
@@ -148,21 +130,6 @@ export interface KoraPayoutHistoryItem {
   customer_email?: string;
   date_created?: string;
   date_completed?: string | null;
-}
-
-export interface KoraBalanceResponse {
-  NGN?: {
-    available_balance: string;
-    pending_balance: string;
-    issuing_balance?: string;
-  };
-  [currency: string]:
-    | {
-        available_balance: string;
-        pending_balance: string;
-        issuing_balance?: string;
-      }
-    | undefined;
 }
 
 export interface KoraPayoutWebhookPayload {
