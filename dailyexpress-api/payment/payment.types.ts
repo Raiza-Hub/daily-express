@@ -20,7 +20,6 @@ export interface InitializePaymentInput {
   currency?: string;
   channels?: KoraChannel[];
   productName: string;
-  customerName?: string;
 }
 
 export interface KoraInitializeRequest {

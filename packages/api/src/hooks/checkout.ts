@@ -51,9 +51,6 @@ export const createTripCheckoutFn = async (
         channels: data.channels,
         productName: data.productName,
         productDescription: data.productDescription,
-        customerName: data.customerName,
-        customerMobile: data.customerMobile,
-        metadata: data.metadata,
       },
     );
 

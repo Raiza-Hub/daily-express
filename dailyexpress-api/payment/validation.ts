@@ -9,7 +9,6 @@ export const initializePaymentSchema = Joi.object({
   currency: Joi.string().uppercase().length(3).default("NGN"),
   channels: Joi.array().items(koraChannelSchema).optional(),
   productName: Joi.string().min(2).max(120).required(),
-  customerName: Joi.string().max(120).optional(),
 });
 
 
