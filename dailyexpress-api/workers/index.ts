@@ -8,7 +8,6 @@ export async function startWorkers() {
     { registerTripRefundWorker },
     { registerAllocationWorker },
     { registerTripDriverAssignedWorker },
-    { registerPaymentZombieSweepWorker },
   ] = await Promise.all([
     import("./email.worker"),
     import("./payment-expiry.worker"),
@@ -18,7 +17,6 @@ export async function startWorkers() {
     import("./trip-refund.worker"),
     import("./allocation.worker"),
     import("./trip-driver-assigned.worker"),
-    import("./payment-zombie-sweep.worker"),
   ]);
 
   await Promise.all([
@@ -30,6 +28,5 @@ export async function startWorkers() {
     registerTripRefundWorker(),
     registerAllocationWorker(),
     registerTripDriverAssignedWorker(),
-    registerPaymentZombieSweepWorker(),
   ]);
 }
