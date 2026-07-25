@@ -1,6 +1,5 @@
 import {
   bigint,
-  boolean,
   index,
   integer,
   jsonb,
@@ -122,23 +121,6 @@ export const payout = pgTable(
   ],
 );
 
-export const payoutWebhook = pgTable(
-  "payout_webhook",
-  {
-    id: uuid("id").defaultRandom().primaryKey(),
-    eventType: varchar("event_type", { length: 64 }).notNull(),
-    reference: varchar("reference", { length: 128 }),
-    signatureValid: boolean("signature_valid").default(false).notNull(),
-    payload: jsonb("payload").notNull(),
-    processedAt: timestamp("processed_at", { mode: "date" }),
-    createdAt: timestamp("created_at", { mode: "date" }).defaultNow().notNull(),
-  },
-  (table) => [
-    index("payout_webhook_reference_idx").on(table.reference),
-    index("payout_webhook_created_at_idx").on(table.createdAt),
-  ],
-);
-
 export const payoutAttempt = pgTable(
   "payout_attempt",
   {
@@ -168,7 +150,6 @@ export const payoutAttempt = pgTable(
 export const payoutSchema = {
   earning,
   payout,
-  payoutWebhook,
   payoutAttempt,
 };
 
