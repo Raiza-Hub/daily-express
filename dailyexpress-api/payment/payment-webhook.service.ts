@@ -6,7 +6,7 @@ import { getPaymentReference } from "../utils/payment";
 import { jobService } from "../workers/job.service";
 import type { WebhookJobData } from "../workers/boss";
 import { koraClient } from "./kora.client";
-import { PaymentRepository, paymentRepository } from "./payment.repository";
+import { PaymentRepository } from "./payment.repository";
 import { PaymentPayoutRefundService } from "./payment-payout-refund.service";
 import { payoutWebhookService } from "../payout/payout-webhook.service";
 import type {
@@ -200,8 +200,3 @@ export class PaymentWebhookService {
     });
   }
 }
-
-export const paymentWebhookService = new PaymentWebhookService(
-  paymentRepository,
-  new PaymentPayoutRefundService(paymentRepository, koraClient),
-);
