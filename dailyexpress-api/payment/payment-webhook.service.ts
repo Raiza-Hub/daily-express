@@ -1,6 +1,6 @@
 import { and, eq } from "drizzle-orm";
 import { db } from "../db/connection";
-import { booking, payment, refund, webhookProcessed } from "../db/index";
+import { booking, payment, paymentWebhook, refund } from "../db/index";
 import { logger } from "../utils/logger";
 import { getPaymentReference } from "../utils/payment";
 import { jobService } from "../workers/job.service";
@@ -32,26 +32,28 @@ export class PaymentWebhookService {
 
         const actualRef = webhook.data.reference.slice(4);
 
-        const dedupKey = `${webhook.event}:${webhook.data.reference}`;
         await db.transaction(async (tx) => {
-          const [claimed] = await tx
-            .insert(webhookProcessed)
-            .values({ eventType: webhook.event, eventReference: dedupKey })
+          const [claimed] = await tx.insert(paymentWebhook)
+            .values({
+              provider: "kora",
+              paymentReference: actualRef,
+              eventType: webhook.event,
+              signatureValid,
+              payload: webhook as unknown as Record<string, unknown>,
+              verificationNote: signatureValid
+                ? "Refund payout webhook verified"
+                : "Refund payout webhook signature invalid",
+            })
             .onConflictDoNothing()
-            .returning({ id: webhookProcessed.id });
+            .returning({ id: paymentWebhook.id });
 
-          if (!claimed) return;
-
-          await this.repo.insertWebhook(tx, {
-            provider: "kora",
-            paymentReference: actualRef,
-            eventType: webhook.event,
-            signatureValid,
-            payload: webhook as unknown as Record<string, unknown>,
-            verificationNote: signatureValid
-              ? "Refund payout webhook verified"
-              : "Refund payout webhook signature invalid",
-          });
+          if (!claimed) {
+            logger.debug("payment.webhook_duplicate_skipped", {
+              event: webhook.event,
+              paymentReference: actualRef,
+            });
+            return;
+          }
 
           if (signatureValid) {
             const targetStatus = webhook.event === "transfer.success" ? "refunded" : "refund_failed";
@@ -72,36 +74,34 @@ export class PaymentWebhookService {
       signature,
     );
 
-    const dedupKey = `${webhook.event}:${webhook.data.payment_reference || webhook.data.reference}`;
+    const paymentRef = webhook.data.payment_reference || webhook.data.reference;
+    if (!paymentRef) {
+      logger.warn("payment.webhook_missing_reference", { event: webhook.event });
+      return;
+    }
 
     await db.transaction(async (tx) => {
-      const [claimed] = await tx.insert(webhookProcessed)
+      const [claimed] = await tx.insert(paymentWebhook)
         .values({
+          provider: "kora",
+          paymentReference: paymentRef,
           eventType: webhook.event,
-          eventReference: dedupKey,
+          signatureValid,
+          payload: webhook,
+          verificationNote: signatureValid
+            ? "Webhook signature verified and queued"
+            : "Webhook signature verification failed",
         })
         .onConflictDoNothing()
-        .returning({ id: webhookProcessed.id });
+        .returning({ id: paymentWebhook.id });
 
       if (!claimed) {
         logger.debug("payment.webhook_duplicate_skipped", {
           event: webhook.event,
-          dedupKey,
+          paymentReference: paymentRef,
         });
         return;
       }
-
-      await this.repo.insertWebhook(tx, {
-        provider: "kora",
-        paymentReference:
-          webhook.data.payment_reference || webhook.data.reference || null,
-        eventType: webhook.event,
-        signatureValid,
-        payload: webhook,
-        verificationNote: signatureValid
-          ? "Webhook signature verified and queued"
-          : "Webhook signature verification failed",
-      });
 
       if (signatureValid) {
         await jobService.enqueuePaymentWebhook(tx, {
@@ -115,8 +115,7 @@ export class PaymentWebhookService {
     if (!signatureValid) {
       logger.warn("payment.webhook_invalid_signature_ignored", {
         event: webhook.event,
-        paymentReference:
-          webhook.data.payment_reference || webhook.data.reference || null,
+        paymentReference: paymentRef,
       });
     }
   }
@@ -134,12 +133,6 @@ export class PaymentWebhookService {
         return;
       case "charge.failed":
         await this.processChargeFailure(reference);
-        return;
-      case "refund.success":
-        await this.payoutRefundService.finalizeRefund(reference, "refunded");
-        return;
-      case "refund.failed":
-        await this.payoutRefundService.finalizeRefund(reference, "refund_failed");
         return;
       default:
         logger.info("payment.webhook_ignored", { event: job.event, reference });
