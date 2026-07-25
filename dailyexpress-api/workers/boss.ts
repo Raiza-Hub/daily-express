@@ -19,7 +19,6 @@ export const QUEUES = {
   ALLOCATION_PROCESS_DLQ: "allocation.process.dlq",
   TRIP_DRIVER_ASSIGNED: "trip.driver_assigned",
   TRIP_DRIVER_ASSIGNED_DLQ: "trip.driver_assigned.dlq",
-  ZOMBIE_SWEEP: "payment.zombie_sweep",
 } as const;
 
 export interface PaymentExpireJobData {
@@ -196,11 +195,6 @@ async function createQueues(instance: PgBoss) {
     retryDelayMax: 300,
     deleteAfterSeconds: 86400,
     deadLetter: QUEUES.TRIP_DRIVER_ASSIGNED_DLQ,
-  });
-
-  await instance.createQueue(QUEUES.ZOMBIE_SWEEP, {
-    retryLimit: 0,
-    deleteAfterSeconds: 86400,
   });
 
   logger.info("pg_boss.queues_created");
