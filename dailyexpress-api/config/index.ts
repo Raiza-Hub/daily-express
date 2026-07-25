@@ -70,14 +70,19 @@ const envSchema = z.object({
   KORA_PUBLIC_KEY: z.string().min(1),
   KORA_BASE_URL: z.url().default("https://api.korapay.com"),
   KORA_WEBHOOK_URL: z.url().optional(),
-  FRONTEND_URL: z.url().default("http://localhost:3000"),
+  FRONTEND_URL: z
+    .url()
+    .default(
+      process.env.NODE_ENV === "production"
+        ? "https://dailyexpress.app"
+        : "http://localhost:3000",
+    ),
   PAYOUT_RETRY_DELAYS_MS: z.string().default("60000,300000,900000"),
   INSUFFICIENT_BALANCE_RETRY_DELAY_MS: z.coerce
     .number()
     .int()
     .positive()
     .default(30 * 60 * 1000),
-  PAYOUT_JOB_EXPIRE_MINUTES: z.coerce.number().int().positive().default(15),
   MINIMUM_PAYOUT_AMOUNT: z.coerce
     .number()
     .int()
@@ -106,7 +111,13 @@ const envSchema = z.object({
   // Auth
   BCRYPT_ROUNDS: z.coerce.number().int().positive().default(10),
   COOKIE_DOMAIN: optionalString(),
-  DRIVER_APP_URL: z.url().default("http://localhost:3001"),
+  DRIVER_APP_URL: z
+    .url()
+    .default(
+      process.env.NODE_ENV === "production"
+        ? "https://driver.dailyexpress.app"
+        : "http://localhost:3001",
+    ),
 
   // Payment
   PAYMENT_PUBLIC_BASE_URL: optionalUrl(),

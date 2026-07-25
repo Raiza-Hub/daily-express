@@ -135,4 +135,4 @@ export type PaymentWebhook = typeof paymentWebhook.$inferSelect;
 export type PaymentWebhookRecord = PaymentWebhook;
 export type Refund = typeof refund.$inferSelect;
 export type RefundRecord = Refund;
-export type NewRefund = typeof refund.$inferInsert;
+

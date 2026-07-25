@@ -435,7 +435,7 @@ export class PaymentInitService {
 
   private getPaymentPublicBaseUrl() {
     const configured =
-      process.env.PAYMENT_PUBLIC_BASE_URL || this.config.KORA_WEBHOOK_URL;
+      this.config.PAYMENT_PUBLIC_BASE_URL || this.config.KORA_WEBHOOK_URL;
     if (!configured) {
       throw createServiceError(
         "PAYMENT_PUBLIC_BASE_URL or KORA_WEBHOOK_URL must be configured",

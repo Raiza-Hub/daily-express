@@ -1,16 +1,9 @@
-const DEFAULT_FRONTEND_URL =
-  process.env.NODE_ENV === "production"
-    ? "https://dailyexpress.app"
-    : "http://localhost:3000";
+import { getConfig } from "../config/index";
 
-const DEFAULT_DRIVER_APP_URL =
-  process.env.NODE_ENV === "production"
-    ? "https://driver.dailyexpress.app"
-    : "http://localhost:3001";
+const config = getConfig();
 
-export const FRONTEND_URL = process.env.FRONTEND_URL || DEFAULT_FRONTEND_URL;
-export const DRIVER_APP_URL =
-  process.env.DRIVER_APP_URL || DEFAULT_DRIVER_APP_URL;
+export const FRONTEND_URL = config.FRONTEND_URL;
+export const DRIVER_APP_URL = config.DRIVER_APP_URL;
 export const GOOGLE_AUTH_FAILURE_REDIRECT_URL = `${FRONTEND_URL}/sign-in?error=google_auth_failed`;
 
 export function resolveFrontendRedirect(redirect?: string) {

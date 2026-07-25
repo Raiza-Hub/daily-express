@@ -10,20 +10,9 @@ import {
   EMAIL_LOGO_CONTENT_ID,
   getEmailLogoAttachmentPath,
 } from "@repo/email";
+import { getConfig } from "../config/index";
 
-function getRequiredEnv(name: string): string {
-  const value = process.env[name];
-
-  if (!value) {
-    throw createServiceError(`${name} is required`, 500);
-  }
-
-  return value;
-}
-
-function getOptionalEnv(name: string, fallback: string): string {
-  return process.env[name]?.trim() || fallback;
-}
+const config = getConfig();
 
 function encodeHeader(value: string): string {
   return `=?UTF-8?B?${Buffer.from(value, "utf8").toString("base64")}?=`;
@@ -81,16 +70,13 @@ export class MailService {
   private fromHeader: string;
 
   constructor() {
-    this.fromAddress = getRequiredEnv("EMAIL_FROM");
-    this.fromHeader = encodeAddress(
-      getOptionalEnv("EMAIL_BRAND_NAME", "Daily Express"),
-      this.fromAddress,
-    );
+    this.fromAddress = config.EMAIL_FROM;
+    this.fromHeader = encodeAddress(config.EMAIL_BRAND_NAME, this.fromAddress);
     this.sesClient = new SESv2Client({
-      region: getRequiredEnv("AWS_REGION"),
+      region: config.AWS_REGION,
       credentials: {
-        accessKeyId: getRequiredEnv("AWS_ACCESS_KEY_ID"),
-        secretAccessKey: getRequiredEnv("AWS_SECRET_ACCESS_KEY"),
+        accessKeyId: config.AWS_ACCESS_KEY_ID,
+        secretAccessKey: config.AWS_SECRET_ACCESS_KEY,
       },
     });
   }
