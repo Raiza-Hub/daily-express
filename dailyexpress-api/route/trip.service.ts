@@ -3,7 +3,7 @@ import { createServiceError } from "@shared/utils";
 import { and, asc, eq, getTableColumns, gte, inArray, lt, ne, notInArray, sql } from "drizzle-orm";
 import { db } from "../db/connection";
 import { booking, route, trip } from "../db/index";
-import { publishNotificationCreatedInBackground } from "../notification/realtime";
+
 import {
     addDaysToDateKey,
     formatBusinessDate,
@@ -85,20 +85,13 @@ export class TripService {
         ],
       );
 
-      const payoutResult = await this.payoutService.markTripCompletedInTransaction(
+      await this.payoutService.markTripCompletedInTransaction(
         tx,
         { tripId, completedAt: new Date() },
       );
 
-      return {
-        updatedTrip,
-        pendingNotifications: payoutResult.pendingNotifications,
-      };
+      return { updatedTrip };
     });
-
-    for (const notification of result.pendingNotifications) {
-      publishNotificationCreatedInBackground(notification);
-    }
 
     return result.updatedTrip;
   }
