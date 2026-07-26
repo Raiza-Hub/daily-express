@@ -275,19 +275,6 @@ export class DriverProfileService {
     }
   }
 
-  async deactivateDriver(userId: string): Promise<void> {
-    const existingDriver = await this.repo.findDriverByUserId(userId);
-    if (!existingDriver) {
-      throw createServiceError("Driver not found", 404);
-    }
-
-    await this.repo.updateDriverStandalone(userId, {
-      isActive: false,
-      deletedAt: new Date(),
-      updatedAt: new Date(),
-    });
-  }
-
   async getDriverStats(driverId: string): Promise<DriverStats> {
     const stats = await this.repo.findDriverStatsByDriverId(driverId);
     if (!stats) {
