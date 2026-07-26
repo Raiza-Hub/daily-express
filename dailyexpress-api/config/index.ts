@@ -51,9 +51,6 @@ const envSchema = z.object({
   RATE_LIMIT_UPSTASH_REDIS_REST_URL: optionalUrl(),
   RATE_LIMIT_UPSTASH_REDIS_REST_TOKEN: optionalString(),
 
-  KYC_UPSTASH_REDIS_REST_URL: optionalUrl(),
-  KYC_UPSTASH_REDIS_REST_TOKEN: optionalString(),
-
   TOKEN_BUCKET_BOOKING_CAPACITY: z.coerce.number().int().positive().default(3),
   TOKEN_BUCKET_BOOKING_REFILL_RATE: z.coerce.number().positive().default(1),
   TOKEN_BUCKET_BOOKING_REFILL_INTERVAL_SEC: z.coerce.number().int().positive().default(60),

@@ -5,7 +5,6 @@ import { notificationService } from "../notification/notification.service";
 import { publishNotificationCreated } from "../notification/realtime";
 import { koraClient } from "../payment/kora.client";
 import { koraIdentityClient } from "../kyc/kora-identity.client";
-import { kycDedupClient } from "../kyc/kyc-dedup.client";
 import { getBoss, QUEUES, type DriverVerificationJobData } from "./boss";
 import { jobService } from "./job.service";
 import { logger } from "../utils/logger";
@@ -238,8 +237,6 @@ async function processKycVerification(
       verified = await koraIdentityClient.verifyNIN(data.kycId, validation);
     }
 
-    await kycDedupClient.markVerified(data.kycId, data.driverId, data.kycType);
-
     const kycNotification = await db.transaction(async (tx) => {
       const current = await tx.query.driver.findFirst({
         where: eq(driver.id, data.driverId),
@@ -279,12 +276,6 @@ async function processKycVerification(
     });
   } catch (error) {
     const reason = error instanceof Error ? error.message : "KYC verification failed";
-
-    try {
-      await kycDedupClient.releaseClaim(data.kycId);
-    } catch {
-      // Redis might be down — rely on TTL to eventually clean up
-    }
 
     const kycNotification = await db.transaction(async (tx) => {
       const current = await tx.query.driver.findFirst({
