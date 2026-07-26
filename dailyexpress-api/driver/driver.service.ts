@@ -73,13 +73,6 @@ export class DriverService {
     return this.profileService.getDriverStats(driverId);
   }
 
-  async recordNewBookingForDriver(
-    tx: DriverTransaction,
-    input: { driverId: string; fareAmount: number },
-  ): Promise<void> {
-    return this.statsService.recordNewBookingForDriver(tx, input);
-  }
-
   async decrementStatsForCancelledBooking(
     tx: DriverTransaction,
     input: { driverId: string; amount: number; previousEarningStatus?: EarningStatus | null },

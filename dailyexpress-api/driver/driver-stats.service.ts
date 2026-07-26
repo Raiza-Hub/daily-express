@@ -20,23 +20,6 @@ const PENDING_PAYMENT_STATUSES = new Set<EarningStatus>([
 ]);
 
 export class DriverStatsService {
-  async recordNewBookingForDriver(
-    tx: DriverTransaction,
-    input: {
-      driverId: string;
-      fareAmount: number;
-    },
-  ): Promise<void> {
-    await tx
-      .update(driverStats)
-      .set({
-        pendingPayments: sql`${driverStats.pendingPayments} + ${input.fareAmount}`,
-        totalPassengers: sql`${driverStats.totalPassengers} + 1`,
-        updatedAt: new Date(),
-      })
-      .where(eq(driverStats.driverId, input.driverId));
-  }
-
   async decrementStatsForCancelledBooking(
     tx: DriverTransaction,
     input: {
