@@ -1,4 +1,4 @@
-import { and, desc, eq, notInArray } from "drizzle-orm";
+import { and, desc, eq, inArray, ne, notInArray } from "drizzle-orm";
 import { db } from "../db/connection";
 import { driver, driverStats, trip, vehicle, type DriverRecord, type DriverStatsRecord, type VehicleRecord } from "../db/index";
 import type { DbTransaction } from "../db/connection";
@@ -9,6 +9,14 @@ type VehicleInsert = typeof vehicle.$inferInsert;
 export class DriverRepository {
   async findDriverByUserId(userId: string): Promise<DriverRecord | null> {
     return (await db.query.driver.findFirst({ where: eq(driver.userId, userId) })) ?? null;
+  }
+
+  async findDriverByKycId(kycId: string, excludeDriverId?: string): Promise<DriverRecord | null> {
+    const conditions = [eq(driver.kycId, kycId), inArray(driver.kycStatus, ["active", "pending"])];
+    if (excludeDriverId) {
+      conditions.push(ne(driver.id, excludeDriverId));
+    }
+    return (await db.query.driver.findFirst({ where: and(...conditions) })) ?? null;
   }
 
   async findDriverStatsByDriverId(driverId: string): Promise<DriverStatsRecord | null> {

@@ -1,15 +1,3 @@
-export type KycType = "bvn" | "nin";
-
-export type KycDedupStatus = "pending_creation" | "pending" | "verified";
-
-export interface KycDedupEntry {
-  driverId: string | null;
-  kycType: KycType;
-  status: KycDedupStatus;
-  claimedAt: string;
-  verifiedAt?: string;
-}
-
 export interface KoraIdentityResponse {
   reference: string;
   id: string;

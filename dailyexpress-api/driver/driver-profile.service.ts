@@ -1,3 +1,4 @@
+import { createHash } from "node:crypto";
 import type { Driver, DriverStats, UpdateProfileRequest } from "@shared/types";
 import { db } from "../db/connection";
 import { driver } from "../db/index";
@@ -5,7 +6,6 @@ import { createServiceError, sanitizeInput } from "@shared/utils";
 import { notificationService } from "../notification/notification.service";
 import { publishNotificationCreatedInBackground } from "../notification/realtime";
 import { jobService } from "../workers/job.service";
-import { kycDedupClient } from "../kyc/kyc-dedup.client";
 import { timeAsync } from "../utils/timing";
 import { DriverRepository, driverRepository } from "./driver.repository";
 
@@ -27,8 +27,8 @@ export class DriverProfileService {
     }
 
     if (kycData) {
-      const dupCheck = await kycDedupClient.checkDuplicate(kycData.kycId, null, kycData.kycType);
-      if (dupCheck.isDuplicate) {
+      const existing = await this.repo.findDriverByKycId(hashKycId(kycData.kycId));
+      if (existing) {
         throw createServiceError(
           "This identity document has already been verified with another driver account",
           409,
@@ -53,6 +53,7 @@ export class DriverProfileService {
               bankVerifiedAt: null,
               kycStatus: kycData ? "pending" : "none",
               kycType: kycData?.kycType ?? null,
+              kycId: kycData ? hashKycId(kycData.kycId) : null,
               kycRequestedAt: kycData ? new Date() : null,
               kycFailureReason: null,
               kycVerifiedAt: null,
@@ -114,9 +115,6 @@ export class DriverProfileService {
 
       return result.driver;
     } catch (error) {
-      if (kycData) {
-        await kycDedupClient.releaseClaim(kycData.kycId).catch(() => {});
-      }
       throw error;
     }
   }
@@ -150,12 +148,8 @@ export class DriverProfileService {
         );
       }
 
-      const dupCheck = await kycDedupClient.checkDuplicate(
-        kycData.kycId,
-        existingDriver.id,
-        kycData.kycType,
-      );
-      if (dupCheck.isDuplicate) {
+      const existing = await this.repo.findDriverByKycId(hashKycId(kycData.kycId), existingDriver.id);
+      if (existing) {
         throw createServiceError(
           "This identity document has already been verified with another driver account",
           409,
@@ -191,6 +185,7 @@ export class DriverProfileService {
             ? {
                 kycStatus: "pending" as const,
                 kycType: kycData.kycType,
+                kycId: hashKycId(kycData.kycId),
                 kycRequestedAt: new Date(),
                 kycFailureReason: null,
                 kycVerifiedAt: null,
@@ -276,9 +271,6 @@ export class DriverProfileService {
 
       return result.driver;
     } catch (error) {
-      if (kycData) {
-        await kycDedupClient.releaseClaim(kycData.kycId).catch(() => {});
-      }
       throw error;
     }
   }
@@ -406,6 +398,10 @@ export class DriverProfileService {
 
     return sanitized;
   }
+}
+
+function hashKycId(kycId: string): string {
+  return createHash("sha256").update(kycId).digest("hex");
 }
 
 export const driverProfileService = new DriverProfileService(driverRepository);

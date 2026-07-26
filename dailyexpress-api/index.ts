@@ -114,21 +114,6 @@ async function createApp(): Promise<Express> {
       }
     }
 
-    if (cfg.KYC_UPSTASH_REDIS_REST_URL) {
-      try {
-        const start = Date.now();
-        const redis = new Redis({
-          url: cfg.KYC_UPSTASH_REDIS_REST_URL,
-          token: cfg.KYC_UPSTASH_REDIS_REST_TOKEN!,
-        });
-        await redis.ping();
-        checks.kycRedis = { status: "ok", latencyMs: Date.now() - start };
-      } catch {
-        healthy = false;
-        checks.kycRedis = { status: "error", message: "connection failed" };
-      }
-    }
-
     checks.pgboss = { status: isBossRunning() ? "ok" : "stopped" };
 
     res.status(healthy ? 200 : 503).json({

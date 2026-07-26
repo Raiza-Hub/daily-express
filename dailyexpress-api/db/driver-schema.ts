@@ -54,6 +54,7 @@ export const driver = pgTable("driver", {
   bankVerifiedAt: timestamp("bank_verified_at", { mode: "date" }),
   kycStatus: kycStatusEnum("kyc_status").default("none").notNull(),
   kycType: text("kyc_type"),
+  kycId: text("kyc_id"),
   kycVerificationReference: text("kyc_verification_reference"),
   kycFailureReason: text("kyc_failure_reason"),
   kycRequestedAt: timestamp("kyc_requested_at", { mode: "date" }),
