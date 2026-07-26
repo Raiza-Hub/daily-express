@@ -1,30 +1,18 @@
-import { and, desc, eq, gte, inArray, lt, notInArray, sql } from "drizzle-orm";
+import { and, desc, eq, gte, lt } from "drizzle-orm";
 import { db } from "../db/connection";
 import {
-  booking,
   driver,
   earning,
   payout,
   payoutAttempt,
-  trip,
   type EarningRecord,
   type PayoutRecord,
   type PayoutAttemptRecord,
   type DriverRecord,
 } from "../db/index";
-import { HIDDEN_BOOKING_PAYMENT_STATUSES } from "../utils/route";
 import type { DbTransaction } from "../db/connection";
 
 type PayoutTransaction = DbTransaction;
-
-export interface EarningsReconciliation {
-  isReconciled: boolean;
-  driverId: string | null;
-  bookingCount: number;
-  bookingAmount: number;
-  earningCount: number;
-  earningAmount: number;
-}
 
 export class PayoutRepository {
 
@@ -98,68 +86,6 @@ export class PayoutRepository {
       .update(earning)
       .set(fields)
       .where(eq(earning.bookingId, bookingId));
-  }
-
-  async reconcileTripEarnings(
-    tx: PayoutTransaction,
-    tripId: string,
-  ): Promise<EarningsReconciliation> {
-    const tripRecord = await tx.query.trip.findFirst({
-      where: eq(trip.id, tripId),
-    });
-
-    const [bookingTotals] = await tx
-      .select({
-        count: sql<number>`count(*)::int`,
-        amount:
-          sql<number>`coalesce(sum(${booking.fareAmount}), 0)::bigint`.mapWith(
-            Number,
-          ),
-      })
-      .from(booking)
-      .where(
-        and(
-          eq(booking.tripId, tripId),
-          inArray(booking.status, ["confirmed", "completed"]),
-          notInArray(
-            booking.paymentStatus,
-            HIDDEN_BOOKING_PAYMENT_STATUSES,
-          ),
-        ),
-      );
-
-    const [earningTotals] = await tx
-      .select({
-        count: sql<number>`count(*)::int`,
-        amount:
-          sql<number>`coalesce(sum(${earning.grossAmount}), 0)::bigint`.mapWith(
-            Number,
-          ),
-      })
-      .from(earning)
-      .where(
-        and(
-          eq(earning.tripId, tripId),
-          notInArray(earning.status, ["cancelled", "manual_review"]),
-        ),
-      );
-
-    const bookingCount = bookingTotals?.count ?? 0;
-    const bookingAmount = bookingTotals?.amount ?? 0;
-    const earningCount = earningTotals?.count ?? 0;
-    const earningAmount = earningTotals?.amount ?? 0;
-    const isReconciled =
-      bookingCount === earningCount &&
-      bookingAmount === earningAmount;
-
-    return {
-      isReconciled,
-      driverId: tripRecord?.driverId ?? null,
-      bookingCount,
-      bookingAmount,
-      earningCount,
-      earningAmount,
-    };
   }
 
   findPayoutByEarningId(tx: PayoutTransaction | typeof db, earningId: string) {
