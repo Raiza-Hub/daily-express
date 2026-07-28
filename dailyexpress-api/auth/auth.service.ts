@@ -398,7 +398,6 @@ export class AuthService {
         profilePictureUrl: null,
         sessionInvalidBefore: new Date(),
         deletedAt: new Date(),
-        anonymizedAt: new Date(),
         updatedAt: new Date(),
       });
     });

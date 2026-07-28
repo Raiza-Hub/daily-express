@@ -22,7 +22,6 @@ export const users = pgTable("users", {
   profilePictureUrl: text("profile_picture_url"),
   sessionInvalidBefore: timestamp("session_invalid_before", { mode: "date" }),
   deletedAt: timestamp("deleted_at", { mode: "date" }),
-  anonymizedAt: timestamp("anonymized_at", { mode: "date" }),
   createdAt: timestamp("created_at", { mode: "date" }).defaultNow().notNull(),
   updatedAt: timestamp("updated_at", { mode: "date" }).defaultNow().notNull(),
 });
