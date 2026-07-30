@@ -3,13 +3,12 @@
 import { TrashIcon } from "@phosphor-icons/react";
 import { Button } from "@repo/ui/components/button";
 import { toast } from "@repo/ui/components/sonner";
-import { useDeactivateDriver, useLogout } from "@repo/api";
+import { useDeactivateDriver } from "@repo/api";
 import { env } from "~/env";
 import { posthogEvents } from "~/lib/posthog-events";
 import { usePostHog } from "posthog-js/react";
 
 const DeleteAccount = () => {
-  const { mutate: signOut } = useLogout();
   const { mutate: deactivateDriver, isPending } = useDeactivateDriver();
   const posthog = usePostHog();
 
@@ -17,12 +16,7 @@ const DeleteAccount = () => {
     deactivateDriver(undefined, {
       onSuccess: () => {
         posthog.capture(posthogEvents.driver_account_deactivate_succeeded);
-        signOut(undefined, {
-          onSuccess: () => {
-            posthog.capture(posthogEvents.driver_logout_succeeded);
-            window.location.href = `${env.NEXT_PUBLIC_WEB_APP_URL}/sign-in`;
-          },
-        });
+        window.location.href = env.NEXT_PUBLIC_WEB_APP_URL;
       },
       onError: (err) => {
         posthog.captureException(new Error(err.message), {

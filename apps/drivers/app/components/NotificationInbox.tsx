@@ -27,6 +27,7 @@ const NotificationInbox = () => {
   const [open, setOpen] = useState(false);
   const [tab, setTab] = useState<NotificationTab>("all");
   const { data: driver, isLoading: isLoadingDriver } = useGetDriver();
+  const notificationsEnabled = Boolean(driver?.id);
   const {
     data,
     isLoading,
@@ -38,7 +39,7 @@ const NotificationInbox = () => {
     isFetchingNextPage,
   } = useDriverNotificationsInfinite({
     limit: 20,
-    enabled: Boolean(driver?.id),
+    enabled: notificationsEnabled,
   });
 
   const notifications = data?.pages.flatMap((page) => page.notifications) ?? [];
