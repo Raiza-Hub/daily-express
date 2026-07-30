@@ -97,10 +97,7 @@ export const useDriverNotifications = (params?: {
         limit: params?.limit,
         unreadOnly: params?.unreadOnly,
       }),
-    retry: false,
     enabled: params?.enabled ?? true,
-    staleTime: 30_000,
-    refetchOnMount: false,
   });
 };
 
@@ -119,10 +116,7 @@ export const useDriverNotificationsInfinite = (params?: {
       }),
     initialPageParam: null as string | null,
     getNextPageParam: (lastPage) => lastPage.nextCursor,
-    retry: false,
     enabled: params?.enabled ?? true,
-    staleTime: 30_000,
-    refetchOnMount: false,
   });
 };
 

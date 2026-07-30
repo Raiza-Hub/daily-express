@@ -112,10 +112,7 @@ export const useGetDriver = (options?: { enabled?: boolean }) => {
   return useQuery({
     queryKey: ["driver"],
     queryFn: getDriverFn,
-    retry: false,
     enabled: options?.enabled ?? true,
-    staleTime: 5 * 60 * 1000,
-    refetchOnMount: false,
     refetchInterval: (query) => {
       const status = query.state.data?.bankVerificationStatus;
       return status === "pending" ? 5000 : false;

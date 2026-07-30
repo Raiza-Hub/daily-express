@@ -59,7 +59,6 @@ const DriverInfo = () => {
   const posthog = usePostHog();
 
   const { data: driver, isLoading, refetch } = useGetDriver();
-
   const [{ isDragging, files }, uploadActions] = useFileUpload({
     onFilesChange: (nextFiles) => {
       const file = nextFiles?.[0]?.file;

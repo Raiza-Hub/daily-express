@@ -12,11 +12,13 @@ import { Avatar, AvatarFallback } from "@repo/ui/components/avatar";
 import { env } from "~/env";
 import { posthogEvents } from "~/lib/posthog-events";
 import { usePostHog } from "posthog-js/react";
+import { useRouter } from "next/navigation";
 
 export function UserAccountNav() {
   const { data: driver, isLoading } = useGetDriver();
   const { mutate: logout } = useLogout();
   const posthog = usePostHog();
+  const router = useRouter();
 
   useEffect(() => {
     if (driver?.id) {
@@ -25,7 +27,11 @@ export function UserAccountNav() {
         name: `${driver.firstName} ${driver.lastName}`,
       });
     }
-  }, [driver, posthog]);
+
+    if (!isLoading && !driver) {
+      router.replace("/sign-up");
+    }
+  }, [driver, isLoading, router, posthog]);
 
   const signOut = () => {
     logout(undefined, {

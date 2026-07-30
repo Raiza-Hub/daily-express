@@ -1,6 +1,7 @@
 import { Router } from "express";
 import * as driverController from "./driver.controller";
 import { authenticateVerifiedGatewayRequest } from "../middleware/gatewayAuth";
+import { requireActiveDriver } from "../middleware/requireActiveDriver";
 import { createTokenBucketLimiter } from "../middleware/tokenBucket";
 import { getConfig } from "../config/index";
 import { validateRequest } from "../middleware/requestValidation";
@@ -21,12 +22,14 @@ const router: Router = Router();
 router.get(
   "/profile",
   authenticateVerifiedGatewayRequest,
+  requireActiveDriver,
   driverController.getDriver,
 );
 
 router.post(
   "/profile/presign",
   authenticateVerifiedGatewayRequest,
+  requireActiveDriver,
   driverActionLimiter,
   driverController.presignProfileUpload,
 );
@@ -34,6 +37,7 @@ router.post(
 router.post(
   "/profile/confirm",
   authenticateVerifiedGatewayRequest,
+  requireActiveDriver,
   driverActionLimiter,
   driverController.confirmProfileUpload,
 );
@@ -49,6 +53,7 @@ router.post(
 router.put(
   "/update",
   authenticateVerifiedGatewayRequest,
+  requireActiveDriver,
   driverActionLimiter,
   validateRequest(updateDriverSchema),
   driverController.updateDriver,
@@ -57,6 +62,7 @@ router.put(
 router.delete(
   "/deactivate",
   authenticateVerifiedGatewayRequest,
+  requireActiveDriver,
   driverActionLimiter,
   driverController.deactivateDriver,
 );
@@ -64,29 +70,34 @@ router.delete(
 router.get(
   "/stats",
   authenticateVerifiedGatewayRequest,
+  requireActiveDriver,
   driverController.getDriverStats,
 );
 
 router.get(
   "/vehicles",
   authenticateVerifiedGatewayRequest,
+  requireActiveDriver,
   driverController.getVehicles,
 );
 router.post(
   "/vehicles",
   authenticateVerifiedGatewayRequest,
+  requireActiveDriver,
   driverActionLimiter,
   driverController.createVehicle,
 );
 router.patch(
   "/vehicles/:id",
   authenticateVerifiedGatewayRequest,
+  requireActiveDriver,
   driverActionLimiter,
   driverController.updateVehicle,
 );
 router.delete(
   "/vehicles/:id",
   authenticateVerifiedGatewayRequest,
+  requireActiveDriver,
   driverActionLimiter,
   driverController.deleteVehicle,
 );

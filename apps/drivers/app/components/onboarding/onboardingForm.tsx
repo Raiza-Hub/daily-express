@@ -20,6 +20,7 @@ import {
   applyApiFieldErrors,
   getApiErrorMessage,
   useCreateDriver,
+  useQueryClient,
   presignProfileUploadFn,
   uploadToR2Fn,
   confirmProfileUploadFn,
@@ -82,6 +83,7 @@ const OnboardingForm = () => {
   const posthog = usePostHog();
   const [currentStep, setCurrentStep] = useState<number>(1);
   const [onboardError, setOnboardError] = useState<string | null>(null);
+  const queryClient = useQueryClient();
 
   const methods = useForm<TonboardingSchema>({
     resolver: zodResolver(onboardingFormSchema),
@@ -113,8 +115,9 @@ const OnboardingForm = () => {
 
 
   const { mutate: createDriver, isPending } = useCreateDriver({
-    onSuccess: async () => {
+    onSuccess: async (data) => {
       posthog.capture(posthogEvents.driver_onboarding_completed);
+      queryClient.setQueryData(["driver"], data);
 
       router.push("/");
 
