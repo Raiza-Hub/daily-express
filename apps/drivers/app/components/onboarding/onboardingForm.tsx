@@ -110,27 +110,25 @@ const OnboardingForm = () => {
 
   const { handleSubmit, trigger } = methods;
   const pendingFileRef = useRef<File | null>(null);
-  const [uploading, setUploading] = useState(false);
+
 
   const { mutate: createDriver, isPending } = useCreateDriver({
     onSuccess: async () => {
       posthog.capture(posthogEvents.driver_onboarding_completed);
 
+      router.push("/");
+
       const file = pendingFileRef.current;
       if (file) {
-        setUploading(true);
         pendingFileRef.current = null;
         try {
-              const presign = await presignProfileUploadFn(file.type, file.size);
+          const presign = await presignProfileUploadFn(file.type, file.size);
           await uploadToR2Fn(presign.uploadUrl, file);
           await confirmProfileUploadFn(presign.key);
         } catch {
           toast.error("Profile picture upload failed. You can update it later in settings.");
         }
-        setUploading(false);
       }
-
-      router.push("/");
     },
     onError: (error: Error) => {
       applyApiFieldErrors<keyof TonboardingSchema>(error, methods.setError, {
@@ -276,7 +274,7 @@ const OnboardingForm = () => {
               className="w-32 cursor-pointer"
               type="button"
               variant="secondary"
-              disabled={isPending || uploading}
+              disabled={isPending}
               onClick={async () => {
                 if (currentStep === STEPS.length) {
                   const step3Fields = STEPS[2]

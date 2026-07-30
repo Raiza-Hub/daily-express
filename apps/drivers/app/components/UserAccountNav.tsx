@@ -37,7 +37,7 @@ export function UserAccountNav() {
     });
   };
 
-  if (isLoading) {
+  if (isLoading && !driver) {
     return (
       <Avatar className="h-10 w-10">
         <AvatarFallback>
