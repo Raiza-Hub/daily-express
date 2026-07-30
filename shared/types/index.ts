@@ -31,7 +31,7 @@ export interface CreateDriverRequest {
   firstName: string;
   lastName: string;
   email: string;
-  profile_pic: string;
+  profile_pic?: string;
   phone: string;
   country: string;
   currency: string;

@@ -18,7 +18,7 @@ export const createDriverSchema = Joi.object({
     "string.email": "Please provide a valid email address",
     "string.empty": "Email is required",
   }),
-  profile_pic: Joi.string(),
+  profile_pic: Joi.string().allow("").optional(),
   phone: Joi.string().regex(phoneRegex).required().messages({
     "string.pattern.base": "Phone number must be a valid international format",
     "string.empty": "Phone number is required",
@@ -84,7 +84,7 @@ export const updateDriverSchema = Joi.object({
   phone: Joi.string().regex(phoneRegex).optional().messages({
     "string.pattern.base": "Phone number must be a valid international format",
   }),
-  profile_pic: Joi.string(),
+  profile_pic: Joi.string().allow("").optional(),
   country: Joi.string().valid(...KORA_SUPPORTED_COUNTRIES).optional().messages({
     "any.only": "This country is not supported at the moment",
   }),
