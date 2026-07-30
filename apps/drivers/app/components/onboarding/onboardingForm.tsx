@@ -173,7 +173,6 @@ const OnboardingForm = () => {
       kycType: data.kycType,
       kycId: data.kycId,
       kycConsent: true,
-      profile_pic: "",
     });
   };
 

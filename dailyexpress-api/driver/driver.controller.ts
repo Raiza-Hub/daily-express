@@ -58,11 +58,7 @@ export const createDriver: RequestHandler = asyncHandler(
       });
     }
 
-    if (!driverData.profile_pic) {
-      return sendErrorResponse(res, 400, "Profile photo is required.", {
-        code: "MISSING_PROFILE_PHOTO",
-      });
-    }
+
 
     const kycData = kycType && kycId ? { kycType: kycType as "bvn" | "nin", kycId } : undefined;
 
