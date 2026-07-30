@@ -91,7 +91,7 @@ export const useDriverNotifications = (params?: {
   enabled?: boolean;
 }) => {
   return useQuery({
-    queryKey: ["driver-notifications", params?.limit, params?.unreadOnly],
+    queryKey: ["driver-notifications"],
     queryFn: () =>
       getDriverNotificationsFn({
         limit: params?.limit,
@@ -107,7 +107,7 @@ export const useDriverNotificationsInfinite = (params?: {
   enabled?: boolean;
 }) => {
   return useInfiniteQuery({
-    queryKey: ["driver-notifications", params?.unreadOnly],
+    queryKey: ["driver-notifications"],
     queryFn: ({ pageParam }: { pageParam: string | null }) =>
       getDriverNotificationsFn({
         limit: params?.limit ?? 20,
