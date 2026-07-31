@@ -89,24 +89,6 @@ function isReadPayload(value: unknown): value is { id: string } {
   return typeof obj.id === "string";
 }
 
-function getNotificationTime(value: Date | string | null | undefined) {
-  if (!value) return 0;
-  return new Date(value).getTime();
-}
-
-function sortNotifications(notifications: DriverNotification[]) {
-  return [...notifications].sort((left, right) => {
-    const occurredDiff =
-      getNotificationTime(right.occurredAt) -
-      getNotificationTime(left.occurredAt);
-    if (occurredDiff !== 0) return occurredDiff;
-    return (
-      getNotificationTime(right.createdAt) -
-      getNotificationTime(left.createdAt)
-    );
-  });
-}
-
 function invalidateDriverDashboardQueries(
   queryClient: ReturnType<typeof useQueryClient>,
 ) {
@@ -174,57 +156,6 @@ export function useDriverNotificationsSSE() {
       if (payload.type === PROFILE_PICTURE_UPLOAD_FAILED_NOTIFICATION_TYPE) {
         toast.error("Profile picture upload failed. Please retry.");
       }
-
-      queryClient.setQueriesData(
-        { queryKey: DRIVER_NOTIFICATIONS_QUERY_KEY },
-        (current: unknown) => {
-          if (!current) {
-            return {
-              pages: [
-                { notifications: [payload], nextCursor: null },
-              ],
-              pageParams: [null] as (string | null)[],
-            };
-          }
-
-          if (
-            typeof current === "object" &&
-            current !== null &&
-            "pages" in current
-          ) {
-            const c = current as {
-              pages: NotificationsPage[];
-              pageParams: unknown[];
-            };
-            return {
-              ...c,
-              pages: c.pages.map(
-                (page: NotificationsPage, pageIndex: number) => {
-                  if (pageIndex === 0) {
-                    return {
-                      ...page,
-                      notifications: sortNotifications([
-                        payload,
-                        ...page.notifications.filter(
-                          (n: DriverNotification) => n.id !== payload.id,
-                        ),
-                      ]),
-                    };
-                  }
-                  return page;
-                },
-              ),
-            };
-          }
-
-          return sortNotifications([
-            payload,
-            ...(current as DriverNotification[]).filter(
-              (n: DriverNotification) => n.id !== payload.id,
-            ),
-          ]);
-        },
-      );
     });
 
     es.addEventListener("notification.read", (event: MessageEvent) => {

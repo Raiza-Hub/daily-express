@@ -33,7 +33,7 @@ function bankDetailsMatch(
 
 function bankVerifiedNotification() {
   return {
-    notificationKey: "bank:verification:verified",
+    notificationKey: "bank-verification-verified",
     kind: "state" as const,
     type: "bank_verification_verified",
       title: "Payout account verified",
@@ -47,7 +47,7 @@ function bankVerifiedNotification() {
 
 function bankFailedNotification(reason: string) {
   return {
-    notificationKey: "bank:verification:failed",
+    notificationKey: "bank-verification-failed",
     kind: "state" as const,
     type: "bank_verification_failed",
     title: "Bank details need attention",
@@ -188,7 +188,7 @@ async function processBankVerification(
 
 function kycVerifiedNotification() {
   return {
-    notificationKey: "kyc:verification:verified",
+    notificationKey: "kyc-verification-verified",
     kind: "state" as const,
     type: "kyc_verification_verified",
     title: "Identity verified",
@@ -201,7 +201,7 @@ function kycVerifiedNotification() {
 
 function kycFailedNotification(reason: string) {
   return {
-    notificationKey: "kyc:verification:failed",
+    notificationKey: "kyc-verification-failed",
     kind: "state" as const,
     type: "kyc_verification_failed",
     title: "Identity verification failed",
