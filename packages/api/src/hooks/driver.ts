@@ -114,8 +114,10 @@ export const useGetDriver = (options?: { enabled?: boolean }) => {
     queryFn: getDriverFn,
     enabled: options?.enabled ?? true,
     refetchInterval: (query) => {
-      const status = query.state.data?.bankVerificationStatus;
-      return status === "pending" ? 1000 : false;
+      const { bankVerificationStatus, kycStatus } = query.state.data ?? {};
+      const isPolling =
+        bankVerificationStatus === "pending" || kycStatus === "pending";
+      return isPolling ? 1000 : false;
     },
   });
 };
