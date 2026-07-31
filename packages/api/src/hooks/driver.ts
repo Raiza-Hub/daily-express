@@ -115,7 +115,7 @@ export const useGetDriver = (options?: { enabled?: boolean }) => {
     enabled: options?.enabled ?? true,
     refetchInterval: (query) => {
       const status = query.state.data?.bankVerificationStatus;
-      return status === "pending" ? 5000 : false;
+      return status === "pending" ? 1000 : false;
     },
   });
 };

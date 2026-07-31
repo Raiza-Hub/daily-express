@@ -177,6 +177,7 @@ const DriverInfo = () => {
 
   const onSubmit = async (data: TDriverInfoSchema) => {
     setDriverInfoError(null);
+    setCanRemoveSelectedImage(false);
     const selectedCountryCurrency =
       countries.find((country) => country.name === data.country)?.currency ||
       driver?.currency ||
