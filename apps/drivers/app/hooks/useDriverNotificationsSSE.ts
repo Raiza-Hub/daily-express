@@ -156,6 +156,10 @@ export function useDriverNotificationsSSE() {
       if (payload.type === PROFILE_PICTURE_UPLOAD_FAILED_NOTIFICATION_TYPE) {
         toast.error("Profile picture upload failed. Please retry.");
       }
+
+      void queryClient.invalidateQueries({
+        queryKey: DRIVER_NOTIFICATIONS_QUERY_KEY,
+      });
     });
 
     es.addEventListener("notification.read", (event: MessageEvent) => {
