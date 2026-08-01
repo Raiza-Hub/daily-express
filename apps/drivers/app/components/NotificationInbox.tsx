@@ -28,6 +28,9 @@ const NotificationInbox = () => {
   const [tab, setTab] = useState<NotificationTab>("all");
   const { data: driver, isLoading: isLoadingDriver } = useGetDriver();
   const notificationsEnabled = Boolean(driver?.id);
+  const isVerificationPending =
+    driver?.bankVerificationStatus === "pending" ||
+    driver?.kycStatus === "pending";
   const {
     data,
     isLoading,
@@ -40,6 +43,7 @@ const NotificationInbox = () => {
   } = useDriverNotificationsInfinite({
     limit: 20,
     enabled: notificationsEnabled,
+    refetchInterval: isVerificationPending ? 500 : false,
   });
 
   const notifications = data?.pages.flatMap((page) => page.notifications) ?? [];
@@ -69,6 +73,9 @@ const NotificationInbox = () => {
 
   const handleOpenChange = (isOpen: boolean) => {
     setOpen(isOpen);
+    if (isOpen) {
+      void refetch();
+    }
   };
 
   const scrollContainerRef = useRef<HTMLDivElement>(null);
