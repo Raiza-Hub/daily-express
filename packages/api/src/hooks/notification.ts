@@ -105,6 +105,7 @@ export const useDriverNotificationsInfinite = (params?: {
   limit?: number;
   unreadOnly?: boolean;
   enabled?: boolean;
+  refetchInterval?: number | false;
 }) => {
   return useInfiniteQuery({
     queryKey: ["driver-notifications"],
@@ -117,6 +118,7 @@ export const useDriverNotificationsInfinite = (params?: {
     initialPageParam: null as string | null,
     getNextPageParam: (lastPage) => lastPage.nextCursor,
     enabled: params?.enabled ?? true,
+    refetchInterval: params?.refetchInterval ?? false,
   });
 };
 
