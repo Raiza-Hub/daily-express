@@ -49,7 +49,7 @@ npx opensrc <owner>/<repo>      # GitHub repo (e.g., npx opensrc vercel/ai)
 - Schema: `dailyexpress-api/db/driver-schema.ts` — removed `inReviewPayments`.
 - Migrations:
   - `0014_aggregate_payouts_per_trip.sql` — APPLIED to prod: payout column drops/adds, `trip_id` FK, partial unique index, `driver_stats` column drop, `earning_status` enum type-swap (see Prod Migration Notes).
-  - `0015_immutable_payouts.sql` — WRITTEN, NOT yet applied to prod: drops `payout_driver_trip_unique_idx` + `payout_status_retry_idx`, drops `payout_attempt` table, drops `retry_count`/`next_retry_at`, `permanent_failed → failed`, `payout_status` enum type-swap to 4 values.
+  - `0015_immutable_payouts.sql` — APPLIED to prod: drops `payout_driver_trip_unique_idx` + `payout_status_retry_idx`, drops `payout_attempt` table, drops `retry_count`/`next_retry_at`, `permanent_failed → failed`, `payout_status` enum type-swap to 4 values.
 - Job layer:
   - `workers/boss.ts`: `PayoutProcessJobData = { tripId: string }`.
   - `workers/job.service.ts`: `enqueuePayout` singletonKey = `payload.tripId`.
@@ -93,10 +93,10 @@ npx opensrc <owner>/<repo>      # GitHub repo (e.g., npx opensrc vercel/ai)
   5. `DROP TYPE earning_status; ALTER TYPE earning_status_new RENAME TO earning_status;`
 - Verified prod: `payout` has `trip_id` (FK restrict), partial unique index `payout_driver_trip_unique_idx`, no `earning_id`/`provider_transfer_code`/`provider_transfer_id`/`earnings_count`; `driver_stats` has no `in_review_payments`; `earning_status` enum has 5 values (no `manual_review`). Legacy 2 payout rows untouched (`trip_id` NULL, `success`, ₦100 each).
 
-## Prod Migration Notes (0015) — NOT YET APPLIED
-- `dailyexpress-api/db/migrations/0015_immutable_payouts.sql` is written but NOT applied to prod yet.
-- Order: drop `payout_driver_trip_unique_idx` + `payout_status_retry_idx` → `DROP TABLE payout_attempt` (drops 2 legacy settled attempt rows on prod) → `ALTER TABLE payout DROP COLUMN retry_count, DROP COLUMN next_retry_at;` → `UPDATE payout SET status='failed' WHERE status='permanent_failed';` → `payout_status` enum type-swap (same 5-step recipe as 0014) to `('pending','processing','success','failed')`, restoring default `'processing'`.
-- After applying, verify prod: `payout_status` enum = 4 values; no `payout_attempt` table; no `retry_count`/`next_retry_at`; no `permanent_failed` rows.
+## Prod Migration Notes (0015) — APPLIED 2026-08-02
+- Applied to prod via `railway connect Postgres` (piped `0015_immutable_payouts.sql`; autocommit per statement).
+- Order: drop `payout_driver_trip_unique_idx` + `payout_status_retry_idx` → `DROP TABLE payout_attempt` (dropped 2 legacy settled attempt rows) → `ALTER TABLE payout DROP COLUMN retry_count, DROP COLUMN next_retry_at;` → `UPDATE payout SET status='failed' WHERE status='permanent_failed';` (UPDATE 0) → `payout_status` enum type-swap (same 5-step recipe as 0014) to `('pending','processing','success','failed')`, restoring default `'processing'`.
+- Verified post-apply: `payout_status` enum = 4 values; no `payout_attempt` table; no `retry_count`/`next_retry_at`; legacy 2 payout rows untouched (`trip_id` NULL, `success`).
 
 ## Key Decisions
 - One payout per (driver, trip), keyed on `payout.trip_id`; amount computed at creation from `available` earnings. `processing` earnings included in eligibility guard but never in creation-time sum.
