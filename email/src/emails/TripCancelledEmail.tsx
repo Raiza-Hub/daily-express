@@ -82,7 +82,7 @@ const TripCancelledEmail = ({
             <Text style={summary}>{cancellationText}</Text>
 
             <Text style={summary}>
-              We have initiated a full refund of{" "}
+              We have initiated a refund of{" "}
               <strong style={strong}>{formatCurrency(amount, currency)}</strong>{" "}
               to your original payment method. You'll receive a confirmation once the
               refund has been completed.
