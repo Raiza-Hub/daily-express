@@ -12,8 +12,7 @@ type EarningStatus =
   | "available"
   | "processing"
   | "paid"
-  | "cancelled"
-  | "manual_review";
+  | "cancelled";
 
 export class DriverService {
   private readonly repo: DriverRepository;

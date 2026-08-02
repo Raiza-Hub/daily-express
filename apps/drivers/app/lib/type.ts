@@ -20,6 +20,7 @@ export interface RouteWithTrips {
   arrivalCode: string;
   bookedSeats: number;
   capacity: number;
+  payoutStatus?: string | null;
   departureCity: { title: string; label: string; locality: string };
   arrivalCity: { title: string; label: string; locality: string };
 }

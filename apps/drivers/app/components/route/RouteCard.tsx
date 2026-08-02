@@ -63,6 +63,7 @@ export default function RouteCard({
         arrivalCode: trip.route.dropoff_location_title,
         bookedSeats: trip.bookedSeats,
         capacity: trip.capacity,
+        payoutStatus: trip.payoutStatus,
         departureCity: {
           title: trip.route.pickup_location_title,
           label: trip.route.pickup_location_label,

@@ -13,7 +13,7 @@ import { db } from "../db/connection";
 import { driver, payout } from "../db/index";
 import { PayoutRepository } from "./payout.repository";
 import { EarningService } from "./earning.service";
-import { PayoutAttemptService } from "./payout-attempt.service";
+import { PayoutSettlementService } from "./payout-settlement.service";
 import { PayoutProcessorService } from "./payout-processor.service";
 import { PayoutWebhookService } from "./payout-webhook.service";
 import { PayoutNotificationService } from "./payout-notification.service";
@@ -22,24 +22,22 @@ import { addDaysToDateKey, getBusinessDayWindow } from "../utils/route";
 import type { KoraPayoutWebhookPayload } from "../payment/payment.types";
 
 type PayoutTransaction = Parameters<Parameters<typeof db.transaction>[0]>[0];
-type PayoutRecord = typeof payout.$inferSelect;
 
 export class PayoutService {
   private readonly config = getConfig();
 
   private readonly repo = new PayoutRepository();
   private readonly earningService = new EarningService(this.repo);
-  private readonly attemptService = new PayoutAttemptService(this.repo);
+  private readonly settlementService = new PayoutSettlementService(this.repo);
   private readonly notificationService = new PayoutNotificationService(this.repo);
   private readonly processorService = new PayoutProcessorService(
     this.repo,
-    this.attemptService,
+    this.settlementService,
     this.notificationService,
   );
   private readonly webhookService = new PayoutWebhookService(
     this.repo,
-    this.attemptService,
-    this.processorService,
+    this.settlementService,
     this.notificationService,
   );
 
@@ -139,11 +137,10 @@ export class PayoutService {
       reference: row.reference,
       amount: row.amount,
       currency: row.currency,
-      earningsCount: row.earningsCount,
+      tripId: row.tripId,
       status: row.status === "pending" ? "processing" : row.status,
       failureCode: row.failureCode,
       failureReason: row.failureReason,
-      nextRetryAt: row.nextRetryAt,
       initiatedAt: row.initiatedAt,
       settledAt: row.settledAt,
       failedAt: row.failedAt,
@@ -208,8 +205,12 @@ export class PayoutService {
     };
   }
 
-  async triggerPayout(earningId: string) {
-    return this.processorService.processEarningPayout(earningId);
+  async triggerPayout(tripId: string) {
+    return this.processorService.processTripPayout(tripId);
+  }
+
+  async hasUnsettledEarnings(tripId: string) {
+    return this.repo.hasUnsettledEarnings(db, tripId);
   }
 
   async processWebhook(input: {
@@ -217,14 +218,6 @@ export class PayoutService {
     event: KoraPayoutWebhookPayload;
   }) {
     return this.webhookService.processWebhook(input);
-  }
-
-  scheduleRetry(payoutRecord: PayoutRecord, reason: string) {
-    return this.processorService.scheduleRetry(payoutRecord, reason);
-  }
-
-  canRetry(retryCount: number) {
-    return this.processorService.canRetry(retryCount);
   }
 
   private async getCurrentDriver(user: JWTPayload) {

@@ -164,7 +164,6 @@ export interface DriverStats {
   driverId: string;
   totalEarnings: number;
   pendingPayments: number;
-  inReviewPayments: number;
   totalPassengers: number;
   createdAt: string;
   updatedAt: string;

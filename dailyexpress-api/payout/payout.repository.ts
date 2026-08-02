@@ -1,13 +1,11 @@
-import { and, desc, eq, gte, lt } from "drizzle-orm";
+import { and, desc, eq, gte, inArray, lt } from "drizzle-orm";
 import { db } from "../db/connection";
 import {
   driver,
   earning,
   payout,
-  payoutAttempt,
   type EarningRecord,
   type PayoutRecord,
-  type PayoutAttemptRecord,
   type DriverRecord,
 } from "../db/index";
 import type { DbTransaction } from "../db/connection";
@@ -88,9 +86,10 @@ export class PayoutRepository {
       .where(eq(earning.bookingId, bookingId));
   }
 
-  findPayoutByEarningId(tx: PayoutTransaction | typeof db, earningId: string) {
+  findPayoutByTripId(tx: PayoutTransaction | typeof db, tripId: string) {
     return tx.query.payout.findFirst({
-      where: eq(payout.earningId, earningId),
+      where: eq(payout.tripId, tripId),
+      orderBy: [desc(payout.createdAt), desc(payout.id)],
     });
   }
 
@@ -100,12 +99,37 @@ export class PayoutRepository {
     });
   }
 
+  findPayoutByReference(reference: string) {
+    return db.query.payout.findFirst({
+      where: eq(payout.reference, reference),
+    });
+  }
+
+  findTripPayoutEarnings(tripId: string) {
+    return db.query.earning.findMany({
+      where: and(
+        eq(earning.tripId, tripId),
+        inArray(earning.status, ["available", "processing"]),
+      ),
+    });
+  }
+
+  hasUnsettledEarnings(tx: PayoutTransaction | typeof db, tripId: string) {
+    return tx.query.earning.findFirst({
+      where: and(
+        eq(earning.tripId, tripId),
+        inArray(earning.status, [
+          "pending_trip_completion",
+          "available",
+          "processing",
+        ]),
+      ),
+      columns: { id: true },
+    });
+  }
+
   insertPayout(tx: PayoutTransaction, values: typeof payout.$inferInsert) {
-    return tx
-      .insert(payout)
-      .values(values)
-      .onConflictDoNothing({ target: payout.earningId })
-      .returning();
+    return tx.insert(payout).values(values).returning();
   }
 
   updatePayout(
@@ -119,54 +143,6 @@ export class PayoutRepository {
       .where(eq(payout.id, id));
   }
 
-
-  findPayoutAttempt(payoutId: string, attemptNumber: number) {
-    return db.query.payoutAttempt.findFirst({
-      where: and(
-        eq(payoutAttempt.payoutId, payoutId),
-        eq(payoutAttempt.attemptNumber, attemptNumber),
-      ),
-    });
-  }
-
-  findPayoutAttemptByReference(reference: string) {
-    return db.query.payoutAttempt.findFirst({
-      where: eq(payoutAttempt.koraReference, reference),
-    });
-  }
-
-  insertPayoutAttempt(
-    values: typeof payoutAttempt.$inferInsert,
-  ) {
-    return db.insert(payoutAttempt).values(values);
-  }
-
-  updatePayoutAttempt(
-    tx: PayoutTransaction | typeof db,
-    id: string,
-    fields: Partial<typeof payoutAttempt.$inferInsert>,
-  ) {
-    return tx
-      .update(payoutAttempt)
-      .set(fields)
-      .where(eq(payoutAttempt.id, id));
-  }
-
-  updatePayoutAttemptByKey(
-    payoutId: string,
-    attemptNumber: number,
-    fields: Partial<typeof payoutAttempt.$inferInsert>,
-  ) {
-    return db
-      .update(payoutAttempt)
-      .set(fields)
-      .where(
-        and(
-          eq(payoutAttempt.payoutId, payoutId),
-          eq(payoutAttempt.attemptNumber, attemptNumber),
-        ),
-      );
-  }
 
   findDriverById(driverId: string) {
     return db.query.driver.findFirst({

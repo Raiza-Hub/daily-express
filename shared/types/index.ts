@@ -97,7 +97,6 @@ export interface DriverStats {
   driverId: string;
   totalEarnings: number;
   pendingPayments: number;
-  inReviewPayments: number;
   totalPassengers: number;
   createdAt: Date;
   updatedAt: Date;
@@ -393,14 +392,12 @@ export type EarningStatus =
   | "available"
   | "processing"
   | "paid"
-  | "cancelled"
-  | "manual_review";
+  | "cancelled";
 
 export type PayoutStatus =
   | "processing"
   | "success"
-  | "failed"
-  | "permanent_failed";
+  | "failed";
 
 export type NotificationTone = "critical" | "attention" | "positive" | "info";
 
@@ -483,14 +480,13 @@ export interface DriverPendingPayoutTrip {
 export interface DriverPayout {
   id: string;
   driverId: string;
+  tripId?: string | null;
   reference: string;
   amount: number;
   currency: string;
-  earningsCount: number;
   status: PayoutStatus;
   failureCode?: string | null;
   failureReason?: string | null;
-  nextRetryAt?: Date | null;
   initiatedAt?: Date | null;
   settledAt?: Date | null;
   failedAt?: Date | null;

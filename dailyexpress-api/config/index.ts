@@ -74,12 +74,6 @@ const envSchema = z.object({
         ? "https://dailyexpress.app"
         : "http://localhost:3000",
     ),
-  PAYOUT_RETRY_DELAYS_MS: z.string().default("60000,300000,900000"),
-  INSUFFICIENT_BALANCE_RETRY_DELAY_MS: z.coerce
-    .number()
-    .int()
-    .positive()
-    .default(30 * 60 * 1000),
   MINIMUM_PAYOUT_AMOUNT: z.coerce
     .number()
     .int()

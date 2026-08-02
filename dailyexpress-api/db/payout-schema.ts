@@ -1,13 +1,11 @@
 import {
   bigint,
   index,
-  integer,
   jsonb,
   pgEnum,
   pgTable,
   text,
   timestamp,
-  uniqueIndex,
   uuid,
   varchar,
 } from "drizzle-orm/pg-core";
@@ -20,7 +18,6 @@ export const earningStatusEnum = pgEnum("earning_status", [
   "processing",
   "paid",
   "cancelled",
-  "manual_review",
 ]);
 
 export const payoutProviderEnum = pgEnum("payout_provider", ["kora"]);
@@ -29,7 +26,6 @@ export const payoutStatusEnum = pgEnum("payout_status", [
   "processing",
   "success",
   "failed",
-  "permanent_failed",
 ]);
 
 export const earning = pgTable(
@@ -75,22 +71,17 @@ export const payout = pgTable(
   {
     id: uuid("id").defaultRandom().primaryKey(),
     driverId: uuid("driver_id").references(() => driver.id, { onDelete: "restrict" }).notNull(),
-    earningId: uuid("earning_id").references(() => earning.id, { onDelete: "restrict" }).notNull(),
+    tripId: uuid("trip_id").references(() => trip.id, { onDelete: "restrict" }),
     recipientBankName: text("recipient_bank_name"),
     recipientAccountLast4: varchar("recipient_account_last4", { length: 4 }),
     reference: varchar("reference", { length: 128 }).notNull().unique(),
     provider: payoutProviderEnum("provider").default("kora").notNull(),
-    providerTransferCode: varchar("provider_transfer_code", { length: 128 }),
-    providerTransferId: varchar("provider_transfer_id", { length: 128 }),
     amount: bigint("amount", { mode: "number" }).notNull(),
     currency: varchar("currency", { length: 8 }).default("NGN").notNull(),
-    earningsCount: integer("earnings_count").notNull(),
     status: payoutStatusEnum("status").default("processing").notNull(),
     driverEmail: varchar("driver_email", { length: 255 }),
     failureCode: text("failure_code"),
     failureReason: text("failure_reason"),
-    retryCount: integer("retry_count").default(0).notNull(),
-    nextRetryAt: timestamp("next_retry_at", { mode: "date" }),
     initiatedAt: timestamp("initiated_at", { mode: "date" }),
     settledAt: timestamp("settled_at", { mode: "date" }),
     failedAt: timestamp("failed_at", { mode: "date" }),
@@ -101,7 +92,6 @@ export const payout = pgTable(
   },
   (table) => [
     index("payout_driver_id_idx").on(table.driverId),
-    uniqueIndex("payout_earning_id_unique_idx").on(table.earningId),
     index("payout_status_idx").on(table.status),
     index("payout_driver_created_at_idx").on(
       table.driverId,
@@ -117,45 +107,15 @@ export const payout = pgTable(
       table.status,
       table.settledAt.desc(),
     ),
-    index("payout_status_retry_idx").on(table.status, table.nextRetryAt),
-  ],
-);
-
-export const payoutAttempt = pgTable(
-  "payout_attempt",
-  {
-    id: uuid("id").defaultRandom().primaryKey(),
-    payoutId: uuid("payout_id").references(() => payout.id, { onDelete: "restrict" }).notNull(),
-    attemptNumber: integer("attempt_number").notNull(),
-    koraReference: varchar("kora_reference", { length: 128 })
-      .notNull()
-      .unique(),
-    status: varchar("status", { length: 32 }).default("pending").notNull(),
-    failureReason: text("failure_reason"),
-    initiatedAt: timestamp("initiated_at", { mode: "date" })
-      .defaultNow()
-      .notNull(),
-    settledAt: timestamp("settled_at", { mode: "date" }),
-    rawWebhook: jsonb("raw_webhook"),
-  },
-  (table) => [
-    index("payout_attempt_payout_id_idx").on(table.payoutId),
-    uniqueIndex("payout_attempt_number_unique_idx").on(
-      table.payoutId,
-      table.attemptNumber,
-    ),
   ],
 );
 
 export const payoutSchema = {
   earning,
   payout,
-  payoutAttempt,
 };
 
 export type Earning = typeof earning.$inferSelect;
 export type EarningRecord = Earning;
 export type Payout = typeof payout.$inferSelect;
 export type PayoutRecord = Payout;
-export type PayoutAttempt = typeof payoutAttempt.$inferSelect;
-export type PayoutAttemptRecord = PayoutAttempt;

@@ -48,7 +48,7 @@ export type DriverVerificationJobData =
   | { type: "kyc_verification" } & DriverKycVerificationPayload;
 
 export interface PayoutProcessJobData {
-  earningId: string;
+  tripId: string;
 }
 
 export interface TripRefundJobData {

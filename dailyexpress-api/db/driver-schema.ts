@@ -77,9 +77,6 @@ export const driverStats = pgTable("driver_stats", {
   pendingPayments: bigint("pending_payments", { mode: "number" })
     .default(0)
     .notNull(),
-  inReviewPayments: bigint("in_review_payments", { mode: "number" })
-    .default(0)
-    .notNull(),
   totalPassengers: integer("total_passengers").default(0).notNull(),
   createdAt: timestamp("created_at", { mode: "date" }).defaultNow().notNull(),
   updatedAt: timestamp("updated_at", { mode: "date" }).defaultNow().notNull(),

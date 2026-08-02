@@ -1,6 +1,6 @@
 import { renderEmail, getEmailSubject } from "@repo/email";
 import { db } from "../db/connection";
-import { eq } from "drizzle-orm";
+import { and, eq } from "drizzle-orm";
 import { earning, payout, type PayoutRecord } from "../db/index";
 import { getConfig } from "../config/index";
 import { PayoutRepository, payoutRepository } from "./payout.repository";
@@ -56,7 +56,7 @@ export class PayoutNotificationService {
 
       if (
         lockedPayout.status === "success" ||
-        lockedPayout.status === "permanent_failed"
+        lockedPayout.status === "failed"
       ) {
         return;
       }
@@ -64,40 +64,29 @@ export class PayoutNotificationService {
       await tx
         .update(payout)
         .set({
-          status: "permanent_failed",
+          status: "failed",
           failureCode: reason,
           failureReason: reason,
-          nextRetryAt: null,
           failedAt: new Date(),
           rawFinalStatusResponse: rawPayload,
           updatedAt: new Date(),
         })
         .where(eq(payout.id, lockedPayout.id));
 
-      const earningId = lockedPayout.earningId;
-      const earningRecord = earningId
-        ? await tx.query.earning.findFirst({
-            where: eq(earning.id, earningId),
-          })
-        : null;
-
-      if (earningId) {
+      if (lockedPayout.tripId) {
         await tx
           .update(earning)
           .set({
-            status: "manual_review",
+            status: "available",
             payoutId: lockedPayout.id,
             updatedAt: new Date(),
           })
-          .where(eq(earning.id, earningId));
-        if (earningRecord) {
-          await this.driverService.adjustPaymentCountersForStatusChange(tx, {
-            driverId: earningRecord.driverId,
-            amount: earningRecord.netAmount,
-            previousStatus: earningRecord.status,
-            nextStatus: "manual_review",
-          });
-        }
+          .where(
+            and(
+              eq(earning.tripId, lockedPayout.tripId),
+              eq(earning.status, "processing"),
+            ),
+          );
       }
 
       if (emailHtml && emailSubject && payoutRecord.driverEmail) {

@@ -10,8 +10,7 @@ type EarningStatus =
   | "available"
   | "processing"
   | "paid"
-  | "cancelled"
-  | "manual_review";
+  | "cancelled";
 
 const PENDING_PAYMENT_STATUSES = new Set<EarningStatus>([
   "pending_trip_completion",
@@ -71,26 +70,16 @@ export class DriverStatsService {
   ): Promise<void> {
     const wasPendingPayment = PENDING_PAYMENT_STATUSES.has(input.previousStatus);
     const isPendingPayment = PENDING_PAYMENT_STATUSES.has(input.nextStatus);
-    const wasInReview = input.previousStatus === "manual_review";
-    const isInReview = input.nextStatus === "manual_review";
 
-    if (wasPendingPayment === isPendingPayment && wasInReview === isInReview) {
+    if (wasPendingPayment === isPendingPayment) {
       return;
     }
 
     const updates: Record<string, SQL | Date> = { updatedAt: new Date() };
 
-    if (wasPendingPayment !== isPendingPayment) {
-      updates.pendingPayments = wasPendingPayment
-        ? sql`GREATEST(${driverStats.pendingPayments} - ${input.amount}, 0)`
-        : sql`${driverStats.pendingPayments} + ${input.amount}`;
-    }
-
-    if (wasInReview !== isInReview) {
-      updates.inReviewPayments = wasInReview
-        ? sql`GREATEST(${driverStats.inReviewPayments} - ${input.amount}, 0)`
-        : sql`${driverStats.inReviewPayments} + ${input.amount}`;
-    }
+    updates.pendingPayments = wasPendingPayment
+      ? sql`GREATEST(${driverStats.pendingPayments} - ${input.amount}, 0)`
+      : sql`${driverStats.pendingPayments} + ${input.amount}`;
 
     await tx
       .update(driverStats)
