@@ -43,7 +43,7 @@ export class PayoutProcessorService {
             type: "bank_setup_pending",
             title: "Bank account setup needed",
             message:
-              "Your bank account information is incomplete. Please update your bank details in your profile to receive payouts.",
+              "Your bank account information is incomplete. Please update your bank details to receive payouts.",
             href: "/settings/bank-details",
             tag: "Action needed",
             tone: "attention",
