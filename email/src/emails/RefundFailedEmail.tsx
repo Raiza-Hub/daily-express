@@ -82,7 +82,7 @@ const RefundFailedEmail = ({
               This can happen due to a bank processing delay, an expired transaction
               window, or a temporary issue on our payment provider's end. Please be
               assured that your money has not been lost. Your refund is still owed
-              to you in full and our support team will follow up to resolve this
+              to you and our support team will follow up to resolve this
               manually.
             </Text>
 

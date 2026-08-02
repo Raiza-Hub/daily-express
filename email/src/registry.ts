@@ -39,15 +39,33 @@ export function getEmailSubject(
   propsJson: string,
 ): string {
   const props = JSON.parse(propsJson);
+  const withDetail = (subject: string, detail: unknown) => {
+    if (detail === undefined || detail === null || detail === "")
+      return subject;
+    return `${subject} - ${detail}`;
+  };
+
   switch (templateName) {
     case "BookingConfirmedEmail":
-      return `Booking Confirmed - ${props.pickupTitle} to ${props.dropoffTitle}`;
+      return withDetail(
+        `Booking Confirmed - ${props.pickupTitle} to ${props.dropoffTitle}`,
+        props.paymentReference,
+      );
     case "DriverAssignedEmail":
-      return `Driver Assigned - ${props.pickupTitle} to ${props.dropoffTitle}`;
+      return withDetail(
+        `Driver Assigned - ${props.pickupTitle} to ${props.dropoffTitle}`,
+        [props.tripDate, props.departureTime].filter(Boolean).join(" "),
+      );
     case "RefundFailedEmail":
-      return `Refund could not be completed yet`;
+      return withDetail(
+        "Refund could not be completed yet",
+        props.paymentReference,
+      );
     case "RefundSuccessfulEmail":
-      return `Your refund has been processed`;
+      return withDetail(
+        "Your refund has been processed",
+        props.paymentReference,
+      );
     case "ResetPasswordEmail":
       return `Reset Password`;
     case "VerifyOtpEmail":
@@ -55,7 +73,10 @@ export function getEmailSubject(
     case "PayoutFailedEmail":
       return `Payout Failed - Action Required`;
     case "TripCancelledEmail":
-      return `Trip Cancelled - Refund Initiated`;
+      return withDetail(
+        "Trip Cancelled - Refund Initiated",
+        props.refundReference,
+      );
     default:
       return "Notification from Daily Express";
   }

@@ -1,4 +1,3 @@
-import { readFileSync } from "node:fs";
 import {
   SESv2Client,
   SendEmailCommand,
@@ -6,10 +5,6 @@ import {
 } from "@aws-sdk/client-sesv2";
 import { createServiceError } from "@shared/utils";
 import { sentryServer } from "@shared/sentry";
-import {
-  EMAIL_LOGO_CONTENT_ID,
-  getEmailLogoAttachmentPath,
-} from "@repo/email";
 import { getConfig } from "../config/index";
 
 const config = getConfig();
@@ -22,18 +17,12 @@ function encodeAddress(label: string, email: string): string {
   return `${encodeHeader(label)} <${email}>`;
 }
 
-function createBoundary(label: string): string {
-  return `dailyexpress-${label}-${Date.now()}-${Math.random().toString(16).slice(2)}`;
-}
-
 function createRawEmail(input: {
   from: string;
   to: string;
   subject: string;
   html: string;
 }) {
-  const boundary = createBoundary("related");
-  const logoBase64 = readFileSync(getEmailLogoAttachmentPath()).toString("base64");
   const htmlBase64 = Buffer.from(input.html, "utf8").toString("base64");
 
   const lines = [
@@ -41,23 +30,10 @@ function createRawEmail(input: {
     `To: ${input.to}`,
     `Subject: ${encodeHeader(input.subject)}`,
     "MIME-Version: 1.0",
-    `Content-Type: multipart/related; boundary="${boundary}"`,
-    "",
-    `--${boundary}`,
     'Content-Type: text/html; charset="UTF-8"',
     "Content-Transfer-Encoding: base64",
     "",
     htmlBase64,
-    "",
-    `--${boundary}`,
-    'Content-Type: image/png; name="email-logo.png"',
-    "Content-Transfer-Encoding: base64",
-    `Content-ID: <${EMAIL_LOGO_CONTENT_ID}>`,
-    'Content-Disposition: inline; filename="email-logo.png"',
-    "",
-    logoBase64,
-    "",
-    `--${boundary}--`,
     "",
   ];
 
