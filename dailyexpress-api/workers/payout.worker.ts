@@ -17,14 +17,14 @@ export async function registerPayoutWorker() {
     async ([job]) => {
       logger.info("worker.payout.started", {
         jobId: job.id,
-        earningId: job.data.earningId,
+        tripId: job.data.tripId,
       });
 
-      await payoutService.triggerPayout(job.data.earningId);
+      await payoutService.triggerPayout(job.data.tripId);
 
       logger.info("worker.payout.completed", {
         jobId: job.id,
-        earningId: job.data.earningId,
+        tripId: job.data.tripId,
       });
     },
   );

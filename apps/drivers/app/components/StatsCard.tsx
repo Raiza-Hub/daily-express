@@ -21,7 +21,7 @@ export default function StatsCard() {
     },
      {
       name: "In Review",
-      value: isLoading ? "..." : formatCurrency(stats?.inReviewPayments || 0),
+      value: isLoading ? "..." : formatCurrency(0),
     },
     {
       name: "Passengers",

@@ -1,60 +1,42 @@
-import { logger } from "../utils/logger";
 import { db } from "../db/connection";
-import { and, eq } from "drizzle-orm";
-import { driver, earning, payout, payoutAttempt, type PayoutRecord, type EarningRecord } from "../db/index";
+import { and, eq, inArray } from "drizzle-orm";
+import { driver, earning, payout, type PayoutRecord, type EarningRecord } from "../db/index";
 import { getConfig } from "../config/index";
 import { generateReference } from "../utils/payment";
 import { PayoutRepository, payoutRepository } from "./payout.repository";
-import { PayoutAttemptService, payoutAttemptService } from "./payout-attempt.service";
+import { PayoutSettlementService, payoutSettlementService } from "./payout-settlement.service";
 import { PayoutNotificationService, payoutNotificationService } from "./payout-notification.service";
 import { notificationService as sharedNotificationService } from "../notification/notification.service";
 import { publishNotificationCreatedInBackground } from "../notification/realtime";
-import { koraClient } from "../payment/kora.client";
-import { jobService } from "../workers/job.service";
-import {
-  isFatalKoraError,
-  isRetryableKoraError,
-  KORA_ERROR_CODES,
-  parseDelayString,
-} from "../utils/payout";
+import { koraClient, isKoraRequestError, type KoraRequestError } from "../payment/kora.client";
+import { KORA_ERROR_CODES } from "../utils/payout";
 
 type ActivePayoutDriver = typeof driver.$inferSelect & {
   bankVerificationStatus: "active";
 };
 
-const AMBIGUOUS_KORA_HTTP_STATUSES = new Set([500, 502, 503, 504]);
-
 export class PayoutProcessorService {
   private readonly config = getConfig();
-  private readonly payoutRetryDelaysMs = parseDelayString(
-    this.config.PAYOUT_RETRY_DELAYS_MS,
-  );
   private readonly kora = koraClient;
 
   constructor(
     private repo: PayoutRepository,
-    private attemptService: PayoutAttemptService,
+    private settlementService: PayoutSettlementService,
     private notificationService: PayoutNotificationService,
   ) {}
 
-  async processEarningPayout(earningId: string) {
-    const earningRecord = await this.repo.findEarningById(earningId);
-    if (!earningRecord) return;
-    if (
-      earningRecord.status !== "available" &&
-      earningRecord.status !== "processing"
-    ) {
-      return;
-    }
+  async processTripPayout(tripId: string) {
+    const earnings = await this.repo.findTripPayoutEarnings(tripId);
+    if (earnings.length === 0) return;
 
     const payoutDriver = await this.getActivePayoutDriver(
-      earningRecord.driverId,
+      earnings[0].driverId,
     );
     if (!payoutDriver) {
       await db.transaction(async (tx) => {
         const notification = await sharedNotificationService.createForDriverInTransaction(
           tx,
-          earningRecord.driverId,
+          earnings[0].driverId,
           {
             notificationKey: "account-setup-pending",
             kind: "state",
@@ -66,8 +48,7 @@ export class PayoutProcessorService {
             tag: "Action needed",
             tone: "attention",
             metadata: {
-              earningId: earningRecord.id,
-              tripId: earningRecord.tripId,
+              tripId,
             },
             occurredAt: new Date(),
           },
@@ -79,20 +60,23 @@ export class PayoutProcessorService {
       return;
     }
 
-    let payoutRecord = await this.getOrCreatePayout(earningRecord, payoutDriver);
-    if (
-      payoutRecord.status === "success" ||
-      payoutRecord.status === "permanent_failed"
-    ) {
+    const latestPayout = await this.repo.findPayoutByTripId(db, tripId);
+    if (latestPayout && latestPayout.status !== "failed") {
       return;
     }
+
+    const payoutRecord = await this.createTripPayout(
+      tripId,
+      earnings,
+      payoutDriver,
+    );
 
     if (payoutRecord.amount < this.config.MINIMUM_PAYOUT_AMOUNT) {
       await db.transaction(async (tx) => {
         const notification =
           await sharedNotificationService.createForDriverInTransaction(
             tx,
-            earningRecord.driverId,
+            earnings[0].driverId,
             {
               notificationKey: "payout-too-small",
               kind: "state",
@@ -104,8 +88,7 @@ export class PayoutProcessorService {
               tag: "Info",
               tone: "info",
               metadata: {
-                earningId: earningRecord.id,
-                tripId: earningRecord.tripId,
+                tripId,
                 amount: payoutRecord.amount,
               },
               occurredAt: new Date(),
@@ -125,32 +108,12 @@ export class PayoutProcessorService {
     payoutRecord: PayoutRecord,
     payoutDriver: ActivePayoutDriver,
   ) {
-    const attemptNumber = payoutRecord.retryCount + 1;
-    const reference = `${payoutRecord.reference}_attempt_${attemptNumber}`;
-
-    if (attemptNumber > 1) {
-      const previousAttempt = await this.repo.findPayoutAttempt(
-        payoutRecord.id,
-        attemptNumber - 1,
-      );
-      if (previousAttempt?.status === "settled") return;
-      if (previousAttempt) {
-        const outcome = await this.attemptService.verifyWithProvider(
-          payoutRecord,
-          previousAttempt,
-        );
-        if (outcome === "settled") return;
-        if (outcome !== "failed") {
-          await this.processVerificationRetryOutcome(payoutRecord, outcome);
-          return;
-        }
-      }
-    }
+    const reference = payoutRecord.reference;
 
     // Prevents duplicate payout attempts: lock serializes creation and marks
     // the payout as "processing" before the external API call so concurrent
     // workers see the updated status and exit early.
-    const attempt = await db.transaction(async (tx) => {
+    const locked = await db.transaction(async (tx) => {
       const [lockedPayout] = await tx
         .select()
         .from(payout)
@@ -159,40 +122,25 @@ export class PayoutProcessorService {
         .limit(1);
       if (!lockedPayout) throw new Error("Payout not found");
 
-      if (lockedPayout.status === "success" || lockedPayout.status === "permanent_failed") {
-        return { attempt: null, alreadyFinalized: true };
+      if (
+        lockedPayout.status === "success" ||
+        lockedPayout.status === "failed" ||
+        lockedPayout.status === "processing"
+      ) {
+        return { alreadyFinalized: true };
       }
-
-      const existing = await tx.query.payoutAttempt.findFirst({
-        where: and(
-          eq(payoutAttempt.payoutId, payoutRecord.id),
-          eq(payoutAttempt.attemptNumber, attemptNumber),
-        ),
-      });
-      if (existing) return { attempt: existing, alreadyFinalized: false };
-
-      const [row] = await tx
-        .insert(payoutAttempt)
-        .values({
-          payoutId: payoutRecord.id,
-          attemptNumber,
-          koraReference: reference,
-          status: "pending",
-        })
-        .returning();
 
       await tx
         .update(payout)
         .set({
           status: "processing",
-          nextRetryAt: null,
           failureCode: null,
           failureReason: null,
           updatedAt: new Date(),
         })
         .where(eq(payout.id, payoutRecord.id));
 
-      if (payoutRecord.earningId) {
+      if (payoutRecord.tripId) {
         await tx
           .update(earning)
           .set({
@@ -200,33 +148,18 @@ export class PayoutProcessorService {
             payoutId: payoutRecord.id,
             updatedAt: new Date(),
           })
-          .where(eq(earning.id, payoutRecord.earningId));
+          .where(
+            and(
+              eq(earning.tripId, payoutRecord.tripId),
+              inArray(earning.status, ["available", "processing"]),
+            ),
+          );
       }
 
-      return { attempt: row, alreadyFinalized: false };
+      return { alreadyFinalized: false };
     });
 
-    if (attempt.alreadyFinalized || !attempt.attempt) return;
-    const currentAttempt = attempt.attempt;
-
-    if (currentAttempt.status === "settled") return;
-    if (
-      currentAttempt.status === "pending" &&
-      payoutRecord.status === "processing"
-    ) {
-      return;
-    }
-    if (currentAttempt.status === "pending_verification") {
-      const outcome = await this.attemptService.verifyWithProvider(
-        payoutRecord,
-        currentAttempt,
-      );
-      if (outcome === "settled") return;
-      if (outcome !== "failed") {
-        await this.processVerificationRetryOutcome(payoutRecord, outcome);
-        return;
-      }
-    }
+    if (locked.alreadyFinalized) return;
 
     try {
       const result = await this.kora.initiatePayout({
@@ -245,216 +178,80 @@ export class PayoutProcessorService {
       await db
         .update(payout)
         .set({
-          providerTransferCode: result.data.reference,
           initiatedAt: new Date(),
           rawInitiateResponse: result.raw,
           updatedAt: new Date(),
         })
         .where(eq(payout.id, payoutRecord.id));
-    } catch (error: any) {
-      const errorCode = error?.koraErrorCode as string | undefined;
-      const failureReason = error?.message || "Payout initiation failed";
-      const shouldVerify = this.shouldVerifyAmbiguousInitiationError(
-        errorCode,
-        error,
-      );
+    } catch (error: unknown) {
+      const koraError = isKoraRequestError(error) ? error : null;
+      const errorCode = koraError?.koraErrorCode;
 
-      await this.repo.updatePayoutAttemptByKey(
-        payoutRecord.id,
-        attemptNumber,
-        {
-          status: shouldVerify ? "pending_verification" : "failed",
-          failureReason,
-        },
-      );
-
-      if (
-        errorCode === KORA_ERROR_CODES.INSUFFICIENT_BALANCE ||
-        errorCode === "conflict"
-      ) {
-        await this.scheduleRetry(
-          payoutRecord,
-          KORA_ERROR_CODES.INSUFFICIENT_BALANCE,
-        );
-        return;
-      }
-      if (errorCode && isFatalKoraError(errorCode)) {
+      if (errorCode === "conflict") {
         await this.notificationService.processPayoutFailure(
           payoutRecord,
-          errorCode,
+          KORA_ERROR_CODES.INSUFFICIENT_BALANCE,
           error,
           true,
         );
         return;
       }
-      if (shouldVerify) {
-        const attempt = await this.repo.findPayoutAttempt(
-          payoutRecord.id,
-          attemptNumber,
-        );
-        if (!attempt) throw error;
-        const outcome = await this.attemptService.verifyWithProvider(
-          payoutRecord,
-          attempt,
-        );
-        if (outcome === "settled") return;
-        if (outcome === "failed" && this.canRetry(payoutRecord.retryCount)) {
-          await this.scheduleRetry(payoutRecord, "API_ERROR");
-          return;
-        }
-        await this.processVerificationRetryOutcome(payoutRecord, outcome);
-        return;
-      }
-      if (
-        errorCode &&
-        isRetryableKoraError(errorCode) &&
-        this.canRetry(payoutRecord.retryCount)
-      ) {
-        await this.scheduleRetry(payoutRecord, "API_ERROR");
-        return;
-      }
 
-      await this.notificationService.processPayoutFailure(
+      // Any other error (network/5xx/unknown) means the transfer may have been
+      // created. Ask the provider before declaring a failure to avoid
+      // double-paying the driver on retry.
+      const outcome = await this.settlementService.verifyWithProvider(
         payoutRecord,
-        errorCode || "MAX_RETRIES_EXCEEDED",
-        error,
-        true,
       );
-    }
-  }
-
-  private async processVerificationRetryOutcome(
-    payoutRecord: PayoutRecord,
-    outcome: string,
-  ) {
-    const reason =
-      outcome === "processing"
-        ? "PAYOUT_AWAITING_CONFIRMATION"
-        : "PAYOUT_VERIFICATION_PENDING";
-    if (this.canRetry(payoutRecord.retryCount)) {
-      await this.scheduleRetry(payoutRecord, reason, { keepStatus: true });
+      if (outcome === "settled") return;
+      if (outcome === "failed") {
+        await this.notificationService.processPayoutFailure(
+          payoutRecord,
+          errorCode || "PAYOUT_FAILED",
+          error,
+          true,
+        );
+        return;
+      }
+      // "processing" / "unknown": leave payout processing and let the
+      // provider webhook confirm the final state.
       return;
     }
-    await this.notificationService.processPayoutFailure(
-      payoutRecord,
-      reason,
-      null,
-      true,
-    );
   }
 
-  async scheduleRetry(
-    payoutRecord: PayoutRecord,
-    reason: string,
-    options?: { keepStatus?: boolean },
-  ) {
-    if (!payoutRecord.earningId) {
-      throw new Error("Cannot schedule payout retry without earningId");
-    }
-    const earningId = payoutRecord.earningId;
-
-    const delayMs =
-      reason === KORA_ERROR_CODES.INSUFFICIENT_BALANCE
-        ? this.config.INSUFFICIENT_BALANCE_RETRY_DELAY_MS
-        : this.payoutRetryDelaysMs[
-            Math.min(
-              payoutRecord.retryCount,
-              Math.max(this.payoutRetryDelaysMs.length - 1, 0),
-            )
-          ] || 60_000;
-    const nextRetryAt = new Date(Date.now() + delayMs);
-    const newStatus = options?.keepStatus ? "processing" : "failed";
-
-    await db.transaction(async (tx) => {
-      const [lockedPayout] = await tx
-        .select()
-        .from(payout)
-        .where(eq(payout.id, payoutRecord.id))
-        .for("update")
-        .limit(1);
-
-      if (!lockedPayout) throw new Error("Payout not found");
-
-      if (
-        lockedPayout.status === "success" ||
-        lockedPayout.status === "permanent_failed"
-      ) {
-        return;
-      }
-
-      await tx
-        .update(payout)
-        .set({
-          status: newStatus,
-          retryCount: lockedPayout.retryCount + 1,
-          nextRetryAt,
-          failureCode: reason,
-          failureReason: reason,
-          updatedAt: new Date(),
-        })
-        .where(eq(payout.id, lockedPayout.id));
-
-      await tx
-        .update(earning)
-        .set({
-          status: "processing",
-          payoutId: lockedPayout.id,
-          updatedAt: new Date(),
-        })
-        .where(eq(earning.id, earningId));
-
-      await jobService.enqueuePayout(tx, { earningId }, nextRetryAt);
-    });
-  }
-
-  private async getOrCreatePayout(
-    earningRecord: EarningRecord,
+  private async createTripPayout(
+    tripId: string,
+    earnings: EarningRecord[],
     payoutDriver: ActivePayoutDriver,
   ): Promise<PayoutRecord> {
+    const amount = earnings.reduce(
+      (sum, entry) => sum + entry.netAmount,
+      0,
+    );
+
     return db.transaction(async (tx) => {
-      const existingPayout = await this.repo.findPayoutByEarningId(
-        tx,
-        earningRecord.id,
-      );
-
-      if (existingPayout) {
-        if (earningRecord.payoutId !== existingPayout.id) {
-          await tx
-            .update(earning)
-            .set({ payoutId: existingPayout.id, updatedAt: new Date() })
-            .where(eq(earning.id, earningRecord.id));
-        }
-        return existingPayout;
-      }
-
       const [createdPayout] = await this.repo.insertPayout(tx, {
-        driverId: earningRecord.driverId,
+        driverId: earnings[0].driverId,
         driverEmail: payoutDriver.email,
         recipientBankName: payoutDriver.bankName,
         recipientAccountLast4: payoutDriver.accountNumber.slice(-4),
-        earningId: earningRecord.id,
+        tripId,
         reference: this.buildPayoutReference(),
-        amount: earningRecord.netAmount,
-        currency: earningRecord.currency || "NGN",
-        earningsCount: 1,
+        amount,
+        currency: earnings[0].currency || "NGN",
         status: "pending",
       });
 
-      const payoutRecord =
-        createdPayout ||
-        (await this.repo.findPayoutByEarningId(tx, earningRecord.id));
-      if (!payoutRecord) {
-        throw new Error(
-          `Failed to create payout for earning ${earningRecord.id}`,
-        );
+      if (!createdPayout) {
+        throw new Error(`Failed to create payout for trip ${tripId}`);
       }
 
       await tx
         .update(earning)
-        .set({ payoutId: payoutRecord.id, updatedAt: new Date() })
-        .where(eq(earning.id, earningRecord.id));
+        .set({ payoutId: createdPayout.id, updatedAt: new Date() })
+        .where(eq(earning.tripId, tripId));
 
-      return payoutRecord;
+      return createdPayout;
     });
   }
 
@@ -478,43 +275,13 @@ export class PayoutProcessorService {
     return record as ActivePayoutDriver;
   }
 
-  canRetry(retryCount: number) {
-    return retryCount < this.payoutRetryDelaysMs.length;
-  }
-
   private buildPayoutReference() {
     return generateReference();
-  }
-
-  private shouldVerifyAmbiguousInitiationError(
-    errorCode: string | undefined,
-    error: unknown,
-  ): boolean {
-    if (errorCode) return false;
-    const httpStatus =
-      typeof error === "object" && error && "koraHttpStatus" in error
-        ? Number((error as { koraHttpStatus?: unknown }).koraHttpStatus)
-        : undefined;
-    const networkError =
-      typeof error === "object" && error && "koraNetworkError" in error
-        ? Boolean((error as { koraNetworkError?: unknown }).koraNetworkError)
-        : false;
-    const serviceStatus =
-      typeof error === "object" && error && "statusCode" in error
-        ? Number((error as { statusCode?: unknown }).statusCode)
-        : undefined;
-
-    return (
-      networkError ||
-      (httpStatus !== undefined &&
-        AMBIGUOUS_KORA_HTTP_STATUSES.has(httpStatus)) ||
-      serviceStatus === 502
-    );
   }
 }
 
 export const payoutProcessorService = new PayoutProcessorService(
   payoutRepository,
-  payoutAttemptService,
+  payoutSettlementService,
   payoutNotificationService,
 );

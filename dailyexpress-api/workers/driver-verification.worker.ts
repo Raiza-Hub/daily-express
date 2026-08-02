@@ -1,12 +1,11 @@
-import { and, eq } from "drizzle-orm";
+import { eq } from "drizzle-orm";
 import { db } from "../db/connection";
-import { driver, notification } from "../db/index";
+import { driver } from "../db/index";
 import { notificationService } from "../notification/notification.service";
 import { publishNotificationCreated } from "../notification/realtime";
 import { koraClient } from "../payment/kora.client";
 import { koraIdentityClient } from "../kyc/kora-identity.client";
 import { getBoss, QUEUES, type DriverVerificationJobData } from "./boss";
-import { jobService } from "./job.service";
 import { logger } from "../utils/logger";
 
 function driverExists(driverId: string) {
@@ -87,7 +86,7 @@ async function processBankVerification(
       });
 
       if (!current || !bankDetailsMatch(current, data)) {
-        return { notificationResult: null, earningId: null as string | null };
+        return { notificationResult: null };
       }
 
       await tx
@@ -110,36 +109,11 @@ async function processBankVerification(
         bankVerifiedNotification(),
       );
 
-      const pendingNotification = await tx.query.notification.findFirst({
-        where: and(
-          eq(notification.driverId, data.driverId),
-          eq(notification.notificationKey, "account-setup-pending"),
-        ),
-        columns: { metadata: true },
-      });
-
-      const earningId = pendingNotification?.metadata &&
-        typeof pendingNotification.metadata === "object" &&
-        "earningId" in pendingNotification.metadata
-        ? (pendingNotification.metadata as Record<string, unknown>).earningId as string
-        : null;
-
-      if (earningId) {
-        await jobService.enqueuePayout(tx, { earningId });
-      }
-
-      return { notificationResult, earningId };
+      return { notificationResult };
     });
 
     if (result.notificationResult?.notification && result.notificationResult.shouldDeliver) {
       await publishNotificationCreated(result.notificationResult.notification);
-    }
-
-    if (result.earningId) {
-      logger.info("worker.verification.bank_payout_reenqueued", {
-        driverId: data.driverId,
-        earningId: result.earningId,
-      });
     }
 
     logger.info("worker.verification.bank_completed", {

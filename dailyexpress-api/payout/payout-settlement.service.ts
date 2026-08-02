@@ -1,6 +1,6 @@
-import { and, eq } from "drizzle-orm";
+import { and, eq, inArray } from "drizzle-orm";
 import { db } from "../db/connection";
-import { earning, payoutAttempt, payout as payoutTable } from "../db/index";
+import { earning, payout as payoutTable } from "../db/index";
 import { koraClient } from "../payment/kora.client";
 import { PayoutRepository, payoutRepository } from "./payout.repository";
 import { driverService as sharedDriverService } from "../driver/driver.service";
@@ -11,16 +11,16 @@ import type { KoraPayoutHistoryItem } from "../payment/payment.types";
 import type { DriverNotification } from "@shared/types";
 
 import type { DbTransaction } from "../db/connection";
-import type { PayoutRecord, PayoutAttemptRecord } from "../db/index";
+import type { PayoutRecord } from "../db/index";
 type PayoutTransaction = DbTransaction;
 
-export type AttemptVerificationOutcome =
+export type PayoutVerificationOutcome =
   | "settled"
   | "failed"
   | "processing"
   | "unknown";
 
-export class PayoutAttemptService {
+export class PayoutSettlementService {
   private readonly kora = koraClient;
   private readonly driverService = sharedDriverService;
   private readonly notificationService = sharedNotificationService;
@@ -29,89 +29,43 @@ export class PayoutAttemptService {
 
   async verifyWithProvider(
     payout: PayoutRecord,
-    attempt: PayoutAttemptRecord,
-  ): Promise<AttemptVerificationOutcome> {
+  ): Promise<PayoutVerificationOutcome> {
     try {
       const verification = await this.kora.findPayoutByReference(
-        attempt.koraReference,
+        payout.reference,
       );
       const verifiedPayout = verification.data as KoraPayoutHistoryItem | null;
 
       if (!verifiedPayout) {
-        await this.updateToPendingVerification(
-          attempt.id,
-          "Payout verification pending",
-          verification.raw,
-        );
-        return "unknown";
+        // Reference not found at the provider: the transfer was never
+        // created, so it is safe to treat this as failed.
+        return "failed";
       }
 
       const providerStatus = verifiedPayout.status.toLowerCase();
       if (providerStatus === "success") {
-        await this.finalizeAttempt(
-          payout,
-          attempt,
-          verification.raw,
-        );
+        await this.finalizePayout(payout, verification.raw);
         return "settled";
       }
 
       if (providerStatus === "failed") {
-        await this.repo.updatePayoutAttempt(db, attempt.id, {
-          status: "failed",
-          failureReason:
-            verifiedPayout.message ||
-            attempt.failureReason ||
-            "Transfer failed",
-          rawWebhook: verification.raw,
-        });
         return "failed";
       }
 
-      if (providerStatus === "processing" || providerStatus === "pending") {
-        await this.updateToPendingVerification(
-          attempt.id,
-          "Awaiting payout confirmation",
-          verification.raw,
-        );
-        await db
-          .update(payoutTable)
-          .set({
-            status: "processing",
-            nextRetryAt: null,
-            failureCode: null,
-            failureReason: null,
-            updatedAt: new Date(),
-          })
-          .where(eq(payoutTable.id, payout.id));
-        return "processing";
-      }
-
-      await this.updateToPendingVerification(
-        attempt.id,
-        verifiedPayout.message || "Payout verification pending",
-        verification.raw,
-      );
-      return "unknown";
+      return "processing";
     } catch (error) {
-      await this.updateToPendingVerification(
-        attempt.id,
-        error instanceof Error ? error.message : "Payout verification pending",
-      );
+      // Lookup API itself failed: we cannot determine the transfer's state,
+      // so leave the payout processing and let the provider webhook resolve it.
       return "unknown";
     }
   }
 
-  async finalizeAttempt(
-    payout: PayoutRecord,
-    attempt: PayoutAttemptRecord,
-    rawPayload: unknown,
-  ) {
+  async finalizePayout(payout: PayoutRecord, rawPayload: unknown) {
     let notificationRecord: DriverNotification | null = null;
     const settledAt = new Date();
 
-    // Prevents double finalization: re-reading payout + attempt under lock
-    // ensures the second caller sees the updated status and leaves it alone.
+    // Prevents double finalization: re-reading payout under lock ensures the
+    // second caller sees the terminal status and leaves it alone.
     await db.transaction(async (tx) => {
       const [lockedPayout] = await tx
         .select()
@@ -119,28 +73,19 @@ export class PayoutAttemptService {
         .where(eq(payoutTable.id, payout.id))
         .for("update")
         .limit(1);
-      if (!lockedPayout || lockedPayout.status === "success") return;
-
-      const [lockedAttempt] = await tx
-        .select()
-        .from(payoutAttempt)
-        .where(eq(payoutAttempt.id, attempt.id))
-        .for("update")
-        .limit(1);
-      if (!lockedAttempt || lockedAttempt.status === "settled") return;
-
-      await this.repo.updatePayoutAttempt(tx, lockedAttempt.id, {
-        status: "settled",
-        settledAt,
-        rawWebhook: rawPayload,
-      });
+      if (
+        !lockedPayout ||
+        lockedPayout.status === "success" ||
+        lockedPayout.status === "failed"
+      ) {
+        return;
+      }
 
       const [updated] = await tx
         .update(payoutTable)
         .set({
           status: "success",
           settledAt,
-          nextRetryAt: null,
           failureCode: null,
           failureReason: null,
           rawFinalStatusResponse: rawPayload,
@@ -149,13 +94,16 @@ export class PayoutAttemptService {
         .where(eq(payoutTable.id, lockedPayout.id))
         .returning();
 
-      const earningRecord = payout.earningId
-        ? await tx.query.earning.findFirst({
-            where: eq(earning.id, payout.earningId),
+      const tripEarnings = payout.tripId
+        ? await tx.query.earning.findMany({
+            where: and(
+              eq(earning.tripId, payout.tripId),
+              inArray(earning.status, ["available", "processing"]),
+            ),
           })
-        : null;
+        : [];
 
-      if (payout.earningId) {
+      if (payout.tripId) {
         await tx
           .update(earning)
           .set({
@@ -163,14 +111,23 @@ export class PayoutAttemptService {
             payoutId: payout.id,
             updatedAt: new Date(),
           })
-          .where(eq(earning.id, payout.earningId));
+          .where(
+            and(
+              eq(earning.tripId, payout.tripId),
+              inArray(earning.status, ["available", "processing"]),
+            ),
+          );
       }
 
-      if (earningRecord) {
+      if (tripEarnings.length > 0) {
+        const totalAmount = tripEarnings.reduce(
+          (sum, entry) => sum + entry.netAmount,
+          0,
+        );
         await this.driverService.adjustPaymentCountersForStatusChange(tx, {
           driverId: payout.driverId,
-          amount: earningRecord.netAmount,
-          previousStatus: earningRecord.status,
+          amount: totalAmount,
+          previousStatus: "processing",
           nextStatus: "paid",
         });
       }
@@ -189,18 +146,6 @@ export class PayoutAttemptService {
     if (notificationRecord) {
       publishNotificationCreatedInBackground(notificationRecord);
     }
-  }
-
-  async updateToPendingVerification(
-    attemptId: string,
-    failureReason: string,
-    rawWebhook?: unknown,
-  ) {
-    await this.repo.updatePayoutAttempt(db, attemptId, {
-      status: "pending_verification",
-      failureReason,
-      ...(rawWebhook === undefined ? {} : { rawWebhook }),
-    });
   }
 
   private async createPayoutSuccessNotification(
@@ -232,4 +177,6 @@ export class PayoutAttemptService {
   }
 }
 
-export const payoutAttemptService = new PayoutAttemptService(payoutRepository);
+export const payoutSettlementService = new PayoutSettlementService(
+  payoutRepository,
+);

@@ -1,8 +1,8 @@
 import type { JWTPayload } from "@shared/types";
 import { createServiceError } from "@shared/utils";
-import { and, asc, eq, getTableColumns, gte, inArray, lt, ne, notInArray, sql } from "drizzle-orm";
+import { and, asc, desc, eq, getTableColumns, gte, inArray, lt, ne, notInArray, sql } from "drizzle-orm";
 import { db } from "../db/connection";
-import { booking, route, trip } from "../db/index";
+import { booking, payout, route, trip } from "../db/index";
 
 import {
     addDaysToDateKey,
@@ -37,7 +37,12 @@ export class TripService {
       throw createServiceError("Cancelled trips cannot be completed", 400);
     }
     if (tripWithRoute.trip.status === "completed") {
-      throw createServiceError("Trip is already completed", 400);
+      const unsettledEarnings = await this.payoutService.hasUnsettledEarnings(
+        tripId,
+      );
+      if (!unsettledEarnings) {
+        throw createServiceError("Trip is already completed", 400);
+      }
     }
 
     const arrivalAt = getTripArrivalAt(tripWithRoute.trip, tripWithRoute.route);
@@ -63,7 +68,12 @@ export class TripService {
         throw createServiceError("Cancelled trips cannot be completed", 400);
       }
       if (lockedTrip.status === "completed") {
-        throw createServiceError("Trip is already completed", 400);
+        const unsettledEarnings = await this.payoutService.hasUnsettledEarnings(
+          tripId,
+        );
+        if (!unsettledEarnings) {
+          throw createServiceError("Trip is already completed", 400);
+        }
       }
 
       const updatedTrip = await this.repo.updateTrip(tx, tripId, {
@@ -127,16 +137,28 @@ export class TripService {
       .groupBy(booking.tripId)
       .as("booking_totals");
 
+    const latestPayout = db
+      .selectDistinctOn([payout.tripId], {
+        tripId: payout.tripId,
+        status: payout.status,
+      })
+      .from(payout)
+      .where(sql`${payout.tripId} is not null`)
+      .orderBy(payout.tripId, desc(payout.createdAt), desc(payout.id))
+      .as("latest_payout");
+
     const tripRows = await db
       .select({
         trip: getTableColumns(trip),
         route: getTableColumns(route),
         visibleBookedSeats: bookingTotals.visibleBookedSeats,
         earnings: bookingTotals.earnings,
+        payoutStatus: latestPayout.status,
       })
       .from(trip)
       .innerJoin(route, eq(trip.routeId, route.id))
       .innerJoin(bookingTotals, eq(bookingTotals.tripId, trip.id))
+      .leftJoin(latestPayout, eq(latestPayout.tripId, trip.id))
       .where(
         and(
           eq(trip.driverId, driverId),
@@ -153,6 +175,7 @@ export class TripService {
       bookedSeats: row.visibleBookedSeats,
       capacity: row.trip.capacity,
       status: row.trip.status,
+      payoutStatus: row.payoutStatus ?? null,
       route: {
         id: row.route.id,
         pickup_location_title: row.route.pickup_location_title,

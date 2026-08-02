@@ -1,31 +1,16 @@
-import { logger } from "../utils/logger";
-import { db } from "../db/connection";
-import { and, eq } from "drizzle-orm";
-import { payout as payoutTable, payoutAttempt } from "../db/index";
 import { PayoutRepository, payoutRepository } from "./payout.repository";
-import { PayoutAttemptService, payoutAttemptService } from "./payout-attempt.service";
-import { PayoutProcessorService, payoutProcessorService } from "./payout-processor.service";
+import { PayoutSettlementService, payoutSettlementService } from "./payout-settlement.service";
 import { PayoutNotificationService, payoutNotificationService } from "./payout-notification.service";
 import { koraClient } from "../payment/kora.client";
 import { KORA_ERROR_CODES } from "../utils/payout";
 import type { KoraPayoutWebhookPayload } from "../payment/payment.types";
-
-const WEBHOOK_RETRYABLE_PATTERNS = [
-  "timeout",
-  "bank processing",
-  "processing error",
-  "service unavailable",
-  "unable to complete",
-  "destination bank is not available",
-];
 
 export class PayoutWebhookService {
   private readonly kora = koraClient;
 
   constructor(
     private repo: PayoutRepository,
-    private attemptService: PayoutAttemptService,
-    private processorService: PayoutProcessorService,
+    private settlementService: PayoutSettlementService,
     private notificationService: PayoutNotificationService,
   ) {}
 
@@ -37,98 +22,30 @@ export class PayoutWebhookService {
       input.event.data,
       input.signature,
     );
-
     if (!signatureValid) return { processed: false, signatureValid };
 
     const reference = input.event.data.reference;
     if (!reference) return { processed: false, signatureValid };
 
-    const attempt = await this.repo.findPayoutAttemptByReference(reference);
-    if (!attempt) return { processed: false, signatureValid };
-
-    const payoutRecord = await this.repo.findPayoutById(attempt.payoutId);
+    const payoutRecord = await this.repo.findPayoutByReference(reference);
     if (!payoutRecord) return { processed: false, signatureValid };
 
-    if (input.event.event === "transfer.success") {
-      if (
-        payoutRecord.status === "permanent_failed" ||
-        payoutRecord.status === "success" ||
-        attempt.status === "settled"
-      ) {
-        return { processed: true, signatureValid };
-      }
+    if (payoutRecord.status === "success" || payoutRecord.status === "failed") {
+      return { processed: true, signatureValid };
+    }
 
-      await this.attemptService.finalizeAttempt(
-        payoutRecord,
-        attempt,
-        input.event,
-      );
+    if (input.event.event === "transfer.success") {
+      await this.settlementService.finalizePayout(payoutRecord, input.event);
       return { processed: true, signatureValid };
     }
 
     if (input.event.event === "transfer.failed") {
-      const failureReason = this.getWebhookFailureReason(input.event);
-
-      const result = await db.transaction(async (tx) => {
-        const [lockedPayout] = await tx
-          .select()
-          .from(payoutTable)
-          .where(eq(payoutTable.id, attempt.payoutId))
-          .for("update")
-          .limit(1);
-
-        if (!lockedPayout) return { action: "skip" as const };
-
-        const [lockedAttempt] = await tx
-          .select()
-          .from(payoutAttempt)
-          .where(eq(payoutAttempt.id, attempt.id))
-          .for("update")
-          .limit(1);
-
-        if (!lockedAttempt) return { action: "skip" as const };
-
-        if (
-          lockedPayout.status === "success" ||
-          lockedPayout.status === "permanent_failed" ||
-          lockedAttempt.status === "settled" ||
-          lockedAttempt.status === "failed"
-        ) {
-          return { action: "skip" as const };
-        }
-
-        await tx
-          .update(payoutAttempt)
-          .set({
-            status: "failed",
-            failureReason,
-            rawWebhook: input.event,
-          })
-          .where(eq(payoutAttempt.id, lockedAttempt.id));
-
-        return { action: "process" as const, payout: lockedPayout };
-      });
-
-      if (result.action === "skip") return { processed: true, signatureValid };
-
-      const currentPayout = result.payout;
-
-      if (failureReason === KORA_ERROR_CODES.INSUFFICIENT_BALANCE) {
-        await this.processorService.scheduleRetry(currentPayout, failureReason);
-      } else if (
-        this.isRetryableFailure(failureReason) &&
-        this.processorService.canRetry(currentPayout.retryCount)
-      ) {
-        await this.processorService.scheduleRetry(currentPayout, "API_ERROR");
-      } else {
-        await this.notificationService.processPayoutFailure(
-          currentPayout,
-          failureReason,
-          input.event,
-          true,
-        );
-      }
-
+      await this.notificationService.processPayoutFailure(
+        payoutRecord,
+        this.getWebhookFailureReason(input.event),
+        input.event,
+        true,
+      );
       return { processed: true, signatureValid };
     }
 
@@ -142,18 +59,10 @@ export class PayoutWebhookService {
     }
     return message || "Transfer failed";
   }
-
-  private isRetryableFailure(message: string): boolean {
-    const normalized = message.toLowerCase();
-    return WEBHOOK_RETRYABLE_PATTERNS.some((pattern) =>
-      normalized.includes(pattern),
-    );
-  }
 }
 
 export const payoutWebhookService = new PayoutWebhookService(
   payoutRepository,
-  payoutAttemptService,
-  payoutProcessorService,
+  payoutSettlementService,
   payoutNotificationService,
 );

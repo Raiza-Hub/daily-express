@@ -95,7 +95,7 @@ export class JobService {
   ) {
     await this.enqueue(tx, QUEUES.PAYOUT_PROCESS, payload, {
       startAfter,
-      singletonKey: payload.earningId,
+      singletonKey: payload.tripId,
     });
   }
 

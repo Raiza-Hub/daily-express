@@ -4,7 +4,6 @@ import { useRef, useEffect } from "react";
 import {
   CheckCircleIcon,
   SpinnerIcon,
-  WarningCircleIcon,
   XCircleIcon,
 } from "@phosphor-icons/react";
 import { Badge } from "@repo/ui/components/badge";
@@ -110,12 +109,6 @@ const PayoutTable = () => {
                     };
                   }
                   if (payout.status === "failed") {
-                    if (payout.nextRetryAt) {
-                      return {
-                        icon: <SpinnerIcon className="animate-spin" />,
-                        label: "Retry scheduled",
-                      };
-                    }
                     return {
                       icon: (
                         <XCircleIcon
@@ -130,17 +123,6 @@ const PayoutTable = () => {
                     return {
                       icon: <SpinnerIcon className="animate-spin" />,
                       label: "Processing",
-                    };
-                  }
-                  if (payout.status === "permanent_failed") {
-                    return {
-                      icon: (
-                        <WarningCircleIcon
-                          weight="fill"
-                          className="fill-amber-500 dark:fill-amber-400"
-                        />
-                      ),
-                      label: "Needs review",
                     };
                   }
                   return {

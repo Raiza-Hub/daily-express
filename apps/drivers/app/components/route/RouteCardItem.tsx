@@ -50,16 +50,20 @@ const RouteCardItem = ({ route }: { route: RouteWithTrips }) => {
       toast.error("Trip has not arrived yet.");
       return;
     }
-    if (isCompleted || completeTrip.isPending) {
+    if (completeTrip.isPending) {
       return;
     }
 
     completeTrip.mutate({ id: route.tripId });
   };
 
-  const isDisabled = isCompleted || completeTrip.isPending;
+  const canRetryPayout = isCompleted && route.payoutStatus === "failed";
+  const isDisabled =
+    (isCompleted && route.payoutStatus !== "failed") || completeTrip.isPending;
   const buttonLabel = isCompleted
-    ? "Trip Completed"
+    ? canRetryPayout
+      ? "Retry Payout"
+      : "Trip Completed"
     : completeTrip.isPending
       ? "Completing..."
       : "Mark Completed";

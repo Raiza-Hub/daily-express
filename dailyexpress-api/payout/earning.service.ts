@@ -44,19 +44,24 @@ export class EarningService {
     tx: PayoutTransaction,
     input: { tripId: string; completedAt?: Date },
   ) {
-    const releasedEarnings = await this.repo.updateEarningsByTrip(
+    const completedAt = input.completedAt || new Date();
+    await this.repo.updateEarningsByTrip(
       tx,
       input.tripId,
       "pending_trip_completion",
       {
         status: "available",
-        availableAt: input.completedAt || new Date(),
+        availableAt: completedAt,
         updatedAt: new Date(),
       },
     );
 
-    for (const entry of releasedEarnings) {
-      await jobService.enqueuePayout(tx, { earningId: entry.id });
+    const unsettledEarning = await this.repo.hasUnsettledEarnings(
+      tx,
+      input.tripId,
+    );
+    if (unsettledEarning) {
+      await jobService.enqueuePayout(tx, { tripId: input.tripId });
     }
   }
 }

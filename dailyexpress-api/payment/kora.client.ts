@@ -27,6 +27,24 @@ interface KoraApiEnvelope<TData> {
   data: TData;
 }
 
+export interface KoraRequestError extends Error {
+  koraErrorCode?: string;
+  koraHttpStatus?: number;
+  koraNetworkError?: boolean;
+  koraResponseData?: unknown;
+}
+
+export function isKoraRequestError(
+  error: unknown,
+): error is KoraRequestError {
+  return (
+    error instanceof Error &&
+    ("koraErrorCode" in error ||
+      "koraHttpStatus" in error ||
+      "koraNetworkError" in error)
+  );
+}
+
 function getKoraErrorMessage(
   message: string | undefined,
   fallback: string,
@@ -85,10 +103,10 @@ export class KoraClient {
             .map(([field, err]) => `${field}: ${err?.message || "invalid"}`)
             .join("; ")})`
         : "";
-      const error = new Error(`${baseMessage}${detailMessage}`);
-      (error as any).koraErrorCode = errorBody.error_code || errorBody.error;
-      (error as any).koraHttpStatus = response.status;
-      (error as any).koraResponseData = errorBody;
+      const error = new Error(`${baseMessage}${detailMessage}`) as KoraRequestError;
+      error.koraErrorCode = errorBody.error_code || errorBody.error;
+      error.koraHttpStatus = response.status;
+      error.koraResponseData = errorBody;
       throw error;
     }
 
@@ -99,9 +117,9 @@ export class KoraClient {
           raw.message || raw.error,
           "Payment provider request failed",
         ),
-      );
-      (error as any).koraErrorCode = raw.error_code || raw.error;
-      (error as any).koraResponseData = raw;
+      ) as KoraRequestError;
+      error.koraErrorCode = raw.error_code || raw.error;
+      error.koraResponseData = raw;
       throw error;
     }
 
@@ -152,10 +170,10 @@ export class KoraClient {
             .map(([field, err]) => `${field}: ${err?.message || "invalid"}`)
             .join("; ")})`
         : "";
-      const error = new Error(`${baseMessage}${detailMessage}`);
-      (error as any).koraErrorCode = errorBody.error_code || errorBody.error;
-      (error as any).koraHttpStatus = response.status;
-      (error as any).koraResponseData = errorBody;
+      const error = new Error(`${baseMessage}${detailMessage}`) as KoraRequestError;
+      error.koraErrorCode = errorBody.error_code || errorBody.error;
+      error.koraHttpStatus = response.status;
+      error.koraResponseData = errorBody;
       throw error;
     }
 
@@ -166,9 +184,9 @@ export class KoraClient {
           raw.message || raw.error,
           "Payment provider request failed",
         ),
-      );
-      (error as any).koraErrorCode = raw.error_code || raw.error;
-      (error as any).koraResponseData = raw;
+      ) as KoraRequestError;
+      error.koraErrorCode = raw.error_code || raw.error;
+      error.koraResponseData = raw;
       throw error;
     }
 

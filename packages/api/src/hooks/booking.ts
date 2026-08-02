@@ -75,6 +75,7 @@ export interface TripsSummaryRange {
     bookedSeats: number;
     capacity: number;
     status: string;
+    payoutStatus?: string | null;
     route: {
       id: string;
       pickup_location_title: string;
