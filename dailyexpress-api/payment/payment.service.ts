@@ -42,7 +42,6 @@ export class PaymentService {
       cleanupProjection?: boolean;
       failureCode?: string;
       failedAt?: Date | null;
-      providerStatus?: string | null;
     },
   ) {
     const existingPayment = await this.repo.findPaymentByReference(reference);
@@ -56,9 +55,6 @@ export class PaymentService {
         .update(payment)
         .set({
           status: nextStatus,
-          providerStatus:
-            options?.providerStatus || existingPayment.providerStatus,
-          lastStatusCheckAt: new Date(),
           failedAt: options?.failedAt ?? existingPayment.failedAt ?? new Date(),
           failureCode: options?.failureCode || existingPayment.failureCode,
           failureReason: reason,
@@ -119,7 +115,6 @@ export class PaymentService {
         verification.data.message || "Payment was not completed",
         {
           failureCode: "PAYMENT_NOT_COMPLETED",
-          providerStatus: verification.data.status,
         },
       );
       return tripStatusUrl;

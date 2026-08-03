@@ -110,15 +110,12 @@ export class PaymentInitService {
         .values({
           userId,
           bookingId: input.bookingId,
-          provider: "kora",
           reference,
           amount: trustedAmount,
           currency: trustedCurrency,
           productName,
           customerEmail: authenticatedEmail.trim(),
           status: "initialized",
-          providerStatus: "pending",
-          channels,
         })
         .onConflictDoNothing({ target: payment.bookingId })
         .returning();
@@ -174,7 +171,6 @@ export class PaymentInitService {
         .set({
           status: "pending",
           checkoutUrl: initializeResponse.data.checkout_url,
-          rawInitializeResponse: initializeResponse.raw,
           updatedAt: new Date(),
         })
         .where(eq(payment.id, setupResult.payment.id))
@@ -226,7 +222,6 @@ export class PaymentInitService {
           existingPayment,
           authenticatedEmail,
           input,
-          providerStatus,
         );
       }
 
@@ -240,7 +235,6 @@ export class PaymentInitService {
         existingPayment,
         authenticatedEmail,
         input,
-        providerStatus,
       );
     }
 
@@ -251,7 +245,6 @@ export class PaymentInitService {
     existingPayment: PaymentRecord,
     authenticatedEmail: string,
     input: InitializePaymentInput,
-    providerStatus: string,
   ) {
     const reference = this.buildReference();
     const channels = dedupeChannels(input.channels);
@@ -275,7 +268,6 @@ export class PaymentInitService {
     logger.info("payment.checkout_retry_refreshing", {
       bookingId: existingPayment.bookingId,
       previousReference: existingPayment.reference,
-      providerStatus,
     });
 
     const result = await db.transaction(async (tx) => {
@@ -336,12 +328,7 @@ export class PaymentInitService {
           productName,
           customerEmail: authenticatedEmail.trim(),
           status: "pending",
-          providerStatus: "pending",
           checkoutUrl: initializeResponse.data.checkout_url,
-          channels,
-          rawInitializeResponse: initializeResponse.raw,
-          lastStatusCheckAt: new Date(),
-          paidAt: null,
           failedAt: null,
           failureCode: null,
           failureReason: null,

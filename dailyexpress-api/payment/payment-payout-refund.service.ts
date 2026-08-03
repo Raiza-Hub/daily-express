@@ -140,7 +140,6 @@ export class PaymentPayoutRefundService {
           currency: paymentRecord.currency,
           reason,
           status: "pending",
-          initiatedBy: "auto",
         });
         return row;
       });
@@ -191,7 +190,6 @@ export class PaymentPayoutRefundService {
     await db.transaction(async (tx) => {
       await this.repo.updateRefundStatus(tx, resolvedRefund.id, {
         status: "pending",
-        providerRefundReference: payoutRef,
       });
 
       if (paymentRecord.bookingId) {
