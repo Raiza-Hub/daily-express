@@ -61,7 +61,6 @@ export class PayoutSettlementService {
 
   async finalizePayout(payout: PayoutRecord) {
     let notificationRecord: DriverNotification | null = null;
-    const settledAt = new Date();
 
     // Prevents double finalization: re-reading payout under lock ensures the
     // second caller sees the terminal status and leaves it alone.
@@ -84,7 +83,6 @@ export class PayoutSettlementService {
         .update(payoutTable)
         .set({
           status: "success",
-          settledAt,
           failureCode: null,
           failureReason: null,
           updatedAt: new Date(),

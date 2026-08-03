@@ -60,8 +60,6 @@ export const payout = pgTable(
     driverEmail: varchar("driver_email", { length: 255 }),
     failureCode: text("failure_code"),
     failureReason: text("failure_reason"),
-    initiatedAt: timestamp("initiated_at", { mode: "date" }),
-    settledAt: timestamp("settled_at", { mode: "date" }),
     failedAt: timestamp("failed_at", { mode: "date" }),
     createdAt: timestamp("created_at", { mode: "date" }).defaultNow().notNull(),
     updatedAt: timestamp("updated_at", { mode: "date" }).defaultNow().notNull(),

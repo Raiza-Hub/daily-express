@@ -178,7 +178,6 @@ export class PayoutProcessorService {
       await db
         .update(payout)
         .set({
-          initiatedAt: new Date(),
           updatedAt: new Date(),
         })
         .where(eq(payout.id, payoutRecord.id));

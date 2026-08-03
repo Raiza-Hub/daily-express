@@ -1,18 +1,15 @@
 "use client";
 
-import { useDriverPayoutBalance, useGetDriver } from "@repo/api";
+import { useGetDriver } from "@repo/api";
 import Image from "next/image";
 import BankList from "../../../bank-names.json";
 import VerificationBadge from "../VerificationBadge";
 import ChangeBankDetailsDialog from "./ChangeBankDetailsDialog";
 import { Bank } from "~/lib/type";
-import { formatCurrency } from "~/lib/utils";
 import Loader from "../Loader";
 
 const PayoutSettings = () => {
   const { data: driver, isLoading } = useGetDriver();
-  const { data: payoutBalance, isError: isPayoutBalanceError } =
-    useDriverPayoutBalance();
 
   const matchedBank = (BankList as Bank[]).find(
     (bank) =>
@@ -72,15 +69,6 @@ const PayoutSettings = () => {
           <p className="mt-1 text-sm text-muted-foreground">
             {driver?.accountNumber ? `${driver.accountNumber} · ` : ""}
             {driver?.bankName || "No bank set"}
-          </p>
-          <p className="mt-1 text-sm text-muted-foreground">
-            Available payout:{" "}
-            {isPayoutBalanceError
-              ? "Unavailable right now"
-              : formatCurrency(
-                  payoutBalance?.availableAmount || 0,
-                  driver?.currency,
-                )}
           </p>
           {driver?.bankVerificationStatus === "pending" && (
             <p className="mt-2 text-sm text-amber-700">

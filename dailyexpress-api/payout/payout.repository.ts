@@ -1,4 +1,4 @@
-import { and, desc, eq, gte, inArray, lt } from "drizzle-orm";
+import { and, desc, eq, inArray } from "drizzle-orm";
 import { db } from "../db/connection";
 import {
   driver,
@@ -150,13 +150,6 @@ export class PayoutRepository {
     });
   }
 
-  findDriverEarnings(driverId: string) {
-    return db.query.earning.findMany({
-      where: eq(earning.driverId, driverId),
-      columns: { status: true, amount: true },
-    });
-  }
-
   findPayoutHistory(
     whereClause: ReturnType<typeof and>,
     limit: number,
@@ -165,18 +158,6 @@ export class PayoutRepository {
       where: whereClause,
       orderBy: [desc(payout.createdAt), desc(payout.id)],
       limit,
-    });
-  }
-
-  findWeeklyPayouts(driverId: string, start: Date, end: Date) {
-    return db.query.payout.findMany({
-      where: and(
-        eq(payout.driverId, driverId),
-        eq(payout.status, "success"),
-        gte(payout.settledAt, start),
-        lt(payout.settledAt, end),
-      ),
-      orderBy: [desc(payout.settledAt)],
     });
   }
 
