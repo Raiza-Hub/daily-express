@@ -294,7 +294,7 @@ export class KoraClient {
   async findPayoutByReference(reference: string) {
     try {
       const response = await this.request<KoraPayoutHistoryItem>(
-        `/merchant/api/v1/payouts/${encodeURIComponent(reference)}`,
+        `/merchant/api/v1/transactions/${encodeURIComponent(reference)}`,
       );
       return response.data;
     } catch {

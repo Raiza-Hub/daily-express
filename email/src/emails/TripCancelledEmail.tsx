@@ -36,14 +36,38 @@ function formatCurrency(amount: number, currency: string = "NGN") {
   }).format(amount);
 }
 
-function getCancellationText(reason: TripCancelledEmailProps["reason"], productName: string) {
+function getCancellationText(
+  reason: TripCancelledEmailProps["reason"],
+  productName: string,
+) {
   switch (reason) {
     case "no_driver_found":
-      return `We were unable to assign a driver to your trip, ${productName}. Your booking has been cancelled and a refund is being processed. We sincerely apologise for the inconvenience.`;
+      return (
+        <>
+          We were unable to assign a driver to your trip,{" "}
+          <strong style={strong}>{productName}</strong>. Your booking has been
+          cancelled and a refund is being processed. We sincerely apologise for the
+          inconvenience.
+        </>
+      );
     case "driver_deactivated":
-      return `We're sorry to let you know that your trip, ${productName} has been cancelled. Unfortunately, this occurred because the assigned driver is no longer available on our platform. We understand how inconvenient this can be, and we sincerely apologise.`;
+      return (
+        <>
+          We're sorry to let you know that your trip,{" "}
+          <strong style={strong}>{productName}</strong> has been cancelled.
+          Unfortunately, this occurred because the assigned driver is no longer
+          available on our platform. We understand how inconvenient this can be, and
+          we sincerely apologise.
+        </>
+      );
     default:
-      return `We're sorry to let you know that your trip, ${productName} has been cancelled. A refund is being processed. We sincerely apologise for the inconvenience.`;
+      return (
+        <>
+          We're sorry to let you know that your trip,{" "}
+          <strong style={strong}>{productName}</strong> has been cancelled. A refund
+          is being processed. We sincerely apologise for the inconvenience.
+        </>
+      );
   }
 }
 

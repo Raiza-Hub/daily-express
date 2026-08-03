@@ -66,9 +66,9 @@ export class PaymentPayoutRefundService {
 
   async refundConfirmedBooking(
     paymentRecord: PaymentRecord,
+    existingRefundReference: string,
     reason = "Trip cancelled because driver deactivated their account",
     emailReason?: "driver_deactivated" | "no_driver_found" | "admin_cancelled",
-    existingRefundReference?: string,
   ): Promise<void> {
     if (paymentRecord.status !== "successful") return;
 
@@ -135,7 +135,7 @@ export class PaymentPayoutRefundService {
         const [row] = await this.repo.insertRefund(tx, {
           paymentId: paymentRecord.id,
           bookingId: paymentRecord.bookingId,
-          reference: generateReference(),
+          reference: existingRefundReference,
           amount: refundAmount,
           currency: paymentRecord.currency,
           reason,
@@ -148,6 +148,14 @@ export class PaymentPayoutRefundService {
     if (!pendingRefund) return;
 
     const resolvedRefund: RefundRecord = pendingRefund;
+
+    if (paymentRecord.bookingId) {
+      await db
+        .update(booking)
+        .set({ paymentStatus: "refund_pending", updatedAt: new Date() })
+        .where(eq(booking.id, paymentRecord.bookingId));
+    }
+
     let accountNumber: string;
     let accountName: string;
     try {
@@ -180,11 +188,23 @@ export class PaymentPayoutRefundService {
         narration: reason,
       });
     } catch (error) {
-      logger.error("payout_refund.initiate_failed", {
-        reference: paymentRecord.reference,
-        error: error instanceof Error ? error.message : String(error),
-      });
-      throw error;
+      const found = await this.kora.findPayoutByReference(payoutRef);
+
+      switch (found?.status) {
+        case "success":
+          await this.finalizeRefund(paymentRecord.reference, "refunded");
+          return;
+        case "pending":
+        case "processing":
+        case "failed":
+          logger.info("payout_refund.provider_owns_transfer", {
+            reference: paymentRecord.reference,
+            status: found.status,
+          });
+          return;
+        default:
+          throw error;
+      }
     }
 
     await db.transaction(async (tx) => {

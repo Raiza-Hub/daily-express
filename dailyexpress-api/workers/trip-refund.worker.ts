@@ -1,4 +1,4 @@
-import { eq } from "drizzle-orm";
+import { and, eq } from "drizzle-orm";
 import { logger } from "../utils/logger";
 import { db } from "../db/connection";
 import { booking, payment, refund } from "../db/index";
@@ -42,9 +42,9 @@ export async function registerTripRefundWorker() {
       try {
         await refundService.refundConfirmedBooking(
           paymentRecord,
+          refundReference,
           refundReason,
           emailReason,
-          refundReference,
         );
 
         logger.info("worker.trip_refund.completed", {
@@ -78,19 +78,30 @@ export async function registerTripRefundWorker() {
       });
 
       await db.transaction(async (tx) => {
-        const [lockedRefund] = await tx
+        const [paymentRecord] = await tx
           .select()
-          .from(refund)
-          .where(eq(refund.reference, refundReference))
-          .for("update")
+          .from(payment)
+          .where(eq(payment.reference, paymentReference))
           .limit(1);
-        if (!lockedRefund) {
+
+        const pendingRefund = paymentRecord
+          ? await tx.query.refund.findFirst({
+              where: and(
+                eq(refund.paymentId, paymentRecord.id),
+                eq(refund.status, "pending"),
+              ),
+              orderBy: (ref, { desc }) => [desc(ref.createdAt)],
+            })
+          : null;
+        if (!pendingRefund) {
           logger.warn("worker.trip_refund.dlq.refund_not_found", {
             jobId: job.id,
+            paymentReference,
             refundReference,
           });
           return;
         }
+        const lockedRefund = pendingRefund;
 
         if (lockedRefund.status === "pending") {
           await paymentRepo.updateRefundStatus(tx, lockedRefund.id, {
@@ -107,9 +118,6 @@ export async function registerTripRefundWorker() {
             .where(eq(booking.id, bookingId));
         }
 
-        const paymentRecord = await tx.query.payment.findFirst({
-          where: eq(payment.reference, paymentReference),
-        });
         if (paymentRecord) {
           await paymentPayoutRefundService.sendRefundFailureEmail(paymentRecord, refundReason, lockedRefund.amount, tx);
         }
