@@ -1,6 +1,6 @@
 import { and, eq } from "drizzle-orm";
 import { db } from "../db/connection";
-import { payment, paymentWebhook } from "../db/index";
+import { payment } from "../db/index";
 import { logger } from "../utils/logger";
 import { getPaymentReference } from "../utils/payment";
 import { jobService } from "../workers/job.service";
@@ -32,34 +32,10 @@ export class PaymentWebhookService {
 
         const actualRef = webhook.data.reference.slice(4);
 
-        await db.transaction(async (tx) => {
-          const [claimed] = await tx.insert(paymentWebhook)
-            .values({
-              provider: "kora",
-              paymentReference: actualRef,
-              eventType: webhook.event,
-              signatureValid,
-              payload: webhook as unknown as Record<string, unknown>,
-              verificationNote: signatureValid
-                ? "Refund payout webhook verified"
-                : "Refund payout webhook signature invalid",
-            })
-            .onConflictDoNothing()
-            .returning({ id: paymentWebhook.id });
-
-          if (!claimed) {
-            logger.debug("payment.webhook_duplicate_skipped", {
-              event: webhook.event,
-              paymentReference: actualRef,
-            });
-            return;
-          }
-
-          if (signatureValid) {
-            const targetStatus = webhook.event === "transfer.success" ? "refunded" : "refund_failed";
-            await this.payoutRefundService.finalizeRefund(actualRef, targetStatus);
-          }
-        });
+        if (signatureValid) {
+          const targetStatus = webhook.event === "transfer.success" ? "refunded" : "refund_failed";
+          await this.payoutRefundService.finalizeRefund(actualRef, targetStatus);
+        }
       } else {
         await payoutWebhookService.processWebhook({
           signature,
@@ -80,37 +56,15 @@ export class PaymentWebhookService {
       return;
     }
 
-    await db.transaction(async (tx) => {
-      const [claimed] = await tx.insert(paymentWebhook)
-        .values({
-          provider: "kora",
-          paymentReference: paymentRef,
-          eventType: webhook.event,
-          signatureValid,
-          payload: webhook,
-          verificationNote: signatureValid
-            ? "Webhook signature verified and queued"
-            : "Webhook signature verification failed",
-        })
-        .onConflictDoNothing()
-        .returning({ id: paymentWebhook.id });
-
-      if (!claimed) {
-        logger.debug("payment.webhook_duplicate_skipped", {
-          event: webhook.event,
-          paymentReference: paymentRef,
-        });
-        return;
-      }
-
-      if (signatureValid) {
+    if (signatureValid) {
+      await db.transaction(async (tx) => {
         await jobService.enqueuePaymentWebhook(tx, {
           event: webhook.event,
           data: webhook.data,
           _retryCount: 0,
         });
-      }
-    });
+      });
+    }
 
     if (!signatureValid) {
       logger.warn("payment.webhook_invalid_signature_ignored", {
