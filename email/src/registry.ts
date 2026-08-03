@@ -31,7 +31,18 @@ export async function renderEmail(
   if (!TemplateComponent) {
     throw new Error(`Template ${templateName} not found`);
   }
-  return render(React.createElement(TemplateComponent as React.FC<any>, props));
+  const html = await render(
+    React.createElement(TemplateComponent as React.FC<any>, props),
+  );
+  return makeUnique(html);
+}
+
+function makeUnique(html: string): string {
+  const token = `${Date.now().toString(36)}-${Math.random().toString(36).slice(2, 10)}`;
+  const marker = `<span style="font-size:0;line-height:0;height:0;overflow:hidden;color:#ffffff;opacity:0;mso-hide:all">${token}</span>`;
+  return html
+    .replace(/<body[^>]*>/, (match) => `${match}${marker}`)
+    .replace("</body>", `${marker}</body>`);
 }
 
 export function getEmailSubject(
@@ -39,33 +50,16 @@ export function getEmailSubject(
   propsJson: string,
 ): string {
   const props = JSON.parse(propsJson);
-  const withDetail = (subject: string, detail: unknown) => {
-    if (detail === undefined || detail === null || detail === "")
-      return subject;
-    return `${subject} - ${detail}`;
-  };
 
   switch (templateName) {
     case "BookingConfirmedEmail":
-      return withDetail(
-        `Booking Confirmed - ${props.pickupTitle} to ${props.dropoffTitle}`,
-        props.paymentReference,
-      );
+      return `Booking Confirmed - ${props.pickupTitle} to ${props.dropoffTitle}`;
     case "DriverAssignedEmail":
-      return withDetail(
-        `Driver Assigned - ${props.pickupTitle} to ${props.dropoffTitle}`,
-        [props.tripDate, props.departureTime].filter(Boolean).join(" "),
-      );
+      return `Driver Assigned - ${props.pickupTitle} to ${props.dropoffTitle}`;
     case "RefundFailedEmail":
-      return withDetail(
-        "Refund could not be completed yet",
-        props.paymentReference,
-      );
+      return `Refund could not be completed yet`;
     case "RefundSuccessfulEmail":
-      return withDetail(
-        "Your refund has been processed",
-        props.paymentReference,
-      );
+      return `Your refund has been processed`;
     case "ResetPasswordEmail":
       return `Reset Password`;
     case "VerifyOtpEmail":
@@ -73,10 +67,7 @@ export function getEmailSubject(
     case "PayoutFailedEmail":
       return `Payout Failed - Action Required`;
     case "TripCancelledEmail":
-      return withDetail(
-        "Trip Cancelled - Refund Initiated",
-        props.refundReference,
-      );
+      return `Trip Cancelled - Refund Initiated`;
     default:
       return "Notification from Daily Express";
   }
