@@ -162,7 +162,7 @@ export class PayoutProcessorService {
     if (locked.alreadyFinalized) return;
 
     try {
-      const result = await this.kora.initiatePayout({
+      await this.kora.initiatePayout({
         reference,
         amount: payoutRecord.amount,
         currency: payoutRecord.currency,
@@ -179,7 +179,6 @@ export class PayoutProcessorService {
         .update(payout)
         .set({
           initiatedAt: new Date(),
-          rawInitiateResponse: result.raw,
           updatedAt: new Date(),
         })
         .where(eq(payout.id, payoutRecord.id));
@@ -191,7 +190,6 @@ export class PayoutProcessorService {
         await this.notificationService.processPayoutFailure(
           payoutRecord,
           KORA_ERROR_CODES.INSUFFICIENT_BALANCE,
-          error,
           true,
         );
         return;
@@ -208,7 +206,6 @@ export class PayoutProcessorService {
         await this.notificationService.processPayoutFailure(
           payoutRecord,
           errorCode || "PAYOUT_FAILED",
-          error,
           true,
         );
         return;

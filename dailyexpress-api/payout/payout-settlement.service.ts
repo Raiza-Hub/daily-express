@@ -31,10 +31,9 @@ export class PayoutSettlementService {
     payout: PayoutRecord,
   ): Promise<PayoutVerificationOutcome> {
     try {
-      const verification = await this.kora.findPayoutByReference(
+      const verifiedPayout = await this.kora.findPayoutByReference(
         payout.reference,
-      );
-      const verifiedPayout = verification.data as KoraPayoutHistoryItem | null;
+      ) as KoraPayoutHistoryItem | null;
 
       if (!verifiedPayout) {
         // Reference not found at the provider: the transfer was never
@@ -44,7 +43,7 @@ export class PayoutSettlementService {
 
       const providerStatus = verifiedPayout.status.toLowerCase();
       if (providerStatus === "success") {
-        await this.finalizePayout(payout, verification.raw);
+        await this.finalizePayout(payout);
         return "settled";
       }
 
@@ -60,7 +59,7 @@ export class PayoutSettlementService {
     }
   }
 
-  async finalizePayout(payout: PayoutRecord, rawPayload: unknown) {
+  async finalizePayout(payout: PayoutRecord) {
     let notificationRecord: DriverNotification | null = null;
     const settledAt = new Date();
 
@@ -88,7 +87,6 @@ export class PayoutSettlementService {
           settledAt,
           failureCode: null,
           failureReason: null,
-          rawFinalStatusResponse: rawPayload,
           updatedAt: new Date(),
         })
         .where(eq(payoutTable.id, lockedPayout.id))
