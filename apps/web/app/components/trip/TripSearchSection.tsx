@@ -19,14 +19,6 @@ import TripFilter from "./TripFilter";
 import TripState from "./TripState";
 
 const TripSearchSection = () => {
-  useEffect(() => {
-    const handler = (e: PageTransitionEvent) => {
-      if (e.persisted) window.location.reload();
-    };
-    window.addEventListener("pageshow", handler);
-    return () => window.removeEventListener("pageshow", handler);
-  }, []);
-
   const [query] = useQueryStates(
     {
       from: searchParams.from,
