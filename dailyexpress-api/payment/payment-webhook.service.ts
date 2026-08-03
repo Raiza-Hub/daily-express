@@ -57,12 +57,10 @@ export class PaymentWebhookService {
     }
 
     if (signatureValid) {
-      await db.transaction(async (tx) => {
-        await jobService.enqueuePaymentWebhook(tx, {
-          event: webhook.event,
-          data: webhook.data,
-          _retryCount: 0,
-        });
+      await this.processWebhookJob({
+        event: webhook.event,
+        data: webhook.data,
+        _retryCount: 0,
       });
     }
 

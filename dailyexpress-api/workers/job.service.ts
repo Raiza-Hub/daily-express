@@ -4,7 +4,6 @@ import {
   type DriverVerificationJobData,
   type PayoutProcessJobData,
   type TripRefundJobData,
-  type WebhookJobData,
 } from "./boss";
 
 type JobExecutor = {
@@ -82,10 +81,6 @@ export class JobService {
     payload: DriverVerificationJobData,
   ) {
     await this.enqueue(tx, QUEUES.DRIVER_VERIFICATION, payload);
-  }
-
-  async enqueuePaymentWebhook(tx: JobExecutor, payload: WebhookJobData) {
-    await this.enqueue(tx, QUEUES.WEBHOOK_PROCESS, payload);
   }
 
   async enqueuePayout(

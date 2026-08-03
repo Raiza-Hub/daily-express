@@ -16,7 +16,6 @@ import type {
   KoraWebhookPayload,
   PaymentStatus,
 } from "./payment.types";
-import type { WebhookJobData } from "../workers/boss";
 
 export class PaymentService {
   private readonly config = getConfig();
@@ -137,11 +136,6 @@ export class PaymentService {
   async handleKoraWebhook(webhook: KoraWebhookPayload, signature?: string) {
     return this.webhookService.processWebhook(webhook, signature);
   }
-
-  async processWebhookJob(job: WebhookJobData) {
-    return this.webhookService.processWebhookJob(job);
-  }
-
 }
 
 export const paymentService = new PaymentService();
