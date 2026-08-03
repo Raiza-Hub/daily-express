@@ -51,7 +51,7 @@ export class PaymentRepository {
   claimPayment(reference: string) {
     return db
       .update(payment)
-      .set({ status: "processing", lastStatusCheckAt: new Date(), updatedAt: new Date() })
+      .set({ status: "processing", updatedAt: new Date() })
       .where(and(eq(payment.reference, reference), eq(payment.status, "pending")))
       .returning();
   }

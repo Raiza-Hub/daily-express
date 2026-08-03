@@ -81,9 +81,6 @@ export class AllocationService {
         .update(payment)
         .set({
           status: "successful",
-          providerStatus: "success",
-          lastStatusCheckAt: new Date(),
-          paidAt: new Date(),
           updatedAt: new Date(),
         })
         .where(and(eq(payment.reference, reference), eq(payment.status, "processing")));

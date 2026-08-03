@@ -103,7 +103,6 @@ export class PaymentWebhookService {
       await this.repo.updateProcessingPayment(reference, "failed", {
         failureCode: "VERIFICATION_MISMATCH",
         failureReason: `Webhook indicated success but verification returned ${verification.data.status}`,
-        providerStatus: verification.data.status,
       });
       return;
     }
@@ -114,12 +113,9 @@ export class PaymentWebhookService {
       await tx.update(payment)
         .set({
           status: "successful",
-          paidAt: new Date(),
           payerBankName: payerAccount?.bank_name ?? null,
           payerAccountNumber: payerAccount?.account_number ?? null,
           payerAccountName: payerAccount?.account_name ?? null,
-          providerStatus: "success",
-          lastStatusCheckAt: new Date(),
           updatedAt: new Date(),
         })
         .where(and(eq(payment.reference, reference), eq(payment.status, "processing")));
@@ -148,7 +144,6 @@ export class PaymentWebhookService {
     await this.repo.updateProcessingPayment(reference, "failed", {
       failureCode: "PAYMENT_FAILED",
       failureReason: verification.data.message || "Payment provider reported a failed charge",
-      providerStatus: verification.data.status,
     });
   }
 }

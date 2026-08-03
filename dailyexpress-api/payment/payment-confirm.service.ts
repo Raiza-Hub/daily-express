@@ -27,12 +27,9 @@ export class PaymentConfirmService {
       await tx.update(payment)
         .set({
           status: "successful",
-          paidAt: new Date(),
           payerBankName: payerAccount?.bank_name ?? null,
           payerAccountNumber: payerAccount?.account_number ?? null,
           payerAccountName: payerAccount?.account_name ?? null,
-          providerStatus: "success",
-          lastStatusCheckAt: new Date(),
           updatedAt: new Date(),
         })
         .where(and(eq(payment.reference, reference), eq(payment.status, "processing")));
