@@ -1,10 +1,8 @@
-import { useInfiniteQuery, useQuery } from "@tanstack/react-query";
+import { useInfiniteQuery } from "@tanstack/react-query";
 import { payoutApi } from "../api";
 import type {
   ApiResponse,
-  DriverPayoutBalance,
   DriverPayoutHistoryItem,
-  DriverPayoutSummary,
   PayoutStatus,
 } from "@shared/types";
 import { handleApiError } from "../utils";
@@ -13,26 +11,6 @@ interface PayoutHistoryResponse {
   payouts: DriverPayoutHistoryItem[];
   nextCursor: string | null;
 }
-
-export const getDriverPayoutBalanceFn =
-  async (): Promise<DriverPayoutBalance> => {
-    try {
-      const response =
-        await payoutApi.get<ApiResponse<DriverPayoutBalance>>(
-          "/balance",
-        );
-
-      if (!response.data.success || !response.data.data) {
-        throw new Error(
-          response.data.error || "Failed to fetch payout balance",
-        );
-      }
-
-      return response.data.data;
-    } catch (err) {
-      return handleApiError(err, "Failed to fetch payout balance") as never;
-    }
-  };
 
 export const getDriverPayoutHistoryFn = async (params?: {
   limit?: number;
@@ -67,35 +45,6 @@ export const getDriverPayoutHistoryFn = async (params?: {
   }
 };
 
-export const getDriverPayoutSummaryFn = async (
-  week: string,
-): Promise<DriverPayoutSummary> => {
-  try {
-    const response = await payoutApi.get<ApiResponse<DriverPayoutSummary>>(
-      `/summary?week=${encodeURIComponent(week)}`,
-    );
-
-    if (!response.data.success || !response.data.data) {
-      throw new Error(response.data.error || "Failed to fetch payout summary");
-    }
-
-    return response.data.data;
-  } catch (err) {
-    return handleApiError(err, "Failed to fetch payout summary") as never;
-  }
-};
-
-export const useDriverPayoutBalance = (options?: { enabled?: boolean }) => {
-  return useQuery({
-    queryKey: ["driver-payout-balance"],
-    queryFn: getDriverPayoutBalanceFn,
-    retry: false,
-    enabled: options?.enabled ?? true,
-    refetchInterval: (query) =>
-      query.state.data?.processingAmount ? 15000 : false,
-  });
-};
-
 export const useDriverPayoutHistory = (params?: {
   limit?: number;
   status?: PayoutStatus;
@@ -122,17 +71,5 @@ export const useDriverPayoutHistory = (params?: {
       )
         ? 15000
         : false,
-  });
-};
-
-export const useDriverPayoutSummary = (
-  week: string,
-  options?: { enabled?: boolean },
-) => {
-  return useQuery({
-    queryKey: ["driver-payout-summary", week],
-    queryFn: () => getDriverPayoutSummaryFn(week),
-    retry: false,
-    enabled: (options?.enabled ?? true) && Boolean(week),
   });
 };

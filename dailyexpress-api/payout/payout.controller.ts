@@ -8,28 +8,6 @@ import { timeAsync } from "../utils/timing";
 import type { PayoutStatus } from "@shared/types";
 import type { KoraPayoutWebhookPayload } from "../payment/payment.types";
 
-export const getBalance: RequestHandler = asyncHandler(
-  async (req: Request, res: Response) => {
-    const user = getAuthenticatedUser(req);
-    if (!user) {
-      return sendErrorResponse(res, 401, "Please sign in again to continue.", {
-        code: "AUTHENTICATION_REQUIRED",
-      });
-    }
-
-    const balance = await timeAsync(
-      "payout.balance.service",
-      { userId: user.userId },
-      () => payoutService.getBalance(user),
-    );
-    return res
-      .status(200)
-      .json(
-        createSuccessResponse(balance, "Payout balance fetched successfully"),
-      );
-  },
-);
-
 export const getHistory: RequestHandler = asyncHandler(
   async (req: Request, res: Response) => {
     const user = getAuthenticatedUser(req);
@@ -64,35 +42,6 @@ export const getHistory: RequestHandler = asyncHandler(
       .status(200)
       .json(
         createSuccessResponse(history, "Payout history fetched successfully"),
-      );
-  },
-);
-
-export const getSummary: RequestHandler = asyncHandler(
-  async (req: Request, res: Response) => {
-    const user = getAuthenticatedUser(req);
-    if (!user) {
-      return sendErrorResponse(res, 401, "Please sign in again to continue.", {
-        code: "AUTHENTICATION_REQUIRED",
-      });
-    }
-
-    const week = typeof req.query.week === "string" ? req.query.week : null;
-    if (!week) {
-      return sendErrorResponse(res, 400, "Week is required.", {
-        code: "MISSING_WEEK",
-      });
-    }
-
-    const summary = await timeAsync(
-      "payout.summary.service",
-      { userId: user.userId, week },
-      () => payoutService.getWeeklySummary(user, week),
-    );
-    return res
-      .status(200)
-      .json(
-        createSuccessResponse(summary, "Payout summary fetched successfully"),
       );
   },
 );

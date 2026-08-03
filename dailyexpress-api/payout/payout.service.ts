@@ -1,13 +1,9 @@
 import { and, desc, eq, gte, lt, or } from "drizzle-orm";
 import type {
-  DriverPayoutBalance,
   DriverPayoutHistoryItem,
-  DriverPayoutSummary,
-  DriverPayoutSummaryDay,
   JWTPayload,
   PayoutStatus,
 } from "@shared/types";
-import { createServiceError } from "@shared/utils";
 import { getConfig } from "../config/index";
 import { db } from "../db/connection";
 import { driver, payout } from "../db/index";
@@ -17,8 +13,6 @@ import { PayoutSettlementService } from "./payout-settlement.service";
 import { PayoutProcessorService } from "./payout-processor.service";
 import { PayoutWebhookService } from "./payout-webhook.service";
 import { PayoutNotificationService } from "./payout-notification.service";
-import { formatDateKey } from "../utils/timezone";
-import { addDaysToDateKey, getBusinessDayWindow } from "../utils/route";
 import type { KoraPayoutWebhookPayload } from "../payment/payment.types";
 
 type PayoutTransaction = Parameters<Parameters<typeof db.transaction>[0]>[0];
@@ -61,43 +55,6 @@ export class PayoutService {
     return this.earningService.completeTrip(tx, input);
   }
 
-  async getBalance(user: JWTPayload): Promise<DriverPayoutBalance> {
-    const currentDriver = await this.getCurrentDriver(user);
-    if (!currentDriver) {
-      return {
-        pendingAmount: 0,
-        availableAmount: 0,
-        processingAmount: 0,
-        paidAmount: 0,
-        nextAutoPayoutAt: null,
-      };
-    }
-
-    const earnings = await this.repo.findDriverEarnings(currentDriver.id);
-    const totals = earnings.reduce(
-      (acc, item) => {
-        if (item.status === "pending_trip_completion") {
-          acc.pendingAmount += item.amount;
-        } else if (item.status === "available") {
-          acc.availableAmount += item.amount;
-        } else if (item.status === "paid") {
-          acc.paidAmount += item.amount;
-        } else if (item.status === "processing") {
-          acc.processingAmount += item.amount;
-        }
-        return acc;
-      },
-      {
-        pendingAmount: 0,
-        availableAmount: 0,
-        processingAmount: 0,
-        paidAmount: 0,
-      },
-    );
-
-    return { ...totals, nextAutoPayoutAt: null };
-  }
-
   async getHistory(
     user: JWTPayload,
     query: { limit?: number; cursor?: string; status?: PayoutStatus },
@@ -136,8 +93,6 @@ export class PayoutService {
       status: row.status === "pending" ? "processing" : row.status,
       failureCode: row.failureCode,
       failureReason: row.failureReason,
-      initiatedAt: row.initiatedAt,
-      settledAt: row.settledAt,
       failedAt: row.failedAt,
       createdAt: row.createdAt,
       updatedAt: row.updatedAt,
@@ -151,53 +106,6 @@ export class PayoutService {
   private normalizeLimit(limit?: number): number {
     if (!limit || !Number.isFinite(limit)) return 20;
     return Math.max(1, Math.min(100, Math.floor(limit)));
-  }
-
-  async getWeeklySummary(
-    user: JWTPayload,
-    week: string,
-  ): Promise<DriverPayoutSummary> {
-    const currentDriver = await this.getCurrentDriver(user);
-    let weekWindow: ReturnType<typeof getBusinessDayWindow>;
-    let weekEndWindow: ReturnType<typeof getBusinessDayWindow>;
-    try {
-      weekWindow = getBusinessDayWindow(week);
-      weekEndWindow = getBusinessDayWindow(
-        addDaysToDateKey(weekWindow.dateKey, 7),
-      );
-    } catch {
-      throw createServiceError("week must be a valid ISO date", 400);
-    }
-    const days = this.emptySummaryDays(weekWindow.dateKey);
-
-    if (!currentDriver) {
-      return {
-        weekStart: weekWindow.dateKey,
-        currency: "NGN",
-        days,
-      };
-    }
-
-    const rows = await this.repo.findWeeklyPayouts(
-      currentDriver.id,
-      weekWindow.start,
-      weekEndWindow.start,
-    );
-
-    const byDate = new Map(days.map((day) => [day.date, day]));
-    for (const row of rows) {
-      const key = formatDateKey(row.settledAt || row.createdAt);
-      const current = byDate.get(key);
-      if (!current) continue;
-      current.totalPaidAmount += row.amount;
-      current.payoutsCount += 1;
-    }
-
-    return {
-      weekStart: weekWindow.dateKey,
-      currency: currentDriver.currency,
-      days: Array.from(byDate.values()),
-    };
   }
 
   async triggerPayout(tripId: string) {
@@ -219,14 +127,6 @@ export class PayoutService {
     return db.query.driver.findFirst({
       where: eq(driver.userId, user.userId),
     });
-  }
-
-  private emptySummaryDays(weekStartDateKey: string): DriverPayoutSummaryDay[] {
-    return Array.from({ length: 7 }, (_, index) => ({
-      date: addDaysToDateKey(weekStartDateKey, index),
-      totalPaidAmount: 0,
-      payoutsCount: 0,
-    }));
   }
 }
 

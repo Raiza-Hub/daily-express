@@ -11,9 +11,7 @@ router.get("/health", (_req, res) => {
   });
 });
 
-router.get("/balance", payoutController.getBalance);
 router.get("/history", payoutController.getHistory);
-router.get("/summary", payoutController.getSummary);
 router.post("/webhooks/kora", payoutController.handleWebhook);
 
 export default router;
