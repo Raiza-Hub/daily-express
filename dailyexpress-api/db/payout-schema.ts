@@ -1,7 +1,6 @@
 import {
   bigint,
   index,
-  jsonb,
   pgEnum,
   pgTable,
   text,
@@ -85,8 +84,6 @@ export const payout = pgTable(
     initiatedAt: timestamp("initiated_at", { mode: "date" }),
     settledAt: timestamp("settled_at", { mode: "date" }),
     failedAt: timestamp("failed_at", { mode: "date" }),
-    rawInitiateResponse: jsonb("raw_initiate_response"),
-    rawFinalStatusResponse: jsonb("raw_final_status_response"),
     createdAt: timestamp("created_at", { mode: "date" }).defaultNow().notNull(),
     updatedAt: timestamp("updated_at", { mode: "date" }).defaultNow().notNull(),
   },

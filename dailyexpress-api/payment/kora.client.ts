@@ -296,9 +296,9 @@ export class KoraClient {
       const response = await this.request<KoraPayoutHistoryItem>(
         `/merchant/api/v1/payouts/${encodeURIComponent(reference)}`,
       );
-      return { data: response.data, raw: response.raw };
+      return response.data;
     } catch {
-      return { data: null, raw: null };
+      return null;
     }
   }
 

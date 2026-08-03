@@ -23,7 +23,6 @@ export class PayoutNotificationService {
   async processPayoutFailure(
     payoutRecord: PayoutRecord,
     reason: string,
-    rawPayload: unknown,
     shouldNotify = false,
   ) {
     let emailHtml: string | null = null;
@@ -68,7 +67,6 @@ export class PayoutNotificationService {
           failureCode: reason,
           failureReason: reason,
           failedAt: new Date(),
-          rawFinalStatusResponse: rawPayload,
           updatedAt: new Date(),
         })
         .where(eq(payout.id, lockedPayout.id));

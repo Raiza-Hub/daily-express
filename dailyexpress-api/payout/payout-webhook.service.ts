@@ -35,7 +35,7 @@ export class PayoutWebhookService {
     }
 
     if (input.event.event === "transfer.success") {
-      await this.settlementService.finalizePayout(payoutRecord, input.event);
+      await this.settlementService.finalizePayout(payoutRecord);
       return { processed: true, signatureValid };
     }
 
@@ -43,7 +43,6 @@ export class PayoutWebhookService {
       await this.notificationService.processPayoutFailure(
         payoutRecord,
         this.getWebhookFailureReason(input.event),
-        input.event,
         true,
       );
       return { processed: true, signatureValid };
