@@ -98,7 +98,6 @@ async function processBankVerification(
           accountName: resolved.data.account_name || data.accountName,
           bankVerificationStatus: "active",
           bankVerificationFailureReason: null,
-          bankVerifiedAt: new Date(),
           updatedAt: new Date(),
         })
         .where(eq(driver.id, data.driverId));
@@ -135,7 +134,6 @@ async function processBankVerification(
         .set({
           bankVerificationStatus: "failed",
           bankVerificationFailureReason: reason,
-          bankVerifiedAt: null,
           updatedAt: new Date(),
         })
         .where(eq(driver.id, data.driverId));
@@ -227,7 +225,6 @@ async function processKycVerification(
           kycStatus: "active",
           kycVerificationReference: verified.reference,
           kycFailureReason: null,
-          kycVerifiedAt: new Date(),
           updatedAt: new Date(),
         })
         .where(eq(driver.id, data.driverId));
@@ -266,7 +263,6 @@ async function processKycVerification(
         .set({
           kycStatus: "failed",
           kycFailureReason: reason,
-          kycVerifiedAt: null,
           updatedAt: new Date(),
         })
         .where(eq(driver.id, data.driverId));

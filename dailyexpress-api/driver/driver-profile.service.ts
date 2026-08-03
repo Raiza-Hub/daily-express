@@ -49,14 +49,10 @@ export class DriverProfileService {
               userId,
               bankVerificationStatus: "pending",
               bankVerificationFailureReason: null,
-              bankVerificationRequestedAt: new Date(),
-              bankVerifiedAt: null,
               kycStatus: kycData ? "pending" : "none",
               kycType: kycData?.kycType ?? null,
               kycId: kycData ? hashKycId(kycData.kycId) : null,
-              kycRequestedAt: kycData ? new Date() : null,
               kycFailureReason: null,
-              kycVerifiedAt: null,
             } as typeof driver.$inferInsert);
 
             await this.repo.insertDriverStats(tx, {
@@ -177,8 +173,6 @@ export class DriverProfileService {
             ? {
                 bankVerificationStatus: "pending" as const,
                 bankVerificationFailureReason: null,
-                bankVerificationRequestedAt: new Date(),
-                bankVerifiedAt: null,
               }
             : {}),
           ...(kycData
@@ -186,9 +180,7 @@ export class DriverProfileService {
                 kycStatus: "pending" as const,
                 kycType: kycData.kycType,
                 kycId: hashKycId(kycData.kycId),
-                kycRequestedAt: new Date(),
                 kycFailureReason: null,
-                kycVerifiedAt: null,
                 kycVerificationReference: null,
               }
             : {}),
