@@ -51,6 +51,7 @@ npx opensrc <owner>/<repo>      # GitHub repo (e.g., npx opensrc vercel/ai)
   - `0014_aggregate_payouts_per_trip.sql` — APPLIED to prod: payout column drops/adds, `trip_id` FK, partial unique index, `driver_stats` column drop, `earning_status` enum type-swap (see Prod Migration Notes).
   - `0015_immutable_payouts.sql` — APPLIED to prod: drops `payout_driver_trip_unique_idx` + `payout_status_retry_idx`, drops `payout_attempt` table, drops `retry_count`/`next_retry_at`, `permanent_failed → failed`, `payout_status` enum type-swap to 4 values.
   - `0016_drop_payout_raw_response_fields.sql` — APPLIED to prod: drops `raw_initiate_response` + `raw_final_status_response` (written but never read).
+  - `0017_drop_payment_webhook.sql` — APPLIED to prod: drops the `payment_webhook` dedup/audit table. Charge idempotency now relies on `claimPayment` (`pending→processing`), refunds on `finalizeRefund`'s pending-refund lookup; payout webhooks never used it.
 - Job layer:
   - `workers/boss.ts`: `PayoutProcessJobData = { tripId: string }`.
   - `workers/job.service.ts`: `enqueuePayout` singletonKey = `payload.tripId`.
