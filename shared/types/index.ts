@@ -66,14 +66,10 @@ export interface Driver {
   accountName: string;
   bankVerificationStatus: BankVerificationStatus;
   bankVerificationFailureReason?: string | null;
-  bankVerificationRequestedAt?: Date | null;
-  bankVerifiedAt?: Date | null;
   kycStatus: KycStatus;
   kycType?: string | null;
   kycVerificationReference?: string | null;
   kycFailureReason?: string | null;
-  kycRequestedAt?: Date | null;
-  kycVerifiedAt?: Date | null;
   isActive?: boolean;
   createdAt: Date;
   updatedAt: Date;
