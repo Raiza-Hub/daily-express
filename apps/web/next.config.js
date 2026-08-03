@@ -4,7 +4,7 @@ const nextConfig = {
   async headers() {
     return [
       {
-        source: "/email-logo.png",
+        source: "/email-logo-v2.png",
         headers: [
           {
             key: "Cache-Control",
