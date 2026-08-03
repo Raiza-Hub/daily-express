@@ -9,8 +9,6 @@ export const QUEUES = {
   DRIVER_VERIFICATION: "driver.verification",
   DRIVER_VERIFICATION_DLQ: "driver.verification.dlq",
 
-  WEBHOOK_PROCESS: "webhook.process",
-  WEBHOOK_PROCESS_DLQ: "webhook.process.dlq",
   TRIP_REFUND: "trip.refund",
   TRIP_REFUND_DLQ: "trip.refund.dlq",
   ALLOCATION_PROCESS: "allocation.process",
@@ -110,7 +108,6 @@ async function createQueues(instance: PgBoss) {
   await instance.createQueue(QUEUES.PAYOUT_PROCESS_DLQ, { retryLimit: 0 });
   await instance.createQueue(QUEUES.DRIVER_VERIFICATION_DLQ, {  retryLimit: 0 });
 
-  await instance.createQueue(QUEUES.WEBHOOK_PROCESS_DLQ, { retryLimit: 0 });
   await instance.createQueue(QUEUES.TRIP_REFUND_DLQ, { retryLimit: 0 });
   await instance.createQueue(QUEUES.ALLOCATION_PROCESS_DLQ, { retryLimit: 0 });
   await instance.createQueue(QUEUES.TRIP_DRIVER_ASSIGNED_DLQ, { retryLimit: 0 });
@@ -142,15 +139,6 @@ async function createQueues(instance: PgBoss) {
     expireInSeconds: 900,
     deleteAfterSeconds: 86400,
     deadLetter: QUEUES.PAYOUT_PROCESS_DLQ,
-  });
-
-  await instance.createQueue(QUEUES.WEBHOOK_PROCESS, {
-    retryLimit: 3,
-    retryDelay: 15,
-    retryBackoff: true,
-    retryDelayMax: 60,
-    deleteAfterSeconds: 86400,
-    deadLetter: QUEUES.WEBHOOK_PROCESS_DLQ,
   });
 
   await instance.createQueue(QUEUES.TRIP_REFUND, {

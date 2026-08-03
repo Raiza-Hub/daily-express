@@ -1,7 +1,6 @@
 export async function startWorkers() {
   const [
     { registerEmailWorker },
-    { registerPaymentWebhookWorker },
     { registerPayoutWorker },
     { registerDriverVerificationWorker },
     { registerTripRefundWorker },
@@ -9,7 +8,6 @@ export async function startWorkers() {
     { registerTripDriverAssignedWorker },
   ] = await Promise.all([
     import("./email.worker"),
-    import("./payment-webhook.worker"),
     import("./payout.worker"),
     import("./driver-verification.worker"),
     import("./trip-refund.worker"),
@@ -19,7 +17,6 @@ export async function startWorkers() {
 
   await Promise.all([
     registerEmailWorker(),
-    registerPaymentWebhookWorker(),
     registerPayoutWorker(),
     registerDriverVerificationWorker(),
     registerTripRefundWorker(),
