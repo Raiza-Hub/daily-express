@@ -1,6 +1,5 @@
 import {
   bigint,
-  index,
   jsonb,
   pgEnum,
   pgTable,
@@ -61,10 +60,6 @@ export const payment = pgTable(
     updatedAt: timestamp("updated_at", { mode: "date" }).defaultNow().notNull(),
   },
   (table) => [
-    index("payment_user_id_idx").on(table.userId),
-    index("payment_status_idx").on(table.status),
-    index("payment_created_at_idx").on(table.createdAt),
-    index("payment_status_created_idx").on(table.status, table.createdAt),
     uniqueIndex("payment_booking_id_unique_idx").on(table.bookingId),
   ],
 );
@@ -95,12 +90,6 @@ export const refund = pgTable(
     createdAt: timestamp("created_at", { mode: "date" }).defaultNow().notNull(),
     updatedAt: timestamp("updated_at", { mode: "date" }).defaultNow().notNull(),
   },
-  (table) => [
-    index("refund_payment_id_idx").on(table.paymentId),
-    index("refund_booking_id_idx").on(table.bookingId),
-    index("refund_status_idx").on(table.status),
-    index("refund_provider_ref_idx").on(table.providerRefundReference),
-  ],
 );
 
 export const paymentSchema = {

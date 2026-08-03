@@ -222,7 +222,7 @@ export class PayoutProcessorService {
     payoutDriver: ActivePayoutDriver,
   ): Promise<PayoutRecord> {
     const amount = earnings.reduce(
-      (sum, entry) => sum + entry.netAmount,
+      (sum, entry) => sum + entry.amount,
       0,
     );
 

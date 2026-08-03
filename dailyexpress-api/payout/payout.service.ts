@@ -46,14 +46,9 @@ export class PayoutService {
     input: {
       bookingId: string;
       tripId: string;
-      routeId: string;
       driverId: string;
-      tripDate: Date | string;
-      pickupTitle: string;
-      dropoffTitle: string;
       fareAmount: number;
       currency: string;
-      sourceEventId: string;
     },
   ) {
     return this.earningService.createEarning(tx, input);
@@ -82,13 +77,13 @@ export class PayoutService {
     const totals = earnings.reduce(
       (acc, item) => {
         if (item.status === "pending_trip_completion") {
-          acc.pendingAmount += item.netAmount;
+          acc.pendingAmount += item.amount;
         } else if (item.status === "available") {
-          acc.availableAmount += item.netAmount;
+          acc.availableAmount += item.amount;
         } else if (item.status === "paid") {
-          acc.paidAmount += item.netAmount;
+          acc.paidAmount += item.amount;
         } else if (item.status === "processing") {
-          acc.processingAmount += item.netAmount;
+          acc.processingAmount += item.amount;
         }
         return acc;
       },

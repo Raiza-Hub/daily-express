@@ -1,6 +1,5 @@
 import {
   bigint,
-  index,
   pgEnum,
   pgTable,
   text,
@@ -9,7 +8,7 @@ import {
   varchar,
 } from "drizzle-orm/pg-core";
 import { driver } from "./driver-schema";
-import { booking, trip, route } from "./route-schema";
+import { booking, trip } from "./route-schema";
 
 export const earningStatusEnum = pgEnum("earning_status", [
   "pending_trip_completion",
@@ -34,35 +33,15 @@ export const earning = pgTable(
     driverId: uuid("driver_id").references(() => driver.id, { onDelete: "restrict" }).notNull(),
     bookingId: uuid("booking_id").references(() => booking.id, { onDelete: "restrict" }).notNull().unique(),
     tripId: uuid("trip_id").references(() => trip.id, { onDelete: "restrict" }).notNull(),
-    routeId: uuid("route_id").references(() => route.id, { onDelete: "restrict" }).notNull(),
-    tripDate: timestamp("trip_date", { mode: "date" }).notNull(),
-    pickupTitle: text("pickup_title").notNull(),
-    dropoffTitle: text("dropoff_title").notNull(),
-    grossAmount: bigint("gross_amount", {
-      mode: "number",
-    }).notNull(),
-    feeAmount: bigint("fee_amount", { mode: "number" }).notNull(),
-    netAmount: bigint("net_amount", { mode: "number" }).notNull(),
+        amount: bigint("amount", { mode: "number" }).notNull(),
     currency: varchar("currency", { length: 8 }).default("NGN").notNull(),
     status: earningStatusEnum("status")
       .default("pending_trip_completion")
       .notNull(),
-    sourceEventId: varchar("source_event_id", { length: 128 })
-      .notNull()
-      .unique(),
     payoutId: uuid("payout_id"),
-    availableAt: timestamp("available_at", { mode: "date" }),
     createdAt: timestamp("created_at", { mode: "date" }).defaultNow().notNull(),
     updatedAt: timestamp("updated_at", { mode: "date" }).defaultNow().notNull(),
   },
-  (table) => [
-    index("earning_driver_id_idx").on(table.driverId),
-    index("earning_trip_id_idx").on(table.tripId),
-    index("earning_route_id_idx").on(table.routeId),
-    index("earning_status_idx").on(table.status),
-    index("earning_driver_status_idx").on(table.driverId, table.status),
-    index("earning_trip_status_idx").on(table.tripId, table.status),
-  ],
 );
 
 export const payout = pgTable(
@@ -87,24 +66,6 @@ export const payout = pgTable(
     createdAt: timestamp("created_at", { mode: "date" }).defaultNow().notNull(),
     updatedAt: timestamp("updated_at", { mode: "date" }).defaultNow().notNull(),
   },
-  (table) => [
-    index("payout_driver_id_idx").on(table.driverId),
-    index("payout_status_idx").on(table.status),
-    index("payout_driver_created_at_idx").on(
-      table.driverId,
-      table.createdAt.desc(),
-    ),
-    index("payout_driver_status_created_at_idx").on(
-      table.driverId,
-      table.status,
-      table.createdAt.desc(),
-    ),
-    index("payout_driver_status_settled_at_idx").on(
-      table.driverId,
-      table.status,
-      table.settledAt.desc(),
-    ),
-  ],
 );
 
 export const payoutSchema = {

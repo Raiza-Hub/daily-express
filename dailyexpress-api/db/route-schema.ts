@@ -2,7 +2,6 @@ import { lte, relations, sql } from "drizzle-orm";
 import {
   bigint,
   check,
-  index,
   integer,
   pgEnum,
   pgTable,
@@ -64,33 +63,6 @@ export const route = pgTable(
       table.dropoff_location_label,
       table.departure_time,
     ),
-    index("route_created_at_idx").on(
-      table.createdAt.desc(),
-    ),
-    index("pickup_location_title_trgm_idx").using(
-      "gin",
-      table.pickup_location_title.op("gin_trgm_ops"),
-    ),
-    index("pickup_location_locality_trgm_idx").using(
-      "gin",
-      table.pickup_location_locality.op("gin_trgm_ops"),
-    ),
-    index("pickup_location_label_trgm_idx").using(
-      "gin",
-      table.pickup_location_label.op("gin_trgm_ops"),
-    ),
-    index("dropoff_location_title_trgm_idx").using(
-      "gin",
-      table.dropoff_location_title.op("gin_trgm_ops"),
-    ),
-    index("dropoff_location_locality_trgm_idx").using(
-      "gin",
-      table.dropoff_location_locality.op("gin_trgm_ops"),
-    ),
-    index("dropoff_location_label_trgm_idx").using(
-      "gin",
-      table.dropoff_location_label.op("gin_trgm_ops"),
-    ),
   ],
 );
 
@@ -111,8 +83,6 @@ export const trip = pgTable(
     updatedAt: timestamp("updated_at", { mode: "date" }).defaultNow().notNull(),
   },
   (table) => [
-    index("trip_driver_date_idx").on(table.driverId, table.date),
-    index("trip_route_date_vt_idx").on(table.routeId, table.date, table.vehicleType),
     check("trip_booked_seats_check", lte(table.bookedSeats, table.capacity)),
   ],
 );
@@ -142,16 +112,6 @@ export const booking = pgTable(
     updatedAt: timestamp("updated_at", { mode: "date" }).defaultNow().notNull(),
   },
   (table) => [
-    index("booking_trip_id_idx").on(table.tripId),
-    index("booking_user_id_idx").on(table.userId),
-    index("booking_route_date_vt_idx").on(table.routeId, table.tripDate, table.vehicleType),
-    index("booking_payment_reference_idx").on(table.paymentReference),
-
-    index("booking_user_visible_created_at_idx")
-      .on(table.userId, table.createdAt.desc())
-      .where(
-        sql`${table.status} in ('confirmed', 'completed') and ${table.paymentStatus} not in ('failed', 'cancelled', 'expired')`,
-      ),
     uniqueIndex("booking_route_user_vt_active_idx")
       .on(table.routeId, table.tripDate, table.userId, table.vehicleType)
       .where(sql`${table.status} in ('pending', 'confirmed')`),
@@ -175,9 +135,7 @@ export const vehicle = pgTable("vehicle", {
   color: text("color").notNull(),
   createdAt: timestamp("created_at", { mode: "date" }).defaultNow().notNull(),
   updatedAt: timestamp("updated_at", { mode: "date" }).defaultNow().notNull(),
-}, (table) => [
-  index("vehicle_driver_id_idx").on(table.driverId),
-]);
+});
 
 export const externalDriver = pgTable("external_driver", {
   id: uuid("id").defaultRandom().primaryKey(),

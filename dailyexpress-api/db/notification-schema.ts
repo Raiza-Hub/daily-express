@@ -1,5 +1,4 @@
 import {
-  index,
   jsonb,
   pgEnum,
   pgTable,
@@ -9,7 +8,6 @@ import {
   uuid,
   varchar,
 } from "drizzle-orm/pg-core";
-import { and, isNull } from "drizzle-orm";
 import { driver } from "./driver-schema";
 
 export const notificationToneEnum = pgEnum("notification_tone", [
@@ -58,14 +56,6 @@ export const notification = pgTable(
       table.driverId,
       table.notificationKey,
     ),
-
-    index("notification_driver_active_cursor_idx")
-      .on(table.driverId.asc(), table.occurredAt.desc(), table.createdAt.desc())
-      .where(isNull(table.archivedAt)),
-
-    index("notification_driver_unread_active_idx")
-      .on(table.driverId.asc(), table.occurredAt.desc(), table.createdAt.desc())
-      .where(and(isNull(table.archivedAt), isNull(table.readAt))!),
   ],
 );
 

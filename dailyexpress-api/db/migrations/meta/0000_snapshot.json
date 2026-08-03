@@ -1,5 +1,5 @@
 {
-  "id": "b9df82d3-305b-4bd8-8e5d-7eaf1841e838",
+  "id": "4385b9c1-a7ad-487b-9bf3-54bbba6d1660",
   "prevId": "00000000-0000-0000-0000-000000000000",
   "version": "7",
   "dialect": "postgresql",
@@ -29,12 +29,6 @@
         },
         "target": {
           "name": "target",
-          "type": "text",
-          "primaryKey": false,
-          "notNull": false
-        },
-        "ip": {
-          "name": "ip",
           "type": "text",
           "primaryKey": false,
           "notNull": false
@@ -443,12 +437,6 @@
           "primaryKey": false,
           "notNull": false
         },
-        "anonymized_at": {
-          "name": "anonymized_at",
-          "type": "timestamp",
-          "primaryKey": false,
-          "notNull": false
-        },
         "created_at": {
           "name": "created_at",
           "type": "timestamp",
@@ -621,6 +609,12 @@
           "primaryKey": false,
           "notNull": false
         },
+        "kyc_id": {
+          "name": "kyc_id",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false
+        },
         "kyc_verification_reference": {
           "name": "kyc_verification_reference",
           "type": "text",
@@ -710,187 +704,6 @@
       "checkConstraints": {},
       "isRLSEnabled": false
     },
-    "public.driver_profile_image_upload": {
-      "name": "driver_profile_image_upload",
-      "schema": "",
-      "columns": {
-        "id": {
-          "name": "id",
-          "type": "uuid",
-          "primaryKey": true,
-          "notNull": true,
-          "default": "gen_random_uuid()"
-        },
-        "driver_id": {
-          "name": "driver_id",
-          "type": "uuid",
-          "primaryKey": false,
-          "notNull": true
-        },
-        "user_id": {
-          "name": "user_id",
-          "type": "uuid",
-          "primaryKey": false,
-          "notNull": true
-        },
-        "status": {
-          "name": "status",
-          "type": "driver_profile_image_upload_status",
-          "typeSchema": "public",
-          "primaryKey": false,
-          "notNull": true,
-          "default": "'pending'"
-        },
-        "file_name": {
-          "name": "file_name",
-          "type": "text",
-          "primaryKey": false,
-          "notNull": false
-        },
-        "mime_type": {
-          "name": "mime_type",
-          "type": "varchar(128)",
-          "primaryKey": false,
-          "notNull": true
-        },
-        "size": {
-          "name": "size",
-          "type": "integer",
-          "primaryKey": false,
-          "notNull": true
-        },
-        "file_base64": {
-          "name": "file_base64",
-          "type": "text",
-          "primaryKey": false,
-          "notNull": true
-        },
-        "old_profile_picture_url": {
-          "name": "old_profile_picture_url",
-          "type": "text",
-          "primaryKey": false,
-          "notNull": false
-        },
-        "secure_url": {
-          "name": "secure_url",
-          "type": "text",
-          "primaryKey": false,
-          "notNull": false
-        },
-        "public_id": {
-          "name": "public_id",
-          "type": "text",
-          "primaryKey": false,
-          "notNull": false
-        },
-        "error_message": {
-          "name": "error_message",
-          "type": "text",
-          "primaryKey": false,
-          "notNull": false
-        },
-        "attempts": {
-          "name": "attempts",
-          "type": "integer",
-          "primaryKey": false,
-          "notNull": true,
-          "default": 0
-        },
-        "metadata": {
-          "name": "metadata",
-          "type": "jsonb",
-          "primaryKey": false,
-          "notNull": false
-        },
-        "created_at": {
-          "name": "created_at",
-          "type": "timestamp",
-          "primaryKey": false,
-          "notNull": true,
-          "default": "now()"
-        },
-        "updated_at": {
-          "name": "updated_at",
-          "type": "timestamp",
-          "primaryKey": false,
-          "notNull": true,
-          "default": "now()"
-        },
-        "processed_at": {
-          "name": "processed_at",
-          "type": "timestamp",
-          "primaryKey": false,
-          "notNull": false
-        }
-      },
-      "indexes": {
-        "driver_profile_image_upload_driver_id_idx": {
-          "name": "driver_profile_image_upload_driver_id_idx",
-          "columns": [
-            {
-              "expression": "driver_id",
-              "isExpression": false,
-              "asc": true,
-              "nulls": "last"
-            }
-          ],
-          "isUnique": false,
-          "concurrently": false,
-          "method": "btree",
-          "with": {}
-        },
-        "driver_profile_image_upload_status_idx": {
-          "name": "driver_profile_image_upload_status_idx",
-          "columns": [
-            {
-              "expression": "status",
-              "isExpression": false,
-              "asc": true,
-              "nulls": "last"
-            }
-          ],
-          "isUnique": false,
-          "concurrently": false,
-          "method": "btree",
-          "with": {}
-        },
-        "driver_profile_image_upload_user_id_idx": {
-          "name": "driver_profile_image_upload_user_id_idx",
-          "columns": [
-            {
-              "expression": "user_id",
-              "isExpression": false,
-              "asc": true,
-              "nulls": "last"
-            }
-          ],
-          "isUnique": false,
-          "concurrently": false,
-          "method": "btree",
-          "with": {}
-        }
-      },
-      "foreignKeys": {
-        "driver_profile_image_upload_driver_id_driver_id_fk": {
-          "name": "driver_profile_image_upload_driver_id_driver_id_fk",
-          "tableFrom": "driver_profile_image_upload",
-          "tableTo": "driver",
-          "columnsFrom": [
-            "driver_id"
-          ],
-          "columnsTo": [
-            "id"
-          ],
-          "onDelete": "cascade",
-          "onUpdate": "no action"
-        }
-      },
-      "compositePrimaryKeys": {},
-      "uniqueConstraints": {},
-      "policies": {},
-      "checkConstraints": {},
-      "isRLSEnabled": false
-    },
     "public.driver_stats": {
       "name": "driver_stats",
       "schema": "",
@@ -917,13 +730,6 @@
         },
         "pending_payments": {
           "name": "pending_payments",
-          "type": "bigint",
-          "primaryKey": false,
-          "notNull": true,
-          "default": 0
-        },
-        "in_review_payments": {
-          "name": "in_review_payments",
           "type": "bigint",
           "primaryKey": false,
           "notNull": true,
@@ -1233,12 +1039,6 @@
           "primaryKey": false,
           "notNull": true
         },
-        "provider_transaction_id": {
-          "name": "provider_transaction_id",
-          "type": "varchar(128)",
-          "primaryKey": false,
-          "notNull": false
-        },
         "amount": {
           "name": "amount",
           "type": "bigint",
@@ -1257,12 +1057,6 @@
           "type": "text",
           "primaryKey": false,
           "notNull": true
-        },
-        "customer_name": {
-          "name": "customer_name",
-          "type": "text",
-          "primaryKey": false,
-          "notNull": false
         },
         "customer_email": {
           "name": "customer_email",
@@ -1284,14 +1078,26 @@
           "primaryKey": false,
           "notNull": false
         },
-        "checkout_url": {
-          "name": "checkout_url",
+        "payer_bank_name": {
+          "name": "payer_bank_name",
           "type": "text",
           "primaryKey": false,
           "notNull": false
         },
-        "checkout_token": {
-          "name": "checkout_token",
+        "payer_account_number": {
+          "name": "payer_account_number",
+          "type": "varchar(32)",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "payer_account_name": {
+          "name": "payer_account_name",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "checkout_url": {
+          "name": "checkout_url",
           "type": "text",
           "primaryKey": false,
           "notNull": false
@@ -1304,18 +1110,6 @@
         },
         "raw_initialize_response": {
           "name": "raw_initialize_response",
-          "type": "jsonb",
-          "primaryKey": false,
-          "notNull": false
-        },
-        "raw_verification_response": {
-          "name": "raw_verification_response",
-          "type": "jsonb",
-          "primaryKey": false,
-          "notNull": false
-        },
-        "metadata": {
-          "name": "metadata",
           "type": "jsonb",
           "primaryKey": false,
           "notNull": false
@@ -1490,110 +1284,6 @@
       "checkConstraints": {},
       "isRLSEnabled": false
     },
-    "public.payment_webhook": {
-      "name": "payment_webhook",
-      "schema": "",
-      "columns": {
-        "id": {
-          "name": "id",
-          "type": "uuid",
-          "primaryKey": true,
-          "notNull": true,
-          "default": "gen_random_uuid()"
-        },
-        "provider": {
-          "name": "provider",
-          "type": "payment_provider",
-          "typeSchema": "public",
-          "primaryKey": false,
-          "notNull": true,
-          "default": "'kora'"
-        },
-        "payment_reference": {
-          "name": "payment_reference",
-          "type": "varchar(128)",
-          "primaryKey": false,
-          "notNull": false
-        },
-        "event_type": {
-          "name": "event_type",
-          "type": "varchar(64)",
-          "primaryKey": false,
-          "notNull": false,
-          "default": "'kora.event'"
-        },
-        "signature_valid": {
-          "name": "signature_valid",
-          "type": "boolean",
-          "primaryKey": false,
-          "notNull": true,
-          "default": false
-        },
-        "payload": {
-          "name": "payload",
-          "type": "jsonb",
-          "primaryKey": false,
-          "notNull": true
-        },
-        "verification_note": {
-          "name": "verification_note",
-          "type": "text",
-          "primaryKey": false,
-          "notNull": false
-        },
-        "processed_at": {
-          "name": "processed_at",
-          "type": "timestamp",
-          "primaryKey": false,
-          "notNull": false
-        },
-        "created_at": {
-          "name": "created_at",
-          "type": "timestamp",
-          "primaryKey": false,
-          "notNull": true,
-          "default": "now()"
-        }
-      },
-      "indexes": {
-        "payment_webhook_payment_reference_idx": {
-          "name": "payment_webhook_payment_reference_idx",
-          "columns": [
-            {
-              "expression": "payment_reference",
-              "isExpression": false,
-              "asc": true,
-              "nulls": "last"
-            }
-          ],
-          "isUnique": false,
-          "concurrently": false,
-          "method": "btree",
-          "with": {}
-        },
-        "payment_webhook_created_at_idx": {
-          "name": "payment_webhook_created_at_idx",
-          "columns": [
-            {
-              "expression": "created_at",
-              "isExpression": false,
-              "asc": true,
-              "nulls": "last"
-            }
-          ],
-          "isUnique": false,
-          "concurrently": false,
-          "method": "btree",
-          "with": {}
-        }
-      },
-      "foreignKeys": {},
-      "compositePrimaryKeys": {},
-      "uniqueConstraints": {},
-      "policies": {},
-      "checkConstraints": {},
-      "isRLSEnabled": false
-    },
     "public.refund": {
       "name": "refund",
       "schema": "",
@@ -1655,18 +1345,6 @@
           "primaryKey": false,
           "notNull": true,
           "default": "'pending'"
-        },
-        "provider_status": {
-          "name": "provider_status",
-          "type": "varchar(32)",
-          "primaryKey": false,
-          "notNull": false
-        },
-        "raw_provider_response": {
-          "name": "raw_provider_response",
-          "type": "jsonb",
-          "primaryKey": false,
-          "notNull": false
         },
         "failure_reason": {
           "name": "failure_reason",
@@ -1806,53 +1484,6 @@
       "checkConstraints": {},
       "isRLSEnabled": false
     },
-    "public.webhook_processed": {
-      "name": "webhook_processed",
-      "schema": "",
-      "columns": {
-        "id": {
-          "name": "id",
-          "type": "uuid",
-          "primaryKey": true,
-          "notNull": true,
-          "default": "gen_random_uuid()"
-        },
-        "event_type": {
-          "name": "event_type",
-          "type": "varchar(64)",
-          "primaryKey": false,
-          "notNull": true
-        },
-        "event_reference": {
-          "name": "event_reference",
-          "type": "varchar(128)",
-          "primaryKey": false,
-          "notNull": true
-        },
-        "processed_at": {
-          "name": "processed_at",
-          "type": "timestamp",
-          "primaryKey": false,
-          "notNull": true,
-          "default": "now()"
-        }
-      },
-      "indexes": {},
-      "foreignKeys": {},
-      "compositePrimaryKeys": {},
-      "uniqueConstraints": {
-        "webhook_processed_event_reference_unique": {
-          "name": "webhook_processed_event_reference_unique",
-          "nullsNotDistinct": false,
-          "columns": [
-            "event_reference"
-          ]
-        }
-      },
-      "policies": {},
-      "checkConstraints": {},
-      "isRLSEnabled": false
-    },
     "public.earning": {
       "name": "earning",
       "schema": "",
@@ -1906,20 +1537,20 @@
           "primaryKey": false,
           "notNull": true
         },
-        "gross_amount_minor": {
-          "name": "gross_amount_minor",
+        "gross_amount": {
+          "name": "gross_amount",
           "type": "bigint",
           "primaryKey": false,
           "notNull": true
         },
-        "fee_amount_minor": {
-          "name": "fee_amount_minor",
+        "fee_amount": {
+          "name": "fee_amount",
           "type": "bigint",
           "primaryKey": false,
           "notNull": true
         },
-        "net_amount_minor": {
-          "name": "net_amount_minor",
+        "net_amount": {
+          "name": "net_amount",
           "type": "bigint",
           "primaryKey": false,
           "notNull": true
@@ -2168,17 +1799,23 @@
           "primaryKey": false,
           "notNull": true
         },
-        "earning_id": {
-          "name": "earning_id",
+        "trip_id": {
+          "name": "trip_id",
           "type": "uuid",
           "primaryKey": false,
-          "notNull": true
+          "notNull": false
         },
-        "recipient_id": {
-          "name": "recipient_id",
-          "type": "uuid",
+        "recipient_bank_name": {
+          "name": "recipient_bank_name",
+          "type": "text",
           "primaryKey": false,
-          "notNull": true
+          "notNull": false
+        },
+        "recipient_account_last4": {
+          "name": "recipient_account_last4",
+          "type": "varchar(4)",
+          "primaryKey": false,
+          "notNull": false
         },
         "reference": {
           "name": "reference",
@@ -2194,29 +1831,11 @@
           "notNull": true,
           "default": "'kora'"
         },
-        "provider_transfer_code": {
-          "name": "provider_transfer_code",
-          "type": "varchar(128)",
-          "primaryKey": false,
-          "notNull": false
-        },
-        "provider_transfer_id": {
-          "name": "provider_transfer_id",
-          "type": "varchar(128)",
-          "primaryKey": false,
-          "notNull": false
-        },
-        "amount_minor": {
-          "name": "amount_minor",
+        "amount": {
+          "name": "amount",
           "type": "bigint",
           "primaryKey": false,
           "notNull": true
-        },
-        "kora_fee_amount": {
-          "name": "kora_fee_amount",
-          "type": "bigint",
-          "primaryKey": false,
-          "notNull": false
         },
         "currency": {
           "name": "currency",
@@ -2224,12 +1843,6 @@
           "primaryKey": false,
           "notNull": true,
           "default": "'NGN'"
-        },
-        "earnings_count": {
-          "name": "earnings_count",
-          "type": "integer",
-          "primaryKey": false,
-          "notNull": true
         },
         "status": {
           "name": "status",
@@ -2257,19 +1870,6 @@
           "primaryKey": false,
           "notNull": false
         },
-        "retry_count": {
-          "name": "retry_count",
-          "type": "integer",
-          "primaryKey": false,
-          "notNull": true,
-          "default": 0
-        },
-        "next_retry_at": {
-          "name": "next_retry_at",
-          "type": "timestamp",
-          "primaryKey": false,
-          "notNull": false
-        },
         "initiated_at": {
           "name": "initiated_at",
           "type": "timestamp",
@@ -2285,18 +1885,6 @@
         "failed_at": {
           "name": "failed_at",
           "type": "timestamp",
-          "primaryKey": false,
-          "notNull": false
-        },
-        "raw_initiate_response": {
-          "name": "raw_initiate_response",
-          "type": "jsonb",
-          "primaryKey": false,
-          "notNull": false
-        },
-        "raw_final_status_response": {
-          "name": "raw_final_status_response",
-          "type": "jsonb",
           "primaryKey": false,
           "notNull": false
         },
@@ -2327,21 +1915,6 @@
             }
           ],
           "isUnique": false,
-          "concurrently": false,
-          "method": "btree",
-          "with": {}
-        },
-        "payout_earning_id_unique_idx": {
-          "name": "payout_earning_id_unique_idx",
-          "columns": [
-            {
-              "expression": "earning_id",
-              "isExpression": false,
-              "asc": true,
-              "nulls": "last"
-            }
-          ],
-          "isUnique": true,
           "concurrently": false,
           "method": "btree",
           "with": {}
@@ -2435,27 +2008,6 @@
           "concurrently": false,
           "method": "btree",
           "with": {}
-        },
-        "payout_status_retry_idx": {
-          "name": "payout_status_retry_idx",
-          "columns": [
-            {
-              "expression": "status",
-              "isExpression": false,
-              "asc": true,
-              "nulls": "last"
-            },
-            {
-              "expression": "next_retry_at",
-              "isExpression": false,
-              "asc": true,
-              "nulls": "last"
-            }
-          ],
-          "isUnique": false,
-          "concurrently": false,
-          "method": "btree",
-          "with": {}
         }
       },
       "foreignKeys": {
@@ -2472,25 +2024,12 @@
           "onDelete": "restrict",
           "onUpdate": "no action"
         },
-        "payout_earning_id_earning_id_fk": {
-          "name": "payout_earning_id_earning_id_fk",
+        "payout_trip_id_trip_id_fk": {
+          "name": "payout_trip_id_trip_id_fk",
           "tableFrom": "payout",
-          "tableTo": "earning",
+          "tableTo": "trip",
           "columnsFrom": [
-            "earning_id"
-          ],
-          "columnsTo": [
-            "id"
-          ],
-          "onDelete": "restrict",
-          "onUpdate": "no action"
-        },
-        "payout_recipient_id_payout_recipient_id_fk": {
-          "name": "payout_recipient_id_payout_recipient_id_fk",
-          "tableFrom": "payout",
-          "tableTo": "payout_recipient",
-          "columnsFrom": [
-            "recipient_id"
+            "trip_id"
           ],
           "columnsTo": [
             "id"
@@ -2509,356 +2048,6 @@
           ]
         }
       },
-      "policies": {},
-      "checkConstraints": {},
-      "isRLSEnabled": false
-    },
-    "public.payout_attempt": {
-      "name": "payout_attempt",
-      "schema": "",
-      "columns": {
-        "id": {
-          "name": "id",
-          "type": "uuid",
-          "primaryKey": true,
-          "notNull": true,
-          "default": "gen_random_uuid()"
-        },
-        "payout_id": {
-          "name": "payout_id",
-          "type": "uuid",
-          "primaryKey": false,
-          "notNull": true
-        },
-        "attempt_number": {
-          "name": "attempt_number",
-          "type": "integer",
-          "primaryKey": false,
-          "notNull": true
-        },
-        "kora_reference": {
-          "name": "kora_reference",
-          "type": "varchar(128)",
-          "primaryKey": false,
-          "notNull": true
-        },
-        "status": {
-          "name": "status",
-          "type": "varchar(32)",
-          "primaryKey": false,
-          "notNull": true,
-          "default": "'pending'"
-        },
-        "failure_reason": {
-          "name": "failure_reason",
-          "type": "text",
-          "primaryKey": false,
-          "notNull": false
-        },
-        "kora_fee_amount": {
-          "name": "kora_fee_amount",
-          "type": "bigint",
-          "primaryKey": false,
-          "notNull": false
-        },
-        "initiated_at": {
-          "name": "initiated_at",
-          "type": "timestamp",
-          "primaryKey": false,
-          "notNull": true,
-          "default": "now()"
-        },
-        "settled_at": {
-          "name": "settled_at",
-          "type": "timestamp",
-          "primaryKey": false,
-          "notNull": false
-        },
-        "raw_webhook": {
-          "name": "raw_webhook",
-          "type": "jsonb",
-          "primaryKey": false,
-          "notNull": false
-        }
-      },
-      "indexes": {
-        "payout_attempt_payout_id_idx": {
-          "name": "payout_attempt_payout_id_idx",
-          "columns": [
-            {
-              "expression": "payout_id",
-              "isExpression": false,
-              "asc": true,
-              "nulls": "last"
-            }
-          ],
-          "isUnique": false,
-          "concurrently": false,
-          "method": "btree",
-          "with": {}
-        },
-        "payout_attempt_number_unique_idx": {
-          "name": "payout_attempt_number_unique_idx",
-          "columns": [
-            {
-              "expression": "payout_id",
-              "isExpression": false,
-              "asc": true,
-              "nulls": "last"
-            },
-            {
-              "expression": "attempt_number",
-              "isExpression": false,
-              "asc": true,
-              "nulls": "last"
-            }
-          ],
-          "isUnique": true,
-          "concurrently": false,
-          "method": "btree",
-          "with": {}
-        }
-      },
-      "foreignKeys": {
-        "payout_attempt_payout_id_payout_id_fk": {
-          "name": "payout_attempt_payout_id_payout_id_fk",
-          "tableFrom": "payout_attempt",
-          "tableTo": "payout",
-          "columnsFrom": [
-            "payout_id"
-          ],
-          "columnsTo": [
-            "id"
-          ],
-          "onDelete": "restrict",
-          "onUpdate": "no action"
-        }
-      },
-      "compositePrimaryKeys": {},
-      "uniqueConstraints": {
-        "payout_attempt_kora_reference_unique": {
-          "name": "payout_attempt_kora_reference_unique",
-          "nullsNotDistinct": false,
-          "columns": [
-            "kora_reference"
-          ]
-        }
-      },
-      "policies": {},
-      "checkConstraints": {},
-      "isRLSEnabled": false
-    },
-    "public.payout_recipient": {
-      "name": "payout_recipient",
-      "schema": "",
-      "columns": {
-        "id": {
-          "name": "id",
-          "type": "uuid",
-          "primaryKey": true,
-          "notNull": true,
-          "default": "gen_random_uuid()"
-        },
-        "driver_id": {
-          "name": "driver_id",
-          "type": "uuid",
-          "primaryKey": false,
-          "notNull": true
-        },
-        "provider": {
-          "name": "provider",
-          "type": "payout_provider",
-          "typeSchema": "public",
-          "primaryKey": false,
-          "notNull": true,
-          "default": "'kora'"
-        },
-        "recipient_code": {
-          "name": "recipient_code",
-          "type": "varchar(128)",
-          "primaryKey": false,
-          "notNull": true
-        },
-        "provider_recipient_id": {
-          "name": "provider_recipient_id",
-          "type": "varchar(128)",
-          "primaryKey": false,
-          "notNull": false
-        },
-        "bank_code": {
-          "name": "bank_code",
-          "type": "varchar(32)",
-          "primaryKey": false,
-          "notNull": true
-        },
-        "bank_name": {
-          "name": "bank_name",
-          "type": "text",
-          "primaryKey": false,
-          "notNull": true
-        },
-        "account_name": {
-          "name": "account_name",
-          "type": "text",
-          "primaryKey": false,
-          "notNull": true
-        },
-        "account_number_last4": {
-          "name": "account_number_last4",
-          "type": "varchar(4)",
-          "primaryKey": false,
-          "notNull": true
-        },
-        "details_fingerprint": {
-          "name": "details_fingerprint",
-          "type": "varchar(128)",
-          "primaryKey": false,
-          "notNull": true
-        },
-        "status": {
-          "name": "status",
-          "type": "payout_recipient_status",
-          "typeSchema": "public",
-          "primaryKey": false,
-          "notNull": true,
-          "default": "'active'"
-        },
-        "raw_response": {
-          "name": "raw_response",
-          "type": "jsonb",
-          "primaryKey": false,
-          "notNull": false
-        },
-        "created_at": {
-          "name": "created_at",
-          "type": "timestamp",
-          "primaryKey": false,
-          "notNull": true,
-          "default": "now()"
-        },
-        "updated_at": {
-          "name": "updated_at",
-          "type": "timestamp",
-          "primaryKey": false,
-          "notNull": true,
-          "default": "now()"
-        }
-      },
-      "indexes": {},
-      "foreignKeys": {
-        "payout_recipient_driver_id_driver_id_fk": {
-          "name": "payout_recipient_driver_id_driver_id_fk",
-          "tableFrom": "payout_recipient",
-          "tableTo": "driver",
-          "columnsFrom": [
-            "driver_id"
-          ],
-          "columnsTo": [
-            "id"
-          ],
-          "onDelete": "restrict",
-          "onUpdate": "no action"
-        }
-      },
-      "compositePrimaryKeys": {},
-      "uniqueConstraints": {
-        "payout_recipient_driver_id_unique": {
-          "name": "payout_recipient_driver_id_unique",
-          "nullsNotDistinct": false,
-          "columns": [
-            "driver_id"
-          ]
-        }
-      },
-      "policies": {},
-      "checkConstraints": {},
-      "isRLSEnabled": false
-    },
-    "public.payout_webhook": {
-      "name": "payout_webhook",
-      "schema": "",
-      "columns": {
-        "id": {
-          "name": "id",
-          "type": "uuid",
-          "primaryKey": true,
-          "notNull": true,
-          "default": "gen_random_uuid()"
-        },
-        "event_type": {
-          "name": "event_type",
-          "type": "varchar(64)",
-          "primaryKey": false,
-          "notNull": true
-        },
-        "reference": {
-          "name": "reference",
-          "type": "varchar(128)",
-          "primaryKey": false,
-          "notNull": false
-        },
-        "signature_valid": {
-          "name": "signature_valid",
-          "type": "boolean",
-          "primaryKey": false,
-          "notNull": true,
-          "default": false
-        },
-        "payload": {
-          "name": "payload",
-          "type": "jsonb",
-          "primaryKey": false,
-          "notNull": true
-        },
-        "processed_at": {
-          "name": "processed_at",
-          "type": "timestamp",
-          "primaryKey": false,
-          "notNull": false
-        },
-        "created_at": {
-          "name": "created_at",
-          "type": "timestamp",
-          "primaryKey": false,
-          "notNull": true,
-          "default": "now()"
-        }
-      },
-      "indexes": {
-        "payout_webhook_reference_idx": {
-          "name": "payout_webhook_reference_idx",
-          "columns": [
-            {
-              "expression": "reference",
-              "isExpression": false,
-              "asc": true,
-              "nulls": "last"
-            }
-          ],
-          "isUnique": false,
-          "concurrently": false,
-          "method": "btree",
-          "with": {}
-        },
-        "payout_webhook_created_at_idx": {
-          "name": "payout_webhook_created_at_idx",
-          "columns": [
-            {
-              "expression": "created_at",
-              "isExpression": false,
-              "asc": true,
-              "nulls": "last"
-            }
-          ],
-          "isUnique": false,
-          "concurrently": false,
-          "method": "btree",
-          "with": {}
-        }
-      },
-      "foreignKeys": {},
-      "compositePrimaryKeys": {},
-      "uniqueConstraints": {},
       "policies": {},
       "checkConstraints": {},
       "isRLSEnabled": false
@@ -2930,6 +2119,13 @@
           "notNull": true,
           "default": 0
         },
+        "fee_amount": {
+          "name": "fee_amount",
+          "type": "bigint",
+          "primaryKey": false,
+          "notNull": true,
+          "default": 0
+        },
         "currency": {
           "name": "currency",
           "type": "varchar(8)",
@@ -2944,12 +2140,6 @@
           "primaryKey": false,
           "notNull": true,
           "default": "'pending'"
-        },
-        "expires_at": {
-          "name": "expires_at",
-          "type": "timestamp",
-          "primaryKey": false,
-          "notNull": false
         },
         "payment_reference": {
           "name": "payment_reference",
@@ -3042,21 +2232,6 @@
           "columns": [
             {
               "expression": "payment_reference",
-              "isExpression": false,
-              "asc": true,
-              "nulls": "last"
-            }
-          ],
-          "isUnique": false,
-          "concurrently": false,
-          "method": "btree",
-          "with": {}
-        },
-        "booking_expires_at_idx": {
-          "name": "booking_expires_at_idx",
-          "columns": [
-            {
-              "expression": "expires_at",
               "isExpression": false,
               "asc": true,
               "nulls": "last"
@@ -3423,6 +2598,12 @@
           "notNull": true,
           "default": "'active'"
         },
+        "zone_id": {
+          "name": "zone_id",
+          "type": "uuid",
+          "primaryKey": false,
+          "notNull": false
+        },
         "created_at": {
           "name": "created_at",
           "type": "timestamp",
@@ -3602,7 +2783,21 @@
           "with": {}
         }
       },
-      "foreignKeys": {},
+      "foreignKeys": {
+        "route_zone_id_zone_id_fk": {
+          "name": "route_zone_id_zone_id_fk",
+          "tableFrom": "route",
+          "tableTo": "zone",
+          "columnsFrom": [
+            "zone_id"
+          ],
+          "columnsTo": [
+            "id"
+          ],
+          "onDelete": "set null",
+          "onUpdate": "no action"
+        }
+      },
       "compositePrimaryKeys": {},
       "uniqueConstraints": {},
       "policies": {},
@@ -3894,6 +3089,60 @@
       "policies": {},
       "checkConstraints": {},
       "isRLSEnabled": false
+    },
+    "public.zone": {
+      "name": "zone",
+      "schema": "",
+      "columns": {
+        "id": {
+          "name": "id",
+          "type": "uuid",
+          "primaryKey": true,
+          "notNull": true,
+          "default": "gen_random_uuid()"
+        },
+        "name": {
+          "name": "name",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "fee": {
+          "name": "fee",
+          "type": "bigint",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "created_at": {
+          "name": "created_at",
+          "type": "timestamp",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "now()"
+        },
+        "updated_at": {
+          "name": "updated_at",
+          "type": "timestamp",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "now()"
+        }
+      },
+      "indexes": {},
+      "foreignKeys": {},
+      "compositePrimaryKeys": {},
+      "uniqueConstraints": {
+        "zone_name_unique": {
+          "name": "zone_name_unique",
+          "nullsNotDistinct": false,
+          "columns": [
+            "name"
+          ]
+        }
+      },
+      "policies": {},
+      "checkConstraints": {},
+      "isRLSEnabled": false
     }
   },
   "enums": {
@@ -3903,16 +3152,6 @@
       "values": [
         "pending",
         "active",
-        "failed"
-      ]
-    },
-    "public.driver_profile_image_upload_status": {
-      "name": "driver_profile_image_upload_status",
-      "schema": "public",
-      "values": [
-        "pending",
-        "processing",
-        "succeeded",
         "failed"
       ]
     },
@@ -3984,8 +3223,7 @@
         "available",
         "processing",
         "paid",
-        "cancelled",
-        "manual_review"
+        "cancelled"
       ]
     },
     "public.payout_provider": {
@@ -3995,15 +3233,6 @@
         "kora"
       ]
     },
-    "public.payout_recipient_status": {
-      "name": "payout_recipient_status",
-      "schema": "public",
-      "values": [
-        "active",
-        "stale",
-        "failed"
-      ]
-    },
     "public.payout_status": {
       "name": "payout_status",
       "schema": "public",
@@ -4011,8 +3240,7 @@
         "pending",
         "processing",
         "success",
-        "failed",
-        "permanent_failed"
+        "failed"
       ]
     },
     "public.status": {
