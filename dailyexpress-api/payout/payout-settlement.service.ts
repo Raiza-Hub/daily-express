@@ -119,7 +119,7 @@ export class PayoutSettlementService {
 
       if (tripEarnings.length > 0) {
         const totalAmount = tripEarnings.reduce(
-          (sum, entry) => sum + entry.netAmount,
+          (sum, entry) => sum + entry.amount,
           0,
         );
         await this.driverService.adjustPaymentCountersForStatusChange(tx, {

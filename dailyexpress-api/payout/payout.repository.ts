@@ -71,7 +71,7 @@ export class PayoutRepository {
       .returning({
         id: earning.id,
         driverId: earning.driverId,
-        netAmount: earning.netAmount,
+        amount: earning.amount,
       });
   }
 
@@ -153,7 +153,7 @@ export class PayoutRepository {
   findDriverEarnings(driverId: string) {
     return db.query.earning.findMany({
       where: eq(earning.driverId, driverId),
-      columns: { status: true, netAmount: true },
+      columns: { status: true, amount: true },
     });
   }
 

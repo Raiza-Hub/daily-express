@@ -176,14 +176,12 @@ export class AllocationService {
 
       if (tripDriverId) {
         await tx.execute(sql`
-          INSERT INTO ${earning} (driver_id, booking_id, trip_id, route_id, trip_date,
-            pickup_title, dropoff_title,
-            gross_amount, fee_amount, net_amount,
-            currency, status, source_event_id, created_at, updated_at)
-          VALUES (${tripDriverId}, ${bookingId}, ${tripId}, ${bookingRecord.routeId},
-            ${tripDateStr}, ${routeRecord.pickup_location_title}, ${routeRecord.dropoff_location_title},
-            ${bookingRecord.fareAmount}, 0, ${bookingRecord.fareAmount},
-            'NGN', 'pending_trip_completion', ${`payment:${reference}:allocation-driver-present`}, now(), now())
+          INSERT INTO ${earning} (driver_id, booking_id, trip_id,
+            amount,
+            currency, status, created_at, updated_at)
+          VALUES (${tripDriverId}, ${bookingId}, ${tripId},
+            ${bookingRecord.fareAmount},
+            'NGN', 'pending_trip_completion', now(), now())
         `);
         await tx.execute(sql`
           UPDATE ${driverStats}

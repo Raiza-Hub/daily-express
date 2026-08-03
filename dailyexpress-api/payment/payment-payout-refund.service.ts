@@ -238,7 +238,7 @@ export class PaymentPayoutRefundService {
           } else if (earningRecord) {
             await sharedDriverService.adjustPaymentCountersForStatusChange(tx, {
               driverId: earningRecord.driverId,
-              amount: earningRecord.netAmount,
+              amount: earningRecord.amount,
               previousStatus: earningRecord.status,
               nextStatus: "cancelled",
             });
@@ -332,7 +332,7 @@ export class PaymentPayoutRefundService {
         } else if (earningRecord) {
           await sharedDriverService.adjustPaymentCountersForStatusChange(tx, {
             driverId: earningRecord.driverId,
-            amount: earningRecord.netAmount,
+            amount: earningRecord.amount,
             previousStatus: earningRecord.status,
             nextStatus: "cancelled",
           });
@@ -505,7 +505,7 @@ export class PaymentPayoutRefundService {
     await sharedDriverService.decrementStatsForCancelledBooking(tx, {
       driverId,
       amount:
-        earningRecord?.netAmount ?? bookingRecord.fareAmount,
+        earningRecord?.amount ?? bookingRecord.fareAmount,
       previousEarningStatus: earningRecord?.status ?? null,
     });
   }

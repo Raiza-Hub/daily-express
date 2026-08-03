@@ -72,10 +72,6 @@ export const passwordResetTokens = pgTable(
     createdAt: timestamp("created_at", { mode: "date" }).defaultNow().notNull(),
     updatedAt: timestamp("updated_at", { mode: "date" }).defaultNow().notNull(),
   },
-  (table) => [
-    index("password_reset_tokens_user_id_idx").on(table.userId),
-    index("password_reset_tokens_expires_at_idx").on(table.expiresAt),
-  ],
 );
 
 export const authSchema = {

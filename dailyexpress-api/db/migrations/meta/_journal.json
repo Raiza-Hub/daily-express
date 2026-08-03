@@ -5,36 +5,8 @@
     {
       "idx": 0,
       "version": "7",
-      "when": 1783364951607,
-      "tag": "0000_complete_black_widow",
-      "breakpoints": true
-    },
-    {
-      "idx": 1,
-      "version": "7",
-      "when": 1783780637009,
-      "tag": "0001_busy_tigra",
-      "breakpoints": true
-    },
-    {
-      "idx": 9,
-      "version": "7",
-      "when": 1783790000000,
-      "tag": "0009_remove_webhook_processed",
-      "breakpoints": true
-    },
-    {
-      "idx": 10,
-      "version": "7",
-      "when": 1783795000000,
-      "tag": "0010_remove_payout_webhook",
-      "breakpoints": true
-    },
-    {
-      "idx": 11,
-      "version": "7",
-      "when": 1783970000000,
-      "tag": "0013_drop_anonymized_at",
+      "when": 1785764821909,
+      "tag": "0000_broken_jack_power",
       "breakpoints": true
     }
   ]

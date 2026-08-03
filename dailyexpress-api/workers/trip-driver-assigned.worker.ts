@@ -79,18 +79,13 @@ async function processTripDriverAssigned(data: TripDriverAssignedJobData) {
 
       const insertResult = (await tx.execute(sql`
         INSERT INTO earning (
-          driver_id, booking_id, trip_id, route_id, trip_date,
-          pickup_title, dropoff_title,
-          gross_amount, fee_amount, net_amount,
-          currency, status, source_event_id, created_at, updated_at
+          driver_id, booking_id, trip_id,
+          amount,
+          currency, status, created_at, updated_at
         ) VALUES (
           ${driverId}, ${bk.id}, ${tripId},
-          ${tripWithRoute.route.id}, ${tripWithRoute.trip.date.toISOString()},
-          ${tripWithRoute.route.pickup_location_title},
-          ${tripWithRoute.route.dropoff_location_title},
-          ${bk.fareAmount}, 0, ${bk.fareAmount},
+          ${bk.fareAmount},
           'NGN', 'pending_trip_completion',
-          ${`booking:${bk.id}:driver-assigned`},
           now(), now()
         )
         ON CONFLICT (booking_id) DO NOTHING

@@ -467,16 +467,6 @@ export interface DriverPayoutBalance {
   nextAutoPayoutAt: string | null;
 }
 
-export interface DriverPendingPayoutTrip {
-  tripId: string;
-  routeId: string;
-  tripDate: string;
-  pickupTitle: string;
-  dropoffTitle: string;
-  pendingAmount: number;
-  currency: string;
-}
-
 export interface DriverPayout {
   id: string;
   driverId: string;
