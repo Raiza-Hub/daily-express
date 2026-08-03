@@ -1,4 +1,4 @@
-const defaultProductionLogoUrl = "https://dailyexpress.app/email-logo.png";
+const defaultProductionLogoUrl = "https://dailyexpress.app/email-logo-v2.png";
 
 /**
  * Returns the logo src for use in email templates.

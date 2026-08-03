@@ -34,15 +34,7 @@ export async function renderEmail(
   const html = await render(
     React.createElement(TemplateComponent as React.FC<any>, props),
   );
-  return makeUnique(html);
-}
-
-function makeUnique(html: string): string {
-  const token = `${Date.now().toString(36)}-${Math.random().toString(36).slice(2, 10)}`;
-  const marker = `<span style="font-size:0;line-height:0;height:0;overflow:hidden;color:#ffffff;opacity:0;mso-hide:all">${token}</span>`;
-  return html
-    .replace(/<body[^>]*>/, (match) => `${match}${marker}`)
-    .replace("</body>", `${marker}</body>`);
+  return html;
 }
 
 export function getEmailSubject(
