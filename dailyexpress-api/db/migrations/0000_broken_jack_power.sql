@@ -2,7 +2,6 @@ CREATE TYPE "public"."bank_verification_status" AS ENUM('pending', 'active', 'fa
 CREATE TYPE "public"."kyc_status" AS ENUM('none', 'pending', 'active', 'failed');--> statement-breakpoint
 CREATE TYPE "public"."notification_kind" AS ENUM('event', 'state');--> statement-breakpoint
 CREATE TYPE "public"."notification_tone" AS ENUM('critical', 'attention', 'positive', 'info');--> statement-breakpoint
-CREATE TYPE "public"."payment_provider" AS ENUM('kora');--> statement-breakpoint
 CREATE TYPE "public"."payment_status" AS ENUM('initialized', 'pending', 'processing', 'successful', 'failed', 'cancelled', 'expired', 'refund_pending', 'refunded', 'refund_failed');--> statement-breakpoint
 CREATE TYPE "public"."refund_status" AS ENUM('pending', 'successful', 'failed');--> statement-breakpoint
 CREATE TYPE "public"."earning_status" AS ENUM('pending_trip_completion', 'available', 'processing', 'paid', 'cancelled');--> statement-breakpoint
@@ -138,22 +137,16 @@ CREATE TABLE "payment" (
 	"id" uuid PRIMARY KEY DEFAULT gen_random_uuid() NOT NULL,
 	"user_id" uuid NOT NULL,
 	"booking_id" uuid,
-	"provider" "payment_provider" DEFAULT 'kora' NOT NULL,
 	"reference" varchar(128) NOT NULL,
 	"amount" bigint NOT NULL,
 	"currency" varchar(8) DEFAULT 'NGN' NOT NULL,
 	"product_name" text NOT NULL,
 	"customer_email" text,
 	"status" "payment_status" DEFAULT 'pending' NOT NULL,
-	"provider_status" varchar(32),
 	"payer_bank_name" text,
 	"payer_account_number" varchar(32),
 	"payer_account_name" text,
 	"checkout_url" text,
-	"channels" jsonb,
-	"raw_initialize_response" jsonb,
-	"last_status_check_at" timestamp,
-	"paid_at" timestamp,
 	"failed_at" timestamp,
 	"failure_code" text,
 	"failure_reason" text,
@@ -167,13 +160,11 @@ CREATE TABLE "refund" (
 	"payment_id" uuid NOT NULL,
 	"booking_id" uuid,
 	"reference" varchar(128) NOT NULL,
-	"provider_refund_reference" varchar(128),
 	"amount" bigint NOT NULL,
 	"currency" varchar(8) DEFAULT 'NGN' NOT NULL,
 	"reason" text,
 	"status" "refund_status" DEFAULT 'pending' NOT NULL,
 	"failure_reason" text,
-	"initiated_by" varchar(32) DEFAULT 'auto' NOT NULL,
 	"completed_at" timestamp,
 	"created_at" timestamp DEFAULT now() NOT NULL,
 	"updated_at" timestamp DEFAULT now() NOT NULL,
@@ -208,8 +199,6 @@ CREATE TABLE "payout" (
 	"driver_email" varchar(255),
 	"failure_code" text,
 	"failure_reason" text,
-	"initiated_at" timestamp,
-	"settled_at" timestamp,
 	"failed_at" timestamp,
 	"created_at" timestamp DEFAULT now() NOT NULL,
 	"updated_at" timestamp DEFAULT now() NOT NULL,

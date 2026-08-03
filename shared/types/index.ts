@@ -349,7 +349,6 @@ export interface Payment {
   id: string;
   userId: string;
   bookingId?: string | null;
-  provider: "kora";
   reference: string;
   amount: number;
   currency: string;
@@ -357,14 +356,9 @@ export interface Payment {
   productDescription: string;
   customerEmail?: string | null;
   status: PaymentStatus;
-  providerStatus?: string | null;
   checkoutUrl?: string | null;
   redirectUrl: string;
   cancelUrl?: string | null;
-  channels?: KoraCheckoutChannel[] | null;
-  rawInitializeResponse?: unknown;
-  lastStatusCheckAt?: Date | null;
-  paidAt?: Date | null;
   failedAt?: Date | null;
   failureCode?: string | null;
   failureReason?: string | null;
@@ -459,14 +453,6 @@ export interface DriverNotificationRealtimeEvents {
   };
 }
 
-export interface DriverPayoutBalance {
-  pendingAmount: number;
-  availableAmount: number;
-  processingAmount: number;
-  paidAmount: number;
-  nextAutoPayoutAt: string | null;
-}
-
 export interface DriverPayout {
   id: string;
   driverId: string;
@@ -477,8 +463,6 @@ export interface DriverPayout {
   status: PayoutStatus;
   failureCode?: string | null;
   failureReason?: string | null;
-  initiatedAt?: Date | null;
-  settledAt?: Date | null;
   failedAt?: Date | null;
   createdAt: Date;
   updatedAt: Date;
@@ -487,18 +471,6 @@ export interface DriverPayout {
 export interface DriverPayoutHistoryItem extends DriverPayout {
   recipientBankName?: string | null;
   recipientAccountLast4?: string | null;
-}
-
-export interface DriverPayoutSummaryDay {
-  date: string;
-  totalPaidAmount: number;
-  payoutsCount: number;
-}
-
-export interface DriverPayoutSummary {
-  weekStart: string;
-  currency: string;
-  days: DriverPayoutSummaryDay[];
 }
 
 export interface ResolveBankAccountRequest {
