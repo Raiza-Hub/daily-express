@@ -204,40 +204,6 @@ export function useDriverNotificationsSSE() {
       );
     });
 
-    es.addEventListener("notification.read_all", (event: MessageEvent) => {
-      const envelope = parseSseEvent(event.data);
-      if (!envelope || envelope.type !== "notification.read_all") return;
-
-      queryClient.setQueriesData(
-        { queryKey: DRIVER_NOTIFICATIONS_QUERY_KEY },
-        (current: unknown) => {
-          if (!current) return current;
-
-          const markAllRead = (n: DriverNotification) => ({
-            ...n,
-            readAt: n.readAt || new Date(envelope.timestamp).toISOString(),
-          });
-
-          if (
-            typeof current === "object" &&
-            current !== null &&
-            "pages" in current
-          ) {
-            const c = current as { pages: NotificationsPage[] };
-            return {
-              ...c,
-              pages: c.pages.map((page: NotificationsPage) => ({
-                ...page,
-                notifications: page.notifications.map(markAllRead),
-              })),
-            };
-          }
-
-          return (current as DriverNotification[]).map(markAllRead);
-        },
-      );
-    });
-
     es.addEventListener("error", () => {
       void queryClient.invalidateQueries({
         queryKey: DRIVER_NOTIFICATIONS_QUERY_KEY,

@@ -4,7 +4,6 @@ import { BellIcon, SpinnerIcon } from "@phosphor-icons/react";
 import {
   useDriverNotificationsInfinite,
   useGetDriver,
-  useMarkAllDriverNotificationsRead,
   useMarkDriverNotificationRead,
 } from "@repo/api";
 import { Badge } from "@repo/ui/components/badge";
@@ -19,13 +18,11 @@ import type { DriverNotification } from "@shared/types";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useCallback, useRef, useState } from "react";
-import { NotificationTab } from "~/lib/type";
 import { formatRelativeTime, getToneClasses } from "~/lib/utils";
 
 const NotificationInbox = () => {
   const router = useRouter();
   const [open, setOpen] = useState(false);
-  const [tab, setTab] = useState<NotificationTab>("all");
   const { data: driver, isLoading: isLoadingDriver } = useGetDriver();
   const notificationsEnabled = Boolean(driver?.id);
   const isVerificationPending =
@@ -51,13 +48,8 @@ const NotificationInbox = () => {
   useBodyScrollLock(open);
 
   const unreadCount = data?.pages[0]?.unreadCount ?? 0;
-  const filteredNotifications =
-    tab === "unread"
-      ? notifications.filter((item) => !item.readAt)
-      : notifications;
 
   const markReadMutation = useMarkDriverNotificationRead();
-  const markAllReadMutation = useMarkAllDriverNotificationsRead();
 
   const handleNotificationClick = (notification: DriverNotification) => {
     if (!notification.readAt) {
@@ -122,61 +114,17 @@ const NotificationInbox = () => {
               variant="default"
               className="absolute -top-1 -right-1 h-4 min-w-4 items-center justify-center rounded-full bg-red-600 px-1 text-[10px] leading-none text-white"
             >
-              {unreadCount > 99 ? "99+" : unreadCount}
+              {unreadCount > 9 ? "9+" : unreadCount}
             </Badge>
           )}
         </button>
       </PopoverTrigger>
 
       <PopoverContent className="w-screen p-0 sm:w-[420px]" align="end">
-        <div className="border-b px-4 py-3">
-          <div className="flex items-center justify-between gap-3">
-            <div>
-              <div className="text-lg font-semibold text-foreground">
+        <div className="border-b px-4 py-2">
+          <div className="flex items-center justify-between">
+              <div className="text-lg font-medium text-foreground">
                 Notifications
-              </div>
-              <div className="text-sm text-muted-foreground">
-                Driver updates from payouts, routes, and account status
-              </div>
-            </div>
-          </div>
-
-          <div className="mt-3 flex items-center justify-between">
-            <div className="flex items-center gap-2">
-              <button
-                type="button"
-                onClick={() => setTab("all")}
-                className={cn(
-                  "rounded-full px-3 py-1 text-xs font-medium transition-colors cursor-pointer",
-                  tab === "all"
-                    ? "bg-blue-100 text-blue-700"
-                    : "bg-muted text-muted-foreground hover:text-foreground",
-                )}
-              >
-                All
-              </button>
-              <button
-                type="button"
-                onClick={() => setTab("unread")}
-                className={cn(
-                  "rounded-full px-3 py-1 text-xs font-medium transition-colors cursor-pointer",
-                  tab === "unread"
-                    ? "bg-blue-100 text-blue-700 "
-                    : "bg-muted text-muted-foreground hover:text-foreground",
-                )}
-              >
-                Unread
-              </button>
-              {unreadCount > 0 && (
-                <button
-                  type="button"
-                  onClick={() => markAllReadMutation.mutate()}
-                  className="text-xs font-medium text-foreground/80 transition-colors hover:text-foreground cursor-pointer"
-                  disabled={markAllReadMutation.isPending}
-                >
-                  Mark all read
-                </button>
-              )}
             </div>
           </div>
         </div>
@@ -205,15 +153,13 @@ const NotificationInbox = () => {
                 Retry
               </button>
             </div>
-          ) : filteredNotifications.length === 0 ? (
+          ) : notifications.length === 0 ? (
             <div className="px-4 py-8 text-center text-sm text-muted-foreground">
-              {tab === "unread"
-                ? "No unread notifications."
-                : "You are caught up. New driver activity will show here."}
+              You are caught up. New driver activity will show here.
             </div>
           ) : (
             <>
-              {filteredNotifications.map((notification) => {
+              {notifications.map((notification) => {
                 const toneClasses = getToneClasses(notification.tone);
                 const unread = !notification.readAt;
 
@@ -231,12 +177,12 @@ const NotificationInbox = () => {
                       )}
                     />
 
-                    <div className="min-w-0 flex-1">
+                    <div className="min-w-0 flex-1 cursor-pointer">
                       <div className="flex items-start justify-between gap-3">
                         <Link
                           href={notification?.href || ""}
                           className={cn(
-                            "text-sm underline-offset-2 hover:underline cursor-pointer",
+                            "text-sm",
                             unread
                               ? "font-semibold text-foreground"
                               : "text-foreground/80",

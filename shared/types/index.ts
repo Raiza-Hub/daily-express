@@ -429,26 +429,6 @@ export interface DriverNotificationReadRealtimeEvent {
   timestamp: number;
 }
 
-export interface DriverNotificationReadAllRealtimeEvent {
-  version: typeof DRIVER_NOTIFICATION_REALTIME_VERSION;
-  type: "notification.read_all";
-  payload: Record<string, never>;
-  timestamp: number;
-}
-
-export type DriverNotificationRealtimeEvent =
-  | DriverNotificationCreatedRealtimeEvent
-  | DriverNotificationReadRealtimeEvent
-  | DriverNotificationReadAllRealtimeEvent;
-
-export interface DriverNotificationRealtimeEvents {
-  notification: {
-    created: DriverNotificationCreatedRealtimeEvent;
-    read: DriverNotificationReadRealtimeEvent;
-    read_all: DriverNotificationReadAllRealtimeEvent;
-  };
-}
-
 export interface DriverPayout {
   id: string;
   driverId: string;
@@ -557,26 +537,3 @@ export interface DriverInfoResponse {
   vehiclePlateNumber: string;
   vehicleColor: string;
 }
-
-export const driverNotificationRealtimeEnvelopeSchema = z.object({
-  version: z.literal(DRIVER_NOTIFICATION_REALTIME_VERSION),
-  timestamp: z.number().int(),
-});
-
-export const driverNotificationCreatedRealtimeEventSchema: z.ZodType<DriverNotificationCreatedRealtimeEvent> = z.object({
-  ...driverNotificationRealtimeEnvelopeSchema.shape,
-  type: z.literal("notification.created"),
-  payload: driverNotificationSchema,
-});
-
-export const driverNotificationReadRealtimeEventSchema: z.ZodType<DriverNotificationReadRealtimeEvent> = z.object({
-  ...driverNotificationRealtimeEnvelopeSchema.shape,
-  type: z.literal("notification.read"),
-  payload: z.object({ id: z.string() }),
-});
-
-export const driverNotificationReadAllRealtimeEventSchema: z.ZodType<DriverNotificationReadAllRealtimeEvent> = z.object({
-  ...driverNotificationRealtimeEnvelopeSchema.shape,
-  type: z.literal("notification.read_all"),
-  payload: z.object({}),
-});

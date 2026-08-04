@@ -58,22 +58,6 @@ export class NotificationRepository {
     return record;
   }
 
-  async updateNotificationsByDriver(
-    driverId: string,
-    values: Partial<InsertNotification>,
-    extraConditions?: Parameters<typeof and>[0][],
-  ) {
-    const conditions = [
-      eq(notification.driverId, driverId),
-      ...(extraConditions ?? []),
-    ];
-    await db
-      .update(notification)
-      .set(values)
-      .where(and(...conditions))
-      .execute();
-  }
-
   async upsertNotification(
     tx: NotificationTransaction,
     values: InsertNotification & { notificationKey: string; driverId: string },

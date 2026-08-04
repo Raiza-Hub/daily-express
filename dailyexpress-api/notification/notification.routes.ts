@@ -16,10 +16,4 @@ router.patch(
   notificationController.markNotificationRead,
 );
 
-router.post(
-  "/read-all",
-  authenticateVerifiedGatewayRequest,
-  notificationController.markAllNotificationsRead,
-);
-
 export default router;
