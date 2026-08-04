@@ -17,7 +17,6 @@ interface NotificationsResponse {
 export const getDriverNotificationsFn = async (params?: {
   limit?: number;
   cursor?: string;
-  unreadOnly?: boolean;
 }): Promise<NotificationsResponse> => {
   try {
     const searchParams = new URLSearchParams();
@@ -26,9 +25,6 @@ export const getDriverNotificationsFn = async (params?: {
     }
     if (params?.cursor) {
       searchParams.set("cursor", params.cursor);
-    }
-    if (params?.unreadOnly) {
-      searchParams.set("unreadOnly", "true");
     }
 
     const response = await notificationApi.get<
@@ -69,25 +65,8 @@ export const markDriverNotificationReadFn = async (
   }
 };
 
-export const markAllDriverNotificationsReadFn = async (): Promise<void> => {
-  try {
-    const response = await notificationApi.post<ApiResponse<null>>(
-      "/read-all",
-    );
-
-    if (!response.data.success) {
-      throw new Error(
-        response.data.error || "Failed to mark notifications as read",
-      );
-    }
-  } catch (err) {
-    return handleApiError(err, "Failed to mark notifications as read") as never;
-  }
-};
-
 export const useDriverNotifications = (params?: {
   limit?: number;
-  unreadOnly?: boolean;
   enabled?: boolean;
 }) => {
   return useQuery({
@@ -95,7 +74,6 @@ export const useDriverNotifications = (params?: {
     queryFn: () =>
       getDriverNotificationsFn({
         limit: params?.limit,
-        unreadOnly: params?.unreadOnly,
       }),
     enabled: params?.enabled ?? true,
   });
@@ -103,7 +81,6 @@ export const useDriverNotifications = (params?: {
 
 export const useDriverNotificationsInfinite = (params?: {
   limit?: number;
-  unreadOnly?: boolean;
   enabled?: boolean;
   refetchInterval?: number | false;
 }) => {
@@ -113,7 +90,6 @@ export const useDriverNotificationsInfinite = (params?: {
       getDriverNotificationsFn({
         limit: params?.limit ?? 20,
         cursor: pageParam ?? undefined,
-        unreadOnly: params?.unreadOnly,
       }),
     initialPageParam: null as string | null,
     getNextPageParam: (lastPage) => lastPage.nextCursor,
@@ -127,19 +103,6 @@ export const useMarkDriverNotificationRead = () => {
 
   return useMutation({
     mutationFn: markDriverNotificationReadFn,
-    onSuccess: () => {
-      void queryClient.invalidateQueries({
-        queryKey: ["driver-notifications"],
-      });
-    },
-  });
-};
-
-export const useMarkAllDriverNotificationsRead = () => {
-  const queryClient = useQueryClient();
-
-  return useMutation({
-    mutationFn: markAllDriverNotificationsReadFn,
     onSuccess: () => {
       void queryClient.invalidateQueries({
         queryKey: ["driver-notifications"],

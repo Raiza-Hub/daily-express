@@ -21,13 +21,11 @@ export const getNotifications: RequestHandler = asyncHandler(
         userId: gatewayUser.userId,
         limit: req.query.limit ? Number(req.query.limit) : undefined,
         hasCursor: Boolean(req.query.cursor),
-        unreadOnly: req.query.unreadOnly === "true",
       },
       () =>
         notificationService.getNotifications(gatewayUser, {
           limit: req.query.limit ? Number(req.query.limit) : undefined,
           cursor: req.query.cursor ? String(req.query.cursor) : undefined,
-          unreadOnly: req.query.unreadOnly === "true",
         }),
     );
 
@@ -64,26 +62,5 @@ export const markNotificationRead: RequestHandler = asyncHandler(
     return res
       .status(200)
       .json(createSuccessResponse(updated, "Notification marked as read"));
-  },
-);
-
-export const markAllNotificationsRead: RequestHandler = asyncHandler(
-  async (req: Request, res: Response) => {
-    const gatewayUser = getAuthenticatedUser(req);
-    if (!gatewayUser) {
-      return sendErrorResponse(res, 401, "Please sign in again to continue.", {
-        code: "AUTHENTICATION_REQUIRED",
-      });
-    }
-
-    await timeAsync(
-      "notification.mark_all_read.service",
-      { userId: gatewayUser.userId },
-      () => notificationService.markAllNotificationsRead(gatewayUser),
-    );
-
-    return res
-      .status(200)
-      .json(createSuccessResponse(null, "Notifications marked as read"));
   },
 );

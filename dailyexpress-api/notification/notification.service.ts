@@ -3,10 +3,7 @@ import { and, eq, isNull, lt, or } from "drizzle-orm";
 import type { DriverNotification, JWTPayload } from "@shared/types";
 import { createServiceError } from "@shared/utils";
 import { notification } from "../db/notification-schema";
-import {
-  publishNotificationReadAllInBackground,
-  publishNotificationReadInBackground,
-} from "./realtime";
+import { publishNotificationReadInBackground } from "./realtime";
 import { NotificationRepository } from "./notification.repository";
 import { db } from "../db/connection";
 
@@ -104,7 +101,7 @@ export class NotificationService {
 
   async getNotifications(
     user: JWTPayload,
-    options?: { limit?: number; cursor?: string; unreadOnly?: boolean },
+    options?: { limit?: number; cursor?: string },
   ): Promise<{
     notifications: DriverNotification[];
     nextCursor: string | null;
@@ -119,14 +116,9 @@ export class NotificationService {
 
     const unreadCount = await this.repo.countUnreadByDriver(driverId);
 
-    const unreadFilters = options?.unreadOnly
-      ? [isNull(notification.readAt)]
-      : [];
-
     let whereClause = and(
       eq(notification.driverId, driverId),
       isNull(notification.archivedAt),
-      ...unreadFilters,
     );
 
     if (options?.cursor) {
@@ -194,19 +186,6 @@ export class NotificationService {
     const updatedNotification = this.mapRecordToNotification(updated);
     publishNotificationReadInBackground(driverId, id);
     return updatedNotification;
-  }
-
-  async markAllNotificationsRead(user: JWTPayload): Promise<void> {
-    const driverId = await this.resolveDriverId(user.userId);
-    const readAt = new Date();
-
-    await this.repo.updateNotificationsByDriver(
-      driverId,
-      { readAt, updatedAt: readAt },
-      [isNull(notification.archivedAt), isNull(notification.readAt)],
-    );
-
-    publishNotificationReadAllInBackground(driverId);
   }
 
   async createForDriverInTransaction(
