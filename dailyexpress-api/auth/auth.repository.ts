@@ -36,23 +36,16 @@ export class AuthRepository {
   }
 
   async updateUser(
-    tx: AuthTransaction | typeof db,
+    tx: AuthTransaction,
     id: string,
     values: Partial<typeof users.$inferInsert>,
-  ): Promise<UserRecord | undefined> {
+  ): Promise<UserRecord> {
     const [updated] = await tx
       .update(users)
       .set(values)
       .where(eq(users.id, id))
       .returning();
     return updated;
-  }
-
-  async updateUserStandalone(
-    id: string,
-    values: Partial<typeof users.$inferInsert>,
-  ): Promise<UserRecord[]> {
-    return db.update(users).set(values).where(eq(users.id, id)).returning();
   }
 
   async findOtpByEmail(email: string): Promise<OtpRecord | null> {

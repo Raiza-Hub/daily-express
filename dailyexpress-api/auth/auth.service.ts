@@ -159,9 +159,11 @@ export class AuthService {
       throw createServiceError("Invalid or expired OTP", 401);
     }
 
-    const [updatedUser] = await this.repo.updateUserStandalone(user.id, {
-      emailVerified: true,
-    });
+    const updatedUser = await db.transaction(async (tx) =>
+      this.repo.updateUser(tx, user.id, {
+        emailVerified: true,
+      }),
+    );
     await this.repo.deleteOtp(email);
 
     return {
@@ -326,7 +328,9 @@ export class AuthService {
     if (!user) {
       throw createServiceError("User not found", 404);
     }
-    const [updated] = await this.repo.updateUserStandalone(userId, data);
+    const updated = await db.transaction(async (tx) =>
+      this.repo.updateUser(tx, userId, data),
+    );
     return updated;
   }
 
@@ -430,13 +434,17 @@ export class AuthService {
   }
 
   async invalidateSessions(userId: string): Promise<void> {
-    await this.repo.updateUserStandalone(userId, {
-      sessionInvalidBefore: new Date(),
+    await db.transaction(async (tx) => {
+      await this.repo.updateUser(tx, userId, {
+        sessionInvalidBefore: new Date(),
+      });
     });
   }
 
   async setPassword(userId: string, password: string) {
     const hashedPassword = await bcrypt.hash(password, this.bcryptRounds);
-    await this.repo.updateUserStandalone(userId, { password: hashedPassword });
+    await db.transaction(async (tx) => {
+      await this.repo.updateUser(tx, userId, { password: hashedPassword });
+    });
   }
 }
