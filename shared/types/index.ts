@@ -420,15 +420,6 @@ export interface DriverNotificationCreatedRealtimeEvent {
   timestamp: number;
 }
 
-export interface DriverNotificationReadRealtimeEvent {
-  version: typeof DRIVER_NOTIFICATION_REALTIME_VERSION;
-  type: "notification.read";
-  payload: {
-    id: string;
-  };
-  timestamp: number;
-}
-
 export interface DriverPayout {
   id: string;
   driverId: string;

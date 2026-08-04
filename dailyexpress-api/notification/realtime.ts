@@ -1,7 +1,6 @@
 import type {
   DriverNotification,
   DriverNotificationCreatedRealtimeEvent,
-  DriverNotificationReadRealtimeEvent,
 } from "@shared/types";
 import {
   DRIVER_NOTIFICATION_REALTIME_VERSION,
@@ -52,36 +51,6 @@ export function publishNotificationCreatedInBackground(
     logger.warn("sse.notification_created_publish_failed", {
       driverId: notification.driverId,
       notificationId: notification.id,
-      error: error instanceof Error ? error.message : String(error),
-    });
-  }
-}
-
-export async function publishNotificationRead(
-  driverId: string,
-  notificationId: string,
-  timestamp = Date.now(),
-): Promise<void> {
-  const event: DriverNotificationReadRealtimeEvent = {
-    version: DRIVER_NOTIFICATION_REALTIME_VERSION,
-    type: "notification.read",
-    payload: { id: notificationId },
-    timestamp,
-  };
-  ssePublish(driverId, "notification.read", event);
-}
-
-export function publishNotificationReadInBackground(
-  driverId: string,
-  notificationId: string,
-  timestamp = Date.now(),
-): void {
-  try {
-    void publishNotificationRead(driverId, notificationId, timestamp);
-  } catch (error) {
-    logger.warn("sse.notification_read_publish_failed", {
-      driverId,
-      notificationId,
       error: error instanceof Error ? error.message : String(error),
     });
   }

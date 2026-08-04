@@ -1,8 +1,6 @@
 import {
   useInfiniteQuery,
   useMutation,
-  useQuery,
-  useQueryClient,
 } from "@tanstack/react-query";
 import { notificationApi } from "../api";
 import type { ApiResponse, DriverNotification } from "@shared/types";
@@ -13,6 +11,8 @@ interface NotificationsResponse {
   nextCursor: string | null;
   unreadCount: number;
 }
+
+const DRIVER_NOTIFICATIONS_QUERY_KEY = ["driver-notifications"] as const;
 
 export const getDriverNotificationsFn = async (params?: {
   limit?: number;
@@ -65,27 +65,13 @@ export const markDriverNotificationReadFn = async (
   }
 };
 
-export const useDriverNotifications = (params?: {
-  limit?: number;
-  enabled?: boolean;
-}) => {
-  return useQuery({
-    queryKey: ["driver-notifications"],
-    queryFn: () =>
-      getDriverNotificationsFn({
-        limit: params?.limit,
-      }),
-    enabled: params?.enabled ?? true,
-  });
-};
-
 export const useDriverNotificationsInfinite = (params?: {
   limit?: number;
   enabled?: boolean;
   refetchInterval?: number | false;
 }) => {
   return useInfiniteQuery({
-    queryKey: ["driver-notifications"],
+    queryKey: DRIVER_NOTIFICATIONS_QUERY_KEY,
     queryFn: ({ pageParam }: { pageParam: string | null }) =>
       getDriverNotificationsFn({
         limit: params?.limit ?? 20,
@@ -99,14 +85,7 @@ export const useDriverNotificationsInfinite = (params?: {
 };
 
 export const useMarkDriverNotificationRead = () => {
-  const queryClient = useQueryClient();
-
   return useMutation({
     mutationFn: markDriverNotificationReadFn,
-    onSuccess: () => {
-      void queryClient.invalidateQueries({
-        queryKey: ["driver-notifications"],
-      });
-    },
   });
 };

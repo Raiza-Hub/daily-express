@@ -3,7 +3,6 @@ import { and, eq, isNull, lt, or } from "drizzle-orm";
 import type { DriverNotification, JWTPayload } from "@shared/types";
 import { createServiceError } from "@shared/utils";
 import { notification } from "../db/notification-schema";
-import { publishNotificationReadInBackground } from "./realtime";
 import { NotificationRepository } from "./notification.repository";
 import { db } from "../db/connection";
 
@@ -184,7 +183,6 @@ export class NotificationService {
     });
 
     const updatedNotification = this.mapRecordToNotification(updated);
-    publishNotificationReadInBackground(driverId, id);
     return updatedNotification;
   }
 
