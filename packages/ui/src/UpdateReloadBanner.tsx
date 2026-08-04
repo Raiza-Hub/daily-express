@@ -30,6 +30,10 @@ function saveDismissedVersion(version: string) {
   }
 }
 
+function reloadPage() {
+  window.location.reload();
+}
+
 export function UpdateReloadBanner({
   initialVersion,
   appName = "web",
@@ -51,7 +55,6 @@ export function UpdateReloadBanner({
 
     let registration: ServiceWorkerRegistration | null = null;
     let channel: BroadcastChannel | null = null;
-    let stopped = false;
 
     function handleNewVersion(version: unknown) {
       if (
@@ -68,6 +71,18 @@ export function UpdateReloadBanner({
       if (isVersionDismissed(version)) {
         setDismissedVersion(version);
       }
+    }
+
+    function requestVersionFrom(worker: ServiceWorker | null | undefined) {
+      try {
+        worker?.postMessage({ type: "GET_VERSION" });
+      } catch {
+        // The worker may have become redundant between state changes.
+      }
+    }
+
+    function handleControllerChange() {
+      requestVersionFrom(navigator.serviceWorker.controller);
     }
 
     function handleVersionMessage(event: MessageEvent) {
@@ -96,32 +111,37 @@ export function UpdateReloadBanner({
       }
 
       try {
-        const reg = await navigator.serviceWorker.register("/api/sw");
+        const reg = await navigator.serviceWorker.register("/api/sw", {
+          updateViaCache: "none",
+        });
         registration = reg;
 
         navigator.serviceWorker.addEventListener(
           "message",
           handleVersionMessage,
         );
+        navigator.serviceWorker.addEventListener(
+          "controllerchange",
+          handleControllerChange,
+        );
 
-        if (reg.waiting) {
-          reg.waiting.postMessage({ type: "GET_VERSION" });
-          return;
-        }
+        requestVersionFrom(
+          reg.waiting ?? navigator.serviceWorker.controller ?? reg.active,
+        );
 
-        reg.onupdatefound = () => {
+        reg.addEventListener("updatefound", () => {
           const installing = reg.installing;
           if (!installing) return;
 
-          installing.onstatechange = () => {
+          installing.addEventListener("statechange", () => {
             if (
               installing.state === "installed" &&
               navigator.serviceWorker.controller
             ) {
-              installing.postMessage({ type: "GET_VERSION" });
+              requestVersionFrom(installing);
             }
-          };
-        };
+          });
+        });
       } catch {
         // ServiceWorker not supported or registration failed.
       }
@@ -146,7 +166,6 @@ export function UpdateReloadBanner({
     document.addEventListener("visibilitychange", handleVisibilityChange);
 
     return () => {
-      stopped = true;
       document.removeEventListener(
         "visibilitychange",
         handleVisibilityChange,
@@ -156,6 +175,10 @@ export function UpdateReloadBanner({
         navigator.serviceWorker.removeEventListener(
           "message",
           handleVersionMessage,
+        );
+        navigator.serviceWorker.removeEventListener(
+          "controllerchange",
+          handleControllerChange,
         );
       }
 
@@ -170,10 +193,6 @@ export function UpdateReloadBanner({
 
     setDismissedVersion(latestVersion);
     saveDismissedVersion(latestVersion);
-  }
-
-  function handleReload() {
-    window.location.reload();
   }
 
   if (!updateAvailable) {
@@ -217,7 +236,7 @@ export function UpdateReloadBanner({
             "bg-[#EFF6FF] text-[#1E40AF] hover:bg-[#DBEAFE] hover:text-[#1E40AF]",
             "focus-visible:ring-[#1E40AF]",
           )}
-          onClick={handleReload}
+          onClick={reloadPage}
         >
           <RefreshCwIcon className="size-3.5" aria-hidden="true" />
           Reload
