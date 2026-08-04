@@ -7,7 +7,6 @@ export const metadata: Metadata = buildDriverMetadata({
     description:
         "Manage your vehicles registered on Daily Express Driver.",
     path: "/vehicles",
-    noIndex: true,
 });
 
 const VehiclesPage = () => {

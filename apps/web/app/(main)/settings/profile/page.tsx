@@ -7,7 +7,6 @@ export const metadata: Metadata = buildWebMetadata({
     description:
         "Manage your Daily Express profile details and account preferences.",
     path: "/settings/profile",
-    noIndex: true,
 });
 
 

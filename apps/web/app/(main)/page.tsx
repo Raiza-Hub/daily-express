@@ -2,22 +2,12 @@ import type { Metadata } from "next";
 import { Suspense } from "react";
 import TripSearchBar from "~/components/trip/TripSearchBar";
 import TripSearchSection from "~/components/trip/TripSearchSection";
-import { buildHomeMetadataFromSearchParams } from "~/lib/seo";
+import { buildWebMetadata } from "~/lib/seo";
 
-type HomePageProps = {
-  searchParams: Promise<{
-    from?: string | string[];
-    to?: string | string[];
-    date?: string | string[];
-    vehicleType?: string | string[];
-  }>;
-};
-
-export async function generateMetadata({
-  searchParams,
-}: HomePageProps): Promise<Metadata> {
-  return buildHomeMetadataFromSearchParams(await searchParams);
-}
+export const metadata: Metadata = buildWebMetadata({
+  title: "Find Trips",
+  path: "/",
+});
 
 export default function Home() {
   return (

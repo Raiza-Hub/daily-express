@@ -7,7 +7,6 @@ export const metadata: Metadata = buildWebMetadata({
     description:
         "Review your Daily Express bookings, trip dates, and current travel status.",
     path: "/trip-status",
-    noIndex: true,
 });
 
 const Page = () => {

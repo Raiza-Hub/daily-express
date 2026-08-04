@@ -1,21 +1,9 @@
-import type { Metadata } from "next";
 import { ReactNode } from "react";
 import { cookies } from "next/headers";
 import { redirect } from "next/navigation";
 import { DriverRealtimeSync } from "~/components/DriverRealtimeSync";
 import Navbar from "~/components/Navbar";
 import { env } from "~/env";
-
-export const metadata: Metadata = {
-    robots: {
-        index: false,
-        follow: false,
-        googleBot: {
-            index: false,
-            follow: false,
-        },
-    },
-};
 
 const Layout = async ({ children }: { children: ReactNode }) => {
     const cookieStore = await cookies();
