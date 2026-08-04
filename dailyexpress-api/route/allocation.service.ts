@@ -5,6 +5,7 @@ import { booking, earning, payment, route, trip, VEHICLE_CAPACITY } from "../db/
 import { driverStats } from "../db/driver-schema";
 import { getConfig } from "../config/index";
 import { logger } from "../utils/logger";
+import { calculateTrustedChargeAmount } from "../utils/payment";
 import { formatAmount } from "../utils/payout";
 import { formatBusinessDate } from "../utils/route";
 import { jobService } from "../workers/job.service";
@@ -51,7 +52,10 @@ export class AllocationService {
         frontendUrl: config.FRONTEND_URL,
         passengerName: `${bookingRecord.firstName ?? ""} ${bookingRecord.lastName ?? ""}`.trim() || null,
         paymentReference: reference,
-        pricePaid: formatAmount(bookingRecord.fareAmount, "NGN"),
+        pricePaid: formatAmount(
+          calculateTrustedChargeAmount(bookingRecord.fareAmount, bookingRecord.feeAmount),
+          "NGN",
+        ),
         pickupTitle: routeRecord.pickup_location_title,
         dropoffTitle: routeRecord.dropoff_location_title,
         tripDate: formatBusinessDate(bookingRecord.tripDate),
