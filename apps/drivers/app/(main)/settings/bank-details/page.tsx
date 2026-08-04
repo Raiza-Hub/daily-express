@@ -7,7 +7,6 @@ export const metadata: Metadata = buildDriverMetadata({
     description:
         "Update Daily Express Driver payout bank details and verification status.",
     path: "/settings/bank-details",
-    noIndex: true,
 });
 
 

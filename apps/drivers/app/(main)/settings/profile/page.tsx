@@ -7,7 +7,6 @@ export const metadata: Metadata = buildDriverMetadata({
     description:
         "Manage your Daily Express Driver profile information and account details.",
     path: "/settings/profile",
-    noIndex: true,
 });
 
 

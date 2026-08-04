@@ -12,21 +12,6 @@ function buildPageTitle(title?: string) {
   return title ? `${title} | ${DRIVER_APP_NAME}` : DRIVER_APP_NAME;
 }
 
-function buildRobots(noIndex?: boolean): Metadata["robots"] | undefined {
-  if (!noIndex) {
-    return undefined;
-  }
-
-  return {
-    index: false,
-    follow: false,
-    googleBot: {
-      index: false,
-      follow: false,
-    },
-  };
-}
-
 export function buildDriverAbsoluteUrl(path = "/") {
   return new URL(path, driverAppUrl).toString();
 }
@@ -35,12 +20,10 @@ export function buildDriverMetadata({
   title,
   description = DEFAULT_DRIVER_DESCRIPTION,
   path = "/",
-  noIndex = false,
 }: {
   title?: string;
   description?: string;
   path?: string;
-  noIndex?: boolean;
 } = {}): Metadata {
   const canonicalUrl = buildDriverAbsoluteUrl(path);
   const fullTitle = buildPageTitle(title);
@@ -51,7 +34,6 @@ export function buildDriverMetadata({
     alternates: {
       canonical: canonicalUrl,
     },
-    robots: buildRobots(noIndex),
     openGraph: {
       title: fullTitle,
       description,

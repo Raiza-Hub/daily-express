@@ -9,7 +9,6 @@ export const metadata: Metadata = buildDriverMetadata({
   description:
     "View your Daily Express route performance, earnings, and driver activity from one dashboard.",
   path: "/",
-  noIndex: true,
 });
 
 export default async function Home({

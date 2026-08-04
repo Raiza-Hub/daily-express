@@ -7,7 +7,6 @@ export const metadata: Metadata = buildDriverMetadata({
     description:
         "Track Daily Express Driver payout history, transfer status, and settlement details.",
     path: "/payouts",
-    noIndex: true,
 });
 
 const PayoutsPage = async () => {
