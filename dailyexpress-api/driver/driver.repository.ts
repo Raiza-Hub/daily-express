@@ -51,13 +51,6 @@ export class DriverRepository {
     return record;
   }
 
-  async updateDriverStandalone(
-    userId: string,
-    values: Partial<typeof driver.$inferInsert>,
-  ): Promise<void> {
-    await db.update(driver).set(values).where(eq(driver.userId, userId));
-  }
-
   async findNonCompletedTripByDriverId(driverId: string) {
     const result = await db.query.trip.findFirst({
       where: and(

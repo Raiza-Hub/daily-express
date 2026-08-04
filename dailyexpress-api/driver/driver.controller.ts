@@ -4,6 +4,7 @@ import { driverService } from "./driver.service";
 import { vehicleService } from "./vehicle.service";
 import { driverRepository } from "./driver.repository";
 import { r2ProfileService } from "./r2-profile.service";
+import { db } from "../db/connection";
 import { createSuccessResponse } from "@shared/utils";
 import { getAuthenticatedUser } from "../middleware/auth";
 import { sendErrorResponse } from "../middleware/apiResponses";
@@ -177,9 +178,13 @@ export const presignProfileUpload: RequestHandler = asyncHandler(
     }
 
     const driverRecord = await driverRepository.findDriverByUserId(gatewayUser.userId);
-    const id = driverRecord?.id ?? gatewayUser.userId;
+    if (!driverRecord) {
+      return sendErrorResponse(res, 404, "Driver not found.", {
+        code: "DRIVER_NOT_FOUND",
+      });
+    }
 
-    const result = await r2ProfileService.generateUploadUrl(id, contentType, contentLength);
+    const result = await r2ProfileService.generateUploadUrl(driverRecord.id, contentType, contentLength);
     return res.status(200).json(createSuccessResponse(result));
   },
 );
@@ -198,9 +203,11 @@ export const confirmProfileUpload: RequestHandler = asyncHandler(
 
     const { publicUrl } = await r2ProfileService.confirmUpload(key);
 
-    await driverRepository.updateDriverStandalone(gatewayUser.userId, {
-      profile_pic: publicUrl,
-      updatedAt: new Date(),
+    await db.transaction(async (tx) => {
+      await driverRepository.updateDriver(tx, gatewayUser.userId, {
+        profile_pic: publicUrl,
+        updatedAt: new Date(),
+      });
     });
 
     return res.status(200).json(
