@@ -344,7 +344,7 @@ export class BookingService {
         booking,
         and(
           eq(booking.tripId, trip.id),
-          eq(booking.status, "confirmed"),
+          inArray(booking.status, [...VISIBLE_BOOKING_STATUSES]),
           notInArray(booking.paymentStatus, HIDDEN_BOOKING_PAYMENT_STATUSES),
         ),
       )
