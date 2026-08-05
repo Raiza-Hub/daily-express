@@ -214,21 +214,12 @@ export class TripClaimService {
         driverId,
         {
           notificationKey: `trip:${tripId}:claimed`,
-          kind: "event",
           type: "trip_claimed",
           title: "Trip claimed successfully",
           message: `You have claimed the trip from ${routeRecord.pickup_location_title} to ${routeRecord.dropoff_location_title} on ${formatRouteDate(tripRecord.date)}.`,
           href: `/?date=${formatBusinessDate(tripRecord.date)}`,
           tag: "Claimed",
           tone: "positive",
-          metadata: {
-            tripId,
-            routeId: routeRecord.id,
-            pickupTitle: routeRecord.pickup_location_title,
-            dropoffTitle: routeRecord.dropoff_location_title,
-            departureTime: routeRecord.departure_time,
-          },
-          occurredAt: new Date(),
         },
       );
 

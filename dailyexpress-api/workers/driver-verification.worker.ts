@@ -33,29 +33,24 @@ function bankDetailsMatch(
 function bankVerifiedNotification() {
   return {
     notificationKey: "bank-verification-verified",
-    kind: "state" as const,
     type: "bank_verification_verified",
       title: "Payout account verified",
     message: "Your bank account is verified and ready for payouts.",
     href: "/settings/bank-details",
     tag: "Verified",
     tone: "positive" as const,
-    occurredAt: new Date(),
   };
 }
 
 function bankFailedNotification(reason: string) {
   return {
     notificationKey: "bank-verification-failed",
-    kind: "state" as const,
     type: "bank_verification_failed",
     title: "Bank details need attention",
     message: reason || "Your payout account could not be verified. Update your bank details to resume payouts.",
     href: "/settings/bank-details",
     tag: "Payout issue",
     tone: "critical" as const,
-    metadata: { reason },
-    occurredAt: new Date(),
   };
 }
 
@@ -161,7 +156,6 @@ async function processBankVerification(
 function kycVerifiedNotification() {
   return {
     notificationKey: "kyc-verification-verified",
-    kind: "state" as const,
     type: "kyc_verification_verified",
     title: "Identity verified",
     message: "Your identity has been verified successfully. You can now claim trips.",
@@ -174,15 +168,12 @@ function kycVerifiedNotification() {
 function kycFailedNotification(reason: string) {
   return {
     notificationKey: "kyc-verification-failed",
-    kind: "state" as const,
     type: "kyc_verification_failed",
     title: "Identity verification failed",
     message: reason || "Your identity could not be verified. Please resubmit your details.",
     href: "/settings/bank-details",
     tag: "KYC issue",
     tone: "critical" as const,
-    metadata: { reason },
-    occurredAt: new Date(),
   };
 }
 

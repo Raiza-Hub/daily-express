@@ -39,7 +39,6 @@ export class PayoutProcessorService {
           earnings[0].driverId,
           {
             notificationKey: "account-setup-pending",
-            kind: "state",
             type: "bank_setup_pending",
             title: "Bank account setup needed",
             message:
@@ -47,10 +46,6 @@ export class PayoutProcessorService {
             href: "/settings/bank-details",
             tag: "Action needed",
             tone: "attention",
-            metadata: {
-              tripId,
-            },
-            occurredAt: new Date(),
           },
         );
         if (notification) {
@@ -78,8 +73,7 @@ export class PayoutProcessorService {
             tx,
             earnings[0].driverId,
             {
-              notificationKey: "payout-too-small",
-              kind: "state",
+notificationKey: "payout-too-small",
               type: "payout_too_small",
               title: "Minimum payout not met",
               message:
@@ -87,11 +81,6 @@ export class PayoutProcessorService {
               href: "/",
               tag: "Info",
               tone: "info",
-              metadata: {
-                tripId,
-                amount: payoutRecord.amount,
-              },
-              occurredAt: new Date(),
             },
           );
         if (notification) {

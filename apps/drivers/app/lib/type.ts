@@ -6,8 +6,6 @@ export interface Bank {
   nibss_bank_code: string;
 }
 
-export type NotificationTab = "all" | "unread";
-
 export interface RouteWithTrips {
   id: string;
   tripId: string;

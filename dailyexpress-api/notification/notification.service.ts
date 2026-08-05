@@ -1,5 +1,5 @@
 import { createHash } from "node:crypto";
-import { and, eq, isNull, lt, or } from "drizzle-orm";
+import { and, eq, lt, or } from "drizzle-orm";
 import type { DriverNotification, JWTPayload } from "@shared/types";
 import { createServiceError } from "@shared/utils";
 import { notification } from "../db/notification-schema";
@@ -8,15 +8,12 @@ import { db } from "../db/connection";
 
 export interface NotificationInput {
   notificationKey: string;
-  kind: "event" | "state";
   type: string;
   title: string;
   message: string;
   href?: string | null;
   tag: string;
   tone: "critical" | "attention" | "positive" | "info";
-  metadata?: Record<string, unknown> | null;
-  occurredAt?: Date;
 }
 
 interface UpsertNotificationResult {
@@ -27,19 +24,6 @@ interface UpsertNotificationResult {
 type NotificationTransaction = Parameters<Parameters<typeof db.transaction>[0]>[0];
 
 const MAX_LIMIT = 50;
-const BANK_VERIFICATION_STATE_KEYS = [
-  "account-setup-pending",
-  "bank-verification-failed",
-  "bank-verification-pending",
-  "bank-verification-verified",
-] as const;
-
-const KYC_VERIFICATION_STATE_KEYS = [
-  "account-setup-pending",
-  "kyc-verification-failed",
-  "kyc-verification-pending",
-  "kyc-verification-verified",
-] as const;
 
 export class NotificationService {
   constructor(private repo = new NotificationRepository()) {}
@@ -56,14 +40,12 @@ export class NotificationService {
     return createHash("sha256")
       .update(
         JSON.stringify({
-          kind: input.kind,
           type: input.type,
           title: input.title,
           message: input.message,
           href: input.href || null,
           tag: input.tag,
           tone: input.tone,
-          metadata: input.metadata || null,
         }),
       )
       .digest("hex");
@@ -76,16 +58,13 @@ export class NotificationService {
       id: record.id,
       driverId: record.driverId,
       notificationKey: record.notificationKey,
-      kind: record.kind,
       type: record.type,
       title: record.title,
       message: record.message,
       href: record.href,
       tag: record.tag,
       tone: record.tone,
-      metadata: (record.metadata as Record<string, unknown> | null) || null,
       readAt: record.readAt,
-      occurredAt: record.occurredAt,
       createdAt: record.createdAt,
       updatedAt: record.updatedAt,
     };
@@ -117,24 +96,23 @@ export class NotificationService {
 
     let whereClause = and(
       eq(notification.driverId, driverId),
-      isNull(notification.archivedAt),
     );
 
     if (options?.cursor) {
-      const [occurredAt, createdAt, id] = options.cursor.split("|");
-      const occurredAtDate = new Date(occurredAt);
+      const [updatedAt, createdAt, id] = options.cursor.split("|");
+      const updatedAtDate = new Date(updatedAt);
       const createdAtDate = new Date(createdAt);
 
       whereClause = and(
         whereClause,
         or(
-          lt(notification.occurredAt, occurredAtDate),
+          lt(notification.updatedAt, updatedAtDate),
           and(
-            eq(notification.occurredAt, occurredAtDate),
+            eq(notification.updatedAt, updatedAtDate),
             lt(notification.createdAt, createdAtDate),
           ),
           and(
-            eq(notification.occurredAt, occurredAtDate),
+            eq(notification.updatedAt, updatedAtDate),
             eq(notification.createdAt, createdAtDate),
             lt(notification.id, id),
           ),
@@ -151,7 +129,7 @@ export class NotificationService {
     let nextCursor: string | null = null;
     if (notifications.length > limit) {
       const nextItem = notifications[limit];
-      nextCursor = `${nextItem.occurredAt.toISOString()}|${nextItem.createdAt.toISOString()}|${nextItem.id}`;
+      nextCursor = `${nextItem.updatedAt.toISOString()}|${nextItem.createdAt.toISOString()}|${nextItem.id}`;
     }
 
     const result = notifications
@@ -179,7 +157,6 @@ export class NotificationService {
     const readAt = new Date();
     const updated = await this.repo.updateNotification(id, {
       readAt,
-      updatedAt: readAt,
     });
 
     const updatedNotification = this.mapRecordToNotification(updated);
@@ -196,16 +173,13 @@ export class NotificationService {
     const created = await this.repo.upsertNotification(tx, {
       driverId,
       notificationKey: descriptor.notificationKey,
-      kind: descriptor.kind,
       type: descriptor.type,
       title: descriptor.title,
       message: descriptor.message,
       href: descriptor.href || null,
       tag: descriptor.tag,
       tone: descriptor.tone,
-      metadata: descriptor.metadata || null,
       contentHash,
-      occurredAt: descriptor.occurredAt || new Date(),
     });
 
     return this.mapRecordToNotification(created);
@@ -218,11 +192,6 @@ export class NotificationService {
   ): Promise<UpsertNotificationResult> {
     const now = new Date();
     const contentHash = this.hashContent(descriptor);
-    const staleKeys = BANK_VERIFICATION_STATE_KEYS.filter(
-      (key) => key !== descriptor.notificationKey,
-    );
-
-    await this.repo.archiveNotificationsByKeys(tx, driverId, [...staleKeys]);
 
     const existing = await this.repo.findNotificationByDriverAndKey(
       tx,
@@ -239,26 +208,19 @@ export class NotificationService {
       return { notification: created, shouldDeliver: true };
     }
 
-    const contentChanged =
-      existing.contentHash !== contentHash || existing.archivedAt !== null;
+    const contentChanged = existing.contentHash !== contentHash;
 
     const updated = await this.repo.updateNotificationInTransaction(
       tx,
       existing.id,
       {
-        kind: descriptor.kind,
         type: descriptor.type,
         title: descriptor.title,
         message: descriptor.message,
         href: descriptor.href || null,
         tag: descriptor.tag,
         tone: descriptor.tone,
-        metadata: descriptor.metadata || null,
         contentHash,
-        archivedAt: null,
-        occurredAt: contentChanged
-          ? descriptor.occurredAt || now
-          : existing.occurredAt,
         readAt: contentChanged ? null : existing.readAt,
         updatedAt: now,
       },
@@ -277,11 +239,6 @@ export class NotificationService {
   ): Promise<UpsertNotificationResult> {
     const now = new Date();
     const contentHash = this.hashContent(descriptor);
-    const staleKeys = KYC_VERIFICATION_STATE_KEYS.filter(
-      (key) => key !== descriptor.notificationKey,
-    );
-
-    await this.repo.archiveNotificationsByKeys(tx, driverId, [...staleKeys]);
 
     const existing = await this.repo.findNotificationByDriverAndKey(
       tx,
@@ -298,26 +255,19 @@ export class NotificationService {
       return { notification: created, shouldDeliver: true };
     }
 
-    const contentChanged =
-      existing.contentHash !== contentHash || existing.archivedAt !== null;
+    const contentChanged = existing.contentHash !== contentHash;
 
     const updated = await this.repo.updateNotificationInTransaction(
       tx,
       existing.id,
       {
-        kind: descriptor.kind,
         type: descriptor.type,
         title: descriptor.title,
         message: descriptor.message,
         href: descriptor.href || null,
         tag: descriptor.tag,
         tone: descriptor.tone,
-        metadata: descriptor.metadata || null,
         contentHash,
-        archivedAt: null,
-        occurredAt: contentChanged
-          ? descriptor.occurredAt || now
-          : existing.occurredAt,
         readAt: contentChanged ? null : existing.readAt,
         updatedAt: now,
       },

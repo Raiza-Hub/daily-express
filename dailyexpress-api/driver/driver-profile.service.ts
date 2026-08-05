@@ -278,7 +278,6 @@ export class DriverProfileService {
   private getAccountSetupPendingNotification() {
     return {
       notificationKey: "account-setup-pending",
-      kind: "state" as const,
       type: "account_setup_pending",
       title: "Setting up your account",
       message:
@@ -286,14 +285,12 @@ export class DriverProfileService {
       href: "/settings/bank-details",
       tag: "Verification",
       tone: "attention" as const,
-      occurredAt: new Date(),
     };
   }
 
   private getBankVerificationPendingNotification() {
     return {
       notificationKey: "bank-verification-pending",
-      kind: "state" as const,
       type: "bank_verification_pending",
       title: "Bank verification in progress",
       message:
@@ -301,21 +298,18 @@ export class DriverProfileService {
       href: "/settings/bank-details",
       tag: "Verification",
       tone: "attention" as const,
-      occurredAt: new Date(),
     };
   }
 
   private getKycVerificationPendingNotification() {
     return {
       notificationKey: "kyc-verification-pending",
-      kind: "state" as const,
       type: "kyc_verification_pending",
       title: "Identity verification in progress",
       message: "We're verifying your identity. You'll be notified once it's complete.",
       href: "/settings/bank-details",
       tag: "Verification",
       tone: "attention" as const,
-      occurredAt: new Date(),
     };
   }
 

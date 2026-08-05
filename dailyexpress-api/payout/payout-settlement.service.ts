@@ -153,7 +153,6 @@ export class PayoutSettlementService {
       payoutRecord.driverId,
       {
         notificationKey: `event:payout:${payoutRecord.id}:completed`,
-        kind: "event",
         type: "payout_completed",
         title: "Payout sent successfully",
         message: `${formatAmount(
@@ -163,11 +162,6 @@ export class PayoutSettlementService {
         href: "/payouts",
         tag: "Paid",
         tone: "positive",
-        metadata: {
-          payoutId: payoutRecord.id,
-          reference: payoutRecord.reference,
-        },
-        occurredAt: new Date(),
       },
     );
   }

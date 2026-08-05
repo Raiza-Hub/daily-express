@@ -1,0 +1,1 @@
+ALTER TABLE "notification" DROP COLUMN "occurred_at";--> statement-breakpoint
