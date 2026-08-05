@@ -1,6 +1,5 @@
 import { eq, sql, type SQL } from "drizzle-orm";
 import { driverStats } from "../db/index";
-import { db } from "../db/connection";
 import type { DbTransaction } from "../db/connection";
 
 type DriverTransaction = DbTransaction;

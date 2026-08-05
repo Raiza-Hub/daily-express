@@ -9,10 +9,6 @@ import { jobService } from "../workers/job.service";
 import { timeAsync } from "../utils/timing";
 import { DriverRepository, driverRepository } from "./driver.repository";
 
-import type { DbTransaction } from "../db/connection";
-import type { DriverRecord } from "../db/index";
-type DriverTransaction = DbTransaction;
-
 export class DriverProfileService {
   constructor(private repo: DriverRepository) {}
 

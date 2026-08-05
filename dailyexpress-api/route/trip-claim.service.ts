@@ -1,5 +1,5 @@
 import { createServiceError } from "@shared/utils";
-import { and, eq, gte, isNull, lt } from "drizzle-orm";
+import { eq, gte, isNull, lt } from "drizzle-orm";
 import { db } from "../db/connection";
 import { driver, externalDriver, trip, vehicle } from "../db/index";
 import { logger } from "../utils/logger";

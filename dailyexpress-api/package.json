@@ -13,11 +13,7 @@
     "db:pull": "bun x drizzle-kit pull",
     "db:migrate": "bun x drizzle-kit migrate",
     "db:studio": "bun x drizzle-kit studio",
-    "db:seed": "bun run scripts/seed.ts",
-    "db:clear": "bun run scripts/clear-db.ts --yes",
-    "db:seed-adebola": "bun run scripts/seed-adebola-bookings.ts",
-    "db:seed-payouts": "bun run scripts/seed-payouts.ts",
-    "db:seed-available-trips": "bun run scripts/seed-available-trips.ts"
+    "db:clear": "bun run scripts/clear-db.ts --yes"
   },
   "dependencies": {
     "@aws-sdk/client-s3": "^3.1094.0",

@@ -1,5 +1,5 @@
 import { createServiceError, sanitizeInput } from "@shared/utils";
-import { and, eq } from "drizzle-orm";
+import { eq } from "drizzle-orm";
 import { getConfig } from "../config/index";
 import { db } from "../db/connection";
 import { booking, payment } from "../db/index";
@@ -17,7 +17,6 @@ import type {
     InitializePaymentInput,
     KoraChannel,
     KoraInitializeResponse,
-    PaymentTransaction,
 } from "./payment.types";
 import type { PaymentRecord } from "../db/index";
 

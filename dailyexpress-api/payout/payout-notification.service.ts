@@ -3,8 +3,6 @@ import { db } from "../db/connection";
 import { and, eq } from "drizzle-orm";
 import { earning, payout, type PayoutRecord } from "../db/index";
 import { getConfig } from "../config/index";
-import { PayoutRepository, payoutRepository } from "./payout.repository";
-import { driverService as sharedDriverService } from "../driver/driver.service";
 import { notificationService as sharedNotificationService } from "../notification/notification.service";
 import { publishNotificationCreatedInBackground } from "../notification/realtime";
 import { jobService } from "../workers/job.service";
@@ -15,10 +13,7 @@ import type { DbTransaction } from "../db/connection";
 type PayoutTransaction = DbTransaction;
 
 export class PayoutNotificationService {
-  private readonly driverService = sharedDriverService;
   private readonly notificationService = sharedNotificationService;
-
-  constructor(private repo: PayoutRepository) {}
 
   async processPayoutFailure(
     payoutRecord: PayoutRecord,
@@ -155,4 +150,4 @@ export class PayoutNotificationService {
   }
 }
 
-export const payoutNotificationService = new PayoutNotificationService(payoutRepository);
+export const payoutNotificationService = new PayoutNotificationService();

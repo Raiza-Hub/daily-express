@@ -7,9 +7,7 @@
       "dependsOn": ["^build"],
       "env": [
         "LOCATION_UPSTASH_REDIS_REST_URL",
-        "NOTIFICATION_UPSTASH_REDIS_REST_URL",
         "AWS_REGION",
-        "DISABLE_LOCATION_SUGGESTIONS_CACHE",
         "NEXT_PUBLIC_DAILYEXPRESS_API_URL",
         "NEXT_PUBLIC_DRIVER_APP_URL",
         "NEXT_PUBLIC_POSTHOG_HOST",
@@ -21,7 +19,6 @@
       ],
       "passThroughEnv": [
         "LOCATION_UPSTASH_REDIS_REST_TOKEN",
-        "NOTIFICATION_UPSTASH_REDIS_REST_TOKEN",
         "AWS_ACCESS_KEY_ID",
         "AWS_SECRET_ACCESS_KEY"
       ],

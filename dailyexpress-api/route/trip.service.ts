@@ -13,7 +13,6 @@ import {
 import { RouteRepository, routeRepository } from "./route.repository";
 import { payoutService as sharedPayoutService } from "../payout/payout.service";
 import { getTripArrivalAt, resolveDriverId, VISIBLE_BOOKING_STATUSES } from "./utils";
-import { logger } from "../utils/logger";
 
 export class TripService {
   private readonly payoutService = sharedPayoutService;
