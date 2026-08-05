@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { RefreshCwIcon, XIcon, ZapIcon } from "lucide-react";
 
 import { Button } from "./components/button";
@@ -12,6 +12,7 @@ const CHANNEL_NAME = "dailyexpress-deployment-version";
 type UpdateReloadBannerProps = {
   initialVersion: string;
   appName?: "web" | "driver";
+  updateCheckKey?: string;
 };
 
 function isVersionDismissed(version: string) {
@@ -37,9 +38,11 @@ function reloadPage() {
 export function UpdateReloadBanner({
   initialVersion,
   appName = "web",
+  updateCheckKey,
 }: UpdateReloadBannerProps) {
   const [latestVersion, setLatestVersion] = useState<string | null>(null);
   const [dismissedVersion, setDismissedVersion] = useState<string | null>(null);
+  const registrationRef = useRef<ServiceWorkerRegistration | null>(null);
   const isDevelopment = initialVersion === "development";
 
   const updateAvailable =
@@ -96,11 +99,11 @@ export function UpdateReloadBanner({
     }
 
     async function checkForUpdates() {
-      if (registration) {
+      if (registrationRef.current) {
         try {
-          await registration.update();
+          await registrationRef.current.update();
         } catch {
-          // Registration update failed; next interval retries.
+          // A later navigation or visibility change retries.
         }
       }
     }
@@ -115,6 +118,7 @@ export function UpdateReloadBanner({
           updateViaCache: "none",
         });
         registration = reg;
+        registrationRef.current = reg;
 
         navigator.serviceWorker.addEventListener(
           "message",
@@ -166,10 +170,10 @@ export function UpdateReloadBanner({
     document.addEventListener("visibilitychange", handleVisibilityChange);
 
     return () => {
-      document.removeEventListener(
-        "visibilitychange",
-        handleVisibilityChange,
-      );
+      document.removeEventListener("visibilitychange", handleVisibilityChange);
+      if (registrationRef.current === registration) {
+        registrationRef.current = null;
+      }
 
       if (navigator.serviceWorker) {
         navigator.serviceWorker.removeEventListener(
@@ -185,6 +189,20 @@ export function UpdateReloadBanner({
       channel?.close();
     };
   }, [initialVersion, isDevelopment]);
+
+  useEffect(() => {
+    if (isDevelopment || updateCheckKey === undefined) {
+      return;
+    }
+
+    void (async () => {
+      try {
+        await registrationRef.current?.update();
+      } catch {
+        // The next route change or visibility change retries.
+      }
+    })();
+  }, [isDevelopment, updateCheckKey]);
 
   function handleDismiss() {
     if (!latestVersion) {
