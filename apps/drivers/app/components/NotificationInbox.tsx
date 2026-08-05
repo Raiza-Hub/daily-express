@@ -191,7 +191,7 @@ const NotificationInbox = () => {
                           {notification.title}
                         </Link>
                         <span className="shrink-0 text-xs text-muted-foreground">
-                          {formatRelativeTime(notification.occurredAt)}
+                          {formatRelativeTime(notification.updatedAt)}
                         </span>
                       </div>
 

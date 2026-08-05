@@ -1,5 +1,4 @@
 import {
-  jsonb,
   pgEnum,
   pgTable,
   text,
@@ -17,11 +16,6 @@ export const notificationToneEnum = pgEnum("notification_tone", [
   "info",
 ]);
 
-export const notificationKindEnum = pgEnum("notification_kind", [
-  "event",
-  "state",
-]);
-
 export const notification = pgTable(
   "notification",
   {
@@ -30,20 +24,14 @@ export const notification = pgTable(
       .references(() => driver.id, { onDelete: "cascade" })
       .notNull(),
     notificationKey: varchar("notification_key", { length: 191 }).notNull(),
-    kind: notificationKindEnum("kind").default("event").notNull(),
     type: varchar("type", { length: 96 }).notNull(),
     title: text("title").notNull(),
     message: text("message").notNull(),
     href: text("href"),
     tag: varchar("tag", { length: 64 }).notNull(),
     tone: notificationToneEnum("tone").default("info").notNull(),
-    metadata: jsonb("metadata"),
     contentHash: varchar("content_hash", { length: 128 }).notNull(),
     readAt: timestamp("read_at", { mode: "date" }),
-    occurredAt: timestamp("occurred_at", { mode: "date" })
-      .defaultNow()
-      .notNull(),
-    archivedAt: timestamp("archived_at", { mode: "date" }),
     createdAt: timestamp("created_at", { mode: "date" })
       .defaultNow()
       .notNull(),

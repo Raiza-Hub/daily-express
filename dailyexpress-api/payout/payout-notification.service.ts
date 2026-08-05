@@ -117,7 +117,6 @@ export class PayoutNotificationService {
       payoutRecord.driverId,
       {
         notificationKey: `event:payout:${payoutRecord.id}:completed`,
-        kind: "event",
         type: "payout_completed",
         title: "Payout sent successfully",
         message: `${formatAmount(
@@ -127,11 +126,6 @@ export class PayoutNotificationService {
         href: "/payouts",
         tag: "Paid",
         tone: "positive",
-        metadata: {
-          payoutId: payoutRecord.id,
-          reference: payoutRecord.reference,
-        },
-        occurredAt: new Date(),
       },
     );
   }
@@ -145,7 +139,6 @@ export class PayoutNotificationService {
       payoutRecord.driverId,
       {
         notificationKey: `event:payout:${payoutRecord.id}:failed`,
-        kind: "event",
         type: "payout_failed",
         title: "A payout needs review",
         message:
@@ -157,11 +150,6 @@ export class PayoutNotificationService {
         href: "/payouts",
         tag: "Action needed",
         tone: "critical",
-        metadata: {
-          payoutId: payoutRecord.id,
-          reference: payoutRecord.reference,
-        },
-        occurredAt: new Date(),
       },
     );
   }

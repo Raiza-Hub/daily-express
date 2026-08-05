@@ -391,22 +391,17 @@ export type PayoutStatus =
 
 export type NotificationTone = "critical" | "attention" | "positive" | "info";
 
-export type DriverNotificationKind = "event" | "state";
-
 export interface DriverNotification {
   id: string;
   driverId: string;
   notificationKey: string;
-  kind: DriverNotificationKind;
   type: string;
   title: string;
   message: string;
   href?: string | null;
   tag: string;
   tone: NotificationTone;
-  metadata?: Record<string, unknown> | null;
   readAt?: Date | string | null;
-  occurredAt: Date | string;
   createdAt: Date | string;
   updatedAt: Date | string;
 }
@@ -472,16 +467,13 @@ export const driverNotificationSchema: z.ZodType<DriverNotification> = z.object(
   id: z.string(),
   driverId: z.string(),
   notificationKey: z.string(),
-  kind: z.enum(["event", "state"]),
   type: z.string(),
   title: z.string(),
   message: z.string(),
   href: z.string().nullable().optional(),
   tag: z.string(),
   tone: z.enum(["critical", "attention", "positive", "info"]),
-  metadata: z.record(z.string(), z.unknown()).nullable().optional(),
   readAt: z.union([z.string(), z.date()]).nullable().optional(),
-  occurredAt: z.union([z.string(), z.date()]),
   createdAt: z.union([z.string(), z.date()]),
   updatedAt: z.union([z.string(), z.date()]),
 });

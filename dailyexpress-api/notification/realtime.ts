@@ -22,7 +22,6 @@ function serializeNotification(
     ...notification,
     href: notification.href ?? null,
     readAt: toIsoString(notification.readAt),
-    occurredAt: toIsoString(notification.occurredAt) ?? new Date().toISOString(),
     createdAt: toIsoString(notification.createdAt) ?? new Date().toISOString(),
     updatedAt: toIsoString(notification.updatedAt) ?? new Date().toISOString(),
   };
