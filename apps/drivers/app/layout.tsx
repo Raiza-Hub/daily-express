@@ -2,7 +2,7 @@ import type { Metadata } from "next";
 import localFont from "next/font/local";
 import "@repo/ui/globals.css";
 import { resolveAppVersion } from "@repo/ui/lib/resolve-app-version";
-import { UpdateReloadBanner } from "@repo/ui/UpdateReloadBanner";
+import { AppUpdateReloadBanner } from "./components/AppUpdateReloadBanner";
 import Providers from "./components/providers";
 import { buildDriverAbsoluteUrl, driverAppName, driverAppUrl } from "./lib/seo";
 
@@ -60,7 +60,7 @@ export default function RootLayout({
   return (
     <html lang="en">
       <body className={`${geistSans.variable} ${geistMono.variable}`}>
-        <UpdateReloadBanner initialVersion={appVersion} appName="driver" />
+        <AppUpdateReloadBanner initialVersion={appVersion} />
         <Providers>{children}</Providers>
       </body>
     </html>
