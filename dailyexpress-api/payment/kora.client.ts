@@ -77,7 +77,6 @@ export class KoraClient {
     data: T;
     raw: KoraApiEnvelope<T>;
   }> {
-    const config = getConfig();
     const url = `${this.baseUrl}${path}`;
     const { _useProxy, ...fetchOptions } = options as RequestInit & { _useProxy?: boolean };
     const response = await fetch(url, {
@@ -146,7 +145,6 @@ export class KoraClient {
     data: T;
     raw: KoraApiEnvelope<T>;
   }> {
-    const config = getConfig();
     const url = `${this.baseUrl}${path}`;
     const response = await fetch(url, {
       ...options,

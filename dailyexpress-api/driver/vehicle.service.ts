@@ -5,8 +5,6 @@ import { driver, trip, vehicle } from "../db/index";
 import { logger } from "../utils/logger";
 import { DriverRepository, driverRepository } from "./driver.repository";
 
-type VehicleRecord = Awaited<ReturnType<DriverRepository["findVehicleById"]>>;
-
 type CreateVehicleInput = {
   plateNumber: string;
   make: string;

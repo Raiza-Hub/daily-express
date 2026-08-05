@@ -8,7 +8,7 @@ import { PayoutSettlementService, payoutSettlementService } from "./payout-settl
 import { PayoutNotificationService, payoutNotificationService } from "./payout-notification.service";
 import { notificationService as sharedNotificationService } from "../notification/notification.service";
 import { publishNotificationCreatedInBackground } from "../notification/realtime";
-import { koraClient, isKoraRequestError, type KoraRequestError } from "../payment/kora.client";
+import { koraClient, isKoraRequestError } from "../payment/kora.client";
 import { KORA_ERROR_CODES } from "../utils/payout";
 
 type ActivePayoutDriver = typeof driver.$inferSelect & {

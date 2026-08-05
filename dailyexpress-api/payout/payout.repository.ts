@@ -4,9 +4,6 @@ import {
   driver,
   earning,
   payout,
-  type EarningRecord,
-  type PayoutRecord,
-  type DriverRecord,
 } from "../db/index";
 import type { DbTransaction } from "../db/connection";
 

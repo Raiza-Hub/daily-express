@@ -1,8 +1,8 @@
 import type { CreateBooking } from "@shared/types";
 import { createServiceError } from "@shared/utils";
-import { and, desc, eq, getTableColumns, inArray, lt, ne, notInArray, or, sql } from "drizzle-orm";
+import { and, desc, eq, getTableColumns, inArray, lt, ne, notInArray, or } from "drizzle-orm";
 import { db } from "../db/connection";
-import { booking, driver, externalDriver, route, trip, users, vehicle, type BookingRecord, type TripRecord, type RouteRecord } from "../db/index";
+import { booking, driver, externalDriver, route, trip, users, vehicle, type BookingRecord } from "../db/index";
 import { logger } from "../utils/logger";
 import {
     formatBusinessDate,

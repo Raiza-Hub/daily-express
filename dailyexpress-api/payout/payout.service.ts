@@ -1,10 +1,9 @@
-import { and, desc, eq, gte, lt, or } from "drizzle-orm";
+import { and, eq, lt, or } from "drizzle-orm";
 import type {
   DriverPayoutHistoryItem,
   JWTPayload,
   PayoutStatus,
 } from "@shared/types";
-import { getConfig } from "../config/index";
 import { db } from "../db/connection";
 import { driver, payout } from "../db/index";
 import { PayoutRepository } from "./payout.repository";
@@ -18,12 +17,10 @@ import type { KoraPayoutWebhookPayload } from "../payment/payment.types";
 type PayoutTransaction = Parameters<Parameters<typeof db.transaction>[0]>[0];
 
 export class PayoutService {
-  private readonly config = getConfig();
-
   private readonly repo = new PayoutRepository();
   private readonly earningService = new EarningService(this.repo);
-  private readonly settlementService = new PayoutSettlementService(this.repo);
-  private readonly notificationService = new PayoutNotificationService(this.repo);
+  private readonly settlementService = new PayoutSettlementService();
+  private readonly notificationService = new PayoutNotificationService();
   private readonly processorService = new PayoutProcessorService(
     this.repo,
     this.settlementService,

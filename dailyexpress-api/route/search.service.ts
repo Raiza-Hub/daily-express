@@ -60,7 +60,7 @@ export class SearchService {
       throw createServiceError("date is required", 400);
     }
 
-    const { start, end } = getBusinessDayWindow(date);
+    getBusinessDayWindow(date);
 
     const pickupTitleScore = createNormalizedSearchScore(
       route.pickup_location_title,

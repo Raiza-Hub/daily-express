@@ -5,7 +5,6 @@ import { db } from "../db/connection";
 import { booking, earning, payment, refund, trip } from "../db/index";
 import { driverService as sharedDriverService } from "../driver/driver.service";
 import { logger } from "../utils/logger";
-import { generateReference } from "../utils/payment";
 import { jobService } from "../workers/job.service";
 import { koraClient, KoraClient } from "./kora.client";
 import { PaymentRepository, paymentRepository } from "./payment.repository";
@@ -315,7 +314,6 @@ export class PaymentPayoutRefundService {
         await this.sendRefundSuccessEmail(
           existingPayment,
           pendingRefund.amount,
-          pendingRefund.reference,
           existingPayment.productName ?? "your trip",
           tx,
         );
@@ -456,7 +454,6 @@ export class PaymentPayoutRefundService {
   async sendRefundSuccessEmail(
     paymentRecord: PaymentRecord,
     refundAmount: number,
-    refundReference: string,
     productName: string,
     tx: PaymentTransaction,
   ) {

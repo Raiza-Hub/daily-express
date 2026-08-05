@@ -7,7 +7,6 @@ import {
   payment,
   refund,
   trip,
-  type PaymentRecord,
   type BookingRecord,
 } from "../db/index";
 import type { PaymentStatus, PaymentTransaction } from "./payment.types";

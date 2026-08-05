@@ -2,7 +2,6 @@ import { and, eq, inArray } from "drizzle-orm";
 import { db } from "../db/connection";
 import { earning, payout as payoutTable } from "../db/index";
 import { koraClient } from "../payment/kora.client";
-import { PayoutRepository, payoutRepository } from "./payout.repository";
 import { driverService as sharedDriverService } from "../driver/driver.service";
 import { notificationService as sharedNotificationService } from "../notification/notification.service";
 import { publishNotificationCreatedInBackground } from "../notification/realtime";
@@ -24,8 +23,6 @@ export class PayoutSettlementService {
   private readonly kora = koraClient;
   private readonly driverService = sharedDriverService;
   private readonly notificationService = sharedNotificationService;
-
-  constructor(private repo: PayoutRepository) {}
 
   async verifyWithProvider(
     payout: PayoutRecord,
@@ -167,6 +164,4 @@ export class PayoutSettlementService {
   }
 }
 
-export const payoutSettlementService = new PayoutSettlementService(
-  payoutRepository,
-);
+export const payoutSettlementService = new PayoutSettlementService();

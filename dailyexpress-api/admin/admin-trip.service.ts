@@ -326,7 +326,7 @@ export class AdminTripService {
         updatedAt: new Date(),
       });
 
-      await this.sendDriverAssignedExternalEmail(tx, tripId, data, adminEmail);
+      await this.sendDriverAssignedExternalEmail(tx, tripId, data);
     });
 
     const externalDriver = await this.repo.findExternalDriverByTripId(tripId);
@@ -350,7 +350,6 @@ export class AdminTripService {
       vehiclePlateNumber?: string;
       vehicleColor?: string;
     },
-    adminEmail: string,
   ) {
     const tripWithRoute = await this.repo.findTripWithRoute(tripId);
     if (!tripWithRoute) return;
@@ -437,8 +436,6 @@ export class AdminTripService {
       const paymentRecords =
         await this.paymentRepo.findPaymentsByBookingIds(bookingIds);
       const paymentMap = new Map(paymentRecords.map((p) => [p.bookingId, p]));
-
-      const vehicleId = lockedTrip.vehicleId;
 
       await this.repo.updateTrip(tx, tripId, {
         status: "cancelled",

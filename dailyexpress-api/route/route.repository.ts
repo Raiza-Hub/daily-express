@@ -1,4 +1,4 @@
-import { and, asc, desc, eq, gte, gt, inArray, isNotNull, isNull, lt, ne, notInArray, or, sql, type SQL } from "drizzle-orm";
+import { and, asc, desc, eq, gte, gt, inArray, isNull, lt, ne, notInArray, or, sql, type SQL } from "drizzle-orm";
 import { db } from "../db/connection";
 import {
   booking,
@@ -8,7 +8,6 @@ import {
   route,
   trip,
   users,
-  zone,
   type RouteRecord,
   type TripRecord,
   type BookingRecord,

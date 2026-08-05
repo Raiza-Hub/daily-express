@@ -1,7 +1,7 @@
-import { and, eq, sql } from "drizzle-orm";
+import { eq, sql } from "drizzle-orm";
 import { logger } from "../utils/logger";
 import { db } from "../db/connection";
-import { booking, driver, earning, route, trip, users } from "../db/index";
+import { earning } from "../db/index";
 import { driverRepository } from "../driver/driver.repository";
 import { routeRepository } from "../route/route.repository";
 import { jobService } from "./job.service";
