@@ -203,9 +203,7 @@ const TripCardItem = ({
                 open={sheetOpen}
                 onOpenChange={setSheetOpen}
                 bookingContext={{
-                    routeId: item.routeId,
                     tripDate: bookingDate,
-                    remainingSeats: 0,
                 }}
                 showDriverDetails={false}
             />

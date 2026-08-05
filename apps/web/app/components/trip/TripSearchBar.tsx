@@ -4,17 +4,15 @@ import { ArrowsLeftRightIcon } from "@phosphor-icons/react";
 import { useBodyScrollLock } from "@repo/ui/hooks/use-body-scroll-lock";
 import { useCalendarState } from "@repo/ui/hooks/use-calendar";
 import { useClickOutside } from "@repo/ui/hooks/use-click-outside";
-import { useLocationField } from "@repo/ui/hooks/use-location-field";
 import { cn } from "@repo/ui/lib/utils";
 import { AnimatePresence } from "framer-motion";
 import { useQueryStates } from "nuqs";
+import { useState } from "react";
 import { formatLocalDate, parseLocalDate } from "~/lib/utils";
 import DepartureDateField from "../DepartureDateField";
 import MobileCalendarSheet from "../MobileCalendarSheet";
 import SearchLocationField from "../SearchLocationField";
 import { searchParams } from "~/lib/type";
-
-
 
 const TripSearchBar = ({ className }: { className?: string }) => {
   const [query, setQuery] = useQueryStates(
@@ -27,16 +25,11 @@ const TripSearchBar = ({ className }: { className?: string }) => {
       history: "replace",
     },
   );
-  const fromField = useLocationField(query.from ?? "");
-  const toField = useLocationField(query.to ?? "");
+  const [from, setFrom] = useState(() => query.from ?? "");
+  const [to, setTo] = useState(() => query.to ?? "");
   const calendar = useCalendarState(
     parseLocalDate(query.date ?? formatLocalDate(new Date())),
   );
-
-  useClickOutside([fromField.ref, toField.ref], () => {
-    fromField.close();
-    toField.close();
-  });
 
   useClickOutside([calendar.desktopRef, calendar.mobileRef], () => {
     calendar.close();
@@ -44,16 +37,16 @@ const TripSearchBar = ({ className }: { className?: string }) => {
 
   useBodyScrollLock(calendar.isOpen);
 
-  const isSearchReady = Boolean(fromField.query && toField.query);
+  const isSearchReady = Boolean(from && to);
 
   const handleSearch = () => {
-    if (!fromField.query || !toField.query) {
+    if (!from || !to) {
       return;
     }
 
     setQuery({
-      from: fromField.query,
-      to: toField.query,
+      from,
+      to,
       date: formatLocalDate(calendar.date),
     });
   };
@@ -64,19 +57,15 @@ const TripSearchBar = ({ className }: { className?: string }) => {
         <SearchLocationField
           id="search-from"
           label="From"
-          value={fromField.query}
-          fieldState={fromField}
-          otherField={toField}
+          value={from}
+          onChange={setFrom}
         />
 
         <button
           type="button"
           onClick={() => {
-            const nextFrom = toField.query;
-            const nextTo = fromField.query;
-
-            fromField.setQuery(nextFrom);
-            toField.setQuery(nextTo);
+            setFrom(to);
+            setTo(from);
           }}
           className="bg-white self-center p-2 rounded-full border border-neutral-200 hover:bg-neutral-50 cursor-pointer transition-transform duration-400"
         >
@@ -86,9 +75,8 @@ const TripSearchBar = ({ className }: { className?: string }) => {
         <SearchLocationField
           id="search-to"
           label="To"
-          value={toField.query}
-          fieldState={toField}
-          otherField={fromField}
+          value={to}
+          onChange={setTo}
         />
 
         <DepartureDateField
