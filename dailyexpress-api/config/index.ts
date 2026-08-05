@@ -3,7 +3,7 @@ import z from "zod/v4";
 function optionalUrl() {
   return z.preprocess(
     (value) => (value === "" ? undefined : value),
-    z.string().url().optional(),
+    z.url().optional(),
   );
 }
 
@@ -51,15 +51,15 @@ const envSchema = z.object({
   RATE_LIMIT_UPSTASH_REDIS_REST_URL: optionalUrl(),
   RATE_LIMIT_UPSTASH_REDIS_REST_TOKEN: optionalString(),
 
-  TOKEN_BUCKET_BOOKING_CAPACITY: z.coerce.number().int().positive().default(3),
+  TOKEN_BUCKET_BOOKING_CAPACITY: z.coerce.number().int().positive().default(10),
   TOKEN_BUCKET_BOOKING_REFILL_RATE: z.coerce.number().positive().default(1),
   TOKEN_BUCKET_BOOKING_REFILL_INTERVAL_SEC: z.coerce.number().int().positive().default(60),
 
-  TOKEN_BUCKET_PAYMENT_CAPACITY: z.coerce.number().int().positive().default(3),
+  TOKEN_BUCKET_PAYMENT_CAPACITY: z.coerce.number().int().positive().default(10),
   TOKEN_BUCKET_PAYMENT_REFILL_RATE: z.coerce.number().positive().default(1),
   TOKEN_BUCKET_PAYMENT_REFILL_INTERVAL_SEC: z.coerce.number().int().positive().default(60),
 
-  TOKEN_BUCKET_DRIVER_CAPACITY: z.coerce.number().int().positive().default(10),
+  TOKEN_BUCKET_DRIVER_CAPACITY: z.coerce.number().int().positive().default(30),
   TOKEN_BUCKET_DRIVER_REFILL_RATE: z.coerce.number().positive().default(1),
   TOKEN_BUCKET_DRIVER_REFILL_INTERVAL_SEC: z.coerce.number().int().positive().default(30),
 
