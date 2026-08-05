@@ -28,9 +28,7 @@ export interface SearchTrip {
 }
 
 export interface BookingContext {
-  routeId: string;
   tripDate: string;
-  remainingSeats: number;
 }
 
 export interface TripStatusItem {

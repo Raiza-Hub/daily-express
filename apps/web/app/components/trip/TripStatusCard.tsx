@@ -20,7 +20,6 @@ const TripStatusCard = ({
         isFetchingNextPage,
         isLoading,
         isError,
-        error,
     } = useGetUserBookingsInfinite();
 
     const allBookings = useMemo(

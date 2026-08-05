@@ -186,9 +186,7 @@ const TripStatusCardItem = ({
                 open={sheetOpen}
                 onOpenChange={setSheetOpen}
                 bookingContext={{
-                    routeId: item.routeId,
                     tripDate: item.tripDate,
-                    remainingSeats: item.remainingSeats,
                 }}
                 driverStatus={item.driverStatus}
                 showDriverDetails={true}

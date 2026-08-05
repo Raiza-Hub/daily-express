@@ -7,7 +7,7 @@ const API_URL =
   process.env.NEXT_PUBLIC_DAILYEXPRESS_API_URL || "http://localhost:8000";
 const SSE_URL = `${API_URL}/api/v1/route/trips/live`;
 
-export type StreamStatus = "connecting" | "connected" | "disconnected";
+type StreamStatus = "connecting" | "connected" | "disconnected";
 
 export function useStreamLiveTrips() {
   const queryClient = useQueryClient();
