@@ -167,11 +167,6 @@ export const useGetMe = (options?: { enabled?: boolean }) => {
   });
 };
 
-export const useRefetchUser = () => {
-  const queryClient = useQueryClient();
-  return () => queryClient.refetchQueries({ queryKey: ["user"] });
-};
-
 export const updateProfileFn = async (
   data: UpdateProfilePayload,
 ): Promise<User> => {
