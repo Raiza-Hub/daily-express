@@ -20,7 +20,7 @@ export const getDriverFn = async (): Promise<Driver | null> => {
   }
 };
 
-export interface PresignResponse {
+interface PresignResponse {
   uploadUrl: string;
   key: string;
   publicUrl: string;
@@ -139,13 +139,6 @@ export const useUpdateDriver = (options?: {
   return useMutation({
     mutationFn: updateDriverFn,
     ...options,
-  });
-};
-
-export const usePresignProfileUpload = () => {
-  return useMutation({
-    mutationFn: ({ contentType, contentLength }: { contentType: string; contentLength: number }) =>
-      presignProfileUploadFn(contentType, contentLength),
   });
 };
 

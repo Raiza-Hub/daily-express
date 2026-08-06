@@ -54,12 +54,12 @@ export interface UserBookingWithTrip {
   } | null;
 }
 
-export interface UserBookingsPage {
+interface UserBookingsPage {
   bookings: UserBookingWithTrip[];
   nextCursor: string | null;
 }
 
-export interface SearchRoutesPage {
+interface SearchRoutesPage {
   routes: Route[];
   nextCursor: string | null;
 }
@@ -247,15 +247,6 @@ export const useCompleteTrip = (options?: {
   });
 };
 
-export const useGetUserBookings = (options?: { enabled?: boolean }) => {
-  return useQuery({
-    queryKey: ["userBookings"],
-    queryFn: () => getUserBookingsFn(null),
-    retry: false,
-    enabled: options?.enabled ?? true,
-  });
-};
-
 export const useGetTripsSummaryRange = (
   startDate: string,
   endDate: string,
@@ -338,7 +329,7 @@ export interface AvailableTripsResponse {
   nextCursor: string | null;
 }
 
-export interface AvailableTripsCountByDateResponse {
+interface AvailableTripsCountByDateResponse {
   counts: Record<string, number>;
 }
 
@@ -399,21 +390,6 @@ export const claimTripFn = async ({
   } catch (err) {
     throw handleApiError(err, "Failed to claim trip");
   }
-};
-
-export const useGetAvailableTrips = (options?: {
-  limit?: number;
-  cursor?: string;
-  search?: string;
-  date?: string;
-  enabled?: boolean;
-}) => {
-  return useQuery({
-    queryKey: ["availableTrips", options?.limit, options?.cursor, options?.search, options?.date],
-    queryFn: () => getAvailableTripsFn({ limit: options?.limit, cursor: options?.cursor, search: options?.search, date: options?.date }),
-    retry: false,
-    enabled: options?.enabled ?? true,
-  });
 };
 
 export const useGetAvailableTripsInfinite = (options?: {
