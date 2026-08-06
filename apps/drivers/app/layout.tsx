@@ -1,8 +1,6 @@
 import type { Metadata } from "next";
 import localFont from "next/font/local";
 import "@repo/ui/globals.css";
-import { resolveAppVersion } from "@repo/ui/lib/resolve-app-version";
-import { AppUpdateReloadBanner } from "./components/AppUpdateReloadBanner";
 import Providers from "./components/providers";
 import { buildDriverAbsoluteUrl, driverAppName, driverAppUrl } from "./lib/seo";
 
@@ -55,12 +53,9 @@ export default function RootLayout({
 }: Readonly<{
   children: React.ReactNode;
 }>) {
-  const appVersion = resolveAppVersion(process.env);
-
   return (
     <html lang="en">
       <body className={`${geistSans.variable} ${geistMono.variable}`}>
-        <AppUpdateReloadBanner initialVersion={appVersion} />
         <Providers>{children}</Providers>
       </body>
     </html>
