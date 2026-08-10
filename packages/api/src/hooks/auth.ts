@@ -268,7 +268,6 @@ export const useGetProviders = () =>
   useQuery({
     queryKey: ["providers"],
     queryFn: getProvidersFn,
-    retry: false,
   });
 
 export const disconnectProviderFn = async (

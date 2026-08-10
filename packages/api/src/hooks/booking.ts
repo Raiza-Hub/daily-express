@@ -213,7 +213,6 @@ export const useGetUserBookingsInfinite = (options?: {
       getUserBookingsFn(pageParam, limit),
     getNextPageParam: (lastPage) => lastPage.nextCursor,
     initialPageParam: null as string | null,
-    retry: false,
     enabled: options?.enabled ?? true,
   });
 };
@@ -255,7 +254,7 @@ export const useGetTripsSummaryRange = (
   return useQuery({
     queryKey: ["tripsSummaryRange", startDate, endDate],
     queryFn: () => getTripsSummaryRangeFn(startDate, endDate),
-    retry: false,
+    placeholderData: keepPreviousData,
     enabled: options?.enabled ?? (!!startDate && !!endDate),
   });
 };
@@ -296,7 +295,6 @@ export const useGetTripBookings = (
   return useQuery({
     queryKey: ["tripBookings", tripId],
     queryFn: () => getTripBookingsFn(tripId),
-    retry: false,
     enabled: options?.enabled ?? !!tripId,
   });
 };
@@ -405,8 +403,8 @@ export const useGetAvailableTripsInfinite = (options?: {
       getAvailableTripsFn({ limit, cursor: pageParam ?? undefined, search: options?.search, date: options?.date }),
     getNextPageParam: (lastPage) => lastPage.nextCursor,
     initialPageParam: null as string | null,
-    retry: false,
     enabled: options?.enabled ?? true,
+    placeholderData: keepPreviousData,
   });
 };
 
@@ -418,7 +416,6 @@ export const useGetAvailableTripsCountByDate = (
   return useQuery({
     queryKey: ["availableTripsCount", startDate, endDate],
     queryFn: () => getAvailableTripsCountByDateFn(startDate, endDate),
-    retry: false,
     enabled: options?.enabled ?? (!!startDate && !!endDate),
     placeholderData: keepPreviousData,
   });

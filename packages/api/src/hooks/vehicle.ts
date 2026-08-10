@@ -75,7 +75,6 @@ export const useGetVehicles = (options?: { enabled?: boolean }) => {
   return useQuery({
     queryKey: ["vehicles"],
     queryFn: getVehiclesFn,
-    retry: false,
     enabled: options?.enabled ?? true,
   });
 };
