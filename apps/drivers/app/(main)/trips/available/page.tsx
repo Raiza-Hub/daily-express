@@ -8,6 +8,12 @@ export const metadata: Metadata = buildDriverMetadata({
   path: "/trips/available",
 });
 
-export default function AvailableTripsPage() {
+export default async function AvailableTripsPage({
+  searchParams,
+}: {
+  searchParams: Promise<Record<string, string | string[] | undefined>>;
+}) {
+  await searchParams;
+
   return <AvailableTripsList />;
 }
