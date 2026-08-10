@@ -1,6 +1,6 @@
 "use client";
 
-import { useQueryClient } from "@repo/api";
+import { useGetDriver, useQueryClient } from "@repo/api";
 import { useCallback, useEffect, useRef, useState } from "react";
 
 const API_URL =
@@ -11,6 +11,7 @@ type StreamStatus = "connecting" | "connected" | "disconnected";
 
 export function useStreamLiveTrips() {
   const queryClient = useQueryClient();
+  const { data: driver } = useGetDriver();
   const esRef = useRef<EventSource | null>(null);
   const [status, setStatus] = useState<StreamStatus>("disconnected");
 
@@ -44,12 +45,13 @@ export function useStreamLiveTrips() {
   }, [queryClient]);
 
   useEffect(() => {
+    if (!driver?.id) return;
     connect();
     return () => {
       esRef.current?.close();
       esRef.current = null;
     };
-  }, [connect]);
+  }, [connect, driver?.id]);
 
   return status;
 }
