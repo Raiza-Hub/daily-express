@@ -80,7 +80,6 @@ const TripCardItem = ({
                 checkoutUrl: checkout.checkoutUrl,
             });
 
-            setBookingVehicleType(null);
             window.location.assign(checkout.checkoutUrl);
         } catch (error) {
             setBookingVehicleType(null);

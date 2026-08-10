@@ -1,4 +1,7 @@
-import { useInfiniteQuery } from "@tanstack/react-query";
+import {
+  keepPreviousData,
+  useInfiniteQuery,
+} from "@tanstack/react-query";
 import { payoutApi } from "../api";
 import type {
   ApiResponse,
@@ -60,8 +63,8 @@ export const useDriverPayoutHistory = (params?: {
       }),
     initialPageParam: null as string | null,
     getNextPageParam: (lastPage) => lastPage.nextCursor,
-    retry: false,
     enabled: params?.enabled ?? true,
+    placeholderData: keepPreviousData,
     refetchInterval: (query) =>
       query.state.data?.pages.some((page) =>
         page.payouts.some(

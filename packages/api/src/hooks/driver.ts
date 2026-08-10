@@ -179,7 +179,6 @@ export const useGetDriverStats = (options?: { enabled?: boolean }) => {
   return useQuery({
     queryKey: ["driverStats"],
     queryFn: getDriverStatsFn,
-    retry: false,
     enabled: options?.enabled ?? true,
   });
 };
