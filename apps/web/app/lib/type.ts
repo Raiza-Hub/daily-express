@@ -1,6 +1,6 @@
 import type { TRoute } from "@repo/types/routeSchema";
 import { DriverInfoProps } from "~/components/DriverInfo";
-import { parseAsString, parseAsStringLiteral } from "nuqs";
+import { createLoader, parseAsString, parseAsStringLiteral } from "nuqs/server";
 
 
 export type SubmittedTripSearch = {
@@ -52,6 +52,8 @@ export const searchParams = {
   date: parseAsString,
   departureTime: parseAsStringLiteral(["morning", "afternoon"]),
 };
+
+export const loadSearchParams = createLoader(searchParams);
 
 export type SearchParams = {
   from: string | null;

@@ -14,7 +14,17 @@ import MobileCalendarSheet from "../MobileCalendarSheet";
 import SearchLocationField from "../SearchLocationField";
 import { searchParams } from "~/lib/type";
 
-const TripSearchBar = ({ className }: { className?: string }) => {
+const TripSearchBar = ({
+  className,
+  initialFrom,
+  initialTo,
+  initialDate,
+}: {
+  className?: string;
+  initialFrom?: string | null;
+  initialTo?: string | null;
+  initialDate?: string | null;
+}) => {
   const [query, setQuery] = useQueryStates(
     {
       from: searchParams.from,
@@ -25,10 +35,10 @@ const TripSearchBar = ({ className }: { className?: string }) => {
       history: "replace",
     },
   );
-  const [from, setFrom] = useState(() => query.from ?? "");
-  const [to, setTo] = useState(() => query.to ?? "");
+  const [from, setFrom] = useState(() => initialFrom ?? query.from ?? "");
+  const [to, setTo] = useState(() => initialTo ?? query.to ?? "");
   const calendar = useCalendarState(
-    parseLocalDate(query.date ?? formatLocalDate(new Date())),
+    parseLocalDate(initialDate ?? query.date ?? formatLocalDate(new Date())),
   );
 
   useClickOutside([calendar.desktopRef, calendar.mobileRef], () => {

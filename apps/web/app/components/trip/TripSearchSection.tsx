@@ -18,7 +18,17 @@ import TripCardItem from "./TripCardItem";
 import TripFilter from "./TripFilter";
 import TripState from "./TripState";
 
-const TripSearchSection = () => {
+const TripSearchSection = ({
+  initialFrom,
+  initialTo,
+  initialDate,
+  initialDepartureTime,
+}: {
+  initialFrom?: string | null;
+  initialTo?: string | null;
+  initialDate?: string | null;
+  initialDepartureTime?: "morning" | "afternoon" | null;
+}) => {
   const [query] = useQueryStates(
     {
       from: searchParams.from,
@@ -29,13 +39,18 @@ const TripSearchSection = () => {
     { history: "replace" },
   );
 
-  const hasSearchParams = Boolean(query.from && query.to);
-  const urlDate = query.date || dayjs().format("YYYY-MM-DD");
+  const fromValue = query.from ?? initialFrom;
+  const toValue = query.to ?? initialTo;
+  const dateValue = query.date ?? initialDate;
+  const departureTimeValue = query.departureTime ?? initialDepartureTime;
+
+  const hasSearchParams = Boolean(fromValue && toValue);
+  const urlDate = dateValue || dayjs().format("YYYY-MM-DD");
   const routeSearchParams = {
-    from: query.from ?? "",
-    to: query.to ?? "",
+    from: fromValue ?? "",
+    to: toValue ?? "",
     date: urlDate,
-    departureTime: query.departureTime ?? undefined,
+    departureTime: departureTimeValue ?? undefined,
   };
 
   const {
