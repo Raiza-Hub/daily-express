@@ -55,13 +55,6 @@ export class DriverProfileService {
               driverId: createdDriver.id,
             });
 
-            const bankNotification =
-              await notificationService.createBankVerificationStateInTransaction(
-                tx,
-                createdDriver.id,
-                this.getAccountSetupPendingNotification(),
-              );
-
             await jobService.enqueueDriverVerification(
               tx,
               {
@@ -91,19 +84,9 @@ export class DriverProfileService {
 
             return {
               driver: createdDriver,
-              bankNotification,
             };
           }),
       );
-
-      if (
-        result.bankNotification.notification &&
-        result.bankNotification.shouldDeliver
-      ) {
-        publishNotificationCreatedInBackground(
-          result.bankNotification.notification,
-        );
-      }
 
       return result.driver;
     } catch (error) {
@@ -269,19 +252,6 @@ export class DriverProfileService {
       throw createServiceError("Driver stats not found", 404);
     }
     return stats;
-  }
-
-  private getAccountSetupPendingNotification() {
-    return {
-      notificationKey: "account-setup-pending",
-      type: "account_setup_pending",
-      title: "Setting up your account",
-      message:
-        "We're verifying your bank and identity details. You'll be notified once everything is ready.",
-      href: "/settings/bank-details",
-      tag: "Verification",
-      tone: "attention" as const,
-    };
   }
 
   private getBankVerificationPendingNotification() {
