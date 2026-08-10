@@ -22,24 +22,6 @@ const VehicleList = () => {
   const [editingVehicle, setEditingVehicle] = useState<Vehicle | null>(null);
   const [deletingVehicle, setDeletingVehicle] = useState<Vehicle | null>(null);
 
-  if (isLoading) {
-    return (
-      <div className="w-full max-w-3xl mx-auto flex items-center justify-center py-20">
-        <Loader text="Loading vehicles..." />
-      </div>
-    );
-  }
-
-  if (isError) {
-    return (
-      <div className="w-full max-w-3xl mx-auto flex flex-col items-center gap-4 py-20">
-        <p className="text-red-500 text-sm">
-          {error instanceof Error ? error.message : "Failed to load vehicles"}
-        </p>
-      </div>
-    );
-  }
-
   return (
     <div className="w-full max-w-3xl mx-auto p-6">
       <div className="flex items-center justify-between mb-6 py-4 border-b border-gray-100">
@@ -59,17 +41,19 @@ const VehicleList = () => {
         </Button>
       </div>
 
-      {(!vehicles || vehicles.length === 0) ? (
+      {isLoading ? (
+        <div className="flex items-center justify-center py-12">
+          <Loader text="Loading vehicles..." />
+        </div>
+      ) : isError ? (
+        <div className="flex flex-col items-center gap-4 py-12">
+          <p className="text-red-500 text-sm">
+            {error instanceof Error ? error.message : "Failed to load vehicles"}
+          </p>
+        </div>
+      ) : (!vehicles || vehicles.length === 0) ? (
         <div className="flex flex-col items-center gap-2 py-12">
           <p className="text-muted-foreground">No vehicles added yet.</p>
-          {/* <Button
-            variant="secondary"
-            className="cursor-pointer"
-            onClick={() => setIsCreateOpen(true)}
-          >
-            <PlusIcon className="size-4 mr-1.5" />
-            Add your first vehicle
-          </Button> */}
         </div>
       ) : (
         <div className="flex flex-col gap-4">
