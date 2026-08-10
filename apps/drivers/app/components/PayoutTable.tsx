@@ -46,22 +46,8 @@ const PayoutTable = () => {
   }, [hasNextPage, isFetchingNextPage, fetchNextPage]);
 
 
-  if (isLoading) {
-    return (
-      <div className="flex items-center justify-center py-12 text-muted-foreground">
-        <SpinnerIcon className="mr-2 animate-spin" />
-        Loading payouts...
-      </div>
-    );
-  }
-
-  if (isError) {
-    return (
-      <div className="flex items-center justify-center py-12 text-muted-foreground">
-        Unable to load payouts right now.
-      </div>
-    );
-  }
+  const isEmptyState = !isLoading && !isError && payouts.length === 0;
+  const isErrorState = isError && payouts.length === 0;
 
   return (
     <div className="w-full bg-white">
@@ -85,7 +71,28 @@ const PayoutTable = () => {
               </tr>
             </thead>
             <tbody>
-              {payouts.length === 0 && (
+              {isLoading && payouts.length === 0 && (
+                <tr>
+                  <td
+                    colSpan={4}
+                    className="py-12 text-center text-muted-foreground"
+                  >
+                    <SpinnerIcon className="mx-auto mb-2 animate-spin" />
+                    Loading payouts...
+                  </td>
+                </tr>
+              )}
+              {isErrorState && (
+                <tr>
+                  <td
+                    colSpan={4}
+                    className="py-12 text-center text-muted-foreground"
+                  >
+                    Unable to load payouts right now.
+                  </td>
+                </tr>
+              )}
+              {isEmptyState && (
                 <tr>
                   <td
                     className="py-12 text-sm text-muted-foreground"
