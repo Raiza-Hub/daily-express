@@ -8,13 +8,10 @@ import { useDebouncedCallback } from "@repo/ui/hooks/use-debounced-callback";
 import dayjs from "dayjs";
 import { parseAsString, useQueryState } from "nuqs";
 import { useEffect, useRef, useState } from "react";
-import { useStreamLiveTrips } from "~/hooks/useStreamLiveTrips";
 import Loader from "../Loader";
 import ClaimTripCardItem from "./ClaimTripCardItem";
 
 export default function AvailableTripsList() {
-  useStreamLiveTrips();
-
   const today = dayjs().format("YYYY-MM-DD");
 
   const [selectedDate, setSelectedDate] = useQueryState(
