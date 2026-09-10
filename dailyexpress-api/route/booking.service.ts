@@ -2,7 +2,7 @@ import type { CreateBooking } from "@shared/types";
 import { createServiceError } from "@shared/utils";
 import { and, desc, eq, getTableColumns, inArray, lt, ne, notInArray, or } from "drizzle-orm";
 import { db } from "../db/connection";
-import { booking, driver, externalDriver, route, trip, users, vehicle, type BookingRecord } from "../db/index";
+import { booking, driver, route, trip, users, vehicle, type BookingRecord } from "../db/index";
 import { logger } from "../utils/logger";
 import {
     formatBusinessDate,
@@ -171,7 +171,6 @@ export class BookingService {
             trip: getTableColumns(trip),
             route: getTableColumns(route),
             driver: getTableColumns(driver),
-            externalDriver: getTableColumns(externalDriver),
             vehicle: getTableColumns(vehicle),
           })
           .from(booking)
@@ -179,7 +178,6 @@ export class BookingService {
           .leftJoin(trip, eq(booking.tripId, trip.id))
           .leftJoin(driver, eq(trip.driverId, driver.id))
           .leftJoin(vehicle, eq(vehicle.driverId, driver.id))
-          .leftJoin(externalDriver, eq(externalDriver.tripId, trip.id))
           .where(
             and(
               visibleBookingConditions,
@@ -229,21 +227,6 @@ export class BookingService {
             vehicleModel: row.vehicle?.model ?? "",
             vehiclePlateNumber: row.vehicle?.plateNumber ?? "",
             vehicleColor: row.vehicle?.color ?? "",
-          };
-        } else if (row.externalDriver) {
-          driverStatus = "assigned";
-          displayMessage = null;
-          driverInfo = {
-            source: "external",
-            firstName: row.externalDriver.firstName,
-            lastName: row.externalDriver.lastName,
-            phoneNumber: row.externalDriver.phone,
-            country: row.externalDriver.country ?? "",
-            state: row.externalDriver.state ?? "",
-            vehicleMake: row.externalDriver.vehicleMake ?? "",
-            vehicleModel: row.externalDriver.vehicleModel ?? "",
-            vehiclePlateNumber: row.externalDriver.vehiclePlateNumber ?? "",
-            vehicleColor: row.externalDriver.vehicleColor ?? "",
           };
         } else if (hasDeparted) {
           driverStatus = "overdue";
