@@ -2,9 +2,12 @@
 
 import { useEffect } from "react";
 import {
-  QuestionIcon,
   SignOutIcon,
   CircleNotchIcon,
+  CarIcon,
+  UserIcon,
+  AddressBookIcon,
+  BankIcon,
 } from "@phosphor-icons/react";
 import { UserAccountNav as SharedUserAccountNav } from "@repo/ui/UserAccountNav";
 import { useGetDriver, useLogout } from "@repo/api";
@@ -67,18 +70,36 @@ export function UserAccountNav() {
   return (
     <SharedUserAccountNav
       user={user}
-      menuItems={[
+      mobileItems={[
         {
-          key: "support",
-          icon: <QuestionIcon weight="bold" />,
-          label: "Support",
-          href: "mailto:support@yourdomain.com",
+          key: "vehicles",
+          icon: <CarIcon />,
+          label: "Vehicles",
+          onClick: () => router.push("/vehicles"),
+        },
+        {
+          key: "settings-profile",
+          icon: <UserIcon />,
+          label: "Profile",
+          onClick: () => router.push("/settings/profile"),
+        },
+        {
+          key: "settings-accounts",
+          icon: <AddressBookIcon />,
+          label: "Accounts",
+          onClick: () => router.push("/settings/accounts"),
+        },
+        {
+          key: "settings-bank-details",
+          icon: <BankIcon />,
+          label: "Bank Details",
+          onClick: () => router.push("/settings/bank-details"),
         },
       ]}
       footerItems={[
         {
           key: "signout",
-          icon: <SignOutIcon weight="bold" />,
+          icon: <SignOutIcon />,
           label: "Log out",
           onClick: signOut,
         },
