@@ -14,10 +14,7 @@ import routeRoutes from "./route/route.routes";
 import adminRoutes from "./admin/admin.routes";
 import paymentRoutes from "./payment/payment.routes";
 import payoutRoutes from "./payout/payout.routes";
-import notificationRoutes from "./notification/notification.routes";
-import notificationSSERoutes from "./notification/sse.routes";
 import { createRequestLoggingMiddleware } from "./middleware/requestLogger";
-import { doubleCsrfProtection, generateCsrfToken } from "./middleware/csrf";
 import { sendErrorResponse } from "./middleware/apiResponses";
 import { getBoss, stopBoss, isBossRunning } from "./workers/boss";
 import { startWorkers } from "./workers/index";
@@ -58,7 +55,6 @@ async function createApp(): Promise<Express> {
         "X-Request-ID",
         "X-Correlation-ID",
         "X-Appsmith-Signature",
-        "X-CSRF-Token",
         "baggage",
         "sentry-trace",
       ],
@@ -163,26 +159,13 @@ async function createApp(): Promise<Express> {
     });
   }
 
-  // CSRF token endpoint
-  app.get("/api/v1/auth/csrf-token", authMiddleware, (req, res) => {
-    const token = generateCsrfToken(req, res);
-    res.json({ csrfToken: token });
-  });
-
   // Mount routes
   app.use("/api/v1/auth", authLimiter, authMiddleware, authRoutes);
-  app.use("/api/v1/driver", authMiddleware, doubleCsrfProtection, driverRoutes);
+  app.use("/api/v1/driver", authMiddleware, driverRoutes);
   app.use("/api/v1/admin", adminLimiter, adminRoutes);
-  app.use("/api/v1/route", authMiddleware, doubleCsrfProtection, routeRoutes);
-  app.use("/api/v1/payments", authMiddleware, doubleCsrfProtection, paymentRoutes);
-  app.use("/api/v1/payouts", authMiddleware, doubleCsrfProtection, payoutRoutes);
-  app.use(
-    "/api/v1/notifications",
-    authMiddleware,
-    doubleCsrfProtection,
-    notificationRoutes,
-    notificationSSERoutes,
-  );
+  app.use("/api/v1/route", authMiddleware, routeRoutes);
+  app.use("/api/v1/payments", authMiddleware, paymentRoutes);
+  app.use("/api/v1/payouts", authMiddleware, payoutRoutes);
   // Error handling
   app.use(notFoundHandler);
   app.use(errorHandler);

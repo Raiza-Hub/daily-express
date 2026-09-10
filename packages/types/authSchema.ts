@@ -1,75 +1,58 @@
-import { z } from "zod/v4"
+import { z } from "zod/v4";
 
-export const SignUpSchema = z.object({
-    firstName: z
-        .string()
-        .min(3, { error: "First name is required." })
-        .max(256, { error: "First name must be at most 256 characters long." }),
+export const PHONE_NUMBER_REGEX = /^\+234[789]\d{9}$/;
 
-    lastName: z
-        .string()
-        .min(3, { error: "Last name is required." })
-        .max(256, { error: "Last name must be at most 256 characters long." }),
+export const MINIMUM_ACCOUNT_AGE = 14;
 
-    email: z
-        .email({ error: "Invalid email address" }),
-    
-    password: z
-        .string()
-        .min(8, "Password must be at least 8 characters"),
-    
-    dateOfBirth: z.date({
-        error: "Date of birth is required",
-    })
-    .refine((date) => date < new Date(), {
-        message: "Date of birth must be in the past",
-    })
-});
+function isUnderAge(dateOfBirth: Date, minimumAge: number): boolean {
+  const today = new Date();
+  const cutoff = new Date(
+    today.getFullYear() - minimumAge,
+    today.getMonth(),
+    today.getDate(),
+  );
+  return dateOfBirth > cutoff;
+}
 
-export const SignInSchema = z.object({
-  email: z.email({
-    error: "Email is required",
-  }),
-  password: z.string().min(8, {
-    error: "Password is required",
-  }),
-});
-
-export const OtpSchema = z
-    .string()
-    .regex(/^\d{6}$/, "OTP must be exactly 6 digits");
-  
-export const ForgetPasswordSchema = z.object({
-    email: z.email({ error: "Email is required" })
-});
-
-export const ResetPasswordSchema = z.object({
-    // email: z.email({ error: "Email is required" }),
-
-    newPassword: z
-      .string()
-      .min(8, { error: "Password must be at least 8 characters" }),
-    
-    confirmPassword: z.string(),
-
-    // otp: z
-    //   .string()
-    //   .regex(/^\d{6}$/, "OTP must be exactly 6 digits")
+export const dateOfBirthField = z
+  .date({ error: "Date of birth is required" })
+  .refine((date) => date < new Date(), {
+    message: "Date of birth must be in the past",
   })
-  .refine((data) => data.newPassword === data.confirmPassword, {
-    message: "Passwords do not match.",
-    path: ["confirmPassword"],
+  .refine((date) => !isUnderAge(date, MINIMUM_ACCOUNT_AGE), {
+    message: `You must be at least ${MINIMUM_ACCOUNT_AGE} years old`,
+  });
+
+export const CompleteOnboardingSchema = z.object({
+  phoneNumber: z
+    .string()
+    .regex(
+      PHONE_NUMBER_REGEX,
+      "Enter a valid Nigerian phone number in international format (e.g. +2348012345678)",
+    ),
+  dateOfBirth: dateOfBirthField,
+  gender: z.enum(["male", "female"], { error: "Please select your gender" }),
 });
 
-export const changePasswordSchema = z.object({
-    oldPassword: z.string().min(8, "Old password is required"),
-    newPassword: z.string().min(8, "Password must be at least 8 characters"),
-});
+export type TCompleteOnboardingSchema = z.infer<
+  typeof CompleteOnboardingSchema
+>;
 
+export const EditProfileSchema = z
+  .object({
+    firstName: z
+      .string()
+      .min(3, { error: "First name is required." })
+      .max(256, { error: "First name must be at most 256 characters long." }),
+    lastName: z
+      .string()
+      .min(3, { error: "Last name is required." })
+      .max(256, { error: "Last name must be at most 256 characters long." }),
+    email: z.string().email({ error: "Invalid email address" }),
+    dateOfBirth: dateOfBirthField,
+    phoneNumber: z.string().regex(PHONE_NUMBER_REGEX).optional(),
+    gender: z.enum(["male", "female"]).optional(),
+  })
+  .partial();
 
-
-export type TChangePasswordSchema = z.infer<typeof changePasswordSchema>;
-export type TSignUpSchema = z.infer<typeof SignUpSchema>
-export type TSignInSchema = z.infer<typeof SignInSchema>;
-export type TForgetPasswordSchema = z.infer<typeof ForgetPasswordSchema>
-export type TresetPasswordSchema = z.infer<typeof ResetPasswordSchema>
+export type TEditProfileSchema = z.infer<typeof EditProfileSchema>;

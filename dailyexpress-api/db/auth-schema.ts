@@ -12,24 +12,15 @@ export const users = pgTable("users", {
   firstName: text("first_name").notNull(),
   lastName: text("last_name").notNull(),
   email: text("email").notNull().unique(),
-  password: text("password"),
   dateOfBirth: timestamp("date_of_birth", { mode: "date" }).notNull(),
   emailVerified: boolean("email_verified")
     .$defaultFn(() => false)
     .notNull(),
   referral: text("referral"),
   profilePictureUrl: text("profile_picture_url"),
-  sessionInvalidBefore: timestamp("session_invalid_before", { mode: "date" }),
+  phone: text("phone"),
+  gender: text("gender"),
   deletedAt: timestamp("deleted_at", { mode: "date" }),
-  createdAt: timestamp("created_at", { mode: "date" }).defaultNow().notNull(),
-  updatedAt: timestamp("updated_at", { mode: "date" }).defaultNow().notNull(),
-});
-
-export const otp = pgTable("otp", {
-  id: uuid("id").defaultRandom().primaryKey(),
-  email: text("email").notNull().unique(),
-  otp: text("otp").notNull(),
-  expiresAt: timestamp("expires_at", { mode: "date" }).notNull(),
   createdAt: timestamp("created_at", { mode: "date" }).defaultNow().notNull(),
   updatedAt: timestamp("updated_at", { mode: "date" }).defaultNow().notNull(),
 });
@@ -58,33 +49,12 @@ export const userProviders = pgTable(
   ],
 );
 
-export const passwordResetTokens = pgTable(
-  "password_reset_tokens",
-  {
-    id: uuid("id").defaultRandom().primaryKey(),
-    userId: uuid("user_id")
-      .references(() => users.id, { onDelete: "cascade" })
-      .notNull(),
-    tokenHash: text("token_hash").notNull().unique(),
-    expiresAt: timestamp("expires_at", { mode: "date" }).notNull(),
-    usedAt: timestamp("used_at", { mode: "date" }),
-    createdAt: timestamp("created_at", { mode: "date" }).defaultNow().notNull(),
-    updatedAt: timestamp("updated_at", { mode: "date" }).defaultNow().notNull(),
-  },
-);
-
 export const authSchema = {
   users,
-  otp,
   userProviders,
-  passwordResetTokens,
 };
 
 export type User = typeof users.$inferSelect;
 export type UserRecord = User;
-export type Otp = typeof otp.$inferSelect;
-export type OtpRecord = Otp;
 export type UserProvider = typeof userProviders.$inferSelect;
 export type UserProviderRecord = UserProvider;
-export type PasswordResetToken = typeof passwordResetTokens.$inferSelect;
-export type PasswordResetTokenRecord = PasswordResetToken;

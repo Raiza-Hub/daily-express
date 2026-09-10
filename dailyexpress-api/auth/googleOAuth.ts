@@ -4,11 +4,10 @@ import { OAuth2Client } from "google-auth-library";
 import { createHash, randomBytes } from "node:crypto";
 import { getConfig } from "../config/index";
 import { db } from "../db/connection";
-import { type User, users, userProviders } from "../db/index";
+import { type User } from "../db/index";
 import { getCookieDomain, setAuthCookies } from "../middleware/auth";
+import { authRepository } from "./auth.repository";
 import { logger, reportError } from "../utils/logger";
-import { isUnder13 } from "./validation";
-import { parseDate } from "../utils/payment";
 import {
     GOOGLE_AUTH_FAILURE_REDIRECT_URL,
     resolveFrontendRedirect,
@@ -16,15 +15,9 @@ import {
 
 const GOOGLE_AUTH_URL = "https://accounts.google.com/o/oauth2/v2/auth";
 const GOOGLE_TOKEN_URL = "https://oauth2.googleapis.com/token";
-const GOOGLE_PEOPLE_URL = "https://people.googleapis.com/v1/people/me";
 const GOOGLE_ISSUER = "https://accounts.google.com";
 const OAUTH_COOKIE_MAX_AGE_MS = 5 * 60 * 1000;
-const OAUTH_SCOPES = [
-  "openid",
-  "email",
-  "profile",
-  "https://www.googleapis.com/auth/user.birthday.read",
-].join(" ");
+const OAUTH_SCOPES = ["openid", "email", "profile"].join(" ");
 
 const OAUTH_COOKIE_NAMES = [
   "oauth_state",
@@ -52,15 +45,7 @@ interface GoogleIdPayload {
   nonce?: string;
   given_name?: string;
   family_name?: string;
-  birthdate?: string;
   picture?: string;
-}
-
-interface GooglePeopleResponse {
-  names?: Array<{ givenName?: string; familyName?: string }>;
-  birthdays?: Array<{
-    date?: { year?: number; month?: number; day?: number };
-  }>;
 }
 
 interface GoogleProfile {
@@ -68,7 +53,6 @@ interface GoogleProfile {
   email: string;
   firstName: string;
   lastName: string;
-  dateOfBirth: Date | null;
   picture: string | null;
 }
 
@@ -165,6 +149,7 @@ export async function completeGoogleOAuth(
   res: Response,
 ): Promise<string> {
   try {
+    const config = getConfig();
     const redirectTarget =
       getSignedCookie(req, "oauth_redirect") || resolveFrontendRedirect();
     const code = getQueryValue(req.query.code);
@@ -182,8 +167,7 @@ export async function completeGoogleOAuth(
 
     const tokenResponse = await exchangeCodeForTokens(code, codeVerifier);
     const profile = await verifyGoogleIdentity(tokenResponse, expectedNonce);
-    const user = await upsertGoogleUser(profile);
-    const config = getConfig();
+    const { user, isNewUser } = await upsertGoogleUser(profile);
 
     setAuthCookies(
       res,
@@ -195,6 +179,10 @@ export async function completeGoogleOAuth(
       config,
     );
     clearGoogleOAuthCookies(res);
+
+    if (isNewUser) {
+      return `${config.FRONTEND_URL}/onboarding`;
+    }
 
     return resolveFrontendRedirect(redirectTarget);
   } catch (error) {
@@ -260,93 +248,65 @@ async function verifyGoogleIdentity(
   if (payload.email_verified !== true) throw new GoogleOAuthError("Google email is not verified");
   if (payload.nonce !== expectedNonce) throw new GoogleOAuthError("Google ID token nonce is invalid");
 
-  const profileFromToken = {
-    firstName: payload.given_name,
-    lastName: payload.family_name,
-    dateOfBirth: parseDate(payload.birthdate),
-  };
-  const needsPeopleApi =
-    !profileFromToken.firstName ||
-    !profileFromToken.lastName ||
-    !profileFromToken.dateOfBirth;
-  const profileFromPeople = needsPeopleApi
-    ? await getGoogleUserInfo(tokenResponse.access_token!)
-    : null;
-
   return {
     googleId: payload.sub,
     email: payload.email,
-    firstName:
-      profileFromToken.firstName || profileFromPeople?.firstName || "Google",
-    lastName: profileFromToken.lastName || profileFromPeople?.lastName || "User",
-    dateOfBirth:
-      profileFromToken.dateOfBirth || profileFromPeople?.dateOfBirth || null,
+    firstName: payload.given_name || "Google",
+    lastName: payload.family_name || "User",
     picture: payload.picture || null,
   };
 }
 
-async function getGoogleUserInfo(accessToken: string) {
-  try {
-    const response = await axios.get<GooglePeopleResponse>(GOOGLE_PEOPLE_URL, {
-      headers: { Authorization: `Bearer ${accessToken}` },
-      params: { personFields: "names,birthdays" },
-    });
-
-    const name = response.data.names?.[0];
-    const birthday = response.data.birthdays?.[0]?.date;
-
-    return {
-      firstName: name?.givenName || "Google",
-      lastName: name?.familyName || "User",
-      dateOfBirth: parseGoogleBirthday(birthday),
-    };
-  } catch (error) {
-    reportError(error, {
-      source: "google-people-api",
-      message: "Error fetching Google user info",
-    });
-    return { firstName: "Google", lastName: "User", dateOfBirth: null };
-  }
-}
-
-function parseGoogleBirthday(
-  birthday: { year?: number; month?: number; day?: number } | undefined,
-): Date | null {
-  if (!birthday?.year || !birthday.month || !birthday.day) return null;
-  return new Date(birthday.year, birthday.month - 1, birthday.day);
-}
-
-async function upsertGoogleUser(profile: GoogleProfile): Promise<User> {
-  if (profile.dateOfBirth && isUnder13(profile.dateOfBirth)) {
-    throw new GoogleOAuthError(
-      "You must be at least 13 years old to create an account",
-    );
-  }
-
+async function upsertGoogleUser(
+  profile: GoogleProfile,
+): Promise<{ user: User; isNewUser: boolean }> {
   return db.transaction(async (tx) => {
-    const [user] = await tx.insert(users).values({
-      email: profile.email,
+    const existingProvider = await authRepository.findUserProvider(
+      tx,
+      "google",
+      profile.googleId,
+    );
+
+    if (existingProvider) {
+      const user = await authRepository.updateUser(tx, existingProvider.userId, {
+        profilePictureUrl: profile.picture,
+        updatedAt: new Date(),
+      });
+      return { user, isNewUser: false };
+    }
+
+    const existingUser = await authRepository.findUserByEmail(profile.email);
+
+    if (existingUser) {
+      const user = await authRepository.updateUser(tx, existingUser.id, {
+        firstName: profile.firstName,
+        lastName: profile.lastName,
+        profilePictureUrl: profile.picture,
+        updatedAt: new Date(),
+      });
+      await authRepository.insertUserProvider(tx, {
+        userId: user.id,
+        provider: "google",
+        providerId: profile.googleId,
+      });
+      return { user, isNewUser: true };
+    }
+
+    const user = await authRepository.insertUser(tx, {
       firstName: profile.firstName,
       lastName: profile.lastName,
-      password: null,
-      dateOfBirth: profile.dateOfBirth || new Date(0),
+      email: profile.email,
       emailVerified: true,
+      dateOfBirth: new Date(0),
       referral: "",
       profilePictureUrl: profile.picture,
-    })
-      .onConflictDoUpdate({
-        target: users.email,
-        set: { profilePictureUrl: profile.picture, updatedAt: new Date() },
-      })
-      .returning();
-
-    await tx.insert(userProviders).values({
+    });
+    await authRepository.insertUserProvider(tx, {
       userId: user.id,
       provider: "google",
       providerId: profile.googleId,
-    })
-      .onConflictDoNothing();
+    });
 
-    return user;
+    return { user, isNewUser: true };
   });
 }

@@ -13,7 +13,9 @@ const AuthNavbar = () => {
                         height={29}
                         className="h-auto w-7 object-contain object-center"
                     />
-                    <h1 className="text-xl font-semibold leading-none">Daily Express</h1>
+                    <span className="text-lg sm:text-xl font-medium leading-none">
+                      Daily Express
+                    </span>
                 </Link>
             </div>
         </nav>
