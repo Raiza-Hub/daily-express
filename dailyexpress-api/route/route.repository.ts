@@ -39,30 +39,17 @@ export class RouteRepository {
   }
 
   async findRouteConflict(input: {
-    pickup_location_title: string;
-    pickup_location_locality: string;
-    pickup_location_label: string;
-    dropoff_location_title: string;
-    dropoff_location_locality: string;
-    dropoff_location_label: string;
-    departure_time: string;
-    excludeRouteId?: string;
-  }): Promise<RouteRecord | null> {
-    const conditions = [
-      eq(route.pickup_location_title, input.pickup_location_title),
-      eq(route.pickup_location_locality, input.pickup_location_locality),
-      eq(route.pickup_location_label, input.pickup_location_label),
-      eq(route.dropoff_location_title, input.dropoff_location_title),
-      eq(route.dropoff_location_locality, input.dropoff_location_locality),
-      eq(route.dropoff_location_label, input.dropoff_location_label),
-      eq(route.departure_time, input.departure_time),
-    ];
-
-    if (input.excludeRouteId) {
-      conditions.push(ne(route.id, input.excludeRouteId));
-    }
-
-    return (await db.query.route.findFirst({ where: and(...conditions) })) ?? null;
+    origin_title: string;
+    origin_locality: string;
+    origin_label: string;
+  }): Promise<RouteRecord | undefined> {
+    return db.query.route.findFirst({
+      where: and(
+        eq(route.origin_title, input.origin_title),
+        eq(route.origin_locality, input.origin_locality),
+        eq(route.origin_label, input.origin_label),
+      ),
+    });
   }
 
   async insertRoute(tx: RouteTransaction, values: typeof route.$inferInsert): Promise<RouteRecord> {
@@ -326,8 +313,8 @@ export class RouteRepository {
       eq(trip.date, tripDate),
       ne(trip.status, "completed"),
       ne(trip.status, "cancelled"),
-      sql`(${trip.date} + ${route.departure_time}) <= ${targetArr}`,
-      sql`(${trip.date} + ${route.arrival_time}) >= ${targetDep}`,
+      sql`(${trip.date} + ${trip.departureTime}) <= ${targetArr}`,
+      sql`(${trip.date} + ${trip.arrivalTime}) >= ${targetDep}`,
     ];
     if (excludeTripId) {
       conditions.push(ne(trip.id, excludeTripId));
@@ -335,7 +322,6 @@ export class RouteRepository {
     const [result] = await tx
       .select({ trip })
       .from(trip)
-      .innerJoin(route, eq(route.id, trip.routeId))
       .where(and(...conditions))
       .limit(1);
     return result?.trip ?? null;

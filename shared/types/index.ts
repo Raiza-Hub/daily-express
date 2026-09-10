@@ -154,19 +154,20 @@ export function logError(error: Error, context?: Record<string, any>): void {
 
 export interface Route {
   id: string;
-  pickup_location_title: string;
-  pickup_location_locality: string;
-  pickup_location_label: string;
-  dropoff_location_title: string;
-  dropoff_location_locality: string;
-  dropoff_location_label: string;
-  intermediate_stops_title: string | null;
-  intermediate_stops_locality: string | null;
-  intermediate_stops_label: string | null;
-  meeting_point: string;
-  price?: number;
+  origin_title: string;
+  origin_locality: string;
+  origin_label: string;
+  destination_title: string | null;
+  destination_locality: string | null;
+  destination_label: string | null;
+  train_station_title: string | null;
+  train_station_locality: string | null;
+  train_station_label: string | null;
+  pickup_point: string;
+  dropoff_point: string;
+  price: number;
   fee: number | null;
-  luggage_fee?: number | null;
+  luggage_fee: number;
   departure_time: string[];
   arrival_time: string[];
   status: "inactive" | "pending" | "active";
@@ -174,47 +175,46 @@ export interface Route {
   updatedAt: Date;
 }
 export interface CreateRoute {
-  driverId?: string;
+  origin_title: string;
+  origin_locality: string;
+  origin_label: string;
+  destination_title: string | null;
+  destination_locality: string | null;
+  destination_label: string | null;
+  train_station_title: string | null;
+  train_station_locality: string | null;
+  train_station_label: string | null;
+  pickup_point: string;
+  dropoff_point: string;
+  price: number;
+  luggage_fee: number;
   fee?: number | null;
-  pickup_location_title: string;
-  pickup_location_locality: string;
-  pickup_location_label: string;
-  dropoff_location_title: string;
-  dropoff_location_locality: string;
-  dropoff_location_label: string;
-  intermediate_stops_title: string | null;
-  intermediate_stops_locality: string | null;
-  intermediate_stops_label: string | null;
-  meeting_point: string;
-  priceCar: number;
-  priceBus: number;
-  departure_time: string;
-  arrival_time: string;
+  departure_time: string[];
+  arrival_time: string[];
   status: "inactive" | "pending" | "active";
 }
 
 export interface SearchRoutesRequest {
   origin: string;
-  to?: string;
-  date: string;
 }
 
 export interface updateRouteRequest {
-  pickup_location_title?: string;
-  pickup_location_locality?: string;
-  pickup_location_label?: string;
-  dropoff_location_title?: string;
-  dropoff_location_locality?: string;
-  dropoff_location_label?: string;
-  intermediate_stops_title?: string | null;
-  intermediate_stops_locality?: string | null;
-  intermediate_stops_label?: string | null;
-  meeting_point?: string;
-  priceCar?: number;
-  priceBus?: number;
+  origin_title?: string;
+  origin_locality?: string;
+  origin_label?: string;
+  destination_title?: string | null;
+  destination_locality?: string | null;
+  destination_label?: string | null;
+  train_station_title?: string | null;
+  train_station_locality?: string | null;
+  train_station_label?: string | null;
+  pickup_point?: string;
+  dropoff_point?: string;
+  price?: number;
+  luggage_fee?: number;
   fee?: number | null;
-  departure_time?: string;
-  arrival_time?: string;
+  departure_time?: string[];
+  arrival_time?: string[];
   status?: "inactive" | "pending" | "active";
 }
 
@@ -234,6 +234,8 @@ export interface Trip {
   routeId: string;
   driverId: string | null;
   date: Date;
+  departureTime: string;
+  arrivalTime: string;
   capacity: number;
   bookedSeats: number;
   status: TripStatus;
@@ -259,6 +261,10 @@ export interface Booking {
   id: string;
   tripId: string | null;
   userId: string;
+  departureTime: string;
+  arrivalTime: string;
+  boardingPoint: "pickup" | "dropoff";
+  luggageCount: number;
   seatCount: number;
   phone: string;
   fareAmount: number;
@@ -281,6 +287,10 @@ export interface CreateBooking {
   vehicleType: "car" | "bus";
   seatCount: number;
   phone: string;
+  timeMode: "departure" | "arrival";
+  selectedTime: string;
+  boardingPoint: "pickup" | "dropoff";
+  luggageCount: number;
 }
 
 export interface updateBookingRequest {
@@ -339,6 +349,10 @@ export interface CreateTripCheckoutRequest {
   vehicleType: "car" | "bus";
   seatCount: number;
   phone: string;
+  timeMode: "departure" | "arrival";
+  selectedTime: string;
+  boardingPoint: "pickup" | "dropoff";
+  luggageCount: number;
   channels?: KoraCheckoutChannel[];
   productName: string;
   productDescription: string;

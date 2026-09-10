@@ -33,34 +33,31 @@ export const route = pgTable(
   "route",
   {
     id: uuid("id").defaultRandom().primaryKey(),
-    pickup_location_title: text("pickup_location_title").notNull(),
-    pickup_location_locality: text("pickup_location_locality").notNull(),
-    pickup_location_label: text("pickup_location_label").notNull(),
-    dropoff_location_title: text("dropoff_location_title").notNull(),
-    dropoff_location_locality: text("dropoff_location_locality").notNull(),
-    dropoff_location_label: text("dropoff_location_label").notNull(),
-    intermediate_stops_title: text("intermediate_stops_title"),
-    intermediate_stops_locality: text("intermediate_stops_locality"),
-    intermediate_stops_label: text("intermediate_stops_label"),
-    meeting_point: text("meeting_point").notNull(),
-    priceCar: bigint("price_car", { mode: "number" }).notNull(),
-    priceBus: bigint("price_bus", { mode: "number" }).notNull(),
+    origin_title: text("origin_title").notNull(),
+    origin_locality: text("origin_locality").notNull(),
+    origin_label: text("origin_label").notNull(),
+    destination_title: text("destination_title"),
+    destination_locality: text("destination_locality"),
+    destination_label: text("destination_label"),
+    train_station_title: text("train_station_title"),
+    train_station_locality: text("train_station_locality"),
+    train_station_label: text("train_station_label"),
+    pickup_point: text("pickup_point").notNull(),
+    dropoff_point: text("dropoff_point").notNull(),
+    price: bigint("price", { mode: "number" }).notNull(),
     fee: bigint("fee", { mode: "number" }),
-    departure_time: time("departure_time").notNull(),
-    arrival_time: time("arrival_time").notNull(),
+    luggage_fee: bigint("luggage_fee", { mode: "number" }).notNull(),
+    departure_time: time("departure_time").array().notNull(),
+    arrival_time: time("arrival_time").array().notNull(),
     status: statusEnum("status").default("active").notNull(),
     createdAt: timestamp("created_at", { mode: "date" }).defaultNow().notNull(),
     updatedAt: timestamp("updated_at", { mode: "date" }).defaultNow().notNull(),
   },
   (table) => [
-    uniqueIndex("route_origin_destination_departure_unique_idx").on(
-      table.pickup_location_title,
-      table.pickup_location_locality,
-      table.pickup_location_label,
-      table.dropoff_location_title,
-      table.dropoff_location_locality,
-      table.dropoff_location_label,
-      table.departure_time,
+    uniqueIndex("route_origin_unique_idx").on(
+      table.origin_title,
+      table.origin_locality,
+      table.origin_label,
     ),
   ],
 );
@@ -72,6 +69,8 @@ export const trip = pgTable(
     routeId: uuid("route_id").references(() => route.id, { onDelete: "restrict" }).notNull(),
     driverId: uuid("driver_id").references(() => driver.id, { onDelete: "restrict" }),
     date: timestamp("date", { mode: "date" }).notNull(),
+    departureTime: time("departure_time").notNull(),
+    arrivalTime: time("arrival_time").notNull(),
     vehicleType: vehicleTypeEnum("vehicle_type").notNull(),
     capacity: integer("capacity").notNull(),
     bookedSeats: integer("booked_seats").default(0).notNull(),
@@ -82,10 +81,11 @@ export const trip = pgTable(
     updatedAt: timestamp("updated_at", { mode: "date" }).defaultNow().notNull(),
   },
   (table) => [
-    uniqueIndex("trip_route_driver_date_unique_idx").on(
+    uniqueIndex("trip_route_driver_date_departure_unique_idx").on(
       table.routeId,
       table.driverId,
       table.date,
+      table.departureTime,
     ),
     check("trip_booked_seats_not_over_capacity_check", lte(table.bookedSeats, table.capacity)),
   ],
@@ -97,6 +97,12 @@ export const booking = pgTable(
     id: uuid("id").defaultRandom().primaryKey(),
     routeId: uuid("route_id").references(() => route.id, { onDelete: "restrict" }).notNull(),
     tripDate: timestamp("trip_date", { mode: "date" }).notNull(),
+    departureTime: time("departure_time").notNull(),
+    arrivalTime: time("arrival_time").notNull(),
+    boardingPoint: text("boarding_point", {
+      enum: ["pickup", "dropoff"],
+    }).default("pickup").notNull(),
+    luggageCount: integer("luggage_count").default(0).notNull(),
     vehicleType: vehicleTypeEnum("vehicle_type").notNull(),
     tripId: uuid("trip_id").references(() => trip.id, { onDelete: "restrict" }),
     userId: uuid("user_id").references(() => users.id, { onDelete: "cascade" }).notNull(),
@@ -118,7 +124,13 @@ export const booking = pgTable(
   },
   (table) => [
     uniqueIndex("booking_route_date_user_vehicletype_active_idx")
-      .on(table.routeId, table.tripDate, table.userId, table.vehicleType)
+      .on(
+        table.routeId,
+        table.tripDate,
+        table.userId,
+        table.vehicleType,
+        table.departureTime,
+      )
       .where(sql`${table.status} in ('pending', 'confirmed')`),
   ],
 );

@@ -40,12 +40,6 @@ router.get(
   adminController.getPendingTrips,
 );
 
-router.get(
-  "/trips/overdue",
-  requireAdminApiKey,
-  adminController.getOverdueTrips,
-);
-
 router.post(
   "/trip/:id/assign-driver",
   requireAdminApiKey,

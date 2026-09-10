@@ -1,100 +1,82 @@
 import Joi from "joi";
 
+const timePattern = /^\d{2}:\d{2}(:\d{2})?$/;
+
+const timeArray = (label: string) =>
+  Joi.array()
+    .items(Joi.string().pattern(timePattern))
+    .min(1)
+    .required()
+    .messages({
+      "array.min": `${label} must include at least one time`,
+      "string.pattern.base": `${label} times must be in HH:MM or HH:MM:SS format`,
+      "any.required": `${label} is required`,
+    });
+
 export const createRouteSchema = Joi.object({
-  pickup_location_title: Joi.string()
+  origin_title: Joi.string()
     .min(2)
     .max(255)
     .messages({
-      "string.empty": "Pickup location title is required",
-      "string.min": "Pickup location title must be at least 2 characters long",
-      "string.max": "Pickup location title must not exceed 255 characters",
-      "any.required": "Pickup location title is required",
+      "string.empty": "Origin title is required",
+      "string.min": "Origin title must be at least 2 characters long",
+      "string.max": "Origin title must not exceed 255 characters",
+      "any.required": "Origin title is required",
     })
     .required(),
-  pickup_location_locality: Joi.string()
+  origin_locality: Joi.string()
     .min(2)
     .max(255)
     .messages({
-      "string.empty": "Pickup location locality is required",
-      "any.required": "Pickup location locality is required",
+      "string.empty": "Origin locality is required",
+      "any.required": "Origin locality is required",
     })
     .required(),
-  pickup_location_label: Joi.string()
+  origin_label: Joi.string()
     .min(2)
     .max(255)
     .messages({
-      "string.empty": "Pickup location label is required",
-      "any.required": "Pickup location label is required",
+      "string.empty": "Origin label is required",
+      "any.required": "Origin label is required",
     })
     .required(),
-  dropoff_location_title: Joi.string()
-    .min(2)
-    .max(255)
-    .messages({
-      "string.empty": "Dropoff location title is required",
-      "string.min": "Dropoff location title must be at least 2 characters long",
-      "string.max": "Dropoff location title must not exceed 255 characters",
-      "any.required": "Dropoff location title is required",
-    })
-    .required(),
-  dropoff_location_locality: Joi.string()
-    .min(2)
-    .max(255)
-    .messages({
-      "string.empty": "Dropoff location locality is required",
-      "any.required": "Dropoff location locality is required",
-    })
-    .required(),
-  dropoff_location_label: Joi.string()
-    .min(2)
-    .max(255)
-    .messages({
-      "string.empty": "Dropoff location label is required",
-      "any.required": "Dropoff location label is required",
-    })
-    .required(),
-  intermediate_stops_title: Joi.string().max(500).allow(null, "").optional(),
-  intermediate_stops_locality: Joi.string().max(500).allow(null, "").optional(),
-  intermediate_stops_label: Joi.string().max(500).allow(null, "").optional(),
-  meeting_point: Joi.string().min(2).max(500).required().messages({
-    "string.empty": "Meeting point is required",
-    "string.min": "Meeting point must be at least 2 characters long",
-    "string.max": "Meeting point must not exceed 500 characters",
-    "any.required": "Meeting point is required",
+  destination_title: Joi.string().min(2).max(255).allow(null, "").optional(),
+  destination_locality: Joi.string().min(2).max(255).allow(null, "").optional(),
+  destination_label: Joi.string().min(2).max(255).allow(null, "").optional(),
+  train_station_title: Joi.string().min(2).max(255).allow(null, "").optional(),
+  train_station_locality: Joi.string().min(2).max(255).allow(null, "").optional(),
+  train_station_label: Joi.string().min(2).max(255).allow(null, "").optional(),
+  pickup_point: Joi.string().min(2).max(500).required().messages({
+    "string.empty": "Pickup point is required",
+    "string.min": "Pickup point must be at least 2 characters long",
+    "string.max": "Pickup point must not exceed 500 characters",
+    "any.required": "Pickup point is required",
   }),
-  priceCar: Joi.number().integer().min(0).required().messages({
-    "number.base": "Car price must be a number",
-    "number.integer": "Car price must be a whole number",
-    "number.min": "Car price cannot be negative",
-    "any.required": "Car price is required",
+  dropoff_point: Joi.string().min(2).max(500).required().messages({
+    "string.empty": "Dropoff point is required",
+    "string.min": "Dropoff point must be at least 2 characters long",
+    "string.max": "Dropoff point must not exceed 500 characters",
+    "any.required": "Dropoff point is required",
   }),
-  priceBus: Joi.number().integer().min(0).required().messages({
-    "number.base": "Bus price must be a number",
-    "number.integer": "Bus price must be a whole number",
-    "number.min": "Bus price cannot be negative",
-    "any.required": "Bus price is required",
+  price: Joi.number().integer().min(0).required().messages({
+    "number.base": "Price must be a number",
+    "number.integer": "Price must be a whole number",
+    "number.min": "Price cannot be negative",
+    "any.required": "Price is required",
   }),
   fee: Joi.number().integer().min(0).allow(null).optional().messages({
     "number.base": "Fee must be a number",
     "number.integer": "Fee must be a whole number",
     "number.min": "Fee cannot be negative",
   }),
-  departure_time: Joi.string()
-    .pattern(/^\d{2}:\d{2}(:\d{2})?$/)
-    .required()
-    .messages({
-      "string.pattern.base":
-        "Departure time must be in HH:MM or HH:MM:SS format",
-      "any.required": "Departure time is required",
-    }),
-  arrival_time: Joi.string()
-    .pattern(/^\d{2}:\d{2}(:\d{2})?$/)
-    .required()
-    .messages({
-      "string.pattern.base":
-        "Arrival time must be in HH:MM or HH:MM:SS format",
-      "any.required": "Arrival time is required",
-    }),
+  luggage_fee: Joi.number().integer().min(0).required().messages({
+    "number.base": "Luggage fee must be a number",
+    "number.integer": "Luggage fee must be a whole number",
+    "number.min": "Luggage fee cannot be negative",
+    "any.required": "Luggage fee is required",
+  }),
+  departure_time: timeArray("Departure"),
+  arrival_time: timeArray("Arrival"),
   status: Joi.string()
     .valid("inactive", "pending", "active")
     .optional()
@@ -104,24 +86,27 @@ export const createRouteSchema = Joi.object({
 });
 
 export const updateRouteSchema = Joi.object({
-  pickup_location_title: Joi.string().min(2).max(255).optional().allow(null),
-  pickup_location_locality: Joi.string().min(2).max(255).optional().allow(null),
-  pickup_location_label: Joi.string().min(2).max(255).optional().allow(null),
-  dropoff_location_title: Joi.string().min(2).max(255).optional().allow(null),
-  dropoff_location_locality: Joi.string().min(2).max(255).optional().allow(null),
-  dropoff_location_label: Joi.string().min(2).max(255).optional().allow(null),
-  intermediate_stops_title: Joi.string().max(500).allow(null, "").optional(),
-  intermediate_stops_locality: Joi.string().max(500).allow(null, "").optional(),
-  intermediate_stops_label: Joi.string().max(500).allow(null, "").optional(),
-  meeting_point: Joi.string().min(2).max(500).optional(),
-  priceCar: Joi.number().integer().min(0).optional(),
-  priceBus: Joi.number().integer().min(0).optional(),
+  origin_title: Joi.string().min(2).max(255).optional().allow(null),
+  origin_locality: Joi.string().min(2).max(255).optional().allow(null),
+  origin_label: Joi.string().min(2).max(255).optional().allow(null),
+  destination_title: Joi.string().min(2).max(255).optional().allow(null),
+  destination_locality: Joi.string().min(2).max(255).optional().allow(null),
+  destination_label: Joi.string().min(2).max(255).optional().allow(null),
+  train_station_title: Joi.string().min(2).max(255).optional().allow(null),
+  train_station_locality: Joi.string().min(2).max(255).optional().allow(null),
+  train_station_label: Joi.string().min(2).max(255).optional().allow(null),
+  pickup_point: Joi.string().min(2).max(500).optional(),
+  dropoff_point: Joi.string().min(2).max(500).optional(),
+  price: Joi.number().integer().min(0).optional(),
   fee: Joi.number().integer().min(0).allow(null).optional(),
-  departure_time: Joi.string()
-    .pattern(/^\d{2}:\d{2}(:\d{2})?$/)
+  luggage_fee: Joi.number().integer().min(0).optional(),
+  departure_time: Joi.array()
+    .items(Joi.string().pattern(timePattern))
+    .min(1)
     .optional(),
-  arrival_time: Joi.string()
-    .pattern(/^\d{2}:\d{2}(:\d{2})?$/)
+  arrival_time: Joi.array()
+    .items(Joi.string().pattern(timePattern))
+    .min(1)
     .optional(),
   status: Joi.string().valid("inactive", "pending", "active").optional(),
 }).min(1);

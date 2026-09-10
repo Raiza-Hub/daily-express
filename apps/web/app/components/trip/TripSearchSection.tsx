@@ -85,8 +85,6 @@ const TripSearchSection = ({
   const urlDate = dateValue || dayjs().format("YYYY-MM-DD");
   const routeSearchParams = {
     origin: originValue,
-    to: "",
-    date: urlDate,
   };
 
   const { data, isLoading, error } = useSearchRoutes({
@@ -94,7 +92,7 @@ const TripSearchSection = ({
     enabled: hasSearchParams && !isFunaabMock,
   });
 
-  const routes: Route[] = data?.pages?.flatMap((page) => page.routes) ?? [];
+  const routes: Route[] = data ?? [];
 
   if (isFunaabMock) {
     return (

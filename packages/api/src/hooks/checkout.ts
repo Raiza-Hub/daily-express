@@ -28,6 +28,10 @@ export const createTripCheckoutFn = async (
       vehicleType: data.vehicleType,
       seatCount: data.seatCount,
       phone: data.phone,
+      timeMode: data.timeMode,
+      selectedTime: data.selectedTime,
+      boardingPoint: data.boardingPoint,
+      luggageCount: data.luggageCount,
     });
 
     if (!bookingResponse.data.success || !bookingResponse.data.data) {

@@ -8,7 +8,6 @@ import { routeService } from "./route.service";
 import { ALLOWED_VEHICLE_TYPES } from "./utils";
 const ALLOWED_VEHICLE_TYPES_SET = new Set(ALLOWED_VEHICLE_TYPES);
 const DATE_ONLY_REGEX = /^\d{4}-\d{2}-\d{2}$/;
-const MAX_TRIPS_SUMMARY_RANGE_DAYS = 31;
 
 function parseDateOnly(value: unknown): string | null {
   if (typeof value !== "string" || !DATE_ONLY_REGEX.test(value)) {
@@ -18,87 +17,9 @@ function parseDateOnly(value: unknown): string | null {
   return value;
 }
 
-function dateKeyToUtcMs(dateKey: string): number {
-  const [year, month, day] = dateKey.split("-").map(Number);
-  return Date.UTC(year, month - 1, day);
-}
-
 function getParam(value: string | string[] | undefined): string | null {
   return typeof value === "string" ? value : (value?.[0] ?? null);
 }
-
-export const getDailyTripSummaries: RequestHandler = asyncHandler(
-  async (req: Request, res: Response) => {
-    const user = getAuthenticatedUser(req);
-    const { startDate, endDate } = req.query;
-    if (!user) {
-      return sendErrorResponse(res, 401, "Please sign in again to continue.", {
-        code: "AUTHENTICATION_REQUIRED",
-      });
-    }
-    if (!startDate || !endDate) {
-      return sendErrorResponse(
-        res,
-        400,
-        "Start date and end date are required.",
-        { code: "MISSING_DATE_RANGE" },
-      );
-    }
-    if (typeof startDate !== "string" || typeof endDate !== "string") {
-      return sendErrorResponse(
-        res,
-        400,
-        "Dates must be single YYYY-MM-DD values.",
-        { code: "INVALID_DATE_RANGE" },
-      );
-    }
-
-    const parsedStartDate = parseDateOnly(startDate);
-    const parsedEndDate = parseDateOnly(endDate);
-    if (!parsedStartDate || !parsedEndDate) {
-      return sendErrorResponse(
-        res,
-        400,
-        "Dates must be in YYYY-MM-DD format.",
-        { code: "INVALID_DATE_FORMAT" },
-      );
-    }
-    if (parsedStartDate > parsedEndDate) {
-      return sendErrorResponse(
-        res,
-        400,
-        "Start date cannot be after end date.",
-        { code: "INVALID_DATE_RANGE" },
-      );
-    }
-
-    const rangeDays =
-      (dateKeyToUtcMs(parsedEndDate) - dateKeyToUtcMs(parsedStartDate)) /
-      (24 * 60 * 60 * 1000);
-    if (rangeDays > MAX_TRIPS_SUMMARY_RANGE_DAYS) {
-      return sendErrorResponse(
-        res,
-        400,
-        `Date range cannot exceed ${MAX_TRIPS_SUMMARY_RANGE_DAYS + 1} days.`,
-        { code: "DATE_RANGE_TOO_LARGE" },
-      );
-    }
-
-    const summaries = await timeAsync(
-      "route.trips_summary_range.service",
-      { userId: user.userId, startDate, endDate },
-      () => routeService.getDailyTripSummaries(user, startDate, endDate),
-    );
-    return res
-      .status(200)
-      .json(
-        createSuccessResponse(
-          summaries,
-          "Trips summary range fetched successfully",
-        ),
-      );
-  },
-);
 
 export const completeTrip: RequestHandler = asyncHandler(
   async (req: Request, res: Response) => {
@@ -128,42 +49,19 @@ export const completeTrip: RequestHandler = asyncHandler(
 
 export const searchRoutes: RequestHandler = asyncHandler(
   async (req: Request, res: Response) => {
-    const { from, to, date, limit, cursor, departureTime } = req.query;
-    const parsedFrom = typeof from === "string" ? from.trim() : "";
-    const parsedTo = typeof to === "string" ? to.trim() : "";
-    const parsedDate = typeof date === "string" ? date.trim() : undefined;
-    const parsedLimit = typeof limit === "string" ? parseInt(limit, 10) : 20;
-    const parsedCursor = typeof cursor === "string" ? cursor : undefined;
-    const parsedDepartureTime =
-      typeof departureTime === "string" ? departureTime : undefined;
+    const { origin } = req.query;
+    const parsedOrigin = typeof origin === "string" ? origin.trim() : "";
 
-    if (!parsedFrom || !parsedTo) {
-      return sendErrorResponse(res, 400, "From and to are required.", {
-        code: "MISSING_ROUTE_SEARCH_LOCATIONS",
-      });
-    }
-    if (!parsedDate) {
-      return sendErrorResponse(res, 400, "Date is required.", {
-        code: "MISSING_ROUTE_SEARCH_DATE",
+    if (!parsedOrigin) {
+      return sendErrorResponse(res, 400, "Origin is required.", {
+        code: "MISSING_ROUTE_SEARCH_ORIGIN",
       });
     }
 
     const routes = await timeAsync(
       "route.search.service",
-      {
-        hasDate: Boolean(parsedDate),
-        limit: parsedLimit,
-        hasCursor: Boolean(parsedCursor),
-      },
-      () =>
-        routeService.searchRoutes({
-          from: parsedFrom,
-          to: parsedTo,
-          date: parsedDate,
-          departureTime: parsedDepartureTime,
-          limit: parsedLimit,
-          cursor: parsedCursor,
-        }),
+      { origin: parsedOrigin },
+      () => routeService.searchRoutes({ origin: parsedOrigin }),
     );
     return res
       .status(200)
@@ -266,7 +164,17 @@ export const getTripBookings: RequestHandler = asyncHandler(
 export const createCheckoutBooking: RequestHandler = asyncHandler(
   async (req: Request, res: Response) => {
     const user = getAuthenticatedUser(req);
-    const { routeId, tripDate, vehicleType, seatCount, phone } = req.body;
+    const {
+      routeId,
+      tripDate,
+      vehicleType,
+      seatCount,
+      phone,
+      timeMode,
+      selectedTime,
+      boardingPoint,
+      luggageCount,
+    } = req.body;
     if (!user) {
       return sendErrorResponse(res, 401, "Please sign in again to continue.", {
         code: "AUTHENTICATION_REQUIRED",
@@ -293,6 +201,36 @@ export const createCheckoutBooking: RequestHandler = asyncHandler(
         code: "MISSING_PHONE",
       });
     }
+    if (timeMode !== "departure" && timeMode !== "arrival") {
+      return sendErrorResponse(
+        res,
+        400,
+        "timeMode must be either 'departure' or 'arrival'.",
+        { code: "INVALID_TIME_MODE" },
+      );
+    }
+    if (typeof selectedTime !== "string" || selectedTime.trim().length === 0) {
+      return sendErrorResponse(res, 400, "Selected time is required.", {
+        code: "MISSING_SELECTED_TIME",
+      });
+    }
+    if (boardingPoint !== "pickup" && boardingPoint !== "dropoff") {
+      return sendErrorResponse(
+        res,
+        400,
+        "boardingPoint must be either 'pickup' or 'dropoff'.",
+        { code: "INVALID_BOARDING_POINT" },
+      );
+    }
+    const parsedLuggageCount = parseInt(luggageCount, 10);
+    if (!Number.isInteger(parsedLuggageCount) || parsedLuggageCount < 0) {
+      return sendErrorResponse(
+        res,
+        400,
+        "Luggage count must be an integer >= 0.",
+        { code: "INVALID_LUGGAGE_COUNT" },
+      );
+    }
     const parsedTripDate = parseDateOnly(tripDate);
     if (!parsedTripDate) {
       return sendErrorResponse(
@@ -305,7 +243,17 @@ export const createCheckoutBooking: RequestHandler = asyncHandler(
 
     const checkoutBooking = await timeAsync(
       "route.create_checkout_booking.service",
-      { userId: user.userId, routeId, tripDate: parsedTripDate, vehicleType, seatCount: parsedSeatCount },
+      {
+        userId: user.userId,
+        routeId,
+        tripDate: parsedTripDate,
+        vehicleType,
+        seatCount: parsedSeatCount,
+        timeMode,
+        selectedTime: selectedTime.trim(),
+        boardingPoint,
+        luggageCount: parsedLuggageCount,
+      },
       () =>
         routeService.createCheckoutBooking(user.userId, {
           routeId,
@@ -313,6 +261,10 @@ export const createCheckoutBooking: RequestHandler = asyncHandler(
           vehicleType,
           seatCount: parsedSeatCount,
           phone: phone.trim(),
+          timeMode,
+          selectedTime: selectedTime.trim(),
+          boardingPoint,
+          luggageCount: parsedLuggageCount,
         }),
     );
 

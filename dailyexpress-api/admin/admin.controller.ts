@@ -110,21 +110,6 @@ export const getPendingTrips: RequestHandler = asyncHandler(
   },
 );
 
-export const getOverdueTrips: RequestHandler = asyncHandler(
-  async (req: Request, res: Response) => {
-    const trips = await timeAsync(
-      "admin.overdue_trips.service",
-      {},
-      () => adminTripService.getOverdueTrips(),
-    );
-    return res
-      .status(200)
-      .json(
-        createSuccessResponse(trips, "Overdue trips fetched successfully"),
-      );
-  },
-);
-
 export const assignPlatformDriver: RequestHandler = asyncHandler(
   async (req: Request, res: Response) => {
     const adminEmail = req.adminUser?.email;

@@ -39,17 +39,24 @@ export interface UserBookingWithTrip {
     availableSeats: number;
     route: {
       id: string;
-      pickup_location_title: string;
-      pickup_location_locality: string;
-      pickup_location_label: string;
-      dropoff_location_title: string;
-      dropoff_location_locality: string;
-      dropoff_location_label: string;
+      origin_title: string;
+      origin_locality: string;
+      origin_label: string;
+      destination_title: string | null;
+      destination_locality: string | null;
+      destination_label: string | null;
+      train_station_title: string | null;
+      train_station_locality: string | null;
+      train_station_label: string | null;
+      pickup_point: string;
+      dropoff_point: string;
       price: number;
       vehicle_type: string;
-      meeting_point: string;
       departure_time: string;
       arrival_time: string;
+      boardingPoint: "pickup" | "dropoff";
+      luggageCount: number;
+      luggage_fee: number;
     };
   } | null;
 }
@@ -58,61 +65,6 @@ interface UserBookingsPage {
   bookings: UserBookingWithTrip[];
   nextCursor: string | null;
 }
-
-interface SearchRoutesPage {
-  routes: Route[];
-  nextCursor: string | null;
-}
-
-export interface TripsSummaryRange {
-  date: string;
-  totalEarnings: number;
-  totalTrips: number;
-  totalPassengers: number;
-  trips: Array<{
-    id: string;
-    date: Date;
-    bookedSeats: number;
-    capacity: number;
-    status: string;
-    payoutStatus?: string | null;
-    route: {
-      id: string;
-      pickup_location_title: string;
-      pickup_location_label: string;
-      pickup_location_locality: string;
-      dropoff_location_title: string;
-      dropoff_location_label: string;
-      dropoff_location_locality: string;
-      price: number;
-      departure_time: Date;
-      arrival_time: Date;
-    };
-    earnings: number;
-  }>;
-}
-
-export const getTripsSummaryRangeFn = async (
-  startDate: string,
-  endDate: string,
-): Promise<TripsSummaryRange[]> => {
-  try {
-    const response = await routeApi.get<ApiResponse<TripsSummaryRange[]>>(
-      "/driver/trips-summary-range",
-      {
-        params: { startDate, endDate },
-      },
-    );
-    if (!response.data.success || !response.data.data) {
-      throw new Error(
-        response.data.error || "Failed to get trips summary range",
-      );
-    }
-    return response.data.data;
-  } catch (err) {
-    return handleApiError(err, "Failed to get trips summary range") as never;
-  }
-};
 
 export const completeTripFn = async ({ id }: { id: string }): Promise<Trip> => {
   try {
@@ -130,19 +82,12 @@ export const completeTripFn = async ({ id }: { id: string }): Promise<Trip> => {
 
 export const searchRoutesFn = async (
   params: SearchRoutesRequest,
-  cursor?: string | null,
-  limit: number = 20,
-): Promise<SearchRoutesPage> => {
+): Promise<Route[]> => {
   try {
     const searchParams = new URLSearchParams();
-    if (params.to) searchParams.set("to", params.to);
-    if (params.date) searchParams.set("date", params.date);
-    searchParams.set("limit", String(limit));
-    if (cursor) {
-      searchParams.set("cursor", cursor);
-    }
+    if (params.origin) searchParams.set("origin", params.origin);
 
-    const response = await routeApi.get<ApiResponse<SearchRoutesPage>>(
+    const response = await routeApi.get<ApiResponse<Route[]>>(
       `/search?${searchParams.toString()}`,
     );
     if (!response.data.success || !response.data.data) {
@@ -154,8 +99,6 @@ export const searchRoutesFn = async (
   }
 };
 
-const ROUTES_PAGE_SIZE = 20;
-
 export const useSearchRoutes = ({
   params,
   enabled,
@@ -163,12 +106,10 @@ export const useSearchRoutes = ({
   params: SearchRoutesRequest;
   enabled: boolean;
 }) => {
-  return useInfiniteQuery({
-    queryKey: ["search-routes", params],
-    queryFn: ({ pageParam }: { pageParam: string | null }) =>
-      searchRoutesFn(params, pageParam, ROUTES_PAGE_SIZE),
-    getNextPageParam: (lastPage) => lastPage.nextCursor,
-    initialPageParam: null as string | null,
+  return useQuery({
+    queryKey: ["search-routes", params.origin],
+    queryFn: () => searchRoutesFn(params),
+    placeholderData: keepPreviousData,
     enabled,
   });
 };
@@ -225,7 +166,6 @@ export const useCompleteTrip = (options?: {
     mutationFn: completeTripFn,
     onSuccess: (data, variables) => {
       void queryClient.invalidateQueries({ queryKey: ["driverRoutes"] });
-      void queryClient.invalidateQueries({ queryKey: ["tripsSummaryRange"] });
       void queryClient.invalidateQueries({
         queryKey: ["tripBookings", variables.id],
       });
@@ -241,19 +181,6 @@ export const useCompleteTrip = (options?: {
       options?.onSuccess?.(data);
     },
     onError: options?.onError,
-  });
-};
-
-export const useGetTripsSummaryRange = (
-  startDate: string,
-  endDate: string,
-  options?: { enabled?: boolean },
-) => {
-  return useQuery({
-    queryKey: ["tripsSummaryRange", startDate, endDate],
-    queryFn: () => getTripsSummaryRangeFn(startDate, endDate),
-    placeholderData: keepPreviousData,
-    enabled: options?.enabled ?? (!!startDate && !!endDate),
   });
 };
 

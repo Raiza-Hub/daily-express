@@ -20,6 +20,9 @@ function isValidNigerianPhone(phone: string): boolean {
   );
 }
 
+type TimeMode = "departure" | "arrival";
+type BoardingPoint = "pickup" | "dropoff";
+
 const TripBookingCards = ({
   route,
   tripDate,
@@ -27,7 +30,7 @@ const TripBookingCards = ({
 }: {
   route: Route;
   tripDate: string;
-  timeTab: "departure" | "arrival";
+  timeTab: TimeMode;
 }) => {
   const router = useRouter();
   const { data: user } = useGetMe();
@@ -36,40 +39,56 @@ const TripBookingCards = ({
 
   const isMock = route.id.startsWith("mock-");
 
-  const [selectedDepartureTime, setSelectedDepartureTime] = useState<string | null>(null);
+  const [selected, setSelected] = useState<{
+    time: string;
+    mode: TimeMode;
+  } | null>(null);
+  const [boardingPoint, setBoardingPoint] = useState<BoardingPoint | null>(null);
   const [leadCarriesLuggage, setLeadCarriesLuggage] = useState(false);
   const [passengers, setPassengers] = useState<Passenger[]>([]);
 
   const isArrival = timeTab === "arrival";
-  const selectedDepartureIndex = selectedDepartureTime
-    ? route.departure_time.indexOf(selectedDepartureTime)
-    : -1;
+  const effectiveBoardingPoint: BoardingPoint =
+    boardingPoint ?? (isArrival ? "dropoff" : "pickup");
+  const boardingLabel =
+    effectiveBoardingPoint === "pickup"
+      ? route.pickup_point
+      : route.dropoff_point;
+  const destinationTitle = route.train_station_title ?? route.destination_title;
 
   const locationBlocks = isArrival
     ? [
         {
           title: "Train Station",
           icon: TrainIcon,
-          label: route.dropoff_location_label,
+          label:
+            route.train_station_label ??
+            route.destination_label ??
+            "Train Station",
         },
         {
-          title: "Origin",
+          title: "Destination",
           icon: BuildingOfficeIcon,
-          label: route.pickup_location_label,
+          label: route.origin_label,
         },
       ]
     : [
         {
           title: "Origin",
           icon: BuildingOfficeIcon,
-          label: route.pickup_location_label,
+          label: route.origin_label,
         },
         {
           title: "Train Station",
           icon: TrainIcon,
-          label: route.dropoff_location_label,
+          label:
+            route.train_station_label ??
+            route.destination_label ??
+            "Train Station",
         },
       ];
+
+  const slotList = isArrival ? route.arrival_time : route.departure_time;
 
   const formatTime = (time: string) => {
     const [hours = 0, minutes = 0] = time.split(":").map(Number);
@@ -91,12 +110,11 @@ const TripBookingCards = ({
     ? `${user.firstName} ${user.lastName}`
     : "";
 
-  const canCheckout =
-    !isMock && route.price !== null && route.fee !== null;
+  const canCheckout = !isMock;
 
   const handleBook = async () => {
-    if (!selectedDepartureTime) {
-      toast.warning("Pick a departure time first.");
+    if (!selected) {
+      toast.warning("Pick a departure or arrival time first.");
       return;
     }
 
@@ -111,10 +129,12 @@ const TripBookingCards = ({
       toast.success("Booking details saved", {
         description: JSON.stringify(
           {
-            route: `${route.pickup_location_title} to ${route.dropoff_location_title}`,
+            route: `${route.origin_title} to ${destinationTitle ?? route.origin_title}`,
             date: tripDate,
-            departure: formatTime(selectedDepartureTime),
-            meetingPoint: route.meeting_point,
+            timeMode: selected.mode,
+            selectedTime: formatTime(selected.time),
+            boardingPoint: effectiveBoardingPoint,
+            boardingLabel,
             vehicle: "car",
             price: route.price,
             luggageFee,
@@ -143,8 +163,12 @@ const TripBookingCards = ({
         vehicleType: "car",
         seatCount: passengersCount,
         phone: primaryPhone,
+        timeMode: selected.mode,
+        selectedTime: selected.time,
+        boardingPoint: effectiveBoardingPoint,
+        luggageCount,
         channels: ["bank_transfer"],
-        productName: `${route.pickup_location_title} to ${route.dropoff_location_title}`,
+        productName: `${route.origin_title} to ${destinationTitle ?? route.origin_title}`,
         productDescription: `Trip booking for ${dayjs(parseLocalDate(tripDate)).format("ddd, D MMM YYYY")}`,
       });
 
@@ -183,42 +207,54 @@ const TripBookingCards = ({
 
         <div className="mb-4">
           <div className="flex flex-wrap gap-2">
-            {isArrival ? (
-              route.arrival_time.map((time, index) => (
+            {slotList.map((time) => {
+              const isActive =
+                selected?.time === time && selected.mode === timeTab;
+              return (
                 <div
                   key={time}
-                  className={`rounded-lg px-3 py-2 border ${
-                    index === selectedDepartureIndex
-                      ? "bg-blue-600 text-white border-blue-600"
-                      : "bg-white text-neutral-900 border-neutral-200"
-                  }`}
-                >
-                  {formatTime(time)}
-                </div>
-              ))
-            ) : (
-              route.departure_time.map((time) => (
-                <div
-                  key={time}
-                  onClick={() => setSelectedDepartureTime(time)}
+                  onClick={() => setSelected({ time, mode: timeTab })}
                   className={`rounded-lg px-3 py-2 cursor-pointer border ${
-                    selectedDepartureTime === time
+                    isActive
                       ? "bg-blue-600 text-white border-blue-600"
                       : "bg-white text-neutral-900 border-neutral-200"
                   }`}
                 >
                   {formatTime(time)}
                 </div>
-              ))
-            )}
+              );
+            })}
           </div>
         </div>
 
         <div className="mb-4">
-          <p className="text-sm font-medium text-neutral-500">
-            Meeting Point
+          <p className="text-sm font-medium text-neutral-500 mb-2">
+            Boarding Point
           </p>
-          <p className="text-neutral-900">{route.meeting_point}</p>
+          <div className="flex flex-wrap gap-2">
+            <div
+              onClick={() => setBoardingPoint("pickup")}
+              className={`rounded-lg px-3 py-2 cursor-pointer border ${
+                effectiveBoardingPoint === "pickup"
+                  ? "bg-blue-600 text-white border-blue-600"
+                  : "bg-white text-neutral-900 border-neutral-200"
+              }`}
+            >
+              <p className="text-sm font-medium">Pickup</p>
+              <p className="text-sm opacity-80">{route.pickup_point}</p>
+            </div>
+            <div
+              onClick={() => setBoardingPoint("dropoff")}
+              className={`rounded-lg px-3 py-2 cursor-pointer border ${
+                effectiveBoardingPoint === "dropoff"
+                  ? "bg-blue-600 text-white border-blue-600"
+                  : "bg-white text-neutral-900 border-neutral-200"
+              }`}
+            >
+              <p className="text-sm font-medium">Dropoff</p>
+              <p className="text-sm opacity-80">{route.dropoff_point}</p>
+            </div>
+          </div>
         </div>
 
         <label className="flex items-center gap-2">
@@ -248,7 +284,7 @@ const TripBookingCards = ({
         onBook={handleBook}
         isBooking={isCreatingCheckout}
         disabled={
-          !selectedDepartureTime ||
+          !selected ||
           isCreatingCheckout ||
           (isMock ? false : !canCheckout)
         }

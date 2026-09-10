@@ -84,6 +84,13 @@ export class BookingFinalizerService {
 
       if (passengerUser?.email) {
         const config = getConfig();
+        const boardingFromPickup = updatedBooking.boardingPoint !== "dropoff";
+        const pickupTitle = boardingFromPickup
+          ? routeRecord.pickup_point
+          : routeRecord.dropoff_point;
+        const dropoffTitle = boardingFromPickup
+          ? (routeRecord.train_station_title ?? routeRecord.destination_title)
+          : routeRecord.origin_title;
         const propsJson = JSON.stringify({
           frontendUrl: config.FRONTEND_URL,
           passengerName: `${updatedBooking.firstName ?? ""} ${updatedBooking.lastName ?? ""}`.trim() || null,
@@ -92,12 +99,12 @@ export class BookingFinalizerService {
             calculateTrustedChargeAmount(updatedBooking.fareAmount, updatedBooking.feeAmount),
             "NGN",
           ),
-          pickupTitle: routeRecord.pickup_location_title,
-          dropoffTitle: routeRecord.dropoff_location_title,
+          pickupTitle,
+          dropoffTitle,
           tripDate: formatBusinessDate(updatedBooking.tripDate),
-          departureTime: routeRecord.departure_time,
+          departureTime: updatedBooking.departureTime,
           timeZone: "Africa/Lagos",
-          meetingPoint: routeRecord.meeting_point,
+          meetingPoint: pickupTitle,
         });
         const emailHtml = await renderEmail("BookingConfirmedEmail", propsJson);
         const emailSubject = getEmailSubject("BookingConfirmedEmail", propsJson);

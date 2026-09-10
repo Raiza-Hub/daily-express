@@ -30,11 +30,6 @@ router.patch(
   routeController.completeTrip,
 );
 router.get(
-  "/driver/trips-summary-range",
-  authenticateVerifiedGatewayRequest,
-  routeController.getDailyTripSummaries,
-);
-router.get(
   "/driver/trip/:tripId/bookings",
   authenticateVerifiedGatewayRequest,
   routeController.getTripBookings,
