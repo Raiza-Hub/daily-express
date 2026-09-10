@@ -138,27 +138,6 @@ export const vehicle = pgTable("vehicle", {
   updatedAt: timestamp("updated_at", { mode: "date" }).defaultNow().notNull(),
 });
 
-export const externalDriver = pgTable("external_driver", {
-  id: uuid("id").defaultRandom().primaryKey(),
-  tripId: uuid("trip_id")
-    .references(() => trip.id, { onDelete: "restrict" })
-    .notNull()
-    .unique(),
-  name: text("name").notNull(),
-  phone: text("phone").notNull(),
-  firstName: text("first_name").notNull(),
-  lastName: text("last_name").notNull(),
-  country: text("country"),
-  state: text("state"),
-  vehicleMake: text("vehicle_make"),
-  vehicleModel: text("vehicle_model"),
-  vehiclePlateNumber: text("vehicle_plate_number"),
-  vehicleColor: text("vehicle_color"),
-  vehicleCapacity: integer("vehicle_capacity"),
-  assignedBy: text("assigned_by").notNull(),
-  assignedAt: timestamp("assigned_at", { mode: "date" }).defaultNow().notNull(),
-});
-
 export const VEHICLE_CAPACITY: Record<string, number> = {
   car: 7,
   bus: 14,
@@ -169,7 +148,6 @@ export const routeSchema = {
   trip,
   booking,
   vehicle,
-  externalDriver,
 };
 
 export type Route = typeof route.$inferSelect;
@@ -180,5 +158,3 @@ export type Booking = typeof booking.$inferSelect;
 export type BookingRecord = Booking;
 export type Vehicle = typeof vehicle.$inferSelect;
 export type VehicleRecord = Vehicle;
-export type ExternalDriver = typeof externalDriver.$inferSelect;
-export type ExternalDriverRecord = ExternalDriver;
