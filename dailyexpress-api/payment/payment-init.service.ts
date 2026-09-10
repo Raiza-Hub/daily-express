@@ -10,7 +10,6 @@ import {
     dedupeChannels,
     generateReference,
 } from "../utils/payment";
-import { bookingFinalizerService } from "../route/booking-finalizer.service";
 import { koraClient } from "./kora.client";
 import { PaymentRepository } from "./payment.repository";
 import type {
@@ -18,7 +17,6 @@ import type {
     KoraChannel,
     KoraInitializeResponse,
 } from "./payment.types";
-import type { PaymentRecord } from "../db/index";
 
 
 
@@ -46,24 +44,13 @@ export class PaymentInitService {
       throw createServiceError("Booking not found", 404);
     }
 
-    // 1. If another request is currently initializing this payment, return the existing payment record (conflict handling)
-    let existingPayment = await this.repo.findPaymentByBookingId(input.bookingId);
-    if (existingPayment?.status === "initialized") {
-      logger.info("payment.initialize_conflict_skipped", {
-        bookingId: input.bookingId,
-      });
-      return existingPayment;
-    }
-
-    if (existingPayment?.status === "pending") {
-      return this.resolveExistingPendingCheckout(
-        existingPayment,
-        authenticatedEmail,
-        input,
-      );
-    }
-
+    // 1. If a payment already exists for this booking (any status), return it (conflict handling)
+    const existingPayment = await this.repo.findPaymentByBookingId(input.bookingId);
     if (existingPayment) {
+      logger.info("payment.initialize_existing_returned", {
+        bookingId: input.bookingId,
+        status: existingPayment.status,
+      });
       return existingPayment;
     }
 
@@ -96,10 +83,6 @@ export class PaymentInitService {
         where: eq(payment.bookingId, input.bookingId),
       });
 
-      if (currentPayment?.status === "pending") {
-        return { action: "return_pending" as const, payment: currentPayment };
-      }
-
       if (currentPayment) {
         return { action: "return_existing" as const, payment: currentPayment };
       }
@@ -131,14 +114,6 @@ export class PaymentInitService {
         throw new Error("Payment conflict occurred but existing record not found");
       }
     });
-
-    if (setupResult.action === "return_pending") {
-      return this.resolveExistingPendingCheckout(
-        setupResult.payment,
-        authenticatedEmail,
-        input,
-      );
-    }
 
     if (setupResult.action === "return_existing") {
       return setupResult.payment;
@@ -186,162 +161,6 @@ export class PaymentInitService {
     });
 
     return finalPayment;
-  }
-
-  private async resolveExistingPendingCheckout(
-    existingPayment: PaymentRecord,
-    authenticatedEmail: string,
-    input: InitializePaymentInput,
-  ) {
-    const verification = await this.kora.verifyTransaction(
-      existingPayment.reference,
-    );
-    const providerStatus = verification.data.status.toLowerCase();
-
-    if (providerStatus === "success") {
-      if (existingPayment.bookingId) {
-        await bookingFinalizerService.finalizeBooking(
-          existingPayment.bookingId,
-          existingPayment.reference,
-        );
-      }
-      return existingPayment;
-    }
-
-    if (["pending", "processing"].includes(providerStatus)) {
-      if (!existingPayment.bookingId) return null;
-      const bookingFare = await this.repo.findBookingFareByBookingId(
-        existingPayment.bookingId,
-        existingPayment.userId,
-      );
-      const expectedAmount = calculateTrustedChargeAmount(bookingFare.fareAmount, bookingFare.feeAmount);
-
-      if (expectedAmount !== existingPayment.amount) {
-        return this.reinitializePayment(
-          existingPayment,
-          authenticatedEmail,
-          input,
-        );
-      }
-
-      return existingPayment;
-    }
-
-    if (
-      ["abandoned", "cancelled", "closed", "failed"].includes(providerStatus)
-    ) {
-      return this.reinitializePayment(
-        existingPayment,
-        authenticatedEmail,
-        input,
-      );
-    }
-
-    return existingPayment;
-  }
-
-  private async reinitializePayment(
-    existingPayment: PaymentRecord,
-    authenticatedEmail: string,
-    input: InitializePaymentInput,
-  ) {
-    const reference = this.buildReference();
-    const channels = dedupeChannels(input.channels);
-    const productName = sanitizeInput(input.productName);
-    const bookingFare = await this.repo.findBookingFareByBookingId(
-      input.bookingId,
-      existingPayment.userId,
-    );
-    const trustedCurrency = bookingFare.currency;
-    const trustedAmount = calculateTrustedChargeAmount(bookingFare.fareAmount, bookingFare.feeAmount);
-
-    if (input.currency && input.currency.toUpperCase() !== trustedCurrency) {
-      throw createServiceError(
-        "Payment currency does not match booking currency",
-        400,
-      );
-    }
-
-    assertCheckoutAmountWithinLimit(trustedAmount);
-
-    logger.info("payment.checkout_retry_refreshing", {
-      bookingId: existingPayment.bookingId,
-      previousReference: existingPayment.reference,
-    });
-
-    const result = await db.transaction(async (tx) => {
-      const [locked] = await tx
-        .select()
-        .from(payment)
-        .where(eq(payment.id, existingPayment.id))
-        .for("update")
-        .limit(1);
-
-      if (!locked || locked.status !== "pending") return null;
-
-      const [updated] = await tx
-        .update(payment)
-        .set({
-          status: "initialized",
-          updatedAt: new Date(),
-        })
-        .where(eq(payment.id, existingPayment.id))
-        .returning();
-
-      return updated;
-    });
-
-    if (!result) {
-      const reloaded = await this.repo.findPaymentByBookingId(input.bookingId);
-      return reloaded || existingPayment;
-    }
-
-    let initializeResponse: { data: KoraInitializeResponse; raw: unknown };
-    try {
-      initializeResponse = await this.createKoraCheckoutSession({
-        email: authenticatedEmail.trim(),
-        amount: trustedAmount,
-        reference,
-        currency: trustedCurrency,
-        channels,
-      });
-    } catch (koraError) {
-      await db
-        .update(payment)
-        .set({
-          status: "failed",
-          failureReason: koraError instanceof Error ? koraError.message : "Checkout retry re-initialization failed",
-          updatedAt: new Date(),
-        })
-        .where(eq(payment.id, existingPayment.id));
-      throw koraError;
-    }
-
-    const updatedPayment = await db.transaction(async (tx) => {
-      const [record] = await tx
-        .update(payment)
-        .set({
-          reference,
-          amount: trustedAmount,
-          currency: trustedCurrency,
-          productName,
-          customerEmail: authenticatedEmail.trim(),
-          status: "pending",
-          checkoutUrl: initializeResponse.data.checkout_url,
-          failedAt: null,
-          failureCode: null,
-          failureReason: null,
-          updatedAt: new Date(),
-        })
-        .where(eq(payment.id, existingPayment.id))
-        .returning();
-
-      if (record) {
-        return record;
-      }
-    });
-
-    return updatedPayment || existingPayment;
   }
 
   private async createKoraCheckoutSession(params: {
