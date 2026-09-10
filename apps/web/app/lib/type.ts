@@ -1,31 +1,13 @@
 import type { TRoute } from "@repo/types/routeSchema";
 import { DriverInfoProps } from "~/components/DriverInfo";
-import { createLoader, parseAsString, parseAsStringLiteral } from "nuqs/server";
+import { createLoader, parseAsString } from "nuqs/server";
 
 
 export type SubmittedTripSearch = {
-  from: string;
-  to: string;
+  origin: string;
   date: string;
   vehicleType?: string[];
 };
-
-export interface SearchTrip {
-  searchResultId: string;
-  routeId: string;
-  pickupLocationTitle: string;
-  pickupLocationLocality: string;
-  pickupLocationLabel: string;
-  dropoffLocationTitle: string;
-  dropoffLocationLocality: string;
-  dropoffLocationLabel: string;
-  priceCar: number;
-  priceBus: number;
-  zoneFee?: number;
-  departureTime: Date;
-  estimatedArrivalTime: Date;
-  meetingPoint: string;
-}
 
 export interface BookingContext {
   tripDate: string;
@@ -40,6 +22,7 @@ export interface TripStatusItem {
   remainingSeats: number;
   paymentStatus: string;
   driverStatus: string;
+  fareAmount: number;
   displayMessage?: string | null;
   feeAmount?: number;
 }
@@ -47,17 +30,13 @@ export interface TripStatusItem {
 
 
 export const searchParams = {
-  from: parseAsString,
-  to: parseAsString,
+  origin: parseAsString,
   date: parseAsString,
-  departureTime: parseAsStringLiteral(["morning", "afternoon"]),
 };
 
 export const loadSearchParams = createLoader(searchParams);
 
 export type SearchParams = {
-  from: string | null;
-  to: string | null;
+  origin: string | null;
   date: string | null;
-  departureTime: "morning" | "afternoon" | null;
 };

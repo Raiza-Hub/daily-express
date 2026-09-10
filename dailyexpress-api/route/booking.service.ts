@@ -51,7 +51,7 @@ export class BookingService {
 
     const fareAmount =
       input.vehicleType === "car" ? routeRecord.priceCar : routeRecord.priceBus;
-    const feeAmount = routeRecord.zone?.fee ?? 0;
+    const feeAmount = routeRecord.fee ?? 0;
 
     const existingBooking = await db.query.booking.findFirst({
       where: and(
@@ -91,6 +91,8 @@ export class BookingService {
         userId,
         firstName: passengerRecord.firstName,
         lastName: passengerRecord.lastName,
+        seatCount: input.seatCount,
+        phone: input.phone,
         fareAmount,
         feeAmount,
         currency: "NGN",
@@ -127,7 +129,9 @@ export class BookingService {
     logger.info("booking.created", {
       bookingId: newBooking.id,
       routeId: newBooking.routeId,
+      tripId: newBooking.tripId,
       vehicleType: newBooking.vehicleType,
+      seatCount: newBooking.seatCount,
       fareAmount: newBooking.fareAmount,
       feeAmount: newBooking.feeAmount,
     });
@@ -256,7 +260,7 @@ export class BookingService {
 
       return {
         id: row.booking.id,
-        seatNumber: row.booking.seatNumber ?? 0,
+        seatCount: row.booking.seatCount,
         fareAmount: row.booking.fareAmount,
         feeAmount: row.booking.feeAmount ?? 0,
         currency: row.booking.currency,
@@ -360,7 +364,7 @@ export class BookingService {
         ? [
             {
               id: row.booking.id,
-              seatNumber: row.booking.seatNumber ?? 0,
+              seatCount: row.booking.seatCount,
               status: row.booking.status,
               paymentStatus: row.booking.paymentStatus,
               createdAt: row.booking.createdAt,

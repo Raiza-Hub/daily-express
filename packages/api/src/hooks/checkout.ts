@@ -1,10 +1,6 @@
 import { useMutation } from "@tanstack/react-query";
 import { paymentApi, routeApi } from "../api";
-import type {
-  ApiResponse,
-  CreateTripCheckoutRequest,
-  TripCheckout,
-} from "@shared/types";
+import type { ApiResponse, CreateTripCheckoutRequest, TripCheckout } from "@shared/types";
 import { handleApiError } from "../utils";
 
 interface CheckoutBookingResponse {
@@ -30,6 +26,8 @@ export const createTripCheckoutFn = async (
       routeId: data.routeId,
       tripDate: data.tripDate,
       vehicleType: data.vehicleType,
+      seatCount: data.seatCount,
+      phone: data.phone,
     });
 
     if (!bookingResponse.data.success || !bookingResponse.data.data) {
