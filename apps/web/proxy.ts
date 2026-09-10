@@ -3,10 +3,12 @@ import { NextRequest, NextResponse } from 'next/server'
 const publicRoutes = [
   "/",
   "/sign-in",
+  "/onboarding",
   "/about",
   "/privacy",
   "/terms",
   "/cookies",
+  "/routes",
 ];
 
 const authRoutes = ['/sign-in']

@@ -6,7 +6,6 @@ import { getAuthenticatedUser } from "../middleware/auth";
 import { timeAsync } from "../utils/timing";
 import { routeService } from "./route.service";
 import { ALLOWED_VEHICLE_TYPES } from "./utils";
-import { sseManager } from "./sse-manager";
 const ALLOWED_VEHICLE_TYPES_SET = new Set(ALLOWED_VEHICLE_TYPES);
 const DATE_ONLY_REGEX = /^\d{4}-\d{2}-\d{2}$/;
 const MAX_TRIPS_SUMMARY_RANGE_DAYS = 31;
@@ -267,7 +266,7 @@ export const getTripBookings: RequestHandler = asyncHandler(
 export const createCheckoutBooking: RequestHandler = asyncHandler(
   async (req: Request, res: Response) => {
     const user = getAuthenticatedUser(req);
-    const { routeId, tripDate, vehicleType } = req.body;
+    const { routeId, tripDate, vehicleType, seatCount, phone } = req.body;
     if (!user) {
       return sendErrorResponse(res, 401, "Please sign in again to continue.", {
         code: "AUTHENTICATION_REQUIRED",
@@ -283,6 +282,17 @@ export const createCheckoutBooking: RequestHandler = asyncHandler(
         code: "INVALID_VEHICLE_TYPE",
       });
     }
+    const parsedSeatCount = parseInt(seatCount, 10);
+    if (!Number.isInteger(parsedSeatCount) || parsedSeatCount < 1) {
+      return sendErrorResponse(res, 400, "Valid seat count is required (integer >= 1).", {
+        code: "INVALID_SEAT_COUNT",
+      });
+    }
+    if (typeof phone !== "string" || phone.trim().length === 0) {
+      return sendErrorResponse(res, 400, "Phone number is required.", {
+        code: "MISSING_PHONE",
+      });
+    }
     const parsedTripDate = parseDateOnly(tripDate);
     if (!parsedTripDate) {
       return sendErrorResponse(
@@ -295,12 +305,14 @@ export const createCheckoutBooking: RequestHandler = asyncHandler(
 
     const checkoutBooking = await timeAsync(
       "route.create_checkout_booking.service",
-      { userId: user.userId, routeId, tripDate: parsedTripDate, vehicleType },
+      { userId: user.userId, routeId, tripDate: parsedTripDate, vehicleType, seatCount: parsedSeatCount },
       () =>
         routeService.createCheckoutBooking(user.userId, {
           routeId,
           tripDate: parsedTripDate,
           vehicleType,
+          seatCount: parsedSeatCount,
+          phone: phone.trim(),
         }),
     );
 
@@ -312,133 +324,6 @@ export const createCheckoutBooking: RequestHandler = asyncHandler(
           "Checkout booking created successfully",
         ),
       );
-  },
-);
-
-export const streamTripUpdates: RequestHandler = (req, res) => {
-  res.writeHead(200, {
-    "Content-Type": "text/event-stream",
-    "Cache-Control": "no-cache",
-    Connection: "keep-alive",
-    "X-Accel-Buffering": "no",
-  });
-  res.write(": connected\n\n");
-  sseManager.addClient(res);
-};
-
-export const getAvailableTrips: RequestHandler = asyncHandler(
-  async (req: Request, res: Response) => {
-    const user = getAuthenticatedUser(req);
-    if (!user) {
-      return sendErrorResponse(res, 401, "Please sign in again to continue.", {
-        code: "AUTHENTICATION_REQUIRED",
-      });
-    }
-    const limit = req.query.limit
-      ? parseInt(req.query.limit as string, 10)
-      : undefined;
-    const cursor =
-      typeof req.query.cursor === "string" ? req.query.cursor : undefined;
-    const search =
-      typeof req.query.search === "string" ? req.query.search.trim() : undefined;
-    const date =
-      typeof req.query.date === "string" ? parseDateOnly(req.query.date) : undefined;
-    const result = await timeAsync(
-      "route.get_available_trips.service",
-      { userId: user.userId, limit, hasCursor: Boolean(cursor), hasSearch: Boolean(search), hasDate: Boolean(date) },
-      () => routeService.getAvailableTrips(limit, cursor, search, date ?? undefined),
-    );
-    return res
-      .status(200)
-      .json(
-        createSuccessResponse(result, "Available trips fetched successfully"),
-      );
-  },
-);
-
-export const getAvailableTripsCountByDate: RequestHandler = asyncHandler(
-  async (req: Request, res: Response) => {
-    const user = getAuthenticatedUser(req);
-    if (!user) {
-      return sendErrorResponse(res, 401, "Please sign in again to continue.", {
-        code: "AUTHENTICATION_REQUIRED",
-      });
-    }
-    const { startDate, endDate } = req.query;
-    if (!startDate || !endDate) {
-      return sendErrorResponse(res, 400, "Start date and end date are required.", {
-        code: "MISSING_DATE_RANGE",
-      });
-    }
-    if (typeof startDate !== "string" || typeof endDate !== "string") {
-      return sendErrorResponse(res, 400, "Dates must be single YYYY-MM-DD values.", {
-        code: "INVALID_DATE_RANGE",
-      });
-    }
-
-    const parsedStartDate = parseDateOnly(startDate);
-    const parsedEndDate = parseDateOnly(endDate);
-    if (!parsedStartDate || !parsedEndDate) {
-      return sendErrorResponse(res, 400, "Dates must be in YYYY-MM-DD format.", {
-        code: "INVALID_DATE_FORMAT",
-      });
-    }
-    if (parsedStartDate > parsedEndDate) {
-      return sendErrorResponse(res, 400, "Start date cannot be after end date.", {
-        code: "INVALID_DATE_RANGE",
-      });
-    }
-
-    const rangeDays =
-      (dateKeyToUtcMs(parsedEndDate) - dateKeyToUtcMs(parsedStartDate)) /
-      (24 * 60 * 60 * 1000);
-    if (rangeDays > 61) {
-      return sendErrorResponse(res, 400, "Date range cannot exceed 62 days.", {
-        code: "DATE_RANGE_TOO_LARGE",
-      });
-    }
-
-    const result = await timeAsync(
-      "route.get_available_trips_count.service",
-      { userId: user.userId, startDate, endDate },
-      () => routeService.getAvailableTripsCountByDate(startDate, endDate),
-    );
-    return res
-      .status(200)
-      .json(
-        createSuccessResponse(result, "Available trips count fetched successfully"),
-      );
-  },
-);
-
-export const claimTrip: RequestHandler = asyncHandler(
-  async (req: Request, res: Response) => {
-    const user = getAuthenticatedUser(req);
-    if (!user) {
-      return sendErrorResponse(res, 401, "Please sign in again to continue.", {
-        code: "AUTHENTICATION_REQUIRED",
-      });
-    }
-    const tripId = getParam(req.params.id);
-    if (!tripId) {
-      return sendErrorResponse(res, 400, "Trip ID is required.", {
-        code: "MISSING_TRIP_ID",
-      });
-    }
-    const vehicleId: string | undefined = req.body.vehicleId;
-    if (!vehicleId) {
-      return sendErrorResponse(res, 400, "Vehicle ID is required.", {
-        code: "MISSING_VEHICLE_ID",
-      });
-    }
-    const trip = await timeAsync(
-      "route.claim_trip.service",
-      { userId: user.userId, tripId, vehicleId },
-      () => routeService.claimTrip(user, tripId, vehicleId),
-    );
-    return res
-      .status(200)
-      .json(createSuccessResponse(trip, "Trip claimed successfully"));
   },
 );
 

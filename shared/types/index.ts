@@ -1,5 +1,4 @@
 // shared typescript types
-import { z } from "zod/v4";
 
 export interface User {
   id: string;
@@ -41,13 +40,6 @@ export interface CreateDriverRequest {
   state: string;
   city: string;
   address: string;
-  bankName: string;
-  bankCode: string;
-  accountNumber: string;
-  accountName: string;
-  kycType: string;
-  kycId: string;
-  kycConsent: boolean;
 }
 
 export interface Driver {
@@ -63,23 +55,21 @@ export interface Driver {
   currency: string;
   state: string;
   city: string;
-  bankName: string;
-  bankCode: string;
-  accountNumber: string;
-  accountName: string;
+  bankName: string | null;
+  bankCode: string | null;
+  accountNumber: string | null;
+  accountName: string | null;
   bankVerificationStatus: BankVerificationStatus;
-  bankVerificationFailureReason?: string | null;
   kycStatus: KycStatus;
   kycType?: string | null;
   kycVerificationReference?: string | null;
-  kycFailureReason?: string | null;
   isActive?: boolean;
   createdAt: Date;
   updatedAt: Date;
 }
 
-export type BankVerificationStatus = "pending" | "active" | "failed";
-export type KycStatus = "none" | "pending" | "active" | "failed";
+export type BankVerificationStatus = "active" | "failed" | null;
+export type KycStatus = "active" | "failed" | null;
 
 export interface DriverPublicProfile {
   id: string;
@@ -172,14 +162,6 @@ export function logError(error: Error, context?: Record<string, any>): void {
   });
 }
 
-export interface Zone {
-  id: string;
-  name: string;
-  fee: number;
-  createdAt: Date;
-  updatedAt: Date;
-}
-
 export interface Route {
   id: string;
   pickup_location_title: string;
@@ -192,18 +174,18 @@ export interface Route {
   intermediate_stops_locality: string | null;
   intermediate_stops_label: string | null;
   meeting_point: string;
-  priceCar: number;
-  priceBus: number;
-  departure_time: string;
-  arrival_time: string;
+  price?: number;
+  fee: number | null;
+  luggage_fee?: number | null;
+  departure_time: string[];
+  arrival_time: string[];
   status: "inactive" | "pending" | "active";
-  zoneId: string | null;
-  zone?: Zone | null;
   createdAt: Date;
   updatedAt: Date;
 }
 export interface CreateRoute {
   driverId?: string;
+  fee?: number | null;
   pickup_location_title: string;
   pickup_location_locality: string;
   pickup_location_label: string;
@@ -219,14 +201,12 @@ export interface CreateRoute {
   departure_time: string;
   arrival_time: string;
   status: "inactive" | "pending" | "active";
-  zoneId?: string | null;
 }
 
 export interface SearchRoutesRequest {
-  from: string;
-  to: string;
+  origin: string;
+  to?: string;
   date: string;
-  departureTime?: string;
 }
 
 export interface updateRouteRequest {
@@ -242,10 +222,10 @@ export interface updateRouteRequest {
   meeting_point?: string;
   priceCar?: number;
   priceBus?: number;
+  fee?: number | null;
   departure_time?: string;
   arrival_time?: string;
   status?: "inactive" | "pending" | "active";
-  zoneId?: string | null;
 }
 
 export type TripStatus = "pending" | "confirmed" | "cancelled" | "completed" | "awaiting_driver";
@@ -289,7 +269,8 @@ export interface Booking {
   id: string;
   tripId: string | null;
   userId: string;
-  seatNumber: number | null;
+  seatCount: number;
+  phone: string;
   fareAmount: number;
   feeAmount: number;
   currency: string;
@@ -308,6 +289,8 @@ export interface CreateBooking {
   routeId: string;
   tripDate: string;
   vehicleType: "car" | "bus";
+  seatCount: number;
+  phone: string;
 }
 
 export interface updateBookingRequest {
@@ -364,6 +347,8 @@ export interface CreateTripCheckoutRequest {
   routeId: string;
   tripDate: string;
   vehicleType: "car" | "bus";
+  seatCount: number;
+  phone: string;
   channels?: KoraCheckoutChannel[];
   productName: string;
   productDescription: string;
@@ -386,32 +371,6 @@ export type PayoutStatus =
   | "processing"
   | "success"
   | "failed";
-
-export type NotificationTone = "critical" | "attention" | "positive" | "info";
-
-export interface DriverNotification {
-  id: string;
-  driverId: string;
-  notificationKey: string;
-  type: string;
-  title: string;
-  message: string;
-  href?: string | null;
-  tag: string;
-  tone: NotificationTone;
-  readAt?: Date | string | null;
-  createdAt: Date | string;
-  updatedAt: Date | string;
-}
-
-export const DRIVER_NOTIFICATION_REALTIME_VERSION = 1;
-
-export interface DriverNotificationCreatedRealtimeEvent {
-  version: typeof DRIVER_NOTIFICATION_REALTIME_VERSION;
-  type: "notification.created";
-  payload: DriverNotification;
-  timestamp: number;
-}
 
 export interface DriverPayout {
   id: string;
@@ -444,37 +403,6 @@ export interface ResolveBankAccountResponse {
   bankName: string;
   bankCode: string;
 }
-
-export interface PushSubscriptionPayload {
-  endpoint: string;
-  p256dh: string;
-  auth: string;
-}
-
-export interface PushNotificationPayload {
-  title: string;
-  message: string;
-  tag?: string;
-  href?: string;
-  tone?: NotificationTone;
-  ttl?: number;
-  urgency?: "low" | "normal" | "high";
-}
-
-export const driverNotificationSchema: z.ZodType<DriverNotification> = z.object({
-  id: z.string(),
-  driverId: z.string(),
-  notificationKey: z.string(),
-  type: z.string(),
-  title: z.string(),
-  message: z.string(),
-  href: z.string().nullable().optional(),
-  tag: z.string(),
-  tone: z.enum(["critical", "attention", "positive", "info"]),
-  readAt: z.union([z.string(), z.date()]).nullable().optional(),
-  createdAt: z.union([z.string(), z.date()]),
-  updatedAt: z.union([z.string(), z.date()]),
-});
 
 export type VehicleStatus = "available" | "in_use";
 

@@ -12,6 +12,7 @@ export default function robots(): MetadataRoute.Robots {
           "/trip-status",
           "/settings/",
           "/sign-in",
+          "/onboarding",
         ],
       },
     ],
