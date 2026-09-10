@@ -1,63 +1,49 @@
 import Joi from "joi";
 
-export function isUnder13(dateOfBirth: Date): boolean {
+export const MINIMUM_ACCOUNT_AGE = 14;
+
+export const ONBOARDING_PHONE_REGEX = /^\+234[789]\d{9}$/;
+export const ONBOARDING_GENDERS = ["male", "female"] as const;
+
+export function isUnder14(dateOfBirth: Date): boolean {
   const today = new Date();
   const threshold = new Date(
-    today.getFullYear() - 13,
+    today.getFullYear() - MINIMUM_ACCOUNT_AGE,
     today.getMonth(),
     today.getDate(),
   );
   return dateOfBirth > threshold;
 }
 
-export const registerSchema = Joi.object({
-  email: Joi.string().email().lowercase().trim().required().messages({
-    "string.email": "Email must be a valid email address",
-    "any.required": "Email is required",
-  }),
-  firstName: Joi.string().required().messages({
-    "any.required": "First name is required",
-  }),
-  lastName: Joi.string().required().messages({
-    "any.required": "Last name is required",
-  }),
+export const completeOnboardingSchema = Joi.object({
+  phoneNumber: Joi.string()
+    .pattern(ONBOARDING_PHONE_REGEX)
+    .required()
+    .messages({
+      "string.pattern.base":
+        "Enter a valid Nigerian phone number in international format (e.g. +2348012345678)",
+      "any.required": "Phone number is required",
+    }),
   dateOfBirth: Joi.date()
     .required()
     .custom((value, helpers) => {
-      if (isUnder13(value)) {
-        return helpers.error("dateOfBirth.under13");
+      if (isUnder14(value)) {
+        return helpers.error("dateOfBirth.under14");
       }
       return value;
     })
     .messages({
       "any.required": "Date of birth is required",
-      "dateOfBirth.under13":
-        "You must be at least 13 years old to create an account",
+      "dateOfBirth.under14": `You must be at least ${MINIMUM_ACCOUNT_AGE} years old`,
     }),
-  password: Joi.string()
-    .min(8)
-    // Removed the restrictive character set at the end to allow ALL special chars
-    .pattern(/^(?=.*[a-z])(?=.*[A-Z])(?=.*\d).{8,}$/)
+  gender: Joi.string()
+    .valid(...ONBOARDING_GENDERS)
     .required()
     .messages({
-      "string.min": "Password must be at least 8 characters long",
-      "string.pattern.base":
-        "Password must contain at least one uppercase letter, one lowercase letter, and one number",
-      "any.required": "Password is required",
+      "any.only": "Please select your gender",
+      "any.required": "Gender is required",
     }),
-  referral: Joi.string().optional().allow(null),
 });
-
-export const loginSchema = Joi.object({
-  email: Joi.string().email().required().messages({
-    "string.email": "Email must be a valid email address",
-    "any.required": "Email is required",
-  }),
-  password: Joi.string().required().messages({
-    "any.required": "Password is required",
-  }),
-});
-
 
 export const updateProfileSchema = Joi.object({
   firstName: Joi.string().optional(),
@@ -65,47 +51,25 @@ export const updateProfileSchema = Joi.object({
   dateOfBirth: Joi.date()
     .optional()
     .custom((value, helpers) => {
-      if (isUnder13(value)) {
-        return helpers.error("dateOfBirth.under13");
+      if (isUnder14(value)) {
+        return helpers.error("dateOfBirth.under14");
       }
       return value;
     })
     .messages({
-      "dateOfBirth.under13":
-        "You must be at least 13 years old to create an account",
+      "dateOfBirth.under14": `You must be at least ${MINIMUM_ACCOUNT_AGE} years old`,
     }),
-});
-
-
-export const forgotPasswordSchema = Joi.object({
-  email: Joi.string().email().required().messages({
-    "string.email": "Email must be a valid email address",
-    "any.required": "Email is required",
-  }),
-});
-
-export const resetPasswordSchema = Joi.object({
-    password: Joi.string()
-    .min(8)
-    .pattern(/^(?=.*[a-z])(?=.*[A-Z])(?=.*\d).{8,}$/)
-    .required()
+  phoneNumber: Joi.string()
+    .pattern(ONBOARDING_PHONE_REGEX)
+    .optional()
     .messages({
-      "string.min": "Password must be at least 8 characters long",
       "string.pattern.base":
-        "Password must contain at least one uppercase letter, one lowercase letter, and one number",
-      "any.required": "Password is required",
+        "Enter a valid Nigerian phone number in international format (e.g. +2348012345678)",
     }),
-});
-
-export const setPasswordSchema = Joi.object({
-    password: Joi.string()
-    .min(8)
-    .pattern(/^(?=.*[a-z])(?=.*[A-Z])(?=.*\d).{8,}$/)
-    .required()
+  gender: Joi.string()
+    .valid(...ONBOARDING_GENDERS)
+    .optional()
     .messages({
-      "string.min": "Password must be at least 8 characters long",
-      "string.pattern.base":
-        "Password must contain at least one uppercase letter, one lowercase letter, and one number",
-      "any.required": "Password is required",
+      "any.only": "Please select your gender",
     }),
 });

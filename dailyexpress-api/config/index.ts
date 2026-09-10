@@ -99,8 +99,12 @@ const envSchema = z.object({
   SUPPORT_EMAIL: z.string().default("support@dailyexpress.app"),
   SUPPORT_PHONE: z.string().default("+234 9063611541"),
 
+  // Email dispatch (Cloudflare Queues → SES worker)
+  CLOUDFLARE_ACCOUNT_ID: optionalString(),
+  CLOUDFLARE_EMAIL_QUEUE_ID: optionalString(),
+  CLOUDFLARE_API_TOKEN: optionalString(),
+
   // Auth
-  BCRYPT_ROUNDS: z.coerce.number().int().positive().default(10),
   COOKIE_DOMAIN: optionalString(),
   DRIVER_APP_URL: z
     .url()
@@ -121,9 +125,6 @@ const envSchema = z.object({
   // Admin API (Appsmith)
   ADMIN_API_KEY: z.string().min(1),
   APPSMITH_SIGNATURE_SECRET: optionalString(),
-
-  //csrf
-  CSRF_SECRET: z.string().min(1),
 
   // Logging
   DAILYEXPRESS_API_LOG_CONSOLE: z

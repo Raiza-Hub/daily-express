@@ -9,18 +9,6 @@ export interface PublicPath {
 
 export const PUBLIC_PATHS: readonly PublicPath[] = [
   {
-    pattern: /^\/api\/v1\/auth\/register$/,
-    methods: ["POST"],
-    description: "User registration",
-    group: "auth",
-  },
-  {
-    pattern: /^\/api\/v1\/auth\/login$/,
-    methods: ["POST"],
-    description: "User login",
-    group: "auth",
-  },
-  {
     pattern: /^\/api\/v1\/auth\/google$/,
     methods: ["GET"],
     description: "Google OAuth initiation",
@@ -30,18 +18,6 @@ export const PUBLIC_PATHS: readonly PublicPath[] = [
     pattern: /^\/api\/v1\/auth\/google\/callback$/,
     methods: ["GET"],
     description: "Google OAuth callback",
-    group: "auth",
-  },
-  {
-    pattern: /^\/api\/v1\/auth\/forget-password$/,
-    methods: ["POST"],
-    description: "Password reset request",
-    group: "auth",
-  },
-  {
-    pattern: /^\/api\/v1\/auth\/reset-password\/[^/]+$/,
-    methods: ["POST"],
-    description: "Password reset with token",
     group: "auth",
   },
   {
