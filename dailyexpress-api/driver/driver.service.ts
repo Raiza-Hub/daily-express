@@ -1,28 +1,18 @@
-import type { Driver, DriverStats, UpdateProfileRequest } from "@shared/types";
+import type { Driver, UpdateProfileRequest } from "@shared/types";
 import { createServiceError } from "@shared/utils";
 import { DriverRepository } from "./driver.repository";
 import { DriverProfileService } from "./driver-profile.service";
-import { DriverStatsService } from "./driver-stats.service";
 import { db } from "../db/connection";
 import { paymentRepository } from "../payment/payment.repository";
 import { getStartOfTodayInRouteTimezone } from "../utils/timezone";
-type DriverTransaction = Parameters<Parameters<typeof import("../db/connection").db.transaction>[0]>[0];
-type EarningStatus =
-  | "pending_trip_completion"
-  | "available"
-  | "processing"
-  | "paid"
-  | "cancelled";
 
 export class DriverService {
   private readonly repo: DriverRepository;
   private readonly profileService: DriverProfileService;
-  private readonly statsService: DriverStatsService;
 
   constructor() {
     this.repo = new DriverRepository();
     this.profileService = new DriverProfileService(this.repo);
-    this.statsService = new DriverStatsService();
   }
 
   async createDriver(
@@ -66,32 +56,6 @@ export class DriverService {
       await this.repo.deactivateDriver(tx, driverRecord.id);
     });
   }
-
-  async getDriverStats(driverId: string): Promise<DriverStats> {
-    return this.profileService.getDriverStats(driverId);
-  }
-
-  async decrementStatsForCancelledBooking(
-    tx: DriverTransaction,
-    input: { driverId: string; amount: number; previousEarningStatus?: EarningStatus | null },
-  ): Promise<void> {
-    return this.statsService.decrementStatsForCancelledBooking(tx, input);
-  }
-
-  async recordPayoutForDriver(
-    tx: DriverTransaction,
-    input: { driverId: string; amount: number },
-  ): Promise<void> {
-    return this.statsService.recordPayoutForDriver(tx, input);
-  }
-
-  async adjustPaymentCountersForStatusChange(
-    tx: DriverTransaction,
-    input: { driverId: string; amount: number; previousStatus: EarningStatus; nextStatus: EarningStatus },
-  ): Promise<void> {
-    return this.statsService.adjustPaymentCountersForStatusChange(tx, input);
-  }
-
 }
 
 export const driverService = new DriverService();

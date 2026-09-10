@@ -68,13 +68,6 @@ router.delete(
 );
 
 router.get(
-  "/stats",
-  authenticateVerifiedGatewayRequest,
-  requireActiveDriver,
-  driverController.getDriverStats,
-);
-
-router.get(
   "/vehicles",
   authenticateVerifiedGatewayRequest,
   requireActiveDriver,

@@ -1,7 +1,5 @@
 import {
-  bigint,
   boolean,
-  integer,
   pgEnum,
   pgTable,
   text,
@@ -52,29 +50,9 @@ export const driver = pgTable("driver", {
   updatedAt: timestamp("updated_at", { mode: "date" }).defaultNow().notNull(),
 });
 
-export const driverStats = pgTable("driver_stats", {
-  id: uuid("id").defaultRandom().primaryKey(),
-  driverId: uuid("driver_id")
-    .references(() => driver.id, { onDelete: "cascade" })
-    .notNull()
-    .unique(),
-  totalEarnings: bigint("total_earnings", { mode: "number" })
-    .default(0)
-    .notNull(),
-  pendingPayments: bigint("pending_payments", { mode: "number" })
-    .default(0)
-    .notNull(),
-  totalPassengers: integer("total_passengers").default(0).notNull(),
-  createdAt: timestamp("created_at", { mode: "date" }).defaultNow().notNull(),
-  updatedAt: timestamp("updated_at", { mode: "date" }).defaultNow().notNull(),
-});
-
 export const driverSchema = {
   driver,
-  driverStats,
 };
 
 export type Driver = typeof driver.$inferSelect;
 export type DriverRecord = Driver;
-export type DriverStats = typeof driverStats.$inferSelect;
-export type DriverStatsRecord = DriverStats;

@@ -1,8 +1,7 @@
 import { renderEmail, getEmailSubject } from "@repo/email";
-import { and, eq, sql } from "drizzle-orm";
+import { and, eq } from "drizzle-orm";
 import { db } from "../db/connection";
 import { booking, earning, route, trip } from "../db/index";
-import { driverStats } from "../db/driver-schema";
 import { getConfig } from "../config/index";
 import { logger } from "../utils/logger";
 import { calculateTrustedChargeAmount } from "../utils/payment";
@@ -19,7 +18,6 @@ export class BookingFinalizerService {
    * seats booked) at dispatch/checkout time, so this only:
    *  - confirms the booking + records the payment reference
    *  - creates the single earning for the trip's driver (amount = total fare)
-   *  - bumps driver stats (pending_payments, total_passengers += seatCount)
    *  - sends the booking-confirmed email
    */
   async finalizeBooking(bookingId: string, reference: string) {
@@ -82,15 +80,6 @@ export class BookingFinalizerService {
             status: "pending_trip_completion",
           })
           .onConflictDoNothing();
-
-        await tx
-          .update(driverStats)
-          .set({
-            pendingPayments: sql`${driverStats.pendingPayments} + ${updatedBooking.fareAmount}`,
-            totalPassengers: sql`${driverStats.totalPassengers} + ${updatedBooking.seatCount ?? 1}`,
-            updatedAt: new Date(),
-          })
-          .where(eq(driverStats.driverId, tripDriverId));
       }
 
       if (passengerUser?.email) {
