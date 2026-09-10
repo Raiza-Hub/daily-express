@@ -5,7 +5,6 @@ import {
   booking,
   driver,
   earning,
-  externalDriver,
   route,
   trip,
   users,
@@ -13,12 +12,10 @@ import {
   type TripRecord,
   type BookingRecord,
   type DriverRecord,
-  type ExternalDriverRecord,
 } from "../db/index";
 import type { DbTransaction } from "../db/connection";
 
 type RouteTransaction = DbTransaction;
-type ExternalDriverInsert = typeof externalDriver.$inferInsert;
 
 type RouteWithAssociations = RouteRecord;
 
@@ -284,27 +281,6 @@ export class RouteRepository {
       .where(and(eq(trip.id, tripId), isNull(trip.driverId)))
       .returning();
     return record ?? null;
-  }
-
-  async insertExternalDriver(
-    tx: RouteTransaction,
-    data: ExternalDriverInsert,
-  ): Promise<ExternalDriverRecord> {
-    const [record] = await tx
-      .insert(externalDriver)
-      .values(data)
-      .returning();
-    return record;
-  }
-
-  async findExternalDriverByTripId(
-    tripId: string,
-  ): Promise<ExternalDriverRecord | null> {
-    return (
-      (await db.query.externalDriver.findFirst({
-        where: eq(externalDriver.tripId, tripId),
-      })) ?? null
-    );
   }
 
   async findBookingsByTripId(

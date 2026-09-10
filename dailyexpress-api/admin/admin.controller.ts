@@ -163,50 +163,6 @@ export const assignPlatformDriver: RequestHandler = asyncHandler(
   },
 );
 
-export const assignExternalDriver: RequestHandler = asyncHandler(
-  async (req: Request, res: Response) => {
-    const adminEmail = req.adminUser?.email;
-    if (!adminEmail) {
-      return sendErrorResponse(res, 401, "Admin authentication required.", {
-        code: "ADMIN_AUTHENTICATION_REQUIRED",
-      });
-    }
-    const tripId = getParam(req.params.id);
-    if (!tripId) {
-      return sendErrorResponse(res, 400, "Trip ID is required.", {
-        code: "MISSING_TRIP_ID",
-      });
-    }
-    const { firstName, lastName, phone, country, state, vehicleMake, vehicleModel, vehiclePlateNumber, vehicleColor, vehicleCapacity } = req.body;
-    if (!firstName || !lastName || !phone) {
-      return sendErrorResponse(
-        res,
-        400,
-        "First name, last name, and phone are required.",
-        { code: "MISSING_EXTERNAL_DRIVER_FIELDS" },
-      );
-    }
-    const result = await timeAsync(
-      "admin.assign_external_driver.service",
-      { tripId, adminEmail },
-      () =>
-        adminTripService.assignExternalDriver(tripId, { firstName, lastName, phone, country, state, vehicleMake, vehicleModel, vehiclePlateNumber, vehicleColor, vehicleCapacity }, adminEmail),
-    );
-    await recordAdminAudit({
-      action: "assign_external_driver",
-      adminEmail,
-      target: tripId,
-
-      details: JSON.stringify({ firstName, lastName, phone }),
-    });
-    return res
-      .status(200)
-      .json(
-        createSuccessResponse(result, "External driver assigned successfully"),
-      );
-  },
-);
-
 export const refundTripPassengers: RequestHandler = asyncHandler(
   async (req: Request, res: Response) => {
     const adminEmail = req.adminUser?.email;

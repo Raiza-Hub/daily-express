@@ -4,7 +4,6 @@ import { getConfig } from "../config/index";
 import { db } from "../db/connection";
 import {
   driver,
-  externalDriver as externalDriverTable,
   trip,
   vehicle,
 } from "../db/index";
@@ -14,7 +13,6 @@ import { logger } from "../utils/logger";
 import { generateReference } from "../utils/payment";
 import { formatBusinessDate, getScheduledDepartureTime } from "../utils/route";
 import { jobService } from "../workers/job.service";
-type ExternalDriverInsert = typeof externalDriverTable.$inferInsert;
 
 export class AdminTripService {
   private readonly paymentRepo = paymentRepository;
@@ -174,17 +172,6 @@ export class AdminTripService {
         throw createServiceError(`Trip is already ${lockedTrip.status}`, 400);
       }
 
-      // Prevent assigning if an external driver is already assigned
-      const existingExternal = await tx.query.externalDriver.findFirst({
-        where: eq(externalDriverTable.tripId, tripId),
-      });
-      if (existingExternal) {
-        throw createServiceError(
-          "This trip already has an external driver assigned",
-          409,
-        );
-      }
-
       if (vehicleId) {
         // 1. Lock the vehicle record FOR UPDATE
         const [lockedVehicle] = await tx
@@ -249,88 +236,6 @@ export class AdminTripService {
       vehicleId,
     });
     return updatedTrip;
-  }
-
-  async assignExternalDriver(
-    tripId: string,
-    data: {
-      firstName: string;
-      lastName: string;
-      phone: string;
-      country?: string;
-      state?: string;
-      vehicleMake?: string;
-      vehicleModel?: string;
-      vehiclePlateNumber?: string;
-      vehicleColor?: string;
-      vehicleCapacity?: number;
-    },
-    adminEmail: string,
-  ) {
-    const tripRecord = await this.repo.findTripById(tripId);
-    if (!tripRecord) {
-      throw createServiceError("Trip not found", 404);
-    }
-    if (tripRecord.driverId) {
-      throw createServiceError(
-        "Trip already has a platform driver assigned",
-        409,
-      );
-    }
-
-    await db.transaction(async (tx) => {
-      const lockedTrip = await this.repo.lockTrip(tx, tripId);
-      if (!lockedTrip) throw createServiceError("Trip not found", 404);
-      if (lockedTrip.driverId)
-        throw createServiceError(
-          "Trip already has a platform driver assigned",
-          409,
-        );
-
-      const existingExternal = await tx.query.externalDriver.findFirst({
-        where: eq(externalDriverTable.tripId, tripId),
-      });
-      if (existingExternal)
-        throw createServiceError(
-          "Trip already has an external driver assigned",
-          409,
-        );
-
-      const externalData: ExternalDriverInsert = {
-        tripId,
-        name: `${data.firstName} ${data.lastName}`.trim(),
-        firstName: data.firstName,
-        lastName: data.lastName,
-        phone: data.phone,
-        assignedBy: adminEmail,
-      };
-
-      if (data.country) externalData.country = data.country;
-      if (data.state) externalData.state = data.state;
-      if (data.vehicleMake) externalData.vehicleMake = data.vehicleMake;
-      if (data.vehicleModel) externalData.vehicleModel = data.vehicleModel;
-      if (data.vehiclePlateNumber)
-        externalData.vehiclePlateNumber = data.vehiclePlateNumber;
-      if (data.vehicleColor) externalData.vehicleColor = data.vehicleColor;
-      if (data.vehicleCapacity)
-        externalData.vehicleCapacity = data.vehicleCapacity;
-
-      await this.repo.insertExternalDriver(tx, externalData);
-
-      await this.repo.updateTrip(tx, tripId, {
-        status: "confirmed",
-        driverClaimedAt: new Date(),
-        updatedAt: new Date(),
-      });
-    });
-
-    const externalDriver = await this.repo.findExternalDriverByTripId(tripId);
-
-    logger.info("trip.admin_assign_external_driver", {
-      tripId,
-      adminEmail,
-    });
-    return { trip: tripRecord, externalDriver };
   }
 
   async refundTripPassengers(
