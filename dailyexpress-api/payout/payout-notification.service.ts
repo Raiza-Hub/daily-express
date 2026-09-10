@@ -3,7 +3,7 @@ import { db } from "../db/connection";
 import { and, eq } from "drizzle-orm";
 import { earning, payout, type PayoutRecord } from "../db/index";
 import { getConfig } from "../config/index";
-import { sendEmailToQueue } from "../mail/email-dispatcher.service";
+import { enqueueEmail } from "../mail/email-dispatcher.service";
 
 export class PayoutNotificationService {
   async processPayoutFailure(
@@ -71,17 +71,17 @@ export class PayoutNotificationService {
           );
       }
 
+      if (emailHtml && emailSubject && payoutRecord.driverEmail) {
+        await enqueueEmail(tx, {
+          emailName: "email.payout_failed",
+          to: payoutRecord.driverEmail,
+          subject: emailSubject,
+          html: emailHtml,
+        });
+      }
+
       return true;
     });
-
-    if (shouldNotify && emailHtml && emailSubject && payoutRecord.driverEmail) {
-      await sendEmailToQueue({
-        emailName: "email.payout_failed",
-        to: payoutRecord.driverEmail,
-        subject: emailSubject,
-        html: emailHtml,
-      });
-    }
   }
 }
 

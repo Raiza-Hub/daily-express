@@ -1,11 +1,12 @@
 import { sql, type SQL } from "drizzle-orm";
 import {
   QUEUES,
+  type EmailSendJobData,
   type PayoutProcessJobData,
   type TripRefundJobData,
 } from "./boss";
 
-type JobExecutor = {
+export type JobExecutor = {
   execute(query: SQL): Promise<unknown>;
 };
 
@@ -77,6 +78,13 @@ export class JobService {
     payload: TripRefundJobData,
   ) {
     await this.enqueue(tx, QUEUES.TRIP_REFUND, payload);
+  }
+
+  async enqueueEmail(
+    tx: JobExecutor,
+    payload: EmailSendJobData,
+  ) {
+    await this.enqueue(tx, QUEUES.EMAIL_SEND, payload);
   }
 }
 
