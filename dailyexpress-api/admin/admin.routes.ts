@@ -53,12 +53,6 @@ router.post(
 );
 
 router.post(
-  "/trip/:id/assign-external",
-  requireAdminApiKey,
-  adminController.assignExternalDriver,
-);
-
-router.post(
   "/trip/:id/refund",
   requireAdminApiKey,
   adminController.refundTripPassengers,
