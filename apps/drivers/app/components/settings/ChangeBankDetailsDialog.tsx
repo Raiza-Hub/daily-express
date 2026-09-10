@@ -222,10 +222,10 @@ function KycFields({
   selectedKycType,
 }: {
   control: Control<TBankDetailsFormValues>;
-  kycStatus: string | undefined;
+  kycStatus: string | null | undefined;
   selectedKycType: string | undefined;
 }) {
-  if (kycStatus === "active" || kycStatus === "pending") {
+  if (kycStatus === "active") {
     return null;
   }
 
@@ -312,7 +312,7 @@ export default function ChangeBankDetailsDialog() {
       // If we pre-fill it while the fields are hidden, superRefine will require kycId
       // and block form submission.
       kycType:
-        driver?.kycStatus === "active" || driver?.kycStatus === "pending"
+        driver?.kycStatus === "active"
           ? ""
           : driver?.kycType || "",
       kycId: "",
@@ -344,7 +344,7 @@ export default function ChangeBankDetailsDialog() {
       bankName: driver?.bankName || "",
       bankCode: driver?.bankCode || "",
       kycType:
-        driver?.kycStatus === "active" || driver?.kycStatus === "pending"
+        driver?.kycStatus === "active"
           ? ""
           : driver?.kycType || "",
       kycId: "",
@@ -395,7 +395,7 @@ export default function ChangeBankDetailsDialog() {
       bankName: driver?.bankName || "",
       bankCode: driver?.bankCode || "",
       kycType:
-        driver?.kycStatus === "active" || driver?.kycStatus === "pending"
+        driver?.kycStatus === "active"
           ? ""
           : driver?.kycType || "",
       kycId: "",

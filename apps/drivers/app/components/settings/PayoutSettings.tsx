@@ -29,8 +29,8 @@ const PayoutSettings = () => {
 
   return (
     <div>
-      <div className="mb-6 border-b border-gray-100 py-4">
-        <h1 className="mb-1 text-xl font-semibold">Bank Details</h1>
+      <div className="mb-6 md:mb-8 border-b border-gray-100 py-4">
+        <h1 className="mb-1.5 text-xl font-semibold">Bank Details</h1>
         <p className="text-sm text-muted-foreground">
           Manage your payout account. Payouts are processed automatically
           shortly after trip completion.
@@ -70,16 +70,9 @@ const PayoutSettings = () => {
             {driver?.accountNumber ? `${driver.accountNumber} · ` : ""}
             {driver?.bankName || "No bank set"}
           </p>
-          {driver?.bankVerificationStatus === "pending" && (
-            <p className="mt-2 text-sm text-amber-700">
-              We are verifying this account with Kora. Payouts will start after
-              the status turns active.
-            </p>
-          )}
           {driver?.bankVerificationStatus === "failed" && (
             <p className="mt-2 text-sm text-red-600">
-              {driver.bankVerificationFailureReason ||
-                "Bank verification failed. Update the details and try again."}
+              Bank verification failed. Update the details and try again.
             </p>
           )}
         </div>
@@ -91,8 +84,8 @@ const PayoutSettings = () => {
 
       <hr className="my-8 border-gray-100" />
 
-      <div className="mb-6 border-b border-gray-100 py-4">
-        <h1 className="mb-1 text-xl font-semibold">Identity Verification</h1>
+      <div className="mb-6 md:mb-8 border-b border-gray-100 py-4">
+        <h2 className="mb-1.5 text-lg font-semibold">Identity Verification</h2>
         <p className="text-sm text-muted-foreground">
           Your identity must be verified to enable payouts.
         </p>
@@ -114,9 +107,7 @@ const PayoutSettings = () => {
                   ? "active"
                   : driver?.kycStatus === "failed"
                     ? "failed"
-                    : driver?.kycStatus === "pending"
-                      ? "pending"
-                      : undefined
+                    : undefined
               }
               notSetLabel="Not verified"
             />
@@ -127,14 +118,9 @@ const PayoutSettings = () => {
           <p className="font-semibold tracking-wide">
             {driver?.kycType ? `${driver.kycType.toUpperCase()} Verification` : "No verification document set"}
           </p>
-          {driver?.kycStatus === "pending" && (
-            <p className="mt-1 text-sm text-amber-700">
-              Your identity verification is in progress.
-            </p>
-          )}
           {driver?.kycStatus === "failed" && (
             <p className="mt-1 text-sm text-red-600">
-              {driver.kycFailureReason || "Verification failed. Please update your KYC details."}
+              Verification failed. Please update your KYC details.
             </p>
           )}
           {driver?.kycStatus === "active" && (
@@ -142,9 +128,9 @@ const PayoutSettings = () => {
               Your identity has been successfully verified.
             </p>
           )}
-          {driver?.kycStatus === "none" && (
+          {!driver?.kycStatus && (
             <p className="mt-1 text-sm text-muted-foreground">
-              Please change bank details to submit your KYC document.
+              No identity verification on file. Add one to enable payouts.
             </p>
           )}
         </div>

@@ -1,4 +1,3 @@
-import { relations } from "drizzle-orm";
 import {
   bigint,
   boolean,
@@ -12,14 +11,11 @@ import {
 import { users } from "./auth-schema";
 
 export const bankVerificationStatusEnum = pgEnum("bank_verification_status", [
-  "pending",
   "active",
   "failed",
 ]);
 
 export const kycStatusEnum = pgEnum("kyc_status", [
-  "none",
-  "pending",
   "active",
   "failed",
 ]);
@@ -40,19 +36,16 @@ export const driver = pgTable("driver", {
   state: text("state").notNull(),
   city: text("city").notNull(),
   address: text("address").notNull(),
-  bankName: text("bank_name").notNull(),
-  bankCode: text("bank_code").notNull(),
-  accountNumber: text("account_number").notNull(),
-  accountName: text("account_name").notNull(),
-  bankVerificationStatus: bankVerificationStatusEnum("bank_verification_status")
-    .default("pending")
-    .notNull(),
-  bankVerificationFailureReason: text("bank_verification_failure_reason"),
-  kycStatus: kycStatusEnum("kyc_status").default("none").notNull(),
+  bankName: text("bank_name"),
+  bankCode: text("bank_code"),
+  accountNumber: text("account_number"),
+  accountName: text("account_name"),
+  bankVerificationStatus: bankVerificationStatusEnum("bank_verification_status"),
+  kycStatus: kycStatusEnum("kyc_status"),
   kycType: text("kyc_type"),
   kycId: text("kyc_id"),
   kycVerificationReference: text("kyc_verification_reference"),
-  kycFailureReason: text("kyc_failure_reason"),
+  lastAssignedAt: timestamp("last_assigned_at", { mode: "date" }),
   isActive: boolean("is_active").default(true).notNull(),
   deletedAt: timestamp("deleted_at", { mode: "date" }),
   createdAt: timestamp("created_at", { mode: "date" }).defaultNow().notNull(),
@@ -76,22 +69,6 @@ export const driverStats = pgTable("driver_stats", {
   updatedAt: timestamp("updated_at", { mode: "date" }).defaultNow().notNull(),
 });
 
-export const driverRelations = relations(driver, ({ one }) => ({
-  stats: one(driverStats, {
-    relationName: "driver_stats",
-    fields: [driver.id],
-    references: [driverStats.driverId],
-  }),
-}));
-
-export const driverStatsRelations = relations(driverStats, ({ one }) => ({
-  driver: one(driver, {
-    relationName: "driver_stats",
-    fields: [driverStats.driverId],
-    references: [driver.id],
-  }),
-}));
-
 export const driverSchema = {
   driver,
   driverStats,
@@ -101,4 +78,3 @@ export type Driver = typeof driver.$inferSelect;
 export type DriverRecord = Driver;
 export type DriverStats = typeof driverStats.$inferSelect;
 export type DriverStatsRecord = DriverStats;
-

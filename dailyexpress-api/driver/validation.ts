@@ -39,31 +39,6 @@ export const createDriverSchema = Joi.object({
   address: Joi.string().min(1).max(200).required().messages({
     "string.empty": "Address is required",
   }),
-  bankName: Joi.string().min(2).max(100).required().messages({
-    "string.empty": "Bank name is required",
-  }),
-  bankCode: Joi.string().min(2).max(20).required().messages({
-    "string.empty": "Bank code is required",
-  }),
-  accountNumber: Joi.string().min(2).max(100).required().messages({
-    "string.empty": "Account number is required",
-  }),
-  accountName: Joi.string().min(2).max(100).required().messages({
-    "string.empty": "Account name is required",
-  }),
-  kycType: Joi.string().valid("bvn", "nin").required().messages({
-    "any.only": "KYC type must be either 'bvn' or 'nin'",
-    "string.empty": "KYC type is required",
-  }),
-  kycId: Joi.string().min(10).max(20).required().messages({
-    "string.min": "KYC ID must be at least 10 characters",
-    "string.max": "KYC ID must not exceed 20 characters",
-    "string.empty": "KYC ID is required",
-  }),
-  kycConsent: Joi.boolean().valid(true).required().messages({
-    "any.only": "You must consent to identity verification",
-    "any.required": "KYC consent is required",
-  }),
 });
 
 export const updateDriverSchema = Joi.object({
@@ -77,9 +52,6 @@ export const updateDriverSchema = Joi.object({
   }),
   email: Joi.string().email().optional().messages({
     "string.email": "Please provide a valid email address",
-  }),
-  password: Joi.string().min(8).optional().messages({
-    "string.min": "Password must be at least 8 characters long",
   }),
   phone: Joi.string().regex(phoneRegex).optional().messages({
     "string.pattern.base": "Phone number must be a valid international format",
