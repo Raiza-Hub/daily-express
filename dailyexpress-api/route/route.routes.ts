@@ -23,26 +23,6 @@ const driverActionLimiter = createTokenBucketLimiter({
 
 const router: Router = Router();
 
-router.get(
-  "/trips/live",
-  routeController.streamTripUpdates,
-);
-router.get(
-  "/driver/trips/available",
-  authenticateVerifiedGatewayRequest,
-  routeController.getAvailableTrips,
-);
-router.get(
-  "/driver/trips/available/calendar",
-  authenticateVerifiedGatewayRequest,
-  routeController.getAvailableTripsCountByDate,
-);
-router.post(
-  "/driver/trip/:id/claim",
-  authenticateVerifiedGatewayRequest,
-  driverActionLimiter,
-  routeController.claimTrip,
-);
 router.patch(
   "/driver/trip/:id/complete",
   authenticateVerifiedGatewayRequest,
