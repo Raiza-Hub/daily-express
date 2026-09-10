@@ -3,7 +3,7 @@ import { db } from "../db/connection";
 import { payment } from "../db/index";
 import { logger } from "../utils/logger";
 import { getPaymentReference } from "../utils/payment";
-import { jobService } from "../workers/job.service";
+import { bookingFinalizerService } from "../route/booking-finalizer.service";
 import type { WebhookJobData } from "../workers/boss";
 import { koraClient } from "./kora.client";
 import { PaymentRepository } from "./payment.repository";
@@ -119,12 +119,11 @@ export class PaymentWebhookService {
           updatedAt: new Date(),
         })
         .where(and(eq(payment.reference, reference), eq(payment.status, "processing")));
-
-      await jobService.enqueue(tx, "allocation.process", {
-        bookingId: claimed.bookingId,
-        reference,
-      });
     });
+
+    if (claimed.bookingId) {
+      await bookingFinalizerService.finalizeBooking(claimed.bookingId, reference);
+    }
   }
 
   private async processChargeFailure(reference: string) {
