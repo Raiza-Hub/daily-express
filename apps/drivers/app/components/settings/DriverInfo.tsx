@@ -212,15 +212,15 @@ const DriverInfo = () => {
 
   return (
     <div>
-      <div className="mb-6 border-b border-gray-100 py-4">
-        <h1 className="mb-1 text-xl font-semibold">Driver Profile</h1>
+      <div className="mb-6 md:mb-8 border-b border-gray-100 py-4">
+        <h1 className="mb-1.5 text-xl font-semibold">Driver Profile</h1>
         <p className="text-sm text-muted-foreground">
           Update your personal details and account information.
         </p>
       </div>
 
       <form onSubmit={handleSubmit(onSubmit)}>
-        <FieldGroup className="sm:space-y-6">
+        <FieldGroup className="gap-5 sm:gap-6">
           <ProfileImageField
             control={control}
             currentFile={currentFile}

@@ -3,9 +3,8 @@ import type { Driver, DriverStats, UpdateProfileRequest } from "@shared/types";
 import { db } from "../db/connection";
 import { driver } from "../db/index";
 import { createServiceError, sanitizeInput } from "@shared/utils";
-import { notificationService } from "../notification/notification.service";
-import { publishNotificationCreatedInBackground } from "../notification/realtime";
-import { jobService } from "../workers/job.service";
+import { koraClient } from "../payment/kora.client";
+import { koraIdentityClient } from "../kyc/kora-identity.client";
 import { timeAsync } from "../utils/timing";
 import { DriverRepository, driverRepository } from "./driver.repository";
 
@@ -15,21 +14,10 @@ export class DriverProfileService {
   async createDriver(
     userId: string,
     driverData: Partial<UpdateProfileRequest>,
-    kycData?: { kycType: "bvn" | "nin"; kycId: string },
   ): Promise<Driver> {
     const existingDriver = await this.repo.findDriverByUserId(userId);
     if (existingDriver) {
       throw createServiceError("Driver profile already exists", 400);
-    }
-
-    if (kycData) {
-      const existing = await this.repo.findDriverByKycId(hashKycId(kycData.kycId));
-      if (existing) {
-        throw createServiceError(
-          "This identity document has already been verified with another driver account",
-          409,
-        );
-      }
     }
 
     try {
@@ -43,44 +31,15 @@ export class DriverProfileService {
             const createdDriver = await this.repo.insertDriver(tx, {
               ...sanitizeData,
               userId,
-              bankVerificationStatus: "pending",
-              bankVerificationFailureReason: null,
-              kycStatus: kycData ? "pending" : "none",
-              kycType: kycData?.kycType ?? null,
-              kycId: kycData ? hashKycId(kycData.kycId) : null,
-              kycFailureReason: null,
+              bankVerificationStatus: null,
+              kycStatus: null,
+              kycType: null,
+              kycId: null,
             } as typeof driver.$inferInsert);
 
             await this.repo.insertDriverStats(tx, {
               driverId: createdDriver.id,
             });
-
-            await jobService.enqueueDriverVerification(
-              tx,
-              {
-                type: "bank_verification",
-                driverId: createdDriver.id,
-                bankName: createdDriver.bankName,
-                bankCode: createdDriver.bankCode,
-                accountNumber: createdDriver.accountNumber,
-                accountName: createdDriver.accountName,
-                currency: createdDriver.currency,
-              },
-            );
-
-            if (kycData) {
-              await jobService.enqueueDriverVerification(
-                tx,
-                {
-                  type: "kyc_verification",
-                  driverId: createdDriver.id,
-                  kycType: kycData.kycType,
-                  kycId: kycData.kycId,
-                  firstName: sanitizeData.firstName ?? undefined,
-                  lastName: sanitizeData.lastName ?? undefined,
-                },
-              );
-            }
 
             return {
               driver: createdDriver,
@@ -116,12 +75,6 @@ export class DriverProfileService {
           400,
         );
       }
-      if (existingDriver.kycStatus === "pending") {
-        throw createServiceError(
-          "Identity verification is already in progress",
-          409,
-        );
-      }
 
       const existing = await this.repo.findDriverByKycId(hashKycId(kycData.kycId), existingDriver.id);
       if (existing) {
@@ -132,10 +85,9 @@ export class DriverProfileService {
       }
     }
 
-    try {
-      const sanitizedData = this.sanitizeProfileData(driverData);
+    const sanitizedData = this.sanitizeProfileData(driverData);
 
-      const bankDetailsChanged =
+    const bankDetailsChanged =
       (sanitizedData.bankName !== undefined &&
         sanitizedData.bankName !== existingDriver.bankName) ||
       (sanitizedData.bankCode !== undefined &&
@@ -145,103 +97,92 @@ export class DriverProfileService {
       (sanitizedData.accountName !== undefined &&
         sanitizedData.accountName !== existingDriver.accountName);
 
-      const result = await db.transaction(async (tx) => {
-        const record = await this.repo.updateDriver(tx, userId, {
-          ...sanitizedData,
-          ...(bankDetailsChanged
-            ? {
-                bankVerificationStatus: "pending" as const,
-                bankVerificationFailureReason: null,
-              }
-            : {}),
-          ...(kycData
-            ? {
-                kycStatus: "pending" as const,
-                kycType: kycData.kycType,
-                kycId: hashKycId(kycData.kycId),
-                kycFailureReason: null,
-                kycVerificationReference: null,
-              }
-            : {}),
+    const record = await db.transaction(async (tx) =>
+      this.repo.updateDriver(tx, userId, {
+        ...sanitizedData,
+        updatedAt: new Date(),
+      }),
+    );
+
+    if (bankDetailsChanged) {
+      await this.verifyBankDetails(userId);
+    }
+
+    if (kycData) {
+      await this.verifyKyc(userId, kycData);
+    }
+
+    const updatedDriver = await this.repo.findDriverByUserId(userId);
+    return updatedDriver ?? record;
+  }
+
+  private async verifyBankDetails(userId: string): Promise<void> {
+    const record = await this.repo.findDriverByUserId(userId);
+    if (!record) {
+      throw createServiceError("Driver not found", 404);
+    }
+
+    if (!record.bankCode || !record.accountNumber) {
+      throw createServiceError(
+        "Bank code and account number are required",
+        400,
+      );
+    }
+
+    try {
+      const resolved = await koraClient.resolveAccountNumber(
+        record.bankCode,
+        record.accountNumber,
+        record.currency,
+      );
+
+      await db.transaction(async (tx) =>
+        this.repo.updateDriver(tx, userId, {
+          bankName: resolved.data.bank_name,
+          bankCode: resolved.data.bank_code,
+          accountNumber: resolved.data.account_number,
+          accountName: resolved.data.account_name,
+          bankVerificationStatus: "active",
           updatedAt: new Date(),
-        });
-
-        let bankNotification: Awaited<
-          ReturnType<
-            typeof notificationService.createBankVerificationStateInTransaction
-          >
-        > | null = null;
-        let kycNotification: Awaited<
-          ReturnType<
-            typeof notificationService.createKycVerificationStateInTransaction
-          >
-        > | null = null;
-        if (bankDetailsChanged) {
-          bankNotification =
-            await notificationService.createBankVerificationStateInTransaction(
-              tx,
-              record.id,
-              this.getBankVerificationPendingNotification(),
-            );
-
-          await jobService.enqueueDriverVerification(
-            tx,
-            {
-              type: "bank_verification",
-              driverId: record.id,
-              bankName: record.bankName,
-              bankCode: record.bankCode,
-              accountNumber: record.accountNumber,
-              accountName: record.accountName,
-              currency: record.currency,
-            },
-          );
-        }
-
-        if (kycData) {
-          kycNotification =
-            await notificationService.createKycVerificationStateInTransaction(
-              tx,
-              record.id,
-              this.getKycVerificationPendingNotification(),
-            );
-
-          await jobService.enqueueDriverVerification(
-            tx,
-            {
-              type: "kyc_verification",
-              driverId: record.id,
-              kycType: kycData.kycType,
-              kycId: kycData.kycId,
-              firstName: record.firstName ?? undefined,
-              lastName: record.lastName ?? undefined,
-            },
-          );
-        }
-
-        return { driver: record, bankNotification, kycNotification };
-      });
-
-      if (
-        result.bankNotification?.notification &&
-        result.bankNotification.shouldDeliver
-      ) {
-        publishNotificationCreatedInBackground(
-          result.bankNotification.notification,
-        );
-      }
-
-      if (
-        result.kycNotification?.notification &&
-        result.kycNotification.shouldDeliver
-      ) {
-        publishNotificationCreatedInBackground(
-          result.kycNotification.notification,
-        );
-      }
-
-      return result.driver;
+        }),
+      );
     } catch (error) {
+      await db.transaction(async (tx) =>
+        this.repo.updateDriver(tx, userId, {
+          bankVerificationStatus: "failed",
+          updatedAt: new Date(),
+        }),
+      );
+      throw error;
+    }
+  }
+
+  private async verifyKyc(
+    userId: string,
+    kycData: { kycType: "bvn" | "nin"; kycId: string },
+  ): Promise<void> {
+    try {
+      const verified =
+        kycData.kycType === "bvn"
+          ? await koraIdentityClient.verifyBVN(kycData.kycId)
+          : await koraIdentityClient.verifyNIN(kycData.kycId);
+
+      await db.transaction(async (tx) =>
+        this.repo.updateDriver(tx, userId, {
+          kycStatus: "active",
+          kycType: kycData.kycType,
+          kycId: hashKycId(kycData.kycId),
+          kycVerificationReference: verified.reference,
+          updatedAt: new Date(),
+        }),
+      );
+    } catch (error) {
+      await db.transaction(async (tx) =>
+        this.repo.updateDriver(tx, userId, {
+          kycStatus: "failed",
+          updatedAt: new Date(),
+        }),
+      );
       throw error;
     }
   }
@@ -252,31 +193,6 @@ export class DriverProfileService {
       throw createServiceError("Driver stats not found", 404);
     }
     return stats;
-  }
-
-  private getBankVerificationPendingNotification() {
-    return {
-      notificationKey: "bank-verification-pending",
-      type: "bank_verification_pending",
-      title: "Bank verification in progress",
-      message:
-        "We are still verifying your payout account. Payouts stay on hold until verification finishes.",
-      href: "/settings/bank-details",
-      tag: "Verification",
-      tone: "attention" as const,
-    };
-  }
-
-  private getKycVerificationPendingNotification() {
-    return {
-      notificationKey: "kyc-verification-pending",
-      type: "kyc_verification_pending",
-      title: "Identity verification in progress",
-      message: "We're verifying your identity. You'll be notified once it's complete.",
-      href: "/settings/bank-details",
-      tag: "Verification",
-      tone: "attention" as const,
-    };
   }
 
   private sanitizeProfileData(

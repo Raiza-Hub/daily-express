@@ -2,7 +2,7 @@
 
 import CountryList from "../../../country-list.json";
 import { cn } from "@repo/ui/lib/utils";
-import { TonboardingSchema } from "@repo/types/index";
+import { TonboardingCreateSchema } from "@repo/types/index";
 import { useState } from "react";
 import { Controller, useFormContext } from "react-hook-form";
 import { Button } from "@repo/ui/components/button";
@@ -45,7 +45,7 @@ const AddressInfoForm = () => {
     watch,
     control,
     formState: { errors },
-  } = useFormContext<TonboardingSchema>();
+  } = useFormContext<TonboardingCreateSchema>();
 
   const selectedCountry = watch("country");
   const selectedState = watch("state");
