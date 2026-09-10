@@ -6,13 +6,15 @@ import { generateReference } from "../utils/payment";
 import { PayoutRepository, payoutRepository } from "./payout.repository";
 import { PayoutSettlementService, payoutSettlementService } from "./payout-settlement.service";
 import { PayoutNotificationService, payoutNotificationService } from "./payout-notification.service";
-import { notificationService as sharedNotificationService } from "../notification/notification.service";
-import { publishNotificationCreatedInBackground } from "../notification/realtime";
 import { koraClient, isKoraRequestError } from "../payment/kora.client";
 import { KORA_ERROR_CODES } from "../utils/payout";
 
 type ActivePayoutDriver = typeof driver.$inferSelect & {
   bankVerificationStatus: "active";
+  bankCode: string;
+  accountNumber: string;
+  accountName: string;
+  email: string;
 };
 
 export class PayoutProcessorService {
@@ -33,25 +35,6 @@ export class PayoutProcessorService {
       earnings[0].driverId,
     );
     if (!payoutDriver) {
-      await db.transaction(async (tx) => {
-        const notification = await sharedNotificationService.createForDriverInTransaction(
-          tx,
-          earnings[0].driverId,
-          {
-            notificationKey: "account-setup-pending",
-            type: "bank_setup_pending",
-            title: "Bank account setup needed",
-            message:
-              "Your bank account information is incomplete. Please update your bank details to receive payouts.",
-            href: "/settings/bank-details",
-            tag: "Action needed",
-            tone: "attention",
-          },
-        );
-        if (notification) {
-          publishNotificationCreatedInBackground(notification);
-        }
-      });
       return;
     }
 
@@ -67,26 +50,6 @@ export class PayoutProcessorService {
     );
 
     if (payoutRecord.amount < this.config.MINIMUM_PAYOUT_AMOUNT) {
-      await db.transaction(async (tx) => {
-        const notification =
-          await sharedNotificationService.createForDriverInTransaction(
-            tx,
-            earnings[0].driverId,
-            {
-notificationKey: "payout-too-small",
-              type: "payout_too_small",
-              title: "Minimum payout not met",
-              message:
-                "Your earnings are below the ₦1,000 minimum payout threshold. Funds will be held until you reach the minimum.",
-              href: "/",
-              tag: "Info",
-              tone: "info",
-            },
-          );
-        if (notification) {
-          publishNotificationCreatedInBackground(notification);
-        }
-      });
       return;
     }
 
@@ -178,7 +141,6 @@ notificationKey: "payout-too-small",
         await this.notificationService.processPayoutFailure(
           payoutRecord,
           KORA_ERROR_CODES.INSUFFICIENT_BALANCE,
-          true,
         );
         return;
       }
@@ -194,7 +156,6 @@ notificationKey: "payout-too-small",
         await this.notificationService.processPayoutFailure(
           payoutRecord,
           errorCode || "PAYOUT_FAILED",
-          true,
         );
         return;
       }
