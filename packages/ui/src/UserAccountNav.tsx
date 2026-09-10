@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useRef, useState } from "react";
 import {
   Avatar,
   AvatarImage,
@@ -34,15 +34,15 @@ export interface UserAccountNavUser {
 
 export interface UserAccountNavMenuItem {
   key: string;
-  icon: React.ReactNode;
+  icon?: React.ReactNode;
   label: string;
-  href?: string;
   onClick?: () => void;
 }
 
 export interface UserAccountNavProps {
   user: UserAccountNavUser;
   menuItems?: UserAccountNavMenuItem[];
+  mobileItems?: UserAccountNavMenuItem[];
   footerItems?: UserAccountNavMenuItem[];
   forceMobile?: boolean;
 }
@@ -52,7 +52,7 @@ export interface UserAccountNavProps {
 function UserInfoContent({ user }: { user: UserAccountNavUser }) {
   return (
     <div className="flex items-center gap-2 px-1 py-1.5 text-left text-sm">
-      <Avatar className="h-10 w-10 *:">
+      <Avatar className="h-10 w-10">
         <AvatarImage
           className="object-cover"
           src={user.profilePictureUrl || ""}
@@ -90,7 +90,6 @@ function UserInfoContent({ user }: { user: UserAccountNavUser }) {
  *   user={currentUser}
  *   menuItems={[
  *     { key: "profile", icon: <UserIcon />, label: "Profile", onClick: () => router.push("/settings/profile") },
- *     { key: "support", icon: <QuestionIcon />, label: "Support", href: "mailto:support@yourdomain.com" },
  *   ]}
  *   footerItems={[
  *     { key: "signout", icon: <SignOutIcon />, label: "Log out", onClick: handleSignOut },
@@ -101,12 +100,14 @@ function UserInfoContent({ user }: { user: UserAccountNavUser }) {
 export function UserAccountNav({
   user,
   menuItems = [],
+  mobileItems = [],
   footerItems = [],
   forceMobile,
 }: UserAccountNavProps) {
   const detectedMobile = useIsMobile();
   const isMobile = forceMobile ?? detectedMobile;
   const [sheetOpen, setSheetOpen] = useState(false);
+  const pendingActionRef = useRef<(() => void) | null>(null);
 
   const renderItem = (
     item: UserAccountNavMenuItem,
@@ -114,43 +115,16 @@ export function UserAccountNav({
   ) => {
     const isSheet = variant === "sheet";
 
-    if (item.href) {
-      return isSheet ? (
-        <a
-          key={item.key}
-          href={item.href}
-          className="flex items-center gap-3 px-2 py-2 text-sm text-foreground hover:bg-muted transition-colors rounded-lg"
-        >
-          <span className="w-4 h-4 text-muted-foreground flex items-center justify-center [&>svg]:w-full [&>svg]:h-full">
-            {item.icon}
-          </span>
-          {item.label}
-        </a>
-      ) : (
-        <DropdownMenuItem key={item.key} asChild>
-          <a
-            href={item.href}
-            className="flex items-center gap-2 cursor-pointer"
-          >
-            <span className="w-4 h-4 flex items-center justify-center [&>svg]:w-full [&>svg]:h-full">
-              {item.icon}
-            </span>
-            {item.label}
-          </a>
-        </DropdownMenuItem>
-      );
-    }
-
     return isSheet ? (
       <button
         key={item.key}
         onClick={() => {
-          item.onClick?.();
+          pendingActionRef.current = item.onClick ?? null;
           setSheetOpen(false);
         }}
-        className="flex items-center gap-3 px-2 py-2 text-sm text-foreground hover:bg-muted transition-colors cursor-pointer w-full text-left rounded-lg"
+        className="flex items-center gap-2.5 px-2 py-2 text-sm font-medium text-foreground hover:bg-muted transition-colors cursor-pointer w-full text-left rounded-lg"
       >
-        <span className="w-4 h-4 text-muted-foreground flex items-center justify-center [&>svg]:w-full [&>svg]:h-full">
+        <span className="w-5 h-5 text-muted-foreground flex items-center justify-center [&>svg]:w-full [&>svg]:h-full">
           {item.icon}
         </span>
         {item.label}
@@ -158,7 +132,9 @@ export function UserAccountNav({
     ) : (
       <DropdownMenuItem
         key={item.key}
-        onClick={item.onClick}
+        onClick={() => {
+          pendingActionRef.current = item.onClick ?? null;
+        }}
         className="cursor-pointer"
       >
         <span className="w-4 h-4 flex items-center justify-center [&>svg]:w-full [&>svg]:h-full">
@@ -187,7 +163,15 @@ export function UserAccountNav({
             </AvatarFallback>
           </Avatar>
         </SheetTrigger>
-        <SheetContent side="right" className="w-full sm:max-w-full gap-1.5">
+        <SheetContent
+          side="right"
+          className="w-full sm:max-w-full gap-1.5"
+          onCloseAutoFocus={() => {
+            const action = pendingActionRef.current;
+            pendingActionRef.current = null;
+            action?.();
+          }}
+        >
           <SheetHeader className="px-2 pb-0">
             <SheetTitle className="sr-only">Account</SheetTitle>
             <SheetDescription className="sr-only">
@@ -195,6 +179,15 @@ export function UserAccountNav({
             </SheetDescription>
             <UserInfoContent user={user} />
           </SheetHeader>
+
+          {mobileItems.length > 0 && (
+            <>
+              <div className="border-t border-border" />
+              <div className="flex flex-col px-2">
+                {mobileItems.map((item) => renderItem(item, "sheet"))}
+              </div>
+            </>
+          )}
 
           {menuItems.length > 0 && (
             <>
@@ -239,6 +232,11 @@ export function UserAccountNav({
         className="w-(--radix-dropdown-menu-trigger-width) min-w-54 rounded-lg"
         align="end"
         sideOffset={10}
+        onCloseAutoFocus={() => {
+          const action = pendingActionRef.current;
+          pendingActionRef.current = null;
+          action?.();
+        }}
       >
         <DropdownMenuLabel className="p-0 font-normal">
           <UserInfoContent user={user} />

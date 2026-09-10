@@ -3,17 +3,13 @@ import { NextRequest, NextResponse } from 'next/server'
 const publicRoutes = [
   "/",
   "/sign-in",
-  "/sign-up",
-  "/verify-email",
-  "/forgot-password",
-  "/reset-password",
   "/about",
   "/privacy",
   "/terms",
   "/cookies",
 ];
 
-const authRoutes = ['/sign-in', '/sign-up', '/forgot-password', '/reset-password']
+const authRoutes = ['/sign-in']
 
 export default async function proxy(req: NextRequest) {
   const path = req.nextUrl.pathname

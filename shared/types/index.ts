@@ -8,23 +8,26 @@ export interface User {
   lastName: string;
   dateOfBirth: Date;
   emailVerified: boolean;
-  referal: string;
+  referral: string | null;
   createdAt: Date;
   updatedAt: Date;
-  hasPassword?: boolean;
   profilePictureUrl?: string | null;
+  phone?: string | null;
+  gender?: string | null;
 }
 
-export interface GetMeResponse {
-  user: User;
-  accessToken: string;
-  refreshToken: string;
+export interface OnboardingInput {
+  phoneNumber: string;
+  dateOfBirth: Date;
+  gender: "male" | "female";
 }
 
 export interface UpdateUserRequest {
   firstName?: string;
   lastName?: string;
   dateOfBirth?: Date;
+  phoneNumber?: string;
+  gender?: "male" | "female";
 }
 
 export interface CreateDriverRequest {
@@ -131,11 +134,6 @@ export interface ApiResponse<T = any> {
   message?: string;
   error?: string;
   errors?: Record<string, string[]>;
-}
-
-export interface AuthTokens {
-  accessToken: string;
-  refreshToken: string;
 }
 
 export interface JWTPayload {

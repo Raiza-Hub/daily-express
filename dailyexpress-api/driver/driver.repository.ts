@@ -12,7 +12,7 @@ export class DriverRepository {
   }
 
   async findDriverByKycId(kycId: string, excludeDriverId?: string): Promise<DriverRecord | null> {
-    const conditions = [eq(driver.kycId, kycId), inArray(driver.kycStatus, ["active", "pending"])];
+    const conditions = [eq(driver.kycId, kycId), inArray(driver.kycStatus, ["active"])];
     if (excludeDriverId) {
       conditions.push(ne(driver.id, excludeDriverId));
     }

@@ -3,15 +3,14 @@
 import { useEffect } from "react";
 import { useRouter } from "next/navigation";
 import {
-  IdentificationCardIcon,
-  QuestionIcon,
+  AddressBookIcon,
   SignOutIcon,
   UserIcon,
 } from "@phosphor-icons/react";
 import { UserAccountNav as SharedUserAccountNav } from "@repo/ui/UserAccountNav";
-import { fetchCsrfToken, useGetDriver, useLogout } from "@repo/api";
+import { useGetDriver, useLogout } from "@repo/api";
 import type { User } from "@shared/types";
-import { buildDriverAppUrl, buildDriverSignUpUrl } from "~/lib/app-routing";
+import { buildDriverAppUrl } from "~/lib/app-routing";
 import { posthogEvents } from "~/lib/posthog-events";
 import { usePostHog } from "posthog-js/react";
 
@@ -35,10 +34,7 @@ export function UserAccountNav({ user }: UserAccountNavProps) {
   }, [user, posthog]);
 
   const handleDriverNavigation = () => {
-    const destination = driver
-      ? buildDriverAppUrl("/")
-      : buildDriverSignUpUrl();
-    window.location.assign(destination);
+    window.location.assign(buildDriverAppUrl("/"));
   };
 
   const handleSignOut = () => {
@@ -46,7 +42,6 @@ export function UserAccountNav({ user }: UserAccountNavProps) {
       onSuccess: async () => {
         posthog.capture(posthogEvents.auth_logout_succeeded);
         posthog.reset();
-        await fetchCsrfToken();
         router.push("/sign-in");
       },
     });
@@ -65,27 +60,21 @@ export function UserAccountNav({ user }: UserAccountNavProps) {
       menuItems={[
         {
           key: "profile",
-          icon: <UserIcon weight="bold" />,
+          icon: <UserIcon />,
           label: "Profile",
           onClick: () => router.push("/settings/profile"),
         },
         {
           key: "Become a driver",
-          icon: <IdentificationCardIcon weight="bold" />,
+          icon: <AddressBookIcon />,
           label: driverLabel,
           onClick: handleDriverNavigation,
-        },
-        {
-          key: "support",
-          icon: <QuestionIcon weight="bold" />,
-          label: "Support",
-          href: "mailto:support@dailyexpress.app",
         },
       ]}
       footerItems={[
         {
           key: "signout",
-          icon: <SignOutIcon weight="bold" />,
+          icon: <SignOutIcon />,
           label: "Log out",
           onClick: handleSignOut,
         },

@@ -29,8 +29,8 @@ const DeleteDriverAccount = () => {
 
   return (
     <div className="mt-10 pt-6 border-t border-red-100">
-      <div className="mb-6 py-4 border-b border-gray-100">
-        <h2 className="text-xl font-semibold mb-1 text-red-600">
+      <div className="mb-6 md:mb-8 py-4 border-b border-gray-100">
+        <h2 className="text-lg font-semibold mb-1.5 text-red-600">
           Deactivate Account
         </h2>
         <p className="text-sm text-muted-foreground">

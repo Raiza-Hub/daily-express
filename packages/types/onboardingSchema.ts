@@ -59,3 +59,15 @@ export const onboardingSchema = z.object({
 });
 
 export type TonboardingSchema = z.infer<typeof onboardingSchema>;
+
+export const onboardingCreateSchema = onboardingSchema.omit({
+  bankName: true,
+  bankCode: true,
+  accountNumber: true,
+  accountName: true,
+  kycType: true,
+  kycId: true,
+  kycConsent: true,
+});
+
+export type TonboardingCreateSchema = z.infer<typeof onboardingCreateSchema>;

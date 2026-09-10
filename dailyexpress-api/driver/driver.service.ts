@@ -28,9 +28,8 @@ export class DriverService {
   async createDriver(
     userId: string,
     driverData: Partial<UpdateProfileRequest>,
-    kycData?: { kycType: "bvn" | "nin"; kycId: string },
   ): Promise<Driver> {
-    return this.profileService.createDriver(userId, driverData, kycData);
+    return this.profileService.createDriver(userId, driverData);
   }
 
   async getProfile(userId: string): Promise<Driver | null> {

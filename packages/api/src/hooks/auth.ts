@@ -1,138 +1,15 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { authApi, setCsrfToken } from "../api";
-import type {
-  User,
-  ApiResponse,
-  GetMeResponse,
-  AuthTokens,
-} from "@shared/types";
+import { authApi } from "../api";
+import type { User, ApiResponse, OnboardingInput } from "@shared/types";
 import { handleApiError } from "../utils";
-
-interface RegisterPayload {
-  email: string;
-  password: string;
-  firstName: string;
-  lastName: string;
-  dateOfBirth: string | Date;
-}
-
-interface LoginPayload {
-  email: string;
-  password: string;
-}
-
-interface VerifyOtpPayload {
-  otp: string;
-}
 
 interface UpdateProfilePayload {
   firstName?: string;
   lastName?: string;
   dateOfBirth?: Date;
+  phoneNumber?: string;
+  gender?: "male" | "female";
 }
-
-interface ResetPasswordPayload {
-  token: string;
-  password: string;
-}
-
-interface VerifyOtpResponse {
-  user: User;
-  tokens: AuthTokens;
-}
-
-export const registerFn = async (
-  data: RegisterPayload,
-): Promise<GetMeResponse> => {
-  try {
-    const response = await authApi.post<ApiResponse<GetMeResponse>>(
-      "/register",
-      data,
-    );
-    if (!response.data.success || !response.data.data) {
-      throw new Error(response.data.error || "Registration failed");
-    }
-    return response.data.data;
-  } catch (err) {
-    return handleApiError(err, "Registration failed") as never;
-  }
-};
-
-export const loginFn = async (data: LoginPayload): Promise<AuthTokens> => {
-  try {
-    const response = await authApi.post<ApiResponse<AuthTokens>>(
-      "/login",
-      data,
-    );
-    if (!response.data.success || !response.data.data) {
-      throw new Error(response.data.error || "Login failed");
-    }
-    return response.data.data;
-  } catch (err) {
-    return handleApiError(err, "Login failed") as never;
-  }
-};
-
-export const verifyOtpFn = async (
-  data: VerifyOtpPayload,
-): Promise<AuthTokens> => {
-  try {
-    const response = await authApi.post<ApiResponse<VerifyOtpResponse>>(
-      "/verify-otp",
-      data,
-    );
-    if (!response.data.success || !response.data.data) {
-      throw new Error(response.data.error || "OTP verification failed");
-    }
-    return response.data.data.tokens;
-  } catch (err) {
-    return handleApiError(err, "OTP verification failed") as never;
-  }
-};
-
-export const resendOtpFn = async (): Promise<void> => {
-  try {
-    const response = await authApi.get<ApiResponse<null>>("/resend-otp");
-    if (!response.data.success) {
-      throw new Error(response.data.error || "Failed to resend OTP");
-    }
-  } catch (err) {
-    return handleApiError(err, "Failed to resend OTP") as never;
-  }
-};
-
-export const forgotPasswordFn = async (email: string): Promise<void> => {
-  try {
-    const response = await authApi.post<ApiResponse<null>>(
-      "/forget-password",
-      {
-        email,
-      },
-    );
-    if (!response.data.success) {
-      throw new Error(response.data.error || "Failed to send reset email");
-    }
-  } catch (err) {
-    return handleApiError(err, "Failed to send reset email") as never;
-  }
-};
-
-export const resetPasswordFn = async ({
-  token,
-  password,
-}: ResetPasswordPayload): Promise<void> => {
-  try {
-    const response = await authApi.post<ApiResponse<null>>(
-      `/reset-password/${token}`,
-      { password },
-    );
-    if (!response.data.success) {
-      throw new Error(response.data.error || "Failed to reset password");
-    }
-  } catch (err) {
-    return handleApiError(err, "Failed to reset password") as never;
-  }
-};
 
 export const logoutFn = async (): Promise<void> => {
   try {
@@ -164,6 +41,7 @@ export const useGetMe = (options?: { enabled?: boolean }) => {
     enabled: options?.enabled ?? true,
     staleTime: 5 * 60 * 1000,
     refetchOnMount: false,
+    refetchOnWindowFocus: false,
   });
 };
 
@@ -195,35 +73,22 @@ export const deleteAccountFn = async (): Promise<void> => {
   }
 };
 
-export const useRegister = () =>
-  useMutation({
-    mutationFn: registerFn,
-  });
-
-export const useLogin = () =>
-  useMutation({
-    mutationFn: loginFn,
-  });
-
-export const useVerifyOtp = () =>
-  useMutation({
-    mutationFn: verifyOtpFn,
-  });
-
-export const useResendOtp = () =>
-  useMutation({
-    mutationFn: resendOtpFn,
-  });
-
-export const useForgotPassword = () =>
-  useMutation({
-    mutationFn: forgotPasswordFn,
-  });
-
-export const useResetPassword = () =>
-  useMutation({
-    mutationFn: resetPasswordFn,
-  });
+export const completeOnboardingFn = async (
+  data: OnboardingInput,
+): Promise<User> => {
+  try {
+    const response = await authApi.patch<ApiResponse<User>>(
+      "/profile/complete",
+      data,
+    );
+    if (!response.data.success || !response.data.data) {
+      throw new Error(response.data.error || "Failed to complete onboarding");
+    }
+    return response.data.data;
+  } catch (err) {
+    return handleApiError(err, "Failed to complete onboarding") as never;
+  }
+};
 
 export const useLogout = () => {
   const queryClient = useQueryClient();
@@ -249,78 +114,11 @@ export const useDeleteAccount = () =>
     mutationFn: deleteAccountFn,
   });
 
-export type Provider = "google";
-
-export const getProvidersFn = async (): Promise<Provider[]> => {
-  try {
-    const response =
-      await authApi.get<ApiResponse<Provider[]>>("/providers");
-    if (!response.data.success || !response.data.data) {
-      throw new Error(response.data.error || "Failed to get providers");
-    }
-    return response.data.data;
-  } catch (err) {
-    return handleApiError(err, "Failed to get providers") as never;
-  }
-};
-
-export const useGetProviders = () =>
-  useQuery({
-    queryKey: ["providers"],
-    queryFn: getProvidersFn,
-  });
-
-export const disconnectProviderFn = async (
-  provider: Provider,
-): Promise<void> => {
-  try {
-    const response = await authApi.delete<ApiResponse<null>>(
-      `/providers/${provider}`,
-    );
-    if (!response.data.success) {
-      throw new Error(response.data.error || "Failed to disconnect provider");
-    }
-  } catch (err) {
-    return handleApiError(err, "Failed to disconnect provider") as never;
-  }
-};
-
-export const useDisconnectProvider = (options?: {
-  onSuccess?: () => void;
+export const useCompleteOnboarding = (options?: {
+  onSuccess?: (data: User) => void;
   onError?: (error: any) => void;
 }) =>
   useMutation({
-    mutationFn: disconnectProviderFn,
+    mutationFn: completeOnboardingFn,
     ...options,
   });
-
-export const setPasswordFn = async (password: string): Promise<void> => {
-  try {
-    const response = await authApi.post<ApiResponse<null>>("/set-password", {
-      password,
-    });
-    if (!response.data.success) {
-      throw new Error(response.data.error || "Failed to set password");
-    }
-  } catch (err) {
-    return handleApiError(err, "Failed to set password") as never;
-  }
-};
-
-export const useSetPassword = (options?: {
-  onSuccess?: () => void;
-  onError?: (error: any) => void;
-}) =>
-  useMutation({
-    mutationFn: setPasswordFn,
-    ...options,
-  });
-
-export async function fetchCsrfToken(): Promise<void> {
-  try {
-    const response = await authApi.get<{ csrfToken: string }>("/csrf-token");
-    setCsrfToken(response.data.csrfToken);
-  } catch {
-    // CSRF token fetch is best-effort
-  }
-}

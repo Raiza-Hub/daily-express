@@ -3,7 +3,7 @@ import { Badge } from "@repo/ui/components/badge";
 
 const VerificationBadge = (props: {
   hasBankDetails: boolean;
-  status?: "pending" | "active" | "failed";
+  status?: "pending" | "active" | "failed" | null;
   notSetLabel?: string;
 }) => {
   if (!props.hasBankDetails) {

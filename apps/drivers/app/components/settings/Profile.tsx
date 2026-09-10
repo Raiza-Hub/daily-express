@@ -5,10 +5,9 @@ import {
   applyApiFieldErrors,
   getApiErrorMessage,
   useGetMe,
-  useGetProviders,
   useUpdateProfile,
 } from "@repo/api";
-import { SignUpSchema } from "@repo/types/authSchema";
+import { EditProfileSchema } from "@repo/types/authSchema";
 import { Button } from "@repo/ui/components/button";
 import {
   Field,
@@ -17,28 +16,23 @@ import {
   FieldLabel,
 } from "@repo/ui/components/field";
 import { Input } from "@repo/ui/components/input";
-import { Icons } from "@repo/ui/Icons";
 import dayjs from "dayjs";
 import { useEffect, useState } from "react";
 import { Controller, useForm } from "react-hook-form";
 import { z } from "zod/v4";
 import { isValidDateString } from "~/lib/utils";
 import DeleteAccount from "./DeleteAccount";
-import DisconnectGoogleDialog from "./DisconnectGoogleDialog";
 import { usePostHog } from "posthog-js/react";
 import { posthogEvents } from "~/lib/posthog-events";
 import Loader from "../Loader";
 
-const ProfileSchema = SignUpSchema.omit({ password: true }).partial();
+const ProfileSchema = EditProfileSchema;
 type TProfileSchema = z.infer<typeof ProfileSchema>;
 
 const Profile = () => {
   const [profileError, setProfileError] = useState<string | null>(null);
   const { data: user, isLoading, refetch: refetchUser } = useGetMe();
-  const { data: providers, refetch: refetchProviders } = useGetProviders();
   const posthog = usePostHog();
-
-  const isGoogleConnected = providers?.includes("google");
 
   const {
     handleSubmit,
@@ -99,16 +93,16 @@ const Profile = () => {
   return (
     <div className="w-full max-w-3xl mx-auto">
       <div>
-        <div className="mb-6 py-4 border-b border-gray-100">
-          <h1 className="text-xl font-semibold mb-1">Profile</h1>
+        <div className="mb-6 md:mb-8 py-4 border-b border-gray-100">
+          <h1 className="text-xl font-semibold mb-1.5">Profile</h1>
           <p className="text-sm text-muted-foreground">
             Manage settings for your Daily Express profile.
           </p>
         </div>
         <form onSubmit={handleSubmit(onSubmit)}>
-          <FieldGroup className="sm:space-y-6">
+          <FieldGroup className="gap-5 sm:gap-6">
             <div className="grid grid-cols-1 sm:grid-cols-[200px_1fr] items-start gap-x-6 gap-y-2">
-              <FieldLabel htmlFor="firstName" className="pt-2.5">
+              <FieldLabel htmlFor="firstName" className="sm:pt-2.5">
                 Full Name
               </FieldLabel>
 
@@ -152,7 +146,7 @@ const Profile = () => {
             </div>
 
             <div className="grid grid-cols-1 sm:grid-cols-[200px_1fr] items-start gap-x-6 gap-y-2">
-              <FieldLabel htmlFor="email" className="pt-2.5">
+              <FieldLabel htmlFor="email" className="sm:pt-2.5">
                 Email
               </FieldLabel>
 
@@ -176,7 +170,7 @@ const Profile = () => {
             </div>
 
             <div className="grid grid-cols-1 sm:grid-cols-[200px_1fr] items-start gap-x-6 gap-y-2">
-              <FieldLabel htmlFor="dateOfBirth" className="pt-2.5">
+              <FieldLabel htmlFor="dateOfBirth" className="sm:pt-2.5">
                 Date of birth
               </FieldLabel>
 
@@ -231,34 +225,6 @@ const Profile = () => {
             </Button>
           </div>
         </form>
-      </div>
-
-      <div>
-        <div className="mb-6 py-4 border-b border-gray-100">
-          <h2 className="text-xl font-semibold mb-1">Authentication</h2>
-          <p className="text-sm text-muted-foreground">
-            Manage your password and authentication settings.
-          </p>
-        </div>
-
-        <div>
-          <div className="flex justify-between items-center py-2 min-h-[40px]">
-            <div className="flex items-center gap-3">
-              <Icons.google className="w-5 h-5" />
-              <span className="text-sm font-medium">Google</span>
-            </div>
-            {isGoogleConnected ? (
-              <DisconnectGoogleDialog
-                hasPassword={!!user?.hasPassword}
-                onSuccess={refetchProviders}
-              />
-            ) : (
-              <Button variant="secondary" disabled className="cursor-pointer">
-                Not connected
-              </Button>
-            )}
-          </div>
-        </div>
       </div>
 
       <DeleteAccount />

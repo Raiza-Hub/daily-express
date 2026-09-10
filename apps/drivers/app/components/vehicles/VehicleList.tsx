@@ -24,10 +24,10 @@ const VehicleList = () => {
 
   return (
     <div className="w-full max-w-3xl mx-auto p-6">
-      <div className="flex items-center justify-between mb-6 py-4 border-b border-gray-100">
+      <div className="flex items-center justify-between mb-6 md:mb-8 py-4 border-b border-gray-100">
         <div>
-          <h1 className="text-xl font-semibold mb-1">Vehicles</h1>
-          <p className="text-sm text-muted-foreground">
+          <h1 className="text-xl sm:text-2xl font-semibold mb-1.5">Vehicles</h1>
+          <p className="text-sm sm:text-base text-muted-foreground">
             Manage your registered vehicles.
           </p>
         </div>
