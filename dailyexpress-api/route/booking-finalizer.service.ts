@@ -8,7 +8,7 @@ import { logger } from "../utils/logger";
 import { calculateTrustedChargeAmount } from "../utils/payment";
 import { formatAmount } from "../utils/payout";
 import { formatBusinessDate } from "../utils/route";
-import { sendEmailToQueue, type EmailToSend } from "../mail/email-dispatcher.service";
+import { enqueueEmail } from "../mail/email-dispatcher.service";
 import { RouteRepository, routeRepository } from "./route.repository";
 
 export class BookingFinalizerService {
@@ -52,8 +52,6 @@ export class BookingFinalizerService {
     const passengerUser = bookingRecord.userId
       ? await this.repo.findUserById(bookingRecord.userId)
       : null;
-
-    let pendingEmail: EmailToSend | null = null;
 
     await db.transaction(async (tx) => {
       const [updatedBooking] = await tx
@@ -114,18 +112,14 @@ export class BookingFinalizerService {
         });
         const emailHtml = await renderEmail("BookingConfirmedEmail", propsJson);
         const emailSubject = getEmailSubject("BookingConfirmedEmail", propsJson);
-        pendingEmail = {
+        await enqueueEmail(tx, {
           emailName: "email.booking_confirmed",
           to: passengerUser.email,
           subject: emailSubject,
           html: emailHtml,
-        };
+        });
       }
     });
-
-    if (pendingEmail) {
-      await sendEmailToQueue(pendingEmail);
-    }
 
     logger.info("booking_finalizer.completed", {
       bookingId,
