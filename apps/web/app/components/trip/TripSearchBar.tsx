@@ -1,42 +1,38 @@
 "use client";
 
-import { ArrowsLeftRightIcon } from "@phosphor-icons/react";
 import { useBodyScrollLock } from "@repo/ui/hooks/use-body-scroll-lock";
 import { useCalendarState } from "@repo/ui/hooks/use-calendar";
 import { useClickOutside } from "@repo/ui/hooks/use-click-outside";
 import { cn } from "@repo/ui/lib/utils";
 import { AnimatePresence } from "framer-motion";
+import { useRouter } from "next/navigation";
 import { useQueryStates } from "nuqs";
 import { useState } from "react";
 import { formatLocalDate, parseLocalDate } from "~/lib/utils";
 import DepartureDateField from "../DepartureDateField";
+import FromLocationField from "../FromLocationField";
 import MobileCalendarSheet from "../MobileCalendarSheet";
-import SearchLocationField from "../SearchLocationField";
 import { searchParams } from "~/lib/type";
 
 const TripSearchBar = ({
   className,
-  initialFrom,
-  initialTo,
+  initialOrigin,
   initialDate,
 }: {
   className?: string;
-  initialFrom?: string | null;
-  initialTo?: string | null;
+  initialOrigin?: string | null;
   initialDate?: string | null;
 }) => {
-  const [query, setQuery] = useQueryStates(
+  const [query] = useQueryStates(
     {
-      from: searchParams.from,
-      to: searchParams.to,
+      origin: searchParams.origin,
       date: searchParams.date,
     },
     {
       history: "replace",
     },
   );
-  const [from, setFrom] = useState(() => initialFrom ?? query.from ?? "");
-  const [to, setTo] = useState(() => initialTo ?? query.to ?? "");
+  const [origin, setOrigin] = useState(() => initialOrigin ?? "");
   const calendar = useCalendarState(
     parseLocalDate(initialDate ?? query.date ?? formatLocalDate(new Date())),
   );
@@ -47,46 +43,25 @@ const TripSearchBar = ({
 
   useBodyScrollLock(calendar.isOpen);
 
-  const isSearchReady = Boolean(from && to);
+  const isSearchReady = Boolean(origin);
+
+  const router = useRouter();
 
   const handleSearch = () => {
-    if (!from || !to) {
+    if (!origin) {
       return;
     }
 
-    setQuery({
-      from,
-      to,
-      date: formatLocalDate(calendar.date),
-    });
+    router.push(`/routes?origin=${origin}&date=${formatLocalDate(calendar.date)}`);
   };
 
   return (
     <div className={cn("w-full relative", className)}>
       <div className="flex flex-col lg:flex-row items-stretch gap-2">
-        <SearchLocationField
+        <FromLocationField
           id="search-from"
-          label="From"
-          value={from}
-          onChange={setFrom}
-        />
-
-        <button
-          type="button"
-          onClick={() => {
-            setFrom(to);
-            setTo(from);
-          }}
-          className="bg-white self-center p-2 rounded-full border border-neutral-200 hover:bg-neutral-50 cursor-pointer transition-transform duration-400"
-        >
-          <ArrowsLeftRightIcon size={18} className="rotate-90 lg:rotate-0" />
-        </button>
-
-        <SearchLocationField
-          id="search-to"
-          label="To"
-          value={to}
-          onChange={setTo}
+          value={origin}
+          onChange={setOrigin}
         />
 
         <DepartureDateField

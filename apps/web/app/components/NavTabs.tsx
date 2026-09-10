@@ -5,6 +5,8 @@ import { usePathname } from "next/navigation";
 import { CarProfileIcon, PathIcon, type Icon } from "@phosphor-icons/react";
 import { cn } from "@repo/ui/lib/utils";
 
+const NAV_VISIBLE_PATHS = ["/", "/trip-status"];
+
 const tabs: { name: string; href: string; icon: Icon }[] = [
     { name: "Book a trip", href: "/", icon: CarProfileIcon },
     { name: "Trip status", href: "/trip-status", icon: PathIcon },
@@ -12,6 +14,10 @@ const tabs: { name: string; href: string; icon: Icon }[] = [
 
 const NavTabs = () => {
     const pathname = usePathname();
+
+    if (!NAV_VISIBLE_PATHS.includes(pathname)) {
+        return null;
+    }
 
     return (
         <div className="mx-auto w-full max-w-7xl px-4">
@@ -32,7 +38,7 @@ const NavTabs = () => {
                             )}
                             aria-current={isActive ? "page" : undefined}
                         >
-                            <TabIcon size={20} />
+                            <TabIcon size={20} weight="duotone" />
                             {tab.name}
                         </Link>
                     );

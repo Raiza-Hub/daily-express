@@ -7,7 +7,7 @@ import duration from "dayjs/plugin/duration";
 import { useQueryClient } from "@repo/api";
 import { useLayoutEffect, useRef, useState } from "react";
 import { TripStatusItem } from "~/lib/type";
-import TripDetailsSheet from "./TripDetailsSheet";
+import RouteSheetDetails from "./RouteSheetDetails";
 
 dayjs.extend(duration);
 
@@ -170,18 +170,14 @@ const TripStatusCardItem = ({
                             </p>
 
                             <p className="mt-2 text-xl font-medium text-neutral-900">
-                                {formatPrice(
-                                    (item.trip.vehicleType === "bus"
-                                        ? item.trip.priceBus
-                                        : item.trip.priceCar) + (item.feeAmount ?? 0)
-                                )}
+                                {formatPrice(item.fareAmount + (item.feeAmount ?? 0))}
                             </p>
                         </div>
                     </div>
                 </div>
             </div>
 
-            <TripDetailsSheet
+            <RouteSheetDetails
                 trip={item.trip}
                 open={sheetOpen}
                 onOpenChange={setSheetOpen}

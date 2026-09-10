@@ -1,34 +1,58 @@
 import Joi from "joi";
 
 export const createRouteSchema = Joi.object({
-  pickup_location_title: Joi.string().min(2).max(255).required().messages({
-    "string.empty": "Pickup location title is required",
-    "string.min": "Pickup location title must be at least 2 characters long",
-    "string.max": "Pickup location title must not exceed 255 characters",
-    "any.required": "Pickup location title is required",
-  }),
-  pickup_location_locality: Joi.string().min(2).max(255).required().messages({
-    "string.empty": "Pickup location locality is required",
-    "any.required": "Pickup location locality is required",
-  }),
-  pickup_location_label: Joi.string().min(2).max(255).required().messages({
-    "string.empty": "Pickup location label is required",
-    "any.required": "Pickup location label is required",
-  }),
-  dropoff_location_title: Joi.string().min(2).max(255).required().messages({
-    "string.empty": "Dropoff location title is required",
-    "string.min": "Dropoff location title must be at least 2 characters long",
-    "string.max": "Dropoff location title must not exceed 255 characters",
-    "any.required": "Dropoff location title is required",
-  }),
-  dropoff_location_locality: Joi.string().min(2).max(255).required().messages({
-    "string.empty": "Dropoff location locality is required",
-    "any.required": "Dropoff location locality is required",
-  }),
-  dropoff_location_label: Joi.string().min(2).max(255).required().messages({
-    "string.empty": "Dropoff location label is required",
-    "any.required": "Dropoff location label is required",
-  }),
+  pickup_location_title: Joi.string()
+    .min(2)
+    .max(255)
+    .messages({
+      "string.empty": "Pickup location title is required",
+      "string.min": "Pickup location title must be at least 2 characters long",
+      "string.max": "Pickup location title must not exceed 255 characters",
+      "any.required": "Pickup location title is required",
+    })
+    .required(),
+  pickup_location_locality: Joi.string()
+    .min(2)
+    .max(255)
+    .messages({
+      "string.empty": "Pickup location locality is required",
+      "any.required": "Pickup location locality is required",
+    })
+    .required(),
+  pickup_location_label: Joi.string()
+    .min(2)
+    .max(255)
+    .messages({
+      "string.empty": "Pickup location label is required",
+      "any.required": "Pickup location label is required",
+    })
+    .required(),
+  dropoff_location_title: Joi.string()
+    .min(2)
+    .max(255)
+    .messages({
+      "string.empty": "Dropoff location title is required",
+      "string.min": "Dropoff location title must be at least 2 characters long",
+      "string.max": "Dropoff location title must not exceed 255 characters",
+      "any.required": "Dropoff location title is required",
+    })
+    .required(),
+  dropoff_location_locality: Joi.string()
+    .min(2)
+    .max(255)
+    .messages({
+      "string.empty": "Dropoff location locality is required",
+      "any.required": "Dropoff location locality is required",
+    })
+    .required(),
+  dropoff_location_label: Joi.string()
+    .min(2)
+    .max(255)
+    .messages({
+      "string.empty": "Dropoff location label is required",
+      "any.required": "Dropoff location label is required",
+    })
+    .required(),
   intermediate_stops_title: Joi.string().max(500).allow(null, "").optional(),
   intermediate_stops_locality: Joi.string().max(500).allow(null, "").optional(),
   intermediate_stops_label: Joi.string().max(500).allow(null, "").optional(),
@@ -49,6 +73,11 @@ export const createRouteSchema = Joi.object({
     "number.integer": "Bus price must be a whole number",
     "number.min": "Bus price cannot be negative",
     "any.required": "Bus price is required",
+  }),
+  fee: Joi.number().integer().min(0).allow(null).optional().messages({
+    "number.base": "Fee must be a number",
+    "number.integer": "Fee must be a whole number",
+    "number.min": "Fee cannot be negative",
   }),
   departure_time: Joi.string()
     .pattern(/^\d{2}:\d{2}(:\d{2})?$/)
@@ -72,22 +101,22 @@ export const createRouteSchema = Joi.object({
     .messages({
       "any.only": "Status must be one of: inactive, pending, active",
     }),
-  zoneId: Joi.string().uuid().allow(null).optional(),
 });
 
 export const updateRouteSchema = Joi.object({
-  pickup_location_title: Joi.string().min(2).max(255).optional(),
-  pickup_location_locality: Joi.string().min(2).max(255).optional(),
-  pickup_location_label: Joi.string().min(2).max(255).optional(),
-  dropoff_location_title: Joi.string().min(2).max(255).optional(),
-  dropoff_location_locality: Joi.string().min(2).max(255).optional(),
-  dropoff_location_label: Joi.string().min(2).max(255).optional(),
+  pickup_location_title: Joi.string().min(2).max(255).optional().allow(null),
+  pickup_location_locality: Joi.string().min(2).max(255).optional().allow(null),
+  pickup_location_label: Joi.string().min(2).max(255).optional().allow(null),
+  dropoff_location_title: Joi.string().min(2).max(255).optional().allow(null),
+  dropoff_location_locality: Joi.string().min(2).max(255).optional().allow(null),
+  dropoff_location_label: Joi.string().min(2).max(255).optional().allow(null),
   intermediate_stops_title: Joi.string().max(500).allow(null, "").optional(),
   intermediate_stops_locality: Joi.string().max(500).allow(null, "").optional(),
   intermediate_stops_label: Joi.string().max(500).allow(null, "").optional(),
   meeting_point: Joi.string().min(2).max(500).optional(),
   priceCar: Joi.number().integer().min(0).optional(),
   priceBus: Joi.number().integer().min(0).optional(),
+  fee: Joi.number().integer().min(0).allow(null).optional(),
   departure_time: Joi.string()
     .pattern(/^\d{2}:\d{2}(:\d{2})?$/)
     .optional(),
@@ -95,5 +124,4 @@ export const updateRouteSchema = Joi.object({
     .pattern(/^\d{2}:\d{2}(:\d{2})?$/)
     .optional(),
   status: Joi.string().valid("inactive", "pending", "active").optional(),
-  zoneId: Joi.string().uuid().allow(null).optional(),
 }).min(1);
