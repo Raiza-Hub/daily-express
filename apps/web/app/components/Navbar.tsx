@@ -9,7 +9,7 @@ import { Avatar, AvatarFallback } from "@repo/ui/components/avatar";
 import { UserAccountNav } from "./UserAccountNav";
 import Image from "next/image";
 import { useGetMe } from "@repo/api";
-import { buildAuthHref, buildDriverSignUpUrl } from "~/lib/app-routing";
+import { buildAuthHref, buildDriverAppUrl } from "~/lib/app-routing";
 
 const Navbar = () => {
   const { data: user, isLoading } = useGetMe();
@@ -38,7 +38,7 @@ const Navbar = () => {
                 {isGuest ? (
                   <div className="hidden lg:block">
                     <Link
-                      href={buildAuthHref("/sign-up", buildDriverSignUpUrl())}
+                      href={buildAuthHref("/sign-in", buildDriverAppUrl("/sign-up"))}
                       className={buttonVariants({
                         variant: "ghost",
                       })}

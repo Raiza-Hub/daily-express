@@ -49,7 +49,6 @@ export const getDriver: RequestHandler = asyncHandler(
 
 export const createDriver: RequestHandler = asyncHandler(
   async (req: Request, res: Response) => {
-    const { kycType, kycId, kycConsent: _, ...driverData } = req.body;
     const gatewayUser = getAuthenticatedUser(req);
     const userId = gatewayUser?.userId;
 
@@ -59,12 +58,8 @@ export const createDriver: RequestHandler = asyncHandler(
       });
     }
 
-
-
-    const kycData = kycType && kycId ? { kycType: kycType as "bvn" | "nin", kycId } : undefined;
-
     const driver = await timeAsync("driver.create.service", { userId }, () =>
-      driverService.createDriver(userId, driverData, kycData),
+      driverService.createDriver(userId, req.body),
     );
 
     return res

@@ -10,9 +10,8 @@ import {
   StepperTitle,
   StepperTrigger,
 } from "@repo/ui/components/stepper";
-import { onboardingSchema, TonboardingSchema } from "@repo/types";
+import { onboardingCreateSchema, TonboardingCreateSchema } from "@repo/types";
 import { zodResolver } from "@hookform/resolvers/zod";
-import { z } from "zod/v4";
 import { toast } from "@repo/ui/components/sonner";
 import { useRouter } from "next/navigation";
 import { useRef, useState } from "react";
@@ -31,9 +30,6 @@ import { usePostHog } from "posthog-js/react";
 import { posthogEvents } from "~/lib/posthog-events";
 import PersonalInfoForm from "./PersonalInfo";
 import AddressInfoForm from "./AddressInfo";
-import PaymentInfo from "./PaymentInfo";
-import BankList from "../../../bank-names.json";
-import { Bank } from "~/lib/type";
 
 const STEPS = [
   {
@@ -50,33 +46,7 @@ const STEPS = [
     Component: AddressInfoForm,
     fields: ["city", "state", "country", "currency", "address", "phoneNumber"],
   },
-  {
-    id: 3,
-    title: "Payment Information",
-    description: "Your earnings will be paid into this account.",
-    Component: PaymentInfo,
-    fields: [
-      "bankName",
-      "accountNumber",
-      "bankCode",
-      "accountName",
-      "kycType",
-      "kycId",
-      "kycConsent",
-    ],
-  },
 ];
-
-const onboardingFormSchema = onboardingSchema.superRefine((data, ctx) => {
-  const label = data.kycType?.toUpperCase() || "BVN/NIN";
-  if (!data.kycId) {
-    ctx.addIssue({
-      code: z.ZodIssueCode.custom,
-      message: `${label} is required.`,
-      path: ["kycId"],
-    });
-  }
-});
 
 const OnboardingForm = () => {
   const router = useRouter();
@@ -85,8 +55,8 @@ const OnboardingForm = () => {
   const [onboardError, setOnboardError] = useState<string | null>(null);
   const queryClient = useQueryClient();
 
-  const methods = useForm<TonboardingSchema>({
-    resolver: zodResolver(onboardingFormSchema),
+  const methods = useForm<TonboardingCreateSchema>({
+    resolver: zodResolver(onboardingCreateSchema),
     mode: "onBlur",
     reValidateMode: "onChange",
     defaultValues: {
@@ -100,13 +70,6 @@ const OnboardingForm = () => {
       city: "",
       state: "",
       phoneNumber: "",
-      bankName: "",
-      bankCode: "",
-      accountNumber: "",
-      accountName: "",
-      kycType: "",
-      kycId: "",
-      kycConsent: true,
     },
   });
 
@@ -134,7 +97,7 @@ const OnboardingForm = () => {
       }
     },
     onError: (error: Error) => {
-      applyApiFieldErrors<keyof TonboardingSchema>(error, methods.setError, {
+      applyApiFieldErrors<keyof TonboardingCreateSchema>(error, methods.setError, {
         phone: "phoneNumber",
         profile_pic: "file",
       });
@@ -147,15 +110,10 @@ const OnboardingForm = () => {
   const currentStepData = STEPS[currentStep - 1];
   const CurrentStepComponent = currentStepData?.Component || (() => null);
 
-  const onSubmit = (data: TonboardingSchema) => {
+  const onSubmit = (data: TonboardingCreateSchema) => {
     setOnboardError(null);
 
     pendingFileRef.current = data.file instanceof File ? data.file : null;
-
-    const selectedBank = (BankList as Bank[]).find(
-      (bank) => bank.name === data.bankName,
-    );
-    const bankCode = selectedBank?.code || "";
 
     createDriver({
       firstName: data.firstName,
@@ -167,13 +125,6 @@ const OnboardingForm = () => {
       currency: data.currency,
       state: data.state,
       city: data.city,
-      bankName: data.bankName,
-      bankCode,
-      accountNumber: data.accountNumber,
-      accountName: data.accountName,
-      kycType: data.kycType,
-      kycId: data.kycId,
-      kycConsent: true,
     });
   };
 
@@ -181,7 +132,7 @@ const OnboardingForm = () => {
     const currentData = STEPS[currentStep - 1];
     if (!currentData) return;
 
-    const stepFields = currentData.fields as (keyof TonboardingSchema)[];
+    const stepFields = currentData.fields as (keyof TonboardingCreateSchema)[];
     const isStepValid = await trigger(stepFields);
 
     if (!isStepValid) {
@@ -218,7 +169,7 @@ const OnboardingForm = () => {
           if (!currentData) return;
 
           const ok = await methods.trigger(
-            currentData.fields as (keyof TonboardingSchema)[],
+            currentData.fields as (keyof TonboardingCreateSchema)[],
           );
           if (ok) setCurrentStep(next);
         }}
@@ -280,9 +231,9 @@ const OnboardingForm = () => {
               disabled={isPending}
               onClick={async () => {
                 if (currentStep === STEPS.length) {
-                  const step3Fields = STEPS[2]
-                    ?.fields as (keyof TonboardingSchema)[];
-                  const isValid = await trigger(step3Fields);
+                  const lastStepFields = STEPS[STEPS.length - 1]
+                    ?.fields as (keyof TonboardingCreateSchema)[];
+                  const isValid = await trigger(lastStepFields);
                   if (isValid) {
                     handleSubmit(onSubmit)();
                   }

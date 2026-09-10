@@ -8,9 +8,6 @@ import { getConfig } from "../config/index";
 import type { JWTPayload } from "@shared/types";
 import { createServiceError } from "@shared/utils";
 import { getRequestPath, isPublicPath } from "./publicPaths";
-import { db } from "../db/connection";
-import { users } from "../db/index";
-import { eq } from "drizzle-orm";
 import { logger } from "../utils/logger";
 import { sendErrorResponse } from "./apiResponses";
 
@@ -166,25 +163,6 @@ export function authMiddleware(
       return;
     }
 
-    const sessionInvalidBefore = await getSessionInvalidBefore(
-      refreshed.userId,
-    );
-    if (
-      sessionInvalidBefore &&
-      refreshed.iat * 1000 < sessionInvalidBefore.getTime()
-    ) {
-      clearAuthCookies(res, config);
-      sendErrorResponse(
-        res,
-        401,
-        "Your session has expired. Please sign in again.",
-        {
-          code: "SESSION_EXPIRED",
-        },
-      );
-      return;
-    }
-
     setAuthCookies(res, refreshed, config);
     setAuthenticatedUser(req, refreshed);
     next();
@@ -222,19 +200,6 @@ export function authMiddleware(
     });
     return;
   });
-}
-
-async function getSessionInvalidBefore(userId: string): Promise<Date | null> {
-  const user = await db.query.users.findFirst({
-    where: eq(users.id, userId),
-    columns: { sessionInvalidBefore: true },
-  });
-
-  if (!user) {
-    return new Date(8640000000000000);
-  }
-
-  return user.sessionInvalidBefore || null;
 }
 
 export function getAuthenticatedUser(req: Request): JWTPayload | null {

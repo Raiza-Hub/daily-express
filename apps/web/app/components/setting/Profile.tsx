@@ -5,10 +5,9 @@ import {
   applyApiFieldErrors,
   getApiErrorMessage,
   useGetMe,
-  useGetProviders,
   useUpdateProfile,
 } from "@repo/api";
-import { SignUpSchema } from "@repo/types/authSchema";
+import { EditProfileSchema } from "@repo/types/authSchema";
 import { Button } from "@repo/ui/components/button";
 import {
   Field,
@@ -17,7 +16,6 @@ import {
   FieldLabel,
 } from "@repo/ui/components/field";
 import { Input } from "@repo/ui/components/input";
-import { Icons } from "@repo/ui/Icons";
 import dayjs from "dayjs";
 import { usePostHog } from "posthog-js/react";
 import { useEffect } from "react";
@@ -26,17 +24,13 @@ import { z } from "zod/v4";
 import { isValidDateString } from "~/lib/utils";
 import { posthogEvents } from "~/lib/posthog-events";
 import DeleteAccount from "./DeleteAccount";
-import DisconnectGoogleDialog from "./DisconnectGoogleDialog";
 
-const ProfileSchema = SignUpSchema.omit({ password: true }).partial();
+const ProfileSchema = EditProfileSchema;
 type TProfileSchema = z.infer<typeof ProfileSchema>;
 
 const Profile = () => {
   const { data: user, isLoading, refetch: refetchUser } = useGetMe();
-  const { data: providers, refetch: refetchProviders } = useGetProviders();
   const posthog = usePostHog();
-
-  const isGoogleConnected = providers?.includes("google");
 
   const { mutate: updateProfile } = useUpdateProfile({
     onSuccess: () => {
@@ -236,34 +230,6 @@ const Profile = () => {
             </Button>
           </div>
         </form>
-      </div>
-
-      <div>
-        <div className="mb-6 py-4 border-b border-gray-100">
-          <h2 className="text-xl font-semibold mb-1">Authentication</h2>
-          <p className="text-sm text-muted-foreground">
-            Manage your password and authentication settings.
-          </p>
-        </div>
-
-        <div>
-          <div className="flex justify-between items-center py-2 min-h-[40px]">
-            <div className="flex items-center gap-3">
-              <Icons.google className="w-5 h-5" />
-              <span className="text-sm font-medium">Google</span>
-            </div>
-            {isGoogleConnected ? (
-              <DisconnectGoogleDialog
-                hasPassword={!!user?.hasPassword}
-                onSuccess={refetchProviders}
-              />
-            ) : (
-              <Button variant="secondary" disabled className="cursor-pointer">
-                Not connected
-              </Button>
-            )}
-          </div>
-        </div>
       </div>
 
       <DeleteAccount />

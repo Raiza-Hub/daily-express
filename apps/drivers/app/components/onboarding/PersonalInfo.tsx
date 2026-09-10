@@ -3,7 +3,7 @@
 import Image from "next/image";
 import { useFileUpload } from "@repo/ui/hooks/use-file-upload";
 import { cn } from "@repo/ui/lib/utils";
-import { TonboardingSchema } from "@repo/types/index";
+import { TonboardingCreateSchema } from "@repo/types/index";
 import { useEffect, useRef } from "react";
 import { Controller, useFormContext, useWatch } from "react-hook-form";
 import { Button } from "@repo/ui/components/button";
@@ -16,7 +16,7 @@ const PersonalInfoForm = () => {
         control,
         setValue,
         formState: { errors }
-    } = useFormContext<TonboardingSchema>();
+    } = useFormContext<TonboardingCreateSchema>();
 
     const formFile = useWatch({ control, name: "file" });
 

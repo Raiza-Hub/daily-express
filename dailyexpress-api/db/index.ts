@@ -39,6 +39,6 @@ export type { PaymentRecord, RefundRecord } from "./payment-schema";
 export type { BookingRecord, TripRecord, RouteRecord, VehicleRecord, ExternalDriverRecord } from "./route-schema";
 export type { EarningRecord, PayoutRecord } from "./payout-schema";
 export type { DriverRecord, DriverStatsRecord } from "./driver-schema";
-export type { UserRecord, OtpRecord, UserProviderRecord, PasswordResetTokenRecord } from "./auth-schema";
+export type { UserRecord, UserProviderRecord } from "./auth-schema";
 
 export type { ZoneRecord } from "./zone-schema";

@@ -1,7 +1,5 @@
-import { buttonVariants } from "@repo/ui/components/button";
 import Link from "next/link";
-import LoginForm from "~/components/auth-form/Login";
-import { buildAuthHref } from "~/lib/app-routing";
+import GoogleSignInButton from "~/components/auth-form/GoogleSignInButton";
 
 const Page = async ({
   searchParams,
@@ -17,20 +15,10 @@ const Page = async ({
           <h1 className="text-3xl font-semibold tracking-tight">
             Welcome back
           </h1>
-          <p className="text-sm">Sign in to your account</p>
+          <p className="text-sm">Sign in to continue</p>
         </div>
 
-        <LoginForm redirect={redirect} />
-
-        <Link
-          className={buttonVariants({
-            variant: "link",
-            className: "gap-1.5",
-          })}
-          href={buildAuthHref("/sign-up", redirect)}
-        >
-          Don&apos;t have an account? Sign up
-        </Link>
+        <GoogleSignInButton redirect={redirect} />
 
         <div className="pt-2">
           <p className="text-center text-xs text-muted-foreground">
