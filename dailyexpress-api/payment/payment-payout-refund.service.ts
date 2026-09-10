@@ -5,7 +5,7 @@ import { db } from "../db/connection";
 import { booking, earning, payment, refund, trip } from "../db/index";
 import { driverService as sharedDriverService } from "../driver/driver.service";
 import { logger } from "../utils/logger";
-import { jobService } from "../workers/job.service";
+import { sendEmailToQueue, type EmailToSend } from "../mail/email-dispatcher.service";
 import { koraClient, KoraClient } from "./kora.client";
 import { PaymentRepository, paymentRepository } from "./payment.repository";
 import type { PaymentRecord, BookingRecord, RefundRecord } from "../db/index";
@@ -206,6 +206,8 @@ export class PaymentPayoutRefundService {
       }
     }
 
+    let pendingEmail: EmailToSend | null = null;
+
     await db.transaction(async (tx) => {
       await this.repo.updateRefundStatus(tx, resolvedRefund.id, {
         status: "pending",
@@ -223,7 +225,6 @@ export class PaymentPayoutRefundService {
             .update(booking)
             .set({
               paymentStatus: "refund_pending",
-              seatNumber: null,
               updatedAt: new Date(),
             })
             .where(eq(booking.id, paymentRecord.bookingId));
@@ -231,7 +232,7 @@ export class PaymentPayoutRefundService {
           if (wasConfirmed && bookingRecord.tripId) {
             await tx
               .update(trip)
-              .set({ bookedSeats: sql`GREATEST(${trip.bookedSeats} - 1, 0)` })
+              .set({ bookedSeats: sql`GREATEST(${trip.bookedSeats} - ${bookingRecord.seatCount ?? 1}, 0)` })
               .where(
                 and(eq(trip.id, bookingRecord.tripId), gt(trip.bookedSeats, 0)),
               );
@@ -263,7 +264,7 @@ export class PaymentPayoutRefundService {
         }
       }
 
-      await this.sendTripCancelledEmail(
+      pendingEmail = await this.sendTripCancelledEmail(
         paymentRecord,
         resolvedRefund.reference,
         emailReason,
@@ -271,6 +272,10 @@ export class PaymentPayoutRefundService {
         tx,
       );
     });
+
+    if (pendingEmail) {
+      await sendEmailToQueue(pendingEmail);
+    }
   }
 
   async finalizeRefund(
@@ -281,6 +286,8 @@ export class PaymentPayoutRefundService {
       paymentReference,
     );
     if (!existingPayment) return;
+
+    let pendingEmail: EmailToSend | null = null;
 
     await db.transaction(async (tx) => {
       const [lockedPayment] = await tx
@@ -311,7 +318,7 @@ export class PaymentPayoutRefundService {
       });
 
       if (status === "refunded" && existingPayment.customerEmail) {
-        await this.sendRefundSuccessEmail(
+        pendingEmail = await this.sendRefundSuccessEmail(
           existingPayment,
           pendingRefund.amount,
           existingPayment.productName ?? "your trip",
@@ -327,8 +334,7 @@ export class PaymentPayoutRefundService {
 
       if (
         bookingRecord &&
-        bookingRecord.status === "confirmed" &&
-        bookingRecord.seatNumber !== null
+        bookingRecord.status === "confirmed"
       ) {
         const earningRecord = await tx.query.earning.findFirst({
           where: eq(earning.bookingId, bookingRecord.id),
@@ -362,6 +368,10 @@ export class PaymentPayoutRefundService {
         }
       }
     });
+
+    if (pendingEmail) {
+      await sendEmailToQueue(pendingEmail);
+    }
   }
 
   async sendRefundFailureEmail(
@@ -369,8 +379,8 @@ export class PaymentPayoutRefundService {
     failureReason: string,
     refundAmount: number,
     tx: PaymentTransaction,
-  ) {
-    if (!paymentRecord.customerEmail) return;
+  ): Promise<EmailToSend | null> {
+    if (!paymentRecord.customerEmail) return null;
 
     let customerName: string | null = null;
     if (paymentRecord.bookingId) {
@@ -399,11 +409,12 @@ export class PaymentPayoutRefundService {
     const html = await renderEmail("RefundFailedEmail", propsJson);
     const subject = getEmailSubject("RefundFailedEmail", propsJson);
 
-    await jobService.enqueueEmail(tx, "email.refund_failed", {
+    return {
+      emailName: "email.refund_failed",
       to: paymentRecord.customerEmail,
       subject,
       html,
-    });
+    };
   }
 
   async sendTripCancelledEmail(
@@ -412,8 +423,8 @@ export class PaymentPayoutRefundService {
     reason: "driver_deactivated" | "no_driver_found" | "admin_cancelled" | undefined,
     refundAmount: number,
     tx: PaymentTransaction,
-  ) {
-    if (!paymentRecord.customerEmail) return;
+  ): Promise<EmailToSend | null> {
+    if (!paymentRecord.customerEmail) return null;
 
     const amount = refundAmount;
 
@@ -444,11 +455,12 @@ export class PaymentPayoutRefundService {
     const html = await renderEmail("TripCancelledEmail", propsJson);
     const subject = getEmailSubject("TripCancelledEmail", propsJson);
 
-    await jobService.enqueueEmail(tx, "email.trip_cancelled_refund", {
+    return {
+      emailName: "email.trip_cancelled_refund",
       to: paymentRecord.customerEmail,
       subject,
       html,
-    });
+    };
   }
 
   async sendRefundSuccessEmail(
@@ -456,8 +468,8 @@ export class PaymentPayoutRefundService {
     refundAmount: number,
     productName: string,
     tx: PaymentTransaction,
-  ) {
-    if (!paymentRecord.customerEmail) return;
+  ): Promise<EmailToSend | null> {
+    if (!paymentRecord.customerEmail) return null;
 
     const amount = refundAmount;
 
@@ -487,11 +499,12 @@ export class PaymentPayoutRefundService {
     const html = await renderEmail("RefundSuccessfulEmail", propsJson);
     const subject = getEmailSubject("RefundSuccessfulEmail", propsJson);
 
-    await jobService.enqueueEmail(tx, "email.refund_successful", {
+    return {
+      emailName: "email.refund_successful",
       to: paymentRecord.customerEmail,
       subject,
       html,
-    });
+    };
   }
 
   private async resolveAndCancelBookingStats(

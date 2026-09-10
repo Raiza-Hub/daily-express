@@ -136,10 +136,9 @@ export class PaymentRepository {
     }
 
     if (isCancellingTransition && existingBooking.tripId) {
-      updatePayload.seatNumber = null;
       await tx
         .update(trip)
-        .set({ bookedSeats: sql`GREATEST(${trip.bookedSeats} - 1, 0)` })
+        .set({ bookedSeats: sql`GREATEST(${trip.bookedSeats} - ${existingBooking.seatCount ?? 1}, 0)` })
         .where(
           and(eq(trip.id, existingBooking.tripId), gt(trip.bookedSeats, 0)),
         );
