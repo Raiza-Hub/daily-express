@@ -1,8 +1,8 @@
 import { and, eq } from "drizzle-orm";
 import { db } from "../db/connection";
 import { payment } from "../db/index";
+import { bookingFinalizerService } from "../route/booking-finalizer.service";
 import { logger } from "../utils/logger";
-import { jobService } from "../workers/job.service";
 import { PaymentRepository } from "./payment.repository";
 import type { KoraVerifyResponse } from "./payment.types";
 
@@ -33,11 +33,10 @@ export class PaymentConfirmService {
           updatedAt: new Date(),
         })
         .where(and(eq(payment.reference, reference), eq(payment.status, "processing")));
-
-      await jobService.enqueue(tx, "allocation.process", {
-        bookingId: claimed.bookingId,
-        reference,
-      });
     });
+
+    if (claimed.bookingId) {
+      await bookingFinalizerService.finalizeBooking(claimed.bookingId, reference);
+    }
   }
 }

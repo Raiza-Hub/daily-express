@@ -4,6 +4,7 @@ import { db } from "../db/connection";
 import { booking, payment, refund } from "../db/index";
 import { paymentRepository } from "../payment/payment.repository";
 import { paymentPayoutRefundService } from "../payment/payment-payout-refund.service";
+import { sendEmailToQueue, type EmailToSend } from "../mail/email-dispatcher.service";
 import { getBoss, QUEUES, type TripRefundJobData } from "./boss";
 
 const paymentRepo = paymentRepository;
@@ -77,6 +78,8 @@ export async function registerTripRefundWorker() {
         refundReference,
       });
 
+      let pendingEmail: EmailToSend | null = null;
+
       await db.transaction(async (tx) => {
         const [paymentRecord] = await tx
           .select()
@@ -119,9 +122,13 @@ export async function registerTripRefundWorker() {
         }
 
         if (paymentRecord) {
-          await paymentPayoutRefundService.sendRefundFailureEmail(paymentRecord, refundReason, lockedRefund.amount, tx);
+          pendingEmail = await paymentPayoutRefundService.sendRefundFailureEmail(paymentRecord, refundReason, lockedRefund.amount, tx);
         }
       });
+
+      if (pendingEmail) {
+        await sendEmailToQueue(pendingEmail);
+      }
     },
   );
 }

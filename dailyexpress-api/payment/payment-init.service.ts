@@ -10,7 +10,7 @@ import {
     dedupeChannels,
     generateReference,
 } from "../utils/payment";
-import { jobService } from "../workers/job.service";
+import { bookingFinalizerService } from "../route/booking-finalizer.service";
 import { koraClient } from "./kora.client";
 import { PaymentRepository } from "./payment.repository";
 import type {
@@ -199,12 +199,12 @@ export class PaymentInitService {
     const providerStatus = verification.data.status.toLowerCase();
 
     if (providerStatus === "success") {
-      await db.transaction(async (tx) => {
-        await jobService.enqueue(tx, "allocation.process", {
-          bookingId: existingPayment.bookingId,
-          reference: existingPayment.reference,
-        });
-      });
+      if (existingPayment.bookingId) {
+        await bookingFinalizerService.finalizeBooking(
+          existingPayment.bookingId,
+          existingPayment.reference,
+        );
+      }
       return existingPayment;
     }
 
