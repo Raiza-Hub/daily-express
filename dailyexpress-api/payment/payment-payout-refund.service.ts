@@ -5,7 +5,7 @@ import { db } from "../db/connection";
 import { booking, earning, payment, refund, trip } from "../db/index";
 import { driverService as sharedDriverService } from "../driver/driver.service";
 import { logger } from "../utils/logger";
-import { sendEmailToQueue, type EmailToSend } from "../mail/email-dispatcher.service";
+import { enqueueEmail, type EmailToSend } from "../mail/email-dispatcher.service";
 import { koraClient, KoraClient } from "./kora.client";
 import { PaymentRepository, paymentRepository } from "./payment.repository";
 import type { PaymentRecord, BookingRecord, RefundRecord } from "../db/index";
@@ -206,8 +206,6 @@ export class PaymentPayoutRefundService {
       }
     }
 
-    let pendingEmail: EmailToSend | null = null;
-
     await db.transaction(async (tx) => {
       await this.repo.updateRefundStatus(tx, resolvedRefund.id, {
         status: "pending",
@@ -264,18 +262,17 @@ export class PaymentPayoutRefundService {
         }
       }
 
-      pendingEmail = await this.sendTripCancelledEmail(
+      const email = await this.sendTripCancelledEmail(
         paymentRecord,
         resolvedRefund.reference,
         emailReason,
         refundAmount,
         tx,
       );
+      if (email) {
+        await enqueueEmail(tx, email);
+      }
     });
-
-    if (pendingEmail) {
-      await sendEmailToQueue(pendingEmail);
-    }
   }
 
   async finalizeRefund(
@@ -286,8 +283,6 @@ export class PaymentPayoutRefundService {
       paymentReference,
     );
     if (!existingPayment) return;
-
-    let pendingEmail: EmailToSend | null = null;
 
     await db.transaction(async (tx) => {
       const [lockedPayment] = await tx
@@ -318,12 +313,15 @@ export class PaymentPayoutRefundService {
       });
 
       if (status === "refunded" && existingPayment.customerEmail) {
-        pendingEmail = await this.sendRefundSuccessEmail(
+        const email = await this.sendRefundSuccessEmail(
           existingPayment,
           pendingRefund.amount,
           existingPayment.productName ?? "your trip",
           tx,
         );
+        if (email) {
+          await enqueueEmail(tx, email);
+        }
       }
 
       const [bookingRecord] = await tx
@@ -368,10 +366,6 @@ export class PaymentPayoutRefundService {
         }
       }
     });
-
-    if (pendingEmail) {
-      await sendEmailToQueue(pendingEmail);
-    }
   }
 
   async sendRefundFailureEmail(

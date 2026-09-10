@@ -99,11 +99,6 @@ const envSchema = z.object({
   SUPPORT_EMAIL: z.string().default("support@dailyexpress.app"),
   SUPPORT_PHONE: z.string().default("+234 9063611541"),
 
-  // Email dispatch (Cloudflare Queues → SES worker)
-  CLOUDFLARE_ACCOUNT_ID: optionalString(),
-  CLOUDFLARE_EMAIL_QUEUE_ID: optionalString(),
-  CLOUDFLARE_API_TOKEN: optionalString(),
-
   // Auth
   COOKIE_DOMAIN: optionalString(),
   DRIVER_APP_URL: z
