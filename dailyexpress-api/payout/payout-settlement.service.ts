@@ -3,15 +3,8 @@ import { db } from "../db/connection";
 import { earning, payout as payoutTable } from "../db/index";
 import { koraClient } from "../payment/kora.client";
 import { driverService as sharedDriverService } from "../driver/driver.service";
-import { notificationService as sharedNotificationService } from "../notification/notification.service";
-import { publishNotificationCreatedInBackground } from "../notification/realtime";
-import { formatAmount } from "../utils/payout";
 import type { KoraPayoutHistoryItem } from "../payment/payment.types";
-import type { DriverNotification } from "@shared/types";
-
-import type { DbTransaction } from "../db/connection";
 import type { PayoutRecord } from "../db/index";
-type PayoutTransaction = DbTransaction;
 
 export type PayoutVerificationOutcome =
   | "settled"
@@ -22,7 +15,6 @@ export type PayoutVerificationOutcome =
 export class PayoutSettlementService {
   private readonly kora = koraClient;
   private readonly driverService = sharedDriverService;
-  private readonly notificationService = sharedNotificationService;
 
   async verifyWithProvider(
     payout: PayoutRecord,
@@ -57,8 +49,6 @@ export class PayoutSettlementService {
   }
 
   async finalizePayout(payout: PayoutRecord) {
-    let notificationRecord: DriverNotification | null = null;
-
     // Prevents double finalization: re-reading payout under lock ensures the
     // second caller sees the terminal status and leaves it alone.
     await db.transaction(async (tx) => {
@@ -76,7 +66,7 @@ export class PayoutSettlementService {
         return;
       }
 
-      const [updated] = await tx
+      await tx
         .update(payoutTable)
         .set({
           status: "success",
@@ -84,8 +74,7 @@ export class PayoutSettlementService {
           failureReason: null,
           updatedAt: new Date(),
         })
-        .where(eq(payoutTable.id, lockedPayout.id))
-        .returning();
+        .where(eq(payoutTable.id, lockedPayout.id));
 
       const tripEarnings = payout.tripId
         ? await tx.query.earning.findMany({
@@ -129,38 +118,7 @@ export class PayoutSettlementService {
         driverId: payout.driverId,
         amount: payout.amount,
       });
-
-      if (updated) {
-        notificationRecord =
-          await this.createPayoutSuccessNotification(tx, updated);
-      }
     });
-
-    if (notificationRecord) {
-      publishNotificationCreatedInBackground(notificationRecord);
-    }
-  }
-
-  private async createPayoutSuccessNotification(
-    tx: PayoutTransaction,
-    payoutRecord: PayoutRecord,
-  ): Promise<DriverNotification> {
-    return this.notificationService.createForDriverInTransaction(
-      tx,
-      payoutRecord.driverId,
-      {
-        notificationKey: `event:payout:${payoutRecord.id}:completed`,
-        type: "payout_completed",
-        title: "Payout sent successfully",
-        message: `${formatAmount(
-          payoutRecord.amount,
-          payoutRecord.currency,
-        )} was transferred to your account.`,
-        href: "/payouts",
-        tag: "Paid",
-        tone: "positive",
-      },
-    );
   }
 }
 
