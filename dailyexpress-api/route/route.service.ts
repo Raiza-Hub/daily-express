@@ -3,16 +3,13 @@ import { BookingService } from "./booking.service";
 import { RouteCrudService } from "./route-crud.service";
 import { RouteRepository } from "./route.repository";
 import { SearchService } from "./search.service";
-import { TripClaimService } from "./trip-claim.service";
 import { TripService } from "./trip.service";
-import { resolveDriverId } from "./utils";
 
 export class RouteService {
   private readonly crud: RouteCrudService;
   private readonly booking: BookingService;
   private readonly trip: TripService;
   private readonly search: SearchService;
-  private readonly tripClaim: TripClaimService;
   private readonly repo: RouteRepository;
 
   constructor() {
@@ -21,7 +18,6 @@ export class RouteService {
     this.booking = new BookingService(this.repo);
     this.trip = new TripService(this.repo);
     this.search = new SearchService();
-    this.tripClaim = new TripClaimService(this.repo);
   }
 
   async createRoute(routeData: CreateRoute): Promise<Route> {
@@ -78,19 +74,6 @@ export class RouteService {
     cursor?: string;
   }): Promise<{ routes: Route[]; nextCursor: string | null }> {
     return this.search.searchRoutes(params);
-  }
-
-  async getAvailableTrips(limit?: number, cursor?: string, search?: string, date?: string) {
-    return this.tripClaim.getAvailableTrips(limit, cursor, search, date);
-  }
-
-  async getAvailableTripsCountByDate(startDate: string, endDate: string) {
-    return this.tripClaim.getAvailableTripsCountByDate(startDate, endDate);
-  }
-
-  async claimTrip(user: JWTPayload, tripId: string, vehicleId: string) {
-    const driverId = await resolveDriverId(user);
-    return this.tripClaim.claimTrip(driverId, tripId, vehicleId);
   }
 }
 
