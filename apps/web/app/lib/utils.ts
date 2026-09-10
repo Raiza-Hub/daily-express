@@ -105,20 +105,34 @@ export function transformToTripStatusItem(
     fareAmount: booking.fareAmount,
     feeAmount: booking.feeAmount ?? 0,
     trip: {
-      departureCity: {
-        title: route.pickup_location_title,
-        locality: route.pickup_location_locality,
-        label: route.pickup_location_label,
+      origin: {
+        title: route.origin_title,
+        locality: route.origin_locality,
+        label: route.origin_label,
       },
-      arrivalCity: {
-        title: route.dropoff_location_title,
-        locality: route.dropoff_location_locality,
-        label: route.dropoff_location_label,
-      },
+      destination: route.destination_title
+        ? {
+            title: route.destination_title,
+            locality: route.destination_locality ?? "",
+            label: route.destination_label ?? "",
+          }
+        : null,
+      train_station: route.train_station_title
+        ? {
+            title: route.train_station_title,
+            locality: route.train_station_locality ?? "",
+            label: route.train_station_label ?? "",
+          }
+        : null,
+      pickupPoint: route.pickup_point,
+      dropoffPoint: route.dropoff_point,
       vehicleType: route.vehicle_type as "car" | "bus",
       departureTime,
       estimatedArrivalTime,
-      meetingPoint: route.meeting_point,
+      boardingPoint: route.boardingPoint,
+      fee: route.luggageCount > 0 ? route.luggageCount * route.luggage_fee : 0,
+      price: route.price,
+      luggageFee: route.luggage_fee,
     },
   };
 }

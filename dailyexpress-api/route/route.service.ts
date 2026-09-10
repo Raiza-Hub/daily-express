@@ -40,10 +40,6 @@ export class RouteService {
     return this.trip.completeTrip(user, tripId);
   }
 
-  async getDailyTripSummaries(user: JWTPayload, startDate: string, endDate: string) {
-    return this.trip.getDailyTripSummaries(user, startDate, endDate);
-  }
-
   async createCheckoutBooking(userId: string, input: CreateBooking) {
     return this.booking.createCheckoutBooking(userId, input);
   }
@@ -65,14 +61,8 @@ export class RouteService {
   }
 
   async searchRoutes(params: {
-    from: string;
-    to: string;
-    date: string;
-    vehicleType?: string[];
-    departureTime?: string;
-    limit?: number;
-    cursor?: string;
-  }): Promise<{ routes: Route[]; nextCursor: string | null }> {
+    origin: string;
+  }): Promise<Route[]> {
     return this.search.searchRoutes(params);
   }
 }

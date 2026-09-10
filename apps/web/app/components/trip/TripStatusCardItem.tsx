@@ -38,6 +38,12 @@ const TripStatusCardItem = ({
     const arrival = dayjs(item.trip.estimatedArrivalTime);
     const hasDeparted = dayjs().isAfter(item.trip.departureTime);
 
+    const originTitle = item.trip.origin.title;
+    const destinationTitle =
+        item.trip.train_station?.title ??
+        item.trip.destination?.title ??
+        item.trip.dropoffPoint;
+
     const departureTime = departure.format("h:mma");
     const arrivalTime = arrival.format("h:mma");
 
@@ -99,7 +105,7 @@ const TripStatusCardItem = ({
                             </span>
 
                             <span className="text-sm text-muted-foreground whitespace-nowrap">
-                                {item.trip.departureCity.title}
+                                {originTitle}
                             </span>
 
                             <span className="text-sm text-muted-foreground text-center whitespace-nowrap">
@@ -107,7 +113,7 @@ const TripStatusCardItem = ({
                             </span>
 
                             <span className="text-sm text-end text-muted-foreground whitespace-nowrap">
-                                {item.trip.arrivalCity.title}
+                                {destinationTitle}
                             </span>
                         </div>
 

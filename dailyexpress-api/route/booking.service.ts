@@ -2,7 +2,7 @@ import type { CreateBooking } from "@shared/types";
 import { createServiceError } from "@shared/utils";
 import { and, desc, eq, getTableColumns, inArray, lt, ne, notInArray, or } from "drizzle-orm";
 import { db } from "../db/connection";
-import { booking, driver, route, trip, users, vehicle, type BookingRecord } from "../db/index";
+import { booking, driver, route, trip, users, vehicle, type BookingRecord, type RouteRecord } from "../db/index";
 import { logger } from "../utils/logger";
 import {
     formatBusinessDate,
@@ -21,6 +21,28 @@ import {
 } from "./utils";
 
 
+function resolveTripSlot(
+  routeRecord: RouteRecord,
+  { timeMode, selectedTime }: Pick<CreateBooking, "timeMode" | "selectedTime">,
+): { departureTime: string; arrivalTime: string } {
+  const isArrival = timeMode === "arrival";
+  const picked = isArrival ? routeRecord.arrival_time : routeRecord.departure_time;
+  const paired = isArrival ? routeRecord.departure_time : routeRecord.arrival_time;
+
+  // departure_time / arrival_time are parallel: same index = same daily run.
+  const index = picked.indexOf(selectedTime);
+  if (index === -1) {
+    throw createServiceError(
+      `Selected ${timeMode} time is not available for this route`,
+      400,
+    );
+  }
+
+  return isArrival
+    ? { departureTime: paired[index], arrivalTime: selectedTime }
+    : { departureTime: selectedTime, arrivalTime: paired[index] };
+}
+
 export class BookingService {
   constructor(private repo: RouteRepository) {}
 
@@ -36,9 +58,12 @@ export class BookingService {
       throw createServiceError("Route is not open for booking", 400);
     }
 
+    const { departureTime, arrivalTime } =
+      resolveTripSlot(routeRecord, input);
+
     const scheduledDepartureTime = getScheduledDepartureTime(
       input.tripDate,
-      routeRecord.departure_time,
+      departureTime,
     );
     if (scheduledDepartureTime <= new Date()) {
       throw createServiceError(
@@ -49,8 +74,7 @@ export class BookingService {
 
     const { start } = getBusinessDayWindow(input.tripDate);
 
-    const fareAmount =
-      input.vehicleType === "car" ? routeRecord.priceCar : routeRecord.priceBus;
+    const fareAmount = routeRecord.price;
     const feeAmount = routeRecord.fee ?? 0;
 
     const existingBooking = await db.query.booking.findFirst({
@@ -59,6 +83,7 @@ export class BookingService {
         eq(booking.tripDate, start),
         eq(booking.userId, userId),
         eq(booking.vehicleType, input.vehicleType),
+        eq(booking.departureTime, departureTime),
         inArray(booking.status, ["pending", "confirmed"]),
       ),
     });
@@ -66,7 +91,17 @@ export class BookingService {
     if (existingBooking) {
       await db
         .update(booking)
-        .set({ fareAmount, feeAmount, updatedAt: new Date() })
+        .set({
+          departureTime,
+          arrivalTime,
+          boardingPoint: input.boardingPoint,
+          luggageCount: input.luggageCount,
+          seatCount: input.seatCount,
+          phone: input.phone,
+          fareAmount,
+          feeAmount,
+          updatedAt: new Date(),
+        })
         .where(eq(booking.id, existingBooking.id));
 
       logger.info("booking.reused", {
@@ -75,7 +110,15 @@ export class BookingService {
         userId,
       });
       return {
-        booking: { ...existingBooking, fareAmount, feeAmount },
+        booking: {
+          ...existingBooking,
+          departureTime,
+          arrivalTime,
+          boardingPoint: input.boardingPoint,
+          luggageCount: input.luggageCount,
+          fareAmount,
+          feeAmount,
+        },
         fareAmount,
         feeAmount,
         currency: existingBooking.currency,
@@ -87,6 +130,10 @@ export class BookingService {
       [newBooking] = await db.insert(booking).values({
         routeId: routeRecord.id,
         tripDate: start,
+        departureTime,
+        arrivalTime,
+        boardingPoint: input.boardingPoint,
+        luggageCount: input.luggageCount,
         vehicleType: input.vehicleType,
         userId,
         firstName: passengerRecord.firstName,
@@ -106,6 +153,7 @@ export class BookingService {
             eq(booking.tripDate, start),
             eq(booking.userId, userId),
             eq(booking.vehicleType, input.vehicleType),
+            eq(booking.departureTime, departureTime),
             inArray(booking.status, ["pending", "confirmed"]),
           ),
         });
@@ -132,6 +180,9 @@ export class BookingService {
       tripId: newBooking.tripId,
       vehicleType: newBooking.vehicleType,
       seatCount: newBooking.seatCount,
+      departureTime: newBooking.departureTime,
+      boardingPoint: newBooking.boardingPoint,
+      luggageCount: newBooking.luggageCount,
       fareAmount: newBooking.fareAmount,
       feeAmount: newBooking.feeAmount,
     });
@@ -208,7 +259,7 @@ export class BookingService {
         const dateKey = formatBusinessDate(row.trip.date);
         const scheduledDeparture = getScheduledDepartureTime(
           dateKey,
-          row.route.departure_time,
+          row.booking.departureTime,
         );
         const hasDeparted = scheduledDeparture <= new Date();
 
@@ -269,21 +320,24 @@ export class BookingService {
               ),
               route: {
                 id: row.route.id,
-                pickup_location_title: row.route.pickup_location_title,
-                pickup_location_locality:
-                  row.route.pickup_location_locality,
-                pickup_location_label: row.route.pickup_location_label,
-                dropoff_location_title:
-                  row.route.dropoff_location_title,
-                dropoff_location_locality:
-                  row.route.dropoff_location_locality,
-                dropoff_location_label:
-                  row.route.dropoff_location_label,
+                origin_title: row.route.origin_title,
+                origin_locality: row.route.origin_locality,
+                origin_label: row.route.origin_label,
+                destination_title: row.route.destination_title,
+                destination_locality: row.route.destination_locality,
+                destination_label: row.route.destination_label,
+                train_station_title: row.route.train_station_title,
+                train_station_locality: row.route.train_station_locality,
+                train_station_label: row.route.train_station_label,
+                pickup_point: row.route.pickup_point,
+                dropoff_point: row.route.dropoff_point,
                 price: row.booking.fareAmount,
                 vehicle_type: row.booking.vehicleType,
-                meeting_point: row.route.meeting_point,
-                departure_time: row.route.departure_time,
-                arrival_time: row.route.arrival_time,
+                departure_time: row.booking.departureTime,
+                arrival_time: row.booking.arrivalTime,
+                boardingPoint: row.booking.boardingPoint,
+                luggageCount: row.booking.luggageCount,
+                luggage_fee: row.route.luggage_fee,
               },
             }
           : null,

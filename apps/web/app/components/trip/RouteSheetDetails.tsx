@@ -77,6 +77,14 @@ const RouteSheetDetails = ({
   const depTime = parseTimeString(trip.departureTime, timeBaseDate);
   const arrTime = parseTimeString(trip.estimatedArrivalTime, timeBaseDate);
 
+  const originTitle = trip.origin.title;
+  const destinationTitle =
+    trip.train_station?.title ?? trip.destination?.title ?? trip.dropoffPoint;
+  const boardingLabel =
+    trip.boardingPoint === "dropoff"
+      ? trip.dropoffPoint
+      : trip.pickupPoint;
+
   const selectedTripDate = bookingContext
     ? parseLocalDate(bookingContext.tripDate)
     : depTime;
@@ -126,7 +134,7 @@ const RouteSheetDetails = ({
           <DrawerHeader className="sr-only">
             <DrawerTitle>Trip details</DrawerTitle>
             <DrawerDescription>
-              Trip from {trip.departureCity.title} to {trip.arrivalCity.title}
+              Trip from {originTitle} to {destinationTitle}
             </DrawerDescription>
           </DrawerHeader>
 
@@ -211,8 +219,8 @@ const RouteSheetDetails = ({
                       >
                         <div className="px-6 pt-3 pb-5 space-y-1">
                           <h2 className="text-lg font-bold text-neutral-900">
-                            {trip.departureCity.title} to{" "}
-                            {trip.arrivalCity.title}
+                            {originTitle} to{" "}
+                            {destinationTitle}
                           </h2>
                           <p className="text-sm text-neutral-500">
                             {bookingDate}
@@ -234,10 +242,10 @@ const RouteSheetDetails = ({
                             </div>
                             <div className="flex-1 flex flex-col min-w-0 break-words pb-4">
                               <p className="font-semibold text-md text-neutral-900 leading-6">
-                                {trip.departureCity.title}
+                                {originTitle}
                               </p>
                               <p className="text-sm text-neutral-500 mt-0.5">
-                                {trip.departureCity.label}
+                                {trip.origin.label}
                               </p>
                             </div>
                           </div>
@@ -256,7 +264,7 @@ const RouteSheetDetails = ({
                             </div>
                             <div className="flex-1 flex flex-col min-w-0 break-words pb-4">
                               <p className="text-sm font-medium text-neutral-900 leading-6">
-                                {trip.meetingPoint} to board vehicle
+                                {boardingLabel} to board vehicle
                               </p>
                             </div>
                           </div>
@@ -302,10 +310,12 @@ const RouteSheetDetails = ({
                             </div>
                             <div className="flex-1 flex flex-col min-w-0 break-words">
                               <p className="font-semibold text-md text-neutral-900 leading-6">
-                                {trip.arrivalCity.title}
+                                {destinationTitle}
                               </p>
                               <p className="text-sm text-neutral-500 mt-0.5">
-                                {trip.arrivalCity.label}
+                                {trip.train_station?.label ??
+                                  trip.destination?.label ??
+                                  ""}
                               </p>
                             </div>
                           </div>

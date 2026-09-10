@@ -6,6 +6,7 @@ import {
   driver,
   trip,
   vehicle,
+  type RouteRecord,
 } from "../db/index";
 import { paymentRepository } from "../payment/payment.repository";
 import { RouteRepository, routeRepository } from "../route/route.repository";
@@ -27,11 +28,11 @@ export class AdminTripService {
 
     const now = new Date();
     return trips
-      .filter(({ trip: t, route: r }) => {
+      .filter(({ trip: t }) => {
         const dateKey = formatBusinessDate(t.date);
         const scheduledDeparture = getScheduledDepartureTime(
           dateKey,
-          r.departure_time,
+          t.departureTime,
         );
         return scheduledDeparture > now;
       })
@@ -42,59 +43,29 @@ export class AdminTripService {
         bookedSeats: t.bookedSeats,
         status: t.status,
         createdAt: t.createdAt,
-        route: {
-          id: r.id,
-          pickup_location_title: r.pickup_location_title,
-          pickup_location_locality: r.pickup_location_locality,
-          pickup_location_label: r.pickup_location_label,
-          dropoff_location_title: r.dropoff_location_title,
-          dropoff_location_locality: r.dropoff_location_locality,
-          dropoff_location_label: r.dropoff_location_label,
-          departure_time: r.departure_time,
-          arrival_time: r.arrival_time,
-          priceCar: r.priceCar,
-          priceBus: r.priceBus,
-        },
+        route: this.toRouteSummary(r),
       }));
   }
 
-  async getOverdueTrips() {
-    const trips = await this.repo.findTripsWithRoute([
-      eq(trip.status, "awaiting_driver"),
-      isNull(trip.driverId),
-    ]);
-
-    const now = new Date();
-    return trips
-      .filter(({ trip: t, route: r }) => {
-        const dateKey = formatBusinessDate(t.date);
-        const scheduledDeparture = getScheduledDepartureTime(
-          dateKey,
-          r.departure_time,
-        );
-        return scheduledDeparture <= now;
-      })
-      .map(({ trip: t, route: r }) => ({
-        tripId: t.id,
-        date: t.date,
-        capacity: t.capacity,
-        bookedSeats: t.bookedSeats,
-        status: t.status,
-        createdAt: t.createdAt,
-        route: {
-          id: r.id,
-          pickup_location_title: r.pickup_location_title,
-          pickup_location_locality: r.pickup_location_locality,
-          pickup_location_label: r.pickup_location_label,
-          dropoff_location_title: r.dropoff_location_title,
-          dropoff_location_locality: r.dropoff_location_locality,
-          dropoff_location_label: r.dropoff_location_label,
-          departure_time: r.departure_time,
-          arrival_time: r.arrival_time,
-          priceCar: r.priceCar,
-          priceBus: r.priceBus,
-        },
-      }));
+private toRouteSummary(r: RouteRecord) {
+    return {
+      id: r.id,
+      origin_title: r.origin_title,
+      origin_locality: r.origin_locality,
+      origin_label: r.origin_label,
+      destination_title: r.destination_title,
+      destination_locality: r.destination_locality,
+      destination_label: r.destination_label,
+      train_station_title: r.train_station_title,
+      train_station_locality: r.train_station_locality,
+      train_station_label: r.train_station_label,
+      pickup_point: r.pickup_point,
+      dropoff_point: r.dropoff_point,
+      departure_time: r.departure_time,
+      arrival_time: r.arrival_time,
+      price: r.price,
+      luggage_fee: r.luggage_fee,
+    };
   }
 
   async assignPlatformDriver(
@@ -112,7 +83,7 @@ export class AdminTripService {
     if (!tripWithRoute) {
       throw createServiceError("Trip not found", 404);
     }
-    const { trip: tripRecord, route: routeRecord } = tripWithRoute;
+    const { trip: tripRecord } = tripWithRoute;
 
     if (tripRecord.driverId) {
       throw createServiceError("Trip already has a driver assigned", 409);
@@ -127,7 +98,7 @@ export class AdminTripService {
     const dateKey = formatBusinessDate(tripRecord.date);
     const scheduledDeparture = getScheduledDepartureTime(
       dateKey,
-      routeRecord.departure_time,
+      tripRecord.departureTime,
     );
     if (scheduledDeparture <= new Date()) {
       throw createServiceError(
@@ -194,8 +165,8 @@ export class AdminTripService {
           driverId,
           vehicleId,
           tripRecord.date,
-          routeRecord.departure_time,
-          routeRecord.arrival_time,
+          tripRecord.departureTime,
+          tripRecord.arrivalTime,
           tripId,
         );
         if (conflict) {

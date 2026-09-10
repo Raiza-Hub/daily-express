@@ -2,7 +2,7 @@ import type { JWTPayload } from "@shared/types";
 import { createServiceError } from "@shared/utils";
 import { eq } from "drizzle-orm";
 import { db } from "../db/connection";
-import { driver, type RouteRecord, type TripRecord } from "../db/index";
+import { driver, type TripRecord } from "../db/index";
 import {
   formatBusinessDate,
   getScheduledDepartureTime,
@@ -70,15 +70,15 @@ export function isValidUserBookingsCursor(value: unknown): value is { tripDate: 
   );
 }
 
-export function getTripArrivalAt(tripRecord: TripRecord, routeRecord: RouteRecord) {
+export function getTripArrivalAt(tripRecord: TripRecord) {
   const dateKey = formatBusinessDate(tripRecord.date);
   const departureAt = getScheduledDepartureTime(
     dateKey,
-    routeRecord.departure_time,
+    tripRecord.departureTime,
   );
   const arrivalAt = getScheduledDepartureTime(
     dateKey,
-    routeRecord.arrival_time,
+    tripRecord.arrivalTime,
   );
 
   if (arrivalAt <= departureAt) {
