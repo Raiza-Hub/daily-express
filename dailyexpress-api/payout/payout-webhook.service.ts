@@ -43,7 +43,6 @@ export class PayoutWebhookService {
       await this.notificationService.processPayoutFailure(
         payoutRecord,
         this.getWebhookFailureReason(input.event),
-        true,
       );
       return { processed: true, signatureValid };
     }
