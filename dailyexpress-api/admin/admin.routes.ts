@@ -4,7 +4,6 @@ import { requireAppsmithSignature } from "../middleware/appsmithSignature";
 import { validateRequest } from "../middleware/requestValidation";
 import * as adminController from "./admin.controller";
 import { createRouteSchema, updateRouteSchema } from "./validation";
-import zoneRoutes from "../zone/zone.api";
 
 const router: Router = Router();
 
@@ -64,7 +63,5 @@ router.post(
   requireAdminApiKey,
   adminController.refundTripPassengers,
 );
-
-router.use("/zones", zoneRoutes);
 
 export default router;

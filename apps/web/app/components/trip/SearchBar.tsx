@@ -1,41 +1,36 @@
 "use client";
 
+import {
+  CalendarDotsIcon,
+  MagnifyingGlassIcon,
+  MapPinAreaIcon,
+} from "@phosphor-icons/react";
 import { useBodyScrollLock } from "@repo/ui/hooks/use-body-scroll-lock";
 import { useCalendarState } from "@repo/ui/hooks/use-calendar";
 import { useClickOutside } from "@repo/ui/hooks/use-click-outside";
-import { cn } from "@repo/ui/lib/utils";
 import { AnimatePresence } from "framer-motion";
 import { useRouter } from "next/navigation";
-import { useQueryStates } from "nuqs";
 import { useState } from "react";
+import { cn } from "@repo/ui/lib/utils";
 import { formatLocalDate, parseLocalDate } from "~/lib/utils";
 import DepartureDateField from "../DepartureDateField";
 import FromLocationField from "../FromLocationField";
 import MobileCalendarSheet from "../MobileCalendarSheet";
-import { searchParams } from "~/lib/type";
 
-const TripSearchBar = ({
-  className,
+const SearchBar = ({
   initialOrigin,
   initialDate,
+  disabled = false,
 }: {
-  className?: string;
   initialOrigin?: string | null;
   initialDate?: string | null;
+  disabled?: boolean;
 }) => {
-  const [query] = useQueryStates(
-    {
-      origin: searchParams.origin,
-      date: searchParams.date,
-    },
-    {
-      history: "replace",
-    },
-  );
   const [origin, setOrigin] = useState(() => initialOrigin ?? "");
   const calendar = useCalendarState(
-    parseLocalDate(initialDate ?? query.date ?? formatLocalDate(new Date())),
+    parseLocalDate(initialDate ?? formatLocalDate(new Date())),
   );
+  const router = useRouter();
 
   useClickOutside([calendar.desktopRef, calendar.mobileRef], () => {
     calendar.close();
@@ -43,9 +38,9 @@ const TripSearchBar = ({
 
   useBodyScrollLock(calendar.isOpen);
 
-  const isSearchReady = Boolean(origin);
-
-  const router = useRouter();
+  const selectDate = (date: Date) => {
+    calendar.select(date);
+  };
 
   const handleSearch = () => {
     if (!origin) {
@@ -56,32 +51,44 @@ const TripSearchBar = ({
   };
 
   return (
-    <div className={cn("w-full relative", className)}>
-      <div className="flex flex-col lg:flex-row items-stretch gap-2">
+    <>
+      <div
+        className={cn(
+          "flex items-stretch border border-neutral-200 rounded-2xl bg-white",
+          disabled && "pointer-events-none opacity-60",
+        )}
+        aria-disabled={disabled}
+      >
         <FromLocationField
-          id="search-from"
+          id="search-origin"
           value={origin}
           onChange={setOrigin}
+          hideLabel
+          icon={<MapPinAreaIcon className="size-5" weight="duotone" />}
         />
+
+        <div className="w-px bg-neutral-200 self-stretch" aria-hidden="true" />
 
         <DepartureDateField
           value={calendar.date}
           isOpen={calendar.isOpen}
           onToggle={calendar.toggle}
-          onSelect={calendar.select}
+          onSelect={selectDate}
           desktopRef={calendar.desktopRef}
+          hideLabel
+          icon={<CalendarDotsIcon className="size-5" weight="duotone" />}
         />
+
+        <div className="w-px bg-neutral-200 self-stretch" aria-hidden="true" />
 
         <button
           type="button"
-          className={cn(
-            "bg-blue-600 hover:bg-blue-700 text-white px-6 py-3 lg:py-0 rounded-2xl gap-2 font-medium cursor-pointer",
-            !isSearchReady && "opacity-60",
-          )}
-          disabled={!isSearchReady}
+          disabled={!origin || disabled}
           onClick={handleSearch}
+          aria-label="Search routes"
+          className="flex shrink-0 items-center justify-center px-5 bg-blue-600 hover:bg-blue-700 text-white transition-colors rounded-r-2xl disabled:opacity-60 disabled:cursor-not-allowed cursor-pointer"
         >
-          Search
+          <MagnifyingGlassIcon className="size-5" weight="bold" />
         </button>
       </div>
 
@@ -91,12 +98,12 @@ const TripSearchBar = ({
             value={calendar.date}
             mobileRef={calendar.mobileRef}
             onClose={calendar.close}
-            onSelect={calendar.select}
+            onSelect={selectDate}
           />
         ) : null}
       </AnimatePresence>
-    </div>
+    </>
   );
-}
+};
 
-export default TripSearchBar;
+export default SearchBar;

@@ -1,7 +1,11 @@
 /* eslint-disable @next/next/no-img-element */
 "use client";
 
-import { MapPinAreaIcon } from "@phosphor-icons/react";
+import {
+  AirTrafficControlIcon,
+  BusIcon,
+  MapPinAreaIcon,
+} from "@phosphor-icons/react";
 import type { TRoute } from "@repo/types/routeSchema";
 import {
   Drawer,
@@ -36,7 +40,7 @@ const panelVariants: Variants = {
   }),
 };
 
-interface TripDetailsSheetProps {
+interface RouteSheetDetailsProps {
   trip: TRoute;
   open: boolean;
   onOpenChange: (open: boolean) => void;
@@ -46,9 +50,10 @@ interface TripDetailsSheetProps {
   driver?: DriverInfoProps;
   displayMessage?: string | null;
   driverStatus?: string;
+  intermediateStop?: { title: string; locality: string; label: string } | null;
 }
 
-const TripDetailsSheet = ({
+const RouteSheetDetails = ({
   trip,
   open,
   onOpenChange,
@@ -58,7 +63,8 @@ const TripDetailsSheet = ({
   driver,
   displayMessage,
   driverStatus,
-}: TripDetailsSheetProps) => {
+  intermediateStop,
+}: RouteSheetDetailsProps) => {
   const [activeTab, setActiveTab] = useState("trip");
   const scrollContainerRef = useRef<HTMLDivElement>(null);
   const prevTabRef = useRef("trip");
@@ -215,63 +221,91 @@ const TripDetailsSheet = ({
 
                         <div className="px-6 pb-2">
                           <div className="flex gap-4">
-                            <div className="shrink-0 w-14 flex justify-end items-start">
+                            <div className="shrink-0 w-14 flex justify-end items-center h-6">
                               <span className="text-sm font-medium text-neutral-800 select-none leading-none">
                                 {departureTime}
                               </span>
                             </div>
-                            <div className="relative shrink-0 w-5 flex flex-col items-center">
-                              <div className="relative z-10 w-3.5 h-3.5 rounded-full border-2 border-neutral-400 bg-white shrink-0" />
+                            <div className="relative shrink-0 w-5 flex flex-col items-center min-h-[96px]">
+                              <div className="relative h-6 flex items-center">
+                                <div className="w-3.5 h-3.5 rounded-full border-2 border-neutral-400 bg-white shrink-0" />
+                              </div>
                               <div className="flex-1 w-px bg-neutral-300" />
                             </div>
-                            <div className="flex-1 flex flex-col pb-5">
-                              <p className="font-semibold text-md text-neutral-900 leading-none">
+                            <div className="flex-1 flex flex-col min-w-0 break-words pb-4">
+                              <p className="font-semibold text-md text-neutral-900 leading-6">
                                 {trip.departureCity.title}
                               </p>
-                              <p className="text-sm text-neutral-500 mt-1">
-                                {trip.departureCity.label}(
-                                {trip.departureCity.locality})
+                              <p className="text-sm text-neutral-500 mt-0.5">
+                                {trip.departureCity.label}
                               </p>
                             </div>
                           </div>
 
                           <div className="flex gap-4">
                             <div className="shrink-0 w-14" />
-                            <div className="relative shrink-0 w-5 flex flex-col items-center min-h-[90px]">
-                              <div className="w-px bg-neutral-300 flex-1" />
-                              <div className="relative z-10 bg-white py-1 shrink-0">
+                            <div className="relative shrink-0 w-5 flex flex-col items-center min-h-[96px]">
+                              <div className="relative h-6 flex items-center">
+                                <BusIcon
+                                  weight="duotone"
+                                  size={20}
+                                  className="text-neutral-500"
+                                />
+                              </div>
+                              <div className="flex-1 w-px bg-neutral-300" />
+                            </div>
+                            <div className="flex-1 flex flex-col min-w-0 break-words pb-4">
+                              <p className="text-sm font-medium text-neutral-900 leading-6">
+                                {trip.meetingPoint} to board vehicle
+                              </p>
+                            </div>
+                          </div>
+
+                          {intermediateStop ? (
+                            <div className="flex gap-4">
+                              <div className="shrink-0 w-14" />
+                              <div className="relative shrink-0 w-5 flex flex-col items-center min-h-[96px]">
+                                <div className="relative h-6 flex items-center">
+                                  <AirTrafficControlIcon
+                                    weight="duotone"
+                                    size={20}
+                                    className="text-neutral-500"
+                                  />
+                                </div>
+                                <div className="flex-1 w-px bg-neutral-300" />
+                              </div>
+                              <div className="flex-1 flex flex-col min-w-0 break-words pb-4">
+                                <p className="font-semibold text-md text-neutral-900 leading-6">
+                                  {intermediateStop.title}
+                                </p>
+                                <p className="text-sm text-neutral-500 mt-0.5">
+                                  {intermediateStop.label}
+                                </p>
+                              </div>
+                            </div>
+                          ) : null}
+
+                          <div className="flex gap-4">
+                            <div className="shrink-0 w-14 flex justify-end items-center h-6">
+                              <span className="text-sm font-medium text-neutral-800 select-none leading-none">
+                                {arrivalTime}
+                              </span>
+                            </div>
+                            <div className="relative shrink-0 w-5 flex flex-col items-center">
+                              <div className="relative h-6 flex items-center">
                                 <MapPinAreaIcon
                                   weight="duotone"
                                   size={20}
                                   className="text-neutral-500"
                                 />
                               </div>
-                              <div className="w-px bg-neutral-300 flex-1" />
                             </div>
-                            <div className="flex-1 flex items-center py-4">
-                              <p className="text-sm font-medium text-neutral-900">
-                                {trip.meetingPoint} to board vehicle
-                              </p>
-                            </div>
-                          </div>
-
-                          <div className="flex gap-4">
-                            <div className="shrink-0 w-14 flex justify-end items-end">
-                              <span className="text-sm font-medium text-neutral-800 select-none leading-none">
-                                {arrivalTime}
-                              </span>
-                            </div>
-                            <div className="relative shrink-0 w-5 flex flex-col items-center">
-                              <div className="w-px bg-neutral-300 flex-1" />
-                              <div className="relative z-10 w-3.5 h-3.5 rounded-full border-2 border-neutral-400 bg-white shrink-0" />
-                            </div>
-                            <div className="flex-1 flex flex-col justify-end pt-5">
-                              <p className="font-semibold text-md text-neutral-900 leading-none">
+                            <div className="flex-1 flex flex-col min-w-0 break-words">
+                              <p className="font-semibold text-md text-neutral-900 leading-6">
                                 {trip.arrivalCity.title}
                               </p>
-                              <p className="text-sm text-neutral-500 mt-1">
-                                {trip.arrivalCity.label}(
-                                {trip.arrivalCity.locality})
+                              <p className="text-sm text-neutral-500 mt-0.5">
+                                {trip.arrivalCity.label}
                               </p>
                             </div>
                           </div>
@@ -320,4 +354,4 @@ const TripDetailsSheet = ({
   );
 };
 
-export default TripDetailsSheet;
+export default RouteSheetDetails;
