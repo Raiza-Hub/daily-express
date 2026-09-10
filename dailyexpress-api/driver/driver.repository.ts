@@ -1,6 +1,6 @@
 import { and, desc, eq, inArray, ne, notInArray } from "drizzle-orm";
 import { db } from "../db/connection";
-import { driver, driverStats, trip, vehicle, type DriverRecord, type DriverStatsRecord, type VehicleRecord } from "../db/index";
+import { driver, trip, vehicle, type DriverRecord, type VehicleRecord } from "../db/index";
 import type { DbTransaction } from "../db/connection";
 
 type DriverTransaction = DbTransaction;
@@ -19,23 +19,12 @@ export class DriverRepository {
     return (await db.query.driver.findFirst({ where: and(...conditions) })) ?? null;
   }
 
-  async findDriverStatsByDriverId(driverId: string): Promise<DriverStatsRecord | null> {
-    return (await db.query.driverStats.findFirst({ where: eq(driverStats.driverId, driverId) })) ?? null;
-  }
-
   async insertDriver(
     tx: DriverTransaction,
     values: typeof driver.$inferInsert,
   ): Promise<DriverRecord> {
     const [created] = await tx.insert(driver).values(values).returning();
     return created;
-  }
-
-  async insertDriverStats(
-    tx: DriverTransaction,
-    values: typeof driverStats.$inferInsert,
-  ): Promise<void> {
-    await tx.insert(driverStats).values(values);
   }
 
   async updateDriver(

@@ -1,5 +1,5 @@
 import { createHash } from "node:crypto";
-import type { Driver, DriverStats, UpdateProfileRequest } from "@shared/types";
+import type { Driver, UpdateProfileRequest } from "@shared/types";
 import { db } from "../db/connection";
 import { driver } from "../db/index";
 import { createServiceError, sanitizeInput } from "@shared/utils";
@@ -36,10 +36,6 @@ export class DriverProfileService {
               kycType: null,
               kycId: null,
             } as typeof driver.$inferInsert);
-
-            await this.repo.insertDriverStats(tx, {
-              driverId: createdDriver.id,
-            });
 
             return {
               driver: createdDriver,
@@ -185,14 +181,6 @@ export class DriverProfileService {
       );
       throw error;
     }
-  }
-
-  async getDriverStats(driverId: string): Promise<DriverStats> {
-    const stats = await this.repo.findDriverStatsByDriverId(driverId);
-    if (!stats) {
-      throw createServiceError("Driver stats not found", 404);
-    }
-    return stats;
   }
 
   private sanitizeProfileData(

@@ -81,16 +81,6 @@ export interface DriverPublicProfile {
   state: string;
 }
 
-export interface DriverStats {
-  id: string;
-  driverId: string;
-  totalEarnings: number;
-  pendingPayments: number;
-  totalPassengers: number;
-  createdAt: Date;
-  updatedAt: Date;
-}
-
 export interface UpdateProfileRequest {
   firstName?: string;
   lastName?: string;

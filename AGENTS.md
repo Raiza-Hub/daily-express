@@ -120,11 +120,22 @@ Email background processing moved off pg-boss to **Cloudflare Queues + Workers**
 - `config/index.ts`: added optional `CLOUDFLARE_ACCOUNT_ID`/`CLOUDFLARE_EMAIL_QUEUE_ID`/`CLOUDFLARE_API_TOKEN`; documented in `.env.example`. API-level AWS SES vars (`AWS_REGION`/`AWS_ACCESS_KEY_ID`/`AWS_SECRET_ACCESS_KEY`/`EMAIL_FROM`) retained in schema but now unused by the API (the CF worker holds its own SES secrets).
 - Verified: `tsc --noEmit` (dailyexpress-api, shared) + `tsc --noEmit` (workers) + turbo `check-types` all pass; grep for `enqueueEmail`/`EMAIL_SEND`/`MailService`/`mail.service`/`registerEmailWorker` residuals returns zero.
 
+### Phase 10 — Remove the `driver_stats` table + implementation entirely (COMPLETE 2026-09-10)
+The `driver_stats` aggregation table is dead end-to-end. The `GET /driver/stats` endpoint + `useGetDriverStats` hook were already unused by any UI (no `StatsCard` exists); nothing reads the table except the removed endpoint. Stats are computed on demand from `earning`/`trip` rows (e.g. `getDailyTripSummaries`) instead.
+- Deleted `driver/driver-stats.service.ts` (all 3 methods: `decrementStatsForCancelledBooking`, `recordPayoutForDriver`, `adjustPaymentCountersForStatusChange`).
+- `db/driver-schema.ts`: removed `driverStats` table + `DriverStats`/`DriverStatsRecord` types (pruned `bigint`/`integer` imports). `db/index.ts`: dropped `DriverStatsRecord` export.
+- `driver/driver.repository.ts`: removed `findDriverStatsByDriverId` + `insertDriverStats`. `driver/driver-profile.service.ts`: removed the `insertDriverStats` call in `createDriver` (tx still returns driver) + `getDriverStats`. `driver/driver.service.ts`: removed `statsService` field and `getDriverStats`/`decrementStatsForCancelledBooking`/`recordPayoutForDriver`/`adjustPaymentCountersForStatusChange`. `driver/driver.controller.ts` + `driver/driver.routes.ts`: removed `getDriverStats` handler + `GET /stats` route.
+- Write-sites cleaned: `route/booking-finalizer.service.ts` (dropped stats UPDATE, kept earning insert + comment fix); `payment/payment-payout-refund.service.ts` (dropped `resolveAndCancelBookingStats` + `adjustPaymentCountersForStatusChange` calls, kept earning-cancel + trip `bookedSeats` updates); `payout/payout-settlement.service.ts` (dropped `adjustPaymentCountersForStatusChange` + `recordPayoutForDriver` in `finalizePayout`, kept payout→success + earnings→paid).
+- `shared/types/index.ts`: removed `DriverStats`. `packages/api/src/hooks/driver.ts`: removed `DriverStats`/`getDriverStatsFn`/`useGetDriverStats`.
+- Migration `dailyexpress-api/db/migrations/0026_drop_driver_stats.sql` (NOT YET APPLIED): `DROP TABLE IF EXISTS "driver_stats";` — destroys historical per-driver totals; confirmed acceptable (data not surfaced anywhere).
+- Verified: `tsc --noEmit` for dailyexpress-api + shared clean on touched files (4 pre-existing `route/route.service.ts` departure_time errors + `web#check-types` string[] errors remain at baseline); turbo `check-types` for types/api/ui/drivers pass; grep for `driverStats`/`driver_stats`/`DriverStats`/`getDriverStats` residuals in source returns zero.
+
 ### In Progress
 - Phase 9, Part A is code-complete but **not deployed/live-verified**. Blocked on user verification + live Cloudflare deployment of the `workers/` consumer (queue create, worker deploy, SES secrets) and wiring runtime CF env vars into dailyexpress-api. Part B (moving refund processing to CF) is unplanned until Part A is verified.
 
 ### Blocked
 - Migrations `0021_drop_zone.sql` and `0022_drop_notification.sql` not applied anywhere (needs a running DB; Docker quit; prod via `railway connect Postgres` when ready). `0021` must run before `0022`'s `DROP TABLE notification` is irrelevant to zone, but apply in order 0020 → 0021 → 0022.
+- Migration `0026_drop_driver_stats.sql` not applied anywhere (needs a running DB; prod via `railway connect Postgres` when ready). Dropping the table destroys historical per-driver `totalEarnings`/`pendingPayments`/`totalPassengers` — accepted (surfaced nowhere).
 - Phase 9, Part A deploy: Cloudflare account/queue/worker create + secret binding (SES region/keys, `EMAIL_FROM`) + dailyexpress-api runtime env (`CLOUDFLARE_ACCOUNT_ID`, `CLOUDFLARE_EMAIL_QUEUE_ID`, `CLOUDFLARE_API_TOKEN`) not yet configured.
 
 ## Prod Migration Notes (0014)
@@ -153,6 +164,7 @@ Email background processing moved off pg-boss to **Cloudflare Queues + Workers**
 - Frontend "Retry Payout" button shows iff the trip's latest `payoutStatus === "failed"` (retry creates a new payout row; `pending`/`processing`/`success` are reused/terminal and not retryable).
 - `in_review_payments`: column dropped; "In Review" card stays with hardcoded `formatCurrency(0)`.
 - Phase 8 (user-confirmed): remove notification module completely. Emails (PayoutFailedEmail) and driver-side state transitions (bank/kyc statuses, payout/earning statuses, driver_stats) are unaffected.
+- Phase 10: `driver_stats` table dropped; per-driver totals are computed on demand from `earning`/`trip` rows (`getDailyTripSummaries`) — no replacement aggregation table.
 - Phase 9, Part A: email dispatch is a single post-commit `sendEmailToQueue` push to a Cloudflare Queue (`email-send`); the CF worker is the only SES sender (structured SESv2 via `aws4fetch`, not raw MIME). No pg-boss email path, no outbox, no KV dedupe, no in-worker throttle. `max_batch_size: 2` is the only rate limiter. Crash between DB-commit and CF push loses that email (accepted).
 
 ## Relevant Files
@@ -160,6 +172,7 @@ Email background processing moved off pg-boss to **Cloudflare Queues + Workers**
 - `dailyexpress-api/db/migrations/0014_aggregate_payouts_per_trip.sql` — Migration: payout column drops/adds, index swaps, `driver_stats` column drop, `earning_status` enum drop-value note.
 - `dailyexpress-api/db/migrations/0015_immutable_payouts.sql` — Migration: drop unique/retry indexes, drop `payout_attempt`, drop retry columns, `permanent_failed → failed`, `payout_status` enum type-swap.
 - `dailyexpress-api/db/migrations/0022_drop_notification.sql` — Migration: `DROP TABLE notification` + `DROP TYPE notification_tone` (not yet applied).
+- `dailyexpress-api/db/migrations/0026_drop_driver_stats.sql` — Migration: `DROP TABLE driver_stats` (destroys historical per-driver aggregates; not yet applied).
 - `dailyexpress-api/payout/payout-settlement.service.ts` — `verifyWithProvider` + `finalizePayout` (replaces `payout-attempt.service.ts`).
 - `dailyexpress-api/mail/email-dispatcher.service.ts` — `sendEmailToQueue` + `EmailToSend`; Cloudflare Queues REST push (Phase 9 Part A).
 - `workers/` — Cloudflare Worker package: `src/consumer.ts`, `package.json`, `tsconfig.json`, `wrangler.jsonc` (consumes `email-send`, DLQ `email-send-dlq`, SESv2 via `aws4fetch`) (Phase 9 Part A).
@@ -168,20 +181,23 @@ Email background processing moved off pg-boss to **Cloudflare Queues + Workers**
 - `dailyexpress-api/payout/payout-attempt.service.ts` — attempt table/service removed.
 - `dailyexpress-api/notification/` (entire dir), `dailyexpress-api/db/notification-schema.ts`, `packages/api/src/hooks/notification.ts` — notification module + schema + hooks (Phase 8).
 - `dailyexpress-api/workers/email.worker.ts` + `dailyexpress-api/mail/mail.service.ts` — pg-boss email consumer + raw-MIME SESv2 sender (Phase 9 Part A).
+- `dailyexpress-api/driver/driver-stats.service.ts` — `driver_stats` read/write service (Phase 10).
 
 ### Edited
 - `dailyexpress-api/db/payout-schema.ts` — payout/earning schema (tripId, removed cols/enums, removed attempt table, 4-value payout_status).
-- `dailyexpress-api/db/driver-schema.ts` — removed `inReviewPayments` from driver_stats.
+- `dailyexpress-api/db/driver-schema.ts` — removed `inReviewPayments` from driver_stats (Phase 5); removed the `driver_stats` table + `DriverStats`/`DriverStatsRecord` types entirely (Phase 10).
 - `dailyexpress-api/workers/boss.ts`, `job.service.ts`, `payout.worker.ts`, `driver-verification.worker.ts` — trip-keyed jobs, removed re-enqueue (Phase 8: verification worker is status-only). Phase 9 Part A: removed `enqueueEmail` (job.service) + `EMAIL_SEND`/`EMAIL_SEND_DLQ` queues (boss).
 - `dailyexpress-api/payout/` — `payout.repository.ts`, `earning.service.ts`, `payout.service.ts`, `payout-processor.service.ts`, `payout-notification.service.ts`, `payout-webhook.service.ts` — immutable single-attempt flow (Phase 8: notification plumbing stripped from processor/settlement/webhook; `payout-notification.service.ts` is email-only). Phase 9 Part A: payout_failed dispatched post-commit via `sendEmailToQueue`.
+- `dailyexpress-api/payout/payout-settlement.service.ts` — Phase 8: notification plumbing removed from `finalizePayout`. Phase 10: dropped `adjustPaymentCountersForStatusChange` + `recordPayoutForDriver` from `finalizePayout`.
 - `dailyexpress-api/route/trip.service.ts` — re-completion guard + latest `payoutStatus` in `getDailyTripSummaries`.
-- `dailyexpress-api/route/booking-finalizer.service.ts` — booking_confirmed dispatched post-commit (Phase 9 Part A).
+- `dailyexpress-api/route/booking-finalizer.service.ts` — booking_confirmed dispatched post-commit (Phase 9 Part A); dropped the driver_stats UPDATE (kept earning insert) (Phase 10).
 - `dailyexpress-api/auth/auth.service.ts` — verify_otp/reset_password dispatched post-commit (Phase 9 Part A).
 - `dailyexpress-api/admin/admin-trip.service.ts` — removed driver-assigned emails (both external + platform) (Phase 9 Part A).
-- `dailyexpress-api/payment/payment-payout-refund.service.ts` + `workers/trip-refund.worker.ts` — refund/trip_cancelled emails dispatched post-commit; send methods `return EmailToSend | null` (Phase 9 Part A).
-- `dailyexpress-api/driver/driver-stats.service.ts` + `driver/driver.service.ts` — removed manual_review + inReviewPayments.
+- `dailyexpress-api/payment/payment-payout-refund.service.ts` + `workers/trip-refund.worker.ts` — refund/trip_cancelled emails dispatched post-commit; send methods `return EmailToSend | null` (Phase 9 Part A). Phase 10: dropped `resolveAndCancelBookingStats` + stats calls from refund paths.
+- `dailyexpress-api/driver/driver.service.ts` — removed manual_review + inReviewPayments (Phase 5); removed `statsService` field + all stats wrapper methods (Phase 10).
 - `dailyexpress-api/config/index.ts` — removed payout retry delay env vars; added optional Cloudflare queue/token vars (Phase 9 Part A).
-- `dailyexpress-api/db/index.ts` + `dailyexpress-api/index.ts` — removed notification schema + routes/SSE mounts (Phase 8).
-- `dailyexpress-api/driver/driver-profile.service.ts` — removed pending-verification notification creation (Phase 8).
-- `shared/types/index.ts` + `packages/api/src/hooks/driver.ts` + `packages/api/src/hooks/booking.ts` — type cleanup + `payoutStatus` in trip summaries (Phase 8: shared notification/push types + unused zod import removed, `notificationApi` + hook export removed from packages/api).
+- `dailyexpress-api/db/index.ts` + `dailyexpress-api/index.ts` — removed notification schema + routes/SSE mounts (Phase 8); dropped `DriverStatsRecord` export (Phase 10).
+- `dailyexpress-api/driver/driver-profile.service.ts` — removed pending-verification notification creation (Phase 8); removed `insertDriverStats` in `createDriver` + `getDriverStats` (Phase 10).
+- `dailyexpress-api/driver/driver.repository.ts` — removed `findDriverStatsByDriverId` + `insertDriverStats` (Phase 10). `dailyexpress-api/driver/driver.controller.ts` + `driver.routes.ts` — removed `getDriverStats` handler + `GET /stats` route (Phase 10).
+- `shared/types/index.ts` + `packages/api/src/hooks/driver.ts` + `packages/api/src/hooks/booking.ts` — type cleanup + `payoutStatus` in trip summaries (Phase 8: shared notification/push types + unused zod import removed, `notificationApi` + hook export removed from packages/api). Phase 10: removed `DriverStats`/`getDriverStatsFn`/`useGetDriverStats` from shared types + hooks/driver.ts.
 - `apps/drivers/app/components/route/RouteCardItem.tsx`, `RouteCard.tsx`, `apps/drivers/app/lib/type.ts`, `apps/drivers/app/components/StatsCard.tsx`, `apps/drivers/app/components/PayoutTable.tsx` — retry button, hardcoded In Review, simplified status display.

@@ -145,34 +145,3 @@ export const useDeactivateDriver = (options?: {
     ...options,
   });
 };
-
-export interface DriverStats {
-  id: string;
-  driverId: string;
-  totalEarnings: number;
-  pendingPayments: number;
-  totalPassengers: number;
-  createdAt: string;
-  updatedAt: string;
-}
-
-export const getDriverStatsFn = async (): Promise<DriverStats> => {
-  try {
-    const response =
-      await driverApi.get<ApiResponse<DriverStats>>("/stats");
-    if (!response.data.success || !response.data.data) {
-      throw new Error(response.data.error || "Failed to get driver stats");
-    }
-    return response.data.data;
-  } catch (err) {
-    return handleApiError(err, "Failed to get driver stats") as never;
-  }
-};
-
-export const useGetDriverStats = (options?: { enabled?: boolean }) => {
-  return useQuery({
-    queryKey: ["driverStats"],
-    queryFn: getDriverStatsFn,
-    enabled: options?.enabled ?? true,
-  });
-};

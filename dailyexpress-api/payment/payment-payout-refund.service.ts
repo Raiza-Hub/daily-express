@@ -3,7 +3,6 @@ import { and, eq, gt, sql } from "drizzle-orm";
 import { getConfig } from "../config/index";
 import { db } from "../db/connection";
 import { booking, earning, payment, refund, trip } from "../db/index";
-import { driverService as sharedDriverService } from "../driver/driver.service";
 import { logger } from "../utils/logger";
 import { enqueueEmail, type EmailToSend } from "../mail/email-dispatcher.service";
 import { koraClient, KoraClient } from "./kora.client";
@@ -236,29 +235,10 @@ export class PaymentPayoutRefundService {
               );
           }
 
-          const earningRecord = await tx.query.earning.findFirst({
-            where: eq(earning.bookingId, paymentRecord.bookingId),
-          });
-
           await tx
             .update(earning)
             .set({ status: "cancelled", updatedAt: new Date() })
             .where(eq(earning.bookingId, paymentRecord.bookingId));
-
-          if (wasConfirmed) {
-            await this.resolveAndCancelBookingStats(
-              tx,
-              bookingRecord,
-              earningRecord,
-            );
-          } else if (earningRecord) {
-            await sharedDriverService.adjustPaymentCountersForStatusChange(tx, {
-              driverId: earningRecord.driverId,
-              amount: earningRecord.amount,
-              previousStatus: earningRecord.status,
-              nextStatus: "cancelled",
-            });
-          }
         }
       }
 
@@ -334,29 +314,10 @@ export class PaymentPayoutRefundService {
         bookingRecord &&
         bookingRecord.status === "confirmed"
       ) {
-        const earningRecord = await tx.query.earning.findFirst({
-          where: eq(earning.bookingId, bookingRecord.id),
-        });
-
         await tx
           .update(earning)
           .set({ status: "cancelled", updatedAt: new Date() })
           .where(eq(earning.bookingId, bookingRecord.id));
-
-        if (status === "refunded") {
-          await this.resolveAndCancelBookingStats(
-            tx,
-            bookingRecord,
-            earningRecord,
-          );
-        } else if (earningRecord) {
-          await sharedDriverService.adjustPaymentCountersForStatusChange(tx, {
-            driverId: earningRecord.driverId,
-            amount: earningRecord.amount,
-            previousStatus: earningRecord.status,
-            nextStatus: "cancelled",
-          });
-        }
 
         if (bookingRecord.tripId) {
           await tx
@@ -499,37 +460,6 @@ export class PaymentPayoutRefundService {
       subject,
       html,
     };
-  }
-
-  private async resolveAndCancelBookingStats(
-    tx: PaymentTransaction,
-    bookingRecord: BookingRecord,
-    existingEarning?: typeof earning.$inferSelect | null,
-  ) {
-    const earningRecord =
-      existingEarning ??
-      (await tx.query.earning.findFirst({
-        where: eq(earning.bookingId, bookingRecord.id),
-      }));
-    const driverId =
-      earningRecord?.driverId ??
-      (bookingRecord.tripId
-        ? (
-            await tx.query.trip.findFirst({
-              where: eq(trip.id, bookingRecord.tripId),
-              columns: { driverId: true },
-            })
-          )?.driverId
-        : undefined);
-
-    if (!driverId) return;
-
-    await sharedDriverService.decrementStatsForCancelledBooking(tx, {
-      driverId,
-      amount:
-        earningRecord?.amount ?? bookingRecord.fareAmount,
-      previousEarningStatus: earningRecord?.status ?? null,
-    });
   }
 }
 

@@ -2,7 +2,6 @@ import { and, eq, inArray } from "drizzle-orm";
 import { db } from "../db/connection";
 import { earning, payout as payoutTable } from "../db/index";
 import { koraClient } from "../payment/kora.client";
-import { driverService as sharedDriverService } from "../driver/driver.service";
 import type { KoraPayoutHistoryItem } from "../payment/payment.types";
 import type { PayoutRecord } from "../db/index";
 
@@ -14,7 +13,6 @@ export type PayoutVerificationOutcome =
 
 export class PayoutSettlementService {
   private readonly kora = koraClient;
-  private readonly driverService = sharedDriverService;
 
   async verifyWithProvider(
     payout: PayoutRecord,
@@ -76,15 +74,6 @@ export class PayoutSettlementService {
         })
         .where(eq(payoutTable.id, lockedPayout.id));
 
-      const tripEarnings = payout.tripId
-        ? await tx.query.earning.findMany({
-            where: and(
-              eq(earning.tripId, payout.tripId),
-              inArray(earning.status, ["available", "processing"]),
-            ),
-          })
-        : [];
-
       if (payout.tripId) {
         await tx
           .update(earning)
@@ -100,24 +89,6 @@ export class PayoutSettlementService {
             ),
           );
       }
-
-      if (tripEarnings.length > 0) {
-        const totalAmount = tripEarnings.reduce(
-          (sum, entry) => sum + entry.amount,
-          0,
-        );
-        await this.driverService.adjustPaymentCountersForStatusChange(tx, {
-          driverId: payout.driverId,
-          amount: totalAmount,
-          previousStatus: "processing",
-          nextStatus: "paid",
-        });
-      }
-
-      await this.driverService.recordPayoutForDriver(tx, {
-        driverId: payout.driverId,
-        amount: payout.amount,
-      });
     });
   }
 }

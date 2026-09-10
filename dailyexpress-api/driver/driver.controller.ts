@@ -117,47 +117,6 @@ export const deactivateDriver: RequestHandler = asyncHandler(
   },
 );
 
-export const getDriverStats: RequestHandler = asyncHandler(
-  async (req: Request, res: Response) => {
-    const gatewayUser = getAuthenticatedUser(req);
-    const userId = gatewayUser?.userId;
-
-    if (!userId) {
-      return sendErrorResponse(res, 401, "Please sign in again to continue.", {
-        code: "AUTHENTICATION_REQUIRED",
-      });
-    }
-
-    const driver = await timeAsync(
-      "driver.stats.profile_lookup",
-      { userId },
-      () => driverService.getProfile(userId),
-    );
-    if (!driver) {
-      return sendErrorResponse(
-        res,
-        404,
-        "We could not find your driver profile.",
-        {
-          code: "DRIVER_NOT_FOUND",
-        },
-      );
-    }
-
-    const stats = await timeAsync(
-      "driver.stats.service",
-      { driverId: driver.id },
-      () => driverService.getDriverStats(driver.id),
-    );
-
-    return res
-      .status(200)
-      .json(
-        createSuccessResponse(stats, "Driver stats retrieved successfully"),
-      );
-  },
-);
-
 // --- Profile Picture (R2 presigned URL) ---
 
 export const presignProfileUpload: RequestHandler = asyncHandler(
