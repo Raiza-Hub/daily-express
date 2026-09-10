@@ -1,15 +1,13 @@
-import { getEmailSubject, renderEmail } from "@repo/email";
 import { createServiceError } from "@shared/utils";
 import { eq, isNull } from "drizzle-orm";
 import { getConfig } from "../config/index";
-import { db, type DbTransaction } from "../db/connection";
+import { db } from "../db/connection";
 import {
   driver,
   externalDriver as externalDriverTable,
   trip,
   vehicle,
 } from "../db/index";
-import { driverRepository } from "../driver/driver.repository";
 import { paymentRepository } from "../payment/payment.repository";
 import { RouteRepository, routeRepository } from "../route/route.repository";
 import { logger } from "../utils/logger";
@@ -161,7 +159,7 @@ export class AdminTripService {
         );
       }
 
-      // Lock the trip row to serialize against concurrent assignExternalDriver / claimTrip
+      // Lock the trip row to serialize against concurrent driver assignment
       const lockedTrip = await this.repo.lockTrip(tx, tripId);
       if (!lockedTrip) {
         throw createServiceError("Trip not found", 404);
@@ -210,6 +208,7 @@ export class AdminTripService {
           vehicleId,
           tripRecord.date,
           routeRecord.departure_time,
+          routeRecord.arrival_time,
           tripId,
         );
         if (conflict) {
@@ -236,8 +235,6 @@ export class AdminTripService {
       if (!updated) {
         throw createServiceError("Failed to assign driver to trip", 500);
       }
-
-      await this.sendDriverAssignedEmail(tx, tripId, driverId, vehicleId);
     });
 
     const updatedTrip = await this.repo.findTripById(tripId);
@@ -325,8 +322,6 @@ export class AdminTripService {
         driverClaimedAt: new Date(),
         updatedAt: new Date(),
       });
-
-      await this.sendDriverAssignedExternalEmail(tx, tripId, data);
     });
 
     const externalDriver = await this.repo.findExternalDriverByTripId(tripId);
@@ -336,71 +331,6 @@ export class AdminTripService {
       adminEmail,
     });
     return { trip: tripRecord, externalDriver };
-  }
-
-  private async sendDriverAssignedExternalEmail(
-    tx: DbTransaction,
-    tripId: string,
-    data: {
-      firstName: string;
-      lastName: string;
-      phone: string;
-      vehicleMake?: string;
-      vehicleModel?: string;
-      vehiclePlateNumber?: string;
-      vehicleColor?: string;
-    },
-  ) {
-    const tripWithRoute = await this.repo.findTripWithRoute(tripId);
-    if (!tripWithRoute) return;
-
-    const { route: routeRecord } = tripWithRoute;
-    const successfulBookings =
-      await this.repo.findSuccessfulBookingsByTripId(tripId);
-
-    if (successfulBookings.length === 0) {
-      throw createServiceError(
-        "No successful bookings found for this trip",
-        400,
-      );
-    }
-
-    const config = getConfig();
-    const dateKey = formatBusinessDate(tripWithRoute.trip.date);
-
-    const userIds = successfulBookings.map((b) => b.userId);
-    const users =
-      userIds.length > 0 ? await this.repo.findUsersByIds(userIds) : [];
-    const userByUserId = new Map(users.map((u) => [u.id, u]));
-
-    for (const bk of successfulBookings) {
-      const passengerUser = userByUserId.get(bk.userId);
-      if (!passengerUser?.email) continue;
-
-      const propsJson = JSON.stringify({
-        frontendUrl: config.FRONTEND_URL,
-        passengerName: `${bk.firstName} ${bk.lastName}`,
-        driverName: `${data.firstName} ${data.lastName}`.trim(),
-        driverPhone: data.phone,
-        vehicleMake: data.vehicleMake ?? "",
-        vehicleModel: data.vehicleModel ?? "",
-        vehiclePlateNumber: data.vehiclePlateNumber ?? "",
-        vehicleColor: data.vehicleColor ?? "",
-        pickupTitle: routeRecord.pickup_location_title,
-        dropoffTitle: routeRecord.dropoff_location_title,
-        departureTime: routeRecord.departure_time,
-        tripDate: dateKey,
-        timeZone: "Africa/Lagos",
-      });
-
-      const html = await renderEmail("DriverAssignedEmail", propsJson);
-
-      await jobService.enqueueEmail(tx, "email.driver_assigned", {
-        to: passengerUser.email,
-        subject: getEmailSubject("DriverAssignedEmail", propsJson),
-        html,
-      });
-    }
   }
 
   async refundTripPassengers(
@@ -474,85 +404,6 @@ export class AdminTripService {
       tripId: result.tripId,
       message: result.message,
     };
-  }
-
-  private async sendDriverAssignedEmail(
-    tx: DbTransaction,
-    tripId: string,
-    driverId: string,
-    vehicleId?: string,
-  ) {
-    const tripWithRoute = await this.repo.findTripWithRoute(tripId);
-    if (!tripWithRoute) return;
-
-    const { route: routeRecord } = tripWithRoute;
-    const successfulBookings =
-      await this.repo.findSuccessfulBookingsByTripId(tripId);
-
-    if (successfulBookings.length === 0) {
-      throw createServiceError(
-        "No successful bookings found for this trip",
-        400,
-      );
-    }
-
-    const driverRecord = await this.repo.findDriverById(driverId);
-    if (!driverRecord) return;
-
-    const userRecord = await this.repo.findUserById(driverRecord.userId);
-    if (!userRecord) return;
-
-    let vehicleMake = "";
-    let vehicleModel = "";
-    let vehiclePlateNumber = "";
-    let vehicleColor = "";
-
-    if (vehicleId) {
-      const vehicleRecord = await driverRepository.findVehicleById(vehicleId);
-      if (vehicleRecord) {
-        vehicleMake = vehicleRecord.make;
-        vehicleModel = vehicleRecord.model;
-        vehiclePlateNumber = vehicleRecord.plateNumber;
-        vehicleColor = vehicleRecord.color;
-      }
-    }
-
-    const config = getConfig();
-    const dateKey = formatBusinessDate(tripWithRoute.trip.date);
-
-    const userIds = successfulBookings.map((b) => b.userId);
-    const users =
-      userIds.length > 0 ? await this.repo.findUsersByIds(userIds) : [];
-    const userByUserId = new Map(users.map((u) => [u.id, u]));
-
-    for (const bk of successfulBookings) {
-      const passengerUser = userByUserId.get(bk.userId);
-      if (!passengerUser?.email) continue;
-
-      const propsJson = JSON.stringify({
-        frontendUrl: config.FRONTEND_URL,
-        passengerName: `${bk.firstName} ${bk.lastName}`,
-        driverName: `${userRecord.firstName} ${userRecord.lastName}`,
-        driverPhone: driverRecord.phone,
-        vehicleMake,
-        vehicleModel,
-        vehiclePlateNumber,
-        vehicleColor,
-        pickupTitle: routeRecord.pickup_location_title,
-        dropoffTitle: routeRecord.dropoff_location_title,
-        departureTime: routeRecord.departure_time,
-        tripDate: dateKey,
-        timeZone: "Africa/Lagos",
-      });
-
-      const html = await renderEmail("DriverAssignedEmail", propsJson);
-
-      await jobService.enqueueEmail(tx, "email.driver_assigned", {
-        to: passengerUser.email,
-        subject: getEmailSubject("DriverAssignedEmail", propsJson),
-        html,
-      });
-    }
   }
 }
 

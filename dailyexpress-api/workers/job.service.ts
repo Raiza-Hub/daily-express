@@ -1,19 +1,12 @@
 import { sql, type SQL } from "drizzle-orm";
 import {
   QUEUES,
-  type DriverVerificationJobData,
   type PayoutProcessJobData,
   type TripRefundJobData,
 } from "./boss";
 
 type JobExecutor = {
   execute(query: SQL): Promise<unknown>;
-};
-
-type EmailJobPayload = {
-  to: string;
-  subject: string;
-  html: string;
 };
 
 function toPgTimestamp(value?: Date) {
@@ -66,21 +59,6 @@ export class JobService {
       FROM pgboss.queue q
       WHERE q.name = ${queueName}
     `);
-  }
-
-  async enqueueEmail(
-    tx: JobExecutor,
-    emailName: `email.${string}`,
-    payload: EmailJobPayload,
-  ) {
-    await this.enqueue(tx, QUEUES.EMAIL_SEND, { emailName, ...payload });
-  }
-
-  async enqueueDriverVerification(
-    tx: JobExecutor,
-    payload: DriverVerificationJobData,
-  ) {
-    await this.enqueue(tx, QUEUES.DRIVER_VERIFICATION, payload);
   }
 
   async enqueuePayout(
