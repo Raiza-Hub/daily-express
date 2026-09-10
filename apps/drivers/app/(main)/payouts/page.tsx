@@ -1,19 +1,23 @@
-import type { Metadata } from "next";
-import PayoutTable from "~/components/PayoutTable";
-import { buildDriverMetadata } from "~/lib/seo";
+// import type { Metadata } from "next";
+// import PayoutTable from "~/components/PayoutTable";
+// import { buildDriverMetadata } from "~/lib/seo";
 
-export const metadata: Metadata = buildDriverMetadata({
-    title: "Payouts",
-    description:
-        "Track Daily Express Driver payout history, transfer status, and settlement details.",
-    path: "/payouts",
-});
+// export const metadata: Metadata = buildDriverMetadata({
+//     title: "Payouts",
+//     description:
+//         "Track Daily Express Driver payout history, transfer status, and settlement details.",
+//     path: "/payouts",
+// });
 
-const PayoutsPage = async () => {
+// const PayoutsPage = async () => {
 
-    return (
-        <PayoutTable />
-    );
-};
+//     return (
+//         <PayoutTable />
+//     );
+// };
 
-export default PayoutsPage;
+// export default PayoutsPage;
+
+export default function PayoutsPage() {
+    return null;
+}
