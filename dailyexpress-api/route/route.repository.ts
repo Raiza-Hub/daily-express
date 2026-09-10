@@ -1,5 +1,6 @@
-import { and, asc, desc, eq, gte, gt, inArray, isNull, lt, ne, notInArray, or, sql, type SQL } from "drizzle-orm";
+import { and, asc, desc, eq, gte, inArray, isNull, lt, ne, notInArray, sql, type SQL } from "drizzle-orm";
 import { db } from "../db/connection";
+import { formatBusinessDate, getScheduledDepartureTime } from "../utils/route";
 import {
   booking,
   driver,
@@ -14,34 +15,29 @@ import {
   type DriverRecord,
   type ExternalDriverRecord,
 } from "../db/index";
-import type { ZoneRecord } from "../db/zone-schema";
 import type { DbTransaction } from "../db/connection";
 
 type RouteTransaction = DbTransaction;
 type ExternalDriverInsert = typeof externalDriver.$inferInsert;
 
+type RouteWithAssociations = RouteRecord;
+
 type TripWithRoute = {
   trip: TripRecord;
-  route: RouteRecord & { zone?: ZoneRecord | null };
-};
-
-type TripWithRouteAndBookings = TripWithRoute & {
-  confirmedBookingCount: number;
+  route: RouteRecord;
 };
 
 export class RouteRepository {
-  async findRouteById(id: string): Promise<RouteRecord & { zone?: ZoneRecord | null } | null> {
+  async findRouteById(id: string): Promise<RouteWithAssociations | null> {
     const result = await db.query.route.findFirst({
       where: eq(route.id, id),
-      with: { zone: true },
     });
     return result ?? null;
   }
 
-  async findAllRoutes(): Promise<(RouteRecord & { zone?: ZoneRecord | null })[]> {
+  async findAllRoutes(): Promise<RouteWithAssociations[]> {
     return db.query.route.findMany({
       orderBy: [desc(route.createdAt)],
-      with: { zone: true },
     });
   }
 
@@ -168,16 +164,12 @@ export class RouteRepository {
     const result = await db.query.trip.findFirst({
       where: eq(trip.id, tripId),
       with: {
-        route: {
-          with: {
-            zone: true,
-          },
-        },
+        route: true,
       },
     });
     if (!result) return null;
-    const { route: routeWithZone, ...tripRecord } = result;
-    return { trip: tripRecord as TripRecord, route: routeWithZone as TripWithRoute["route"] };
+    const { route: routeRecord, ...tripRecord } = result;
+    return { trip: tripRecord as TripRecord, route: routeRecord as TripWithRoute["route"] };
   }
 
   async findBookingById(id: string): Promise<BookingRecord | null> {
@@ -274,89 +266,6 @@ export class RouteRepository {
       .orderBy(asc(trip.date));
   }
 
-  async findTripsWithRouteAndBookingCount(
-    conditions: SQL[],
-    limit = 20,
-    cursor?: { date: Date; id: string } | null,
-    search?: string,
-  ): Promise<{ rows: TripWithRouteAndBookings[]; hasMore: boolean; nextCursor: { date: Date; id: string } | null }> {
-    const departureFilter = sql`((${trip.date} + ${route.departure_time}) AT TIME ZONE 'UTC') > now()`;
-
-    const allConditions = [...conditions, departureFilter];
-
-    if (search) {
-      const pattern = `%${search}%`;
-      allConditions.push(
-        sql`(
-          ${route.pickup_location_title} ILIKE ${pattern}
-          OR ${route.pickup_location_locality} ILIKE ${pattern}
-          OR ${route.dropoff_location_title} ILIKE ${pattern}
-          OR ${route.dropoff_location_locality} ILIKE ${pattern}
-        )`,
-      );
-    }
-
-    if (cursor) {
-      const cursorCondition = or(
-        gt(trip.date, cursor.date),
-        and(eq(trip.date, cursor.date), gt(trip.id, cursor.id)),
-      );
-      if (cursorCondition) {
-        allConditions.push(cursorCondition);
-      }
-    }
-
-    const rows = await db
-      .select({
-        trip,
-        route,
-        confirmedBookingCount: sql<number>`
-          count(*) filter (where ${booking.status} = 'confirmed')
-        `.as("confirmed_booking_count"),
-      })
-      .from(trip)
-      .innerJoin(route, eq(route.id, trip.routeId))
-      .leftJoin(booking, eq(booking.tripId, trip.id))
-      .where(and(...allConditions))
-      .groupBy(trip.id, route.id)
-      .orderBy(asc(trip.date))
-      .limit(limit + 1);
-
-    const hasMore = rows.length > limit;
-    const pageRows = hasMore ? rows.slice(0, limit) : rows;
-    const lastRow = pageRows[pageRows.length - 1];
-    const nextCursor = hasMore && lastRow
-      ? { date: lastRow.trip.date, id: lastRow.trip.id }
-      : null;
-
-    return {
-      rows: pageRows.map((r) => ({
-        trip: r.trip,
-        route: r.route,
-        confirmedBookingCount: Number(r.confirmedBookingCount),
-      })),
-      hasMore,
-      nextCursor,
-    };
-  }
-
-  async countAvailableTripsByDateRange(start: Date, end: Date) {
-    return db
-      .select({ date: trip.date })
-      .from(trip)
-      .innerJoin(route, eq(route.id, trip.routeId))
-      .where(
-        and(
-          eq(trip.status, "awaiting_driver"),
-          isNull(trip.driverId),
-          gte(trip.date, start),
-          lt(trip.date, end),
-          sql`((${trip.date} + ${route.departure_time}) AT TIME ZONE 'UTC') > now()`,
-        ),
-      )
-      .orderBy(asc(trip.date));
-  }
-
   async assignDriverToTrip(
     tx: RouteTransaction,
     tripId: string,
@@ -424,15 +333,25 @@ export class RouteRepository {
     vehicleId: string,
     tripDate: Date,
     departureTime: string,
+    arrivalTime: string,
     excludeTripId?: string,
   ): Promise<TripRecord | null> {
+    const dateKey = formatBusinessDate(tripDate);
+    const targetDep = getScheduledDepartureTime(dateKey, departureTime);
+    const targetArrRaw = getScheduledDepartureTime(dateKey, arrivalTime);
+    const targetArr =
+      targetArrRaw.getTime() <= targetDep.getTime()
+        ? new Date(targetArrRaw.getTime() + 24 * 60 * 60 * 1000)
+        : targetArrRaw;
+
     const conditions = [
       eq(trip.driverId, driverId),
       eq(trip.vehicleId, vehicleId),
       eq(trip.date, tripDate),
-      eq(route.departure_time, departureTime),
       ne(trip.status, "completed"),
       ne(trip.status, "cancelled"),
+      sql`(${trip.date} + ${route.departure_time}) <= ${targetArr}`,
+      sql`(${trip.date} + ${route.arrival_time}) >= ${targetDep}`,
     ];
     if (excludeTripId) {
       conditions.push(ne(trip.id, excludeTripId));
