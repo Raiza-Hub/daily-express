@@ -136,11 +136,6 @@ export interface ApiResponse<T = any> {
   errors?: Record<string, string[]>;
 }
 
-export interface AuthTokens {
-  accessToken: string;
-  refreshToken: string;
-}
-
 export interface JWTPayload {
   userId: string;
   email: string;
