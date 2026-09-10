@@ -7,6 +7,9 @@ export const QUEUES = {
 
   TRIP_REFUND: "trip.refund",
   TRIP_REFUND_DLQ: "trip.refund.dlq",
+
+  EMAIL_SEND: "email.send",
+  EMAIL_SEND_DLQ: "email.send.dlq",
 } as const;
 
 export interface WebhookJobData {
@@ -25,6 +28,13 @@ export interface TripRefundJobData {
   refundReference: string;
   refundReason: string;
   emailReason?: "driver_deactivated" | "no_driver_found" | "admin_cancelled";
+}
+
+export interface EmailSendJobData {
+  emailName: string;
+  to: string;
+  subject: string;
+  html: string;
 }
 
 let boss: PgBoss | null = null;
@@ -67,6 +77,8 @@ async function createQueues(instance: PgBoss) {
 
   await instance.createQueue(QUEUES.TRIP_REFUND_DLQ, { retryLimit: 0 });
 
+  await instance.createQueue(QUEUES.EMAIL_SEND_DLQ, { retryLimit: 0 });
+
   // Create primary queues
   await instance.createQueue(QUEUES.PAYOUT_PROCESS, {
     retryLimit: 0,
@@ -85,6 +97,15 @@ async function createQueues(instance: PgBoss) {
     retryDelayMax: 300,
     deleteAfterSeconds: 86400,
     deadLetter: QUEUES.TRIP_REFUND_DLQ,
+  });
+
+  await instance.createQueue(QUEUES.EMAIL_SEND, {
+    retryLimit: 3,
+    retryDelay: 10,
+    retryBackoff: true,
+    retryDelayMax: 60,
+    deleteAfterSeconds: 86400,
+    deadLetter: QUEUES.EMAIL_SEND_DLQ,
   });
 
   logger.info("pg_boss.queues_created");
