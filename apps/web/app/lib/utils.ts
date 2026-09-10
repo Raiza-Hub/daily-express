@@ -1,5 +1,5 @@
 import type { Route } from "@shared/types";
-import { SearchTrip, TripStatusItem } from "./type";
+import { TripStatusItem } from "./type";
 import { type UserBookingWithTrip } from "@repo/api";
 import dayjs from "dayjs";
 
@@ -63,26 +63,6 @@ export function parseLocalDate(date: string): Date {
   return new Date(year, month - 1, day);
 }
 
-export function toSearchTrip(item: Route & { zone?: { fee: number } | null }, tripDate?: string): SearchTrip {
-  const baseDate = tripDate ? parseLocalDate(tripDate) : new Date();
-  return {
-    searchResultId: item.id,
-    routeId: item.id,
-    pickupLocationTitle: item.pickup_location_title,
-    pickupLocationLocality: item.pickup_location_locality,
-    pickupLocationLabel: item.pickup_location_label,
-    dropoffLocationTitle: item.dropoff_location_title,
-    dropoffLocationLocality: item.dropoff_location_locality,
-    dropoffLocationLabel: item.dropoff_location_label,
-    priceCar: item.priceCar,
-    priceBus: item.priceBus,
-    zoneFee: item.zone?.fee ?? 0,
-    departureTime: parseTimeString(item.departure_time, baseDate),
-    estimatedArrivalTime: parseTimeString(item.arrival_time, baseDate),
-    meetingPoint: item.meeting_point,
-  };
-}
-
 export function transformToTripStatusItem(
   booking: UserBookingWithTrip,
 ): TripStatusItem | null {
@@ -122,6 +102,7 @@ export function transformToTripStatusItem(
     remainingSeats: trip.availableSeats,
     paymentStatus: booking.paymentStatus,
     driverStatus: booking.driverStatus,
+    fareAmount: booking.fareAmount,
     feeAmount: booking.feeAmount ?? 0,
     trip: {
       departureCity: {
@@ -135,9 +116,6 @@ export function transformToTripStatusItem(
         label: route.dropoff_location_label,
       },
       vehicleType: route.vehicle_type as "car" | "bus",
-      seatNumber: trip.capacity,
-      priceCar: booking.fareAmount,
-      priceBus: booking.fareAmount,
       departureTime,
       estimatedArrivalTime,
       meetingPoint: route.meeting_point,

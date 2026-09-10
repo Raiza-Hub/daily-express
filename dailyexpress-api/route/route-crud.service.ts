@@ -57,23 +57,18 @@ export class RouteCrudService {
       pickup_location_title:
         routeData.pickup_location_title ?? existingRoute.pickup_location_title,
       pickup_location_locality:
-        routeData.pickup_location_locality ??
-        existingRoute.pickup_location_locality,
+        routeData.pickup_location_locality ?? existingRoute.pickup_location_locality,
       pickup_location_label:
-        routeData.pickup_location_label ??
-        existingRoute.pickup_location_label,
+        routeData.pickup_location_label ?? existingRoute.pickup_location_label,
       dropoff_location_title:
-        routeData.dropoff_location_title ??
-        existingRoute.dropoff_location_title,
+        routeData.dropoff_location_title ?? existingRoute.dropoff_location_title,
       dropoff_location_locality:
-        routeData.dropoff_location_locality ??
-        existingRoute.dropoff_location_locality,
+        routeData.dropoff_location_locality ?? existingRoute.dropoff_location_locality,
       dropoff_location_label:
-        routeData.dropoff_location_label ??
-        existingRoute.dropoff_location_label,
+        routeData.dropoff_location_label ?? existingRoute.dropoff_location_label,
       departure_time:
         routeData.departure_time ?? existingRoute.departure_time,
-      zoneId: routeData.zoneId !== undefined ? routeData.zoneId : existingRoute.zoneId,
+      fee: routeData.fee !== undefined ? routeData.fee : existingRoute.fee,
     };
 
     const conflictingRoute = await this.repo.findRouteConflict({

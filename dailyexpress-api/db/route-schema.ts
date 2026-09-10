@@ -1,4 +1,4 @@
-import { lte, relations, sql } from "drizzle-orm";
+import { lte, sql } from "drizzle-orm";
 import {
   bigint,
   check,
@@ -12,9 +12,8 @@ import {
   uuid,
   varchar,
 } from "drizzle-orm/pg-core";
-import { driver } from "./driver-schema";
 import { users } from "./auth-schema";
-import { zone } from "./zone-schema";
+import { driver } from "./driver-schema";
 
 export const statusEnum = pgEnum("status", ["inactive", "pending", "active"]);
 export const vehicleTypeEnum = pgEnum("vehicle_type", [
@@ -46,10 +45,10 @@ export const route = pgTable(
     meeting_point: text("meeting_point").notNull(),
     priceCar: bigint("price_car", { mode: "number" }).notNull(),
     priceBus: bigint("price_bus", { mode: "number" }).notNull(),
+    fee: bigint("fee", { mode: "number" }),
     departure_time: time("departure_time").notNull(),
     arrival_time: time("arrival_time").notNull(),
     status: statusEnum("status").default("active").notNull(),
-    zoneId: uuid("zone_id").references(() => zone.id, { onDelete: "set null" }),
     createdAt: timestamp("created_at", { mode: "date" }).defaultNow().notNull(),
     updatedAt: timestamp("updated_at", { mode: "date" }).defaultNow().notNull(),
   },
@@ -83,7 +82,12 @@ export const trip = pgTable(
     updatedAt: timestamp("updated_at", { mode: "date" }).defaultNow().notNull(),
   },
   (table) => [
-    check("trip_booked_seats_check", lte(table.bookedSeats, table.capacity)),
+    uniqueIndex("trip_route_driver_date_unique_idx").on(
+      table.routeId,
+      table.driverId,
+      table.date,
+    ),
+    check("trip_booked_seats_not_over_capacity_check", lte(table.bookedSeats, table.capacity)),
   ],
 );
 
@@ -96,7 +100,8 @@ export const booking = pgTable(
     vehicleType: vehicleTypeEnum("vehicle_type").notNull(),
     tripId: uuid("trip_id").references(() => trip.id, { onDelete: "restrict" }),
     userId: uuid("user_id").references(() => users.id, { onDelete: "cascade" }).notNull(),
-    seatNumber: integer("seat_number"),
+    seatCount: integer("seat_count").default(1).notNull(),
+    phone: varchar("phone", { length: 20 }).notNull(),
     firstName: text("first_name"),
     lastName: text("last_name"),
     fareAmount: bigint("fare_amount", { mode: "number" }).default(0).notNull(),
@@ -112,14 +117,9 @@ export const booking = pgTable(
     updatedAt: timestamp("updated_at", { mode: "date" }).defaultNow().notNull(),
   },
   (table) => [
-    uniqueIndex("booking_route_user_vt_active_idx")
+    uniqueIndex("booking_route_date_user_vehicletype_active_idx")
       .on(table.routeId, table.tripDate, table.userId, table.vehicleType)
       .where(sql`${table.status} in ('pending', 'confirmed')`),
-    uniqueIndex("booking_trip_id_seat_number_active_idx")
-      .on(table.tripId, table.seatNumber)
-      .where(
-        sql`${table.seatNumber} is not null and ${table.status} in ('pending', 'confirmed')`,
-      ),
   ],
 );
 
@@ -128,6 +128,7 @@ export const vehicle = pgTable("vehicle", {
   driverId: uuid("driver_id")
     .references(() => driver.id, { onDelete: "cascade" })
     .notNull(),
+  vehicleType: vehicleTypeEnum("vehicle_type"),
   plateNumber: text("plate_number").notNull(),
   make: text("make").notNull(),
   model: text("model").notNull(),
@@ -157,48 +158,6 @@ export const externalDriver = pgTable("external_driver", {
   assignedBy: text("assigned_by").notNull(),
   assignedAt: timestamp("assigned_at", { mode: "date" }).defaultNow().notNull(),
 });
-
-export const routeRelations = relations(route, ({ many, one }) => ({
-  trips: many(trip),
-  zone: one(zone, {
-    fields: [route.zoneId],
-    references: [zone.id],
-  }),
-}));
-
-export const tripRelations = relations(trip, ({ one, many }) => ({
-  route: one(route, {
-    fields: [trip.routeId],
-    references: [route.id],
-  }),
-  bookings: many(booking),
-  externalDrivers: many(externalDriver),
-  vehicle: one(vehicle, {
-    fields: [trip.vehicleId],
-    references: [vehicle.id],
-  }),
-}));
-
-export const bookingRelations = relations(booking, ({ one }) => ({
-  trip: one(trip, {
-    fields: [booking.tripId],
-    references: [trip.id],
-  }),
-}));
-
-export const externalDriverRelations = relations(externalDriver, ({ one }) => ({
-  trip: one(trip, {
-    fields: [externalDriver.tripId],
-    references: [trip.id],
-  }),
-}));
-
-export const vehicleRelations = relations(vehicle, ({ one }) => ({
-  ownerDriver: one(driver, {
-    fields: [vehicle.driverId],
-    references: [driver.id],
-  }),
-}));
 
 export const VEHICLE_CAPACITY: Record<string, number> = {
   car: 7,
