@@ -4,12 +4,7 @@ import { getConfig } from "../config/index";
 import { db } from "../db/connection";
 import { booking, payment } from "../db/index";
 import { logger } from "../utils/logger";
-import {
-    assertCheckoutAmountWithinLimit,
-    calculateTrustedChargeAmount,
-    dedupeChannels,
-    generateReference,
-} from "../utils/payment";
+import { calculateTripChargeAmount, dedupeChannels, generateReference } from "../utils/payment";
 import { koraClient } from "./kora.client";
 import { PaymentRepository } from "./payment.repository";
 import type {
@@ -62,9 +57,7 @@ export class PaymentInitService {
       userId,
     );
     const trustedCurrency = bookingFare.currency;
-    const trustedAmount = calculateTrustedChargeAmount(bookingFare.fareAmount, bookingFare.feeAmount);
-
-    assertCheckoutAmountWithinLimit(trustedAmount);
+    const trustedAmount = calculateTripChargeAmount(bookingFare);
 
     // 2. Pre-insert the payment with status 'initialized' under row lock to claim checkout session creation
     const setupResult = await db.transaction(async (tx) => {

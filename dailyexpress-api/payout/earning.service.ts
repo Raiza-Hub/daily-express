@@ -10,18 +10,16 @@ export class EarningService {
   async createEarning(
     tx: PayoutTransaction,
     input: {
-      bookingId: string;
       tripId: string;
-      driverId: string;
-      fareAmount: number;
+      driverId: string | null;
+      amount: number;
       currency: string;
     },
   ) {
     await this.repo.insertEarning(tx, {
-      driverId: input.driverId,
-      bookingId: input.bookingId,
+      driverId: input.driverId ?? null,
       tripId: input.tripId,
-      amount: input.fareAmount,
+      amount: input.amount,
       currency: input.currency,
       status: "pending_trip_completion",
       updatedAt: new Date(),

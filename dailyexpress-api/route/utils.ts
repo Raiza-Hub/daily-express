@@ -8,13 +8,10 @@ import {
   getScheduledDepartureTime,
 } from "../utils/route";
 
-export const ALLOWED_VEHICLE_TYPES = ["car", "bus"] as const;
 export const ROUTE_SEARCH_SCORE_THRESHOLD = 0.15;
 export const VISIBLE_BOOKING_STATUSES = ["confirmed", "completed", "awaiting_driver"] as const;
 export const DEFAULT_PAGE_LIMIT = 20;
 export const MAX_PAGE_LIMIT = 50;
-
-export type VehicleType = (typeof ALLOWED_VEHICLE_TYPES)[number];
 
 export function normalizePageLimit(limit?: number): number {
   if (!limit || !Number.isFinite(limit)) {

@@ -2,7 +2,7 @@ import { getEmailSubject, renderEmail } from "@repo/email";
 import { and, eq, gt, sql } from "drizzle-orm";
 import { getConfig } from "../config/index";
 import { db } from "../db/connection";
-import { booking, earning, payment, refund, trip } from "../db/index";
+import { booking, earning, payment, refund, trip, users } from "../db/index";
 import { logger } from "../utils/logger";
 import { enqueueEmail, type EmailToSend } from "../mail/email-dispatcher.service";
 import { koraClient, KoraClient } from "./kora.client";
@@ -97,13 +97,13 @@ export class PaymentPayoutRefundService {
 
     const bookingRecord = await db.query.booking.findFirst({
       where: eq(booking.id, paymentRecord.bookingId),
-      columns: { fareAmount: true, feeAmount: true },
+      columns: { totalAmount: true },
     });
     if (!bookingRecord) {
       logger.error("payout_refund.booking_not_found", { reference: paymentRecord.reference, bookingId: paymentRecord.bookingId });
       return;
     }
-    const refundAmount = bookingRecord.fareAmount;
+    const refundAmount = bookingRecord.totalAmount;
 
     let pendingRefund: RefundRecord | null = null;
 
@@ -148,10 +148,38 @@ export class PaymentPayoutRefundService {
     const resolvedRefund: RefundRecord = pendingRefund;
 
     if (paymentRecord.bookingId) {
-      await db
-        .update(booking)
-        .set({ paymentStatus: "refund_pending", updatedAt: new Date() })
-        .where(eq(booking.id, paymentRecord.bookingId));
+      const bookingId = paymentRecord.bookingId;
+      await db.transaction(async (tx) => {
+        const bookingRecord = await tx.query.booking.findFirst({
+          where: eq(booking.id, bookingId),
+        });
+        if (!bookingRecord) return;
+
+        await tx
+          .update(booking)
+          .set({ paymentStatus: "refund_pending", updatedAt: new Date() })
+          .where(eq(booking.id, bookingId));
+
+        if (bookingRecord.status === "confirmed" && bookingRecord.tripId) {
+          const passengerCount = await this.repo.countPassengersByBooking(
+            tx,
+            bookingRecord.id,
+          );
+          await tx
+            .update(trip)
+            .set({ bookedSeats: sql`GREATEST(${trip.bookedSeats} - ${passengerCount}, 0)` })
+            .where(
+              and(eq(trip.id, bookingRecord.tripId), gt(trip.bookedSeats, 0)),
+            );
+        }
+
+        if (bookingRecord.tripId) {
+          await tx
+            .update(earning)
+            .set({ status: "cancelled", updatedAt: new Date() })
+            .where(eq(earning.tripId, bookingRecord.tripId));
+        }
+      });
     }
 
     let accountNumber: string;
@@ -209,38 +237,6 @@ export class PaymentPayoutRefundService {
       await this.repo.updateRefundStatus(tx, resolvedRefund.id, {
         status: "pending",
       });
-
-      if (paymentRecord.bookingId) {
-        const bookingRecord = await tx.query.booking.findFirst({
-          where: eq(booking.id, paymentRecord.bookingId),
-        });
-
-        if (bookingRecord) {
-          const wasConfirmed = bookingRecord.status === "confirmed";
-
-          await tx
-            .update(booking)
-            .set({
-              paymentStatus: "refund_pending",
-              updatedAt: new Date(),
-            })
-            .where(eq(booking.id, paymentRecord.bookingId));
-
-          if (wasConfirmed && bookingRecord.tripId) {
-            await tx
-              .update(trip)
-              .set({ bookedSeats: sql`GREATEST(${trip.bookedSeats} - ${bookingRecord.seatCount ?? 1}, 0)` })
-              .where(
-                and(eq(trip.id, bookingRecord.tripId), gt(trip.bookedSeats, 0)),
-              );
-          }
-
-          await tx
-            .update(earning)
-            .set({ status: "cancelled", updatedAt: new Date() })
-            .where(eq(earning.bookingId, paymentRecord.bookingId));
-        }
-      }
 
       const email = await this.sendTripCancelledEmail(
         paymentRecord,
@@ -304,28 +300,10 @@ export class PaymentPayoutRefundService {
         }
       }
 
-      const [bookingRecord] = await tx
+      await tx
         .update(booking)
         .set({ paymentStatus: status, updatedAt: new Date() })
-        .where(eq(booking.paymentReference, paymentReference))
-        .returning();
-
-      if (
-        bookingRecord &&
-        bookingRecord.status === "confirmed"
-      ) {
-        await tx
-          .update(earning)
-          .set({ status: "cancelled", updatedAt: new Date() })
-          .where(eq(earning.bookingId, bookingRecord.id));
-
-        if (bookingRecord.tripId) {
-          await tx
-            .update(trip)
-            .set({ bookedSeats: sql`GREATEST(${trip.bookedSeats} - 1, 0)` })
-            .where(eq(trip.id, bookingRecord.tripId));
-        }
-      }
+        .where(eq(booking.paymentReference, paymentReference));
     });
   }
 
@@ -339,12 +317,18 @@ export class PaymentPayoutRefundService {
 
     let customerName: string | null = null;
     if (paymentRecord.bookingId) {
-      const bk = await tx.query.booking.findFirst({
+      const bookingRef = await tx.query.booking.findFirst({
         where: eq(booking.id, paymentRecord.bookingId),
-        columns: { firstName: true, lastName: true },
+        columns: { userId: true },
       });
-      if (bk?.firstName) {
-        customerName = `${bk.firstName} ${bk.lastName ?? ""}`.trim();
+      if (bookingRef?.userId) {
+        const userName = await tx.query.users.findFirst({
+          where: eq(users.id, bookingRef.userId),
+          columns: { firstName: true, lastName: true },
+        });
+        if (userName?.firstName) {
+          customerName = `${userName.firstName} ${userName.lastName ?? ""}`.trim();
+        }
       }
     }
 
@@ -385,12 +369,18 @@ export class PaymentPayoutRefundService {
 
     let customerName: string | null = null;
     if (paymentRecord.bookingId) {
-      const bk = await tx.query.booking.findFirst({
+      const bookingRef = await tx.query.booking.findFirst({
         where: eq(booking.id, paymentRecord.bookingId),
-        columns: { firstName: true, lastName: true },
+        columns: { userId: true },
       });
-      if (bk?.firstName) {
-        customerName = `${bk.firstName} ${bk.lastName ?? ""}`.trim();
+      if (bookingRef?.userId) {
+        const userName = await tx.query.users.findFirst({
+          where: eq(users.id, bookingRef.userId),
+          columns: { firstName: true, lastName: true },
+        });
+        if (userName?.firstName) {
+          customerName = `${userName.firstName} ${userName.lastName ?? ""}`.trim();
+        }
       }
     }
 
@@ -430,12 +420,18 @@ export class PaymentPayoutRefundService {
 
     let customerName: string | null = null;
     if (paymentRecord.bookingId) {
-      const bk = await tx.query.booking.findFirst({
+      const bookingRef = await tx.query.booking.findFirst({
         where: eq(booking.id, paymentRecord.bookingId),
-        columns: { firstName: true, lastName: true },
+        columns: { userId: true },
       });
-      if (bk?.firstName) {
-        customerName = `${bk.firstName} ${bk.lastName ?? ""}`.trim();
+      if (bookingRef?.userId) {
+        const userName = await tx.query.users.findFirst({
+          where: eq(users.id, bookingRef.userId),
+          columns: { firstName: true, lastName: true },
+        });
+        if (userName?.firstName) {
+          customerName = `${userName.firstName} ${userName.lastName ?? ""}`.trim();
+        }
       }
     }
 

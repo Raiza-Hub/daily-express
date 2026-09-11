@@ -5,8 +5,6 @@ import { sendErrorResponse } from "../middleware/apiResponses";
 import { getAuthenticatedUser } from "../middleware/auth";
 import { timeAsync } from "../utils/timing";
 import { routeService } from "./route.service";
-import { ALLOWED_VEHICLE_TYPES } from "./utils";
-const ALLOWED_VEHICLE_TYPES_SET = new Set(ALLOWED_VEHICLE_TYPES);
 const DATE_ONLY_REGEX = /^\d{4}-\d{2}-\d{2}$/;
 
 function parseDateOnly(value: unknown): string | null {
@@ -167,13 +165,10 @@ export const createCheckoutBooking: RequestHandler = asyncHandler(
     const {
       routeId,
       tripDate,
-      vehicleType,
-      seatCount,
-      phone,
-      timeMode,
+      tripType,
       selectedTime,
       boardingPoint,
-      luggageCount,
+      passengers,
     } = req.body;
     if (!user) {
       return sendErrorResponse(res, 401, "Please sign in again to continue.", {
@@ -185,28 +180,12 @@ export const createCheckoutBooking: RequestHandler = asyncHandler(
         code: "MISSING_ROUTE_ID",
       });
     }
-    if (!vehicleType || !ALLOWED_VEHICLE_TYPES_SET.has(vehicleType)) {
-      return sendErrorResponse(res, 400, "Valid vehicle type is required (car or bus).", {
-        code: "INVALID_VEHICLE_TYPE",
-      });
-    }
-    const parsedSeatCount = parseInt(seatCount, 10);
-    if (!Number.isInteger(parsedSeatCount) || parsedSeatCount < 1) {
-      return sendErrorResponse(res, 400, "Valid seat count is required (integer >= 1).", {
-        code: "INVALID_SEAT_COUNT",
-      });
-    }
-    if (typeof phone !== "string" || phone.trim().length === 0) {
-      return sendErrorResponse(res, 400, "Phone number is required.", {
-        code: "MISSING_PHONE",
-      });
-    }
-    if (timeMode !== "departure" && timeMode !== "arrival") {
+    if (tripType !== "departure" && tripType !== "arrival") {
       return sendErrorResponse(
         res,
         400,
-        "timeMode must be either 'departure' or 'arrival'.",
-        { code: "INVALID_TIME_MODE" },
+        "tripType must be either 'departure' or 'arrival'.",
+        { code: "INVALID_TRIP_TYPE" },
       );
     }
     if (typeof selectedTime !== "string" || selectedTime.trim().length === 0) {
@@ -222,14 +201,33 @@ export const createCheckoutBooking: RequestHandler = asyncHandler(
         { code: "INVALID_BOARDING_POINT" },
       );
     }
-    const parsedLuggageCount = parseInt(luggageCount, 10);
-    if (!Number.isInteger(parsedLuggageCount) || parsedLuggageCount < 0) {
+    if (!Array.isArray(passengers) || passengers.length < 1 || passengers.length > 4) {
       return sendErrorResponse(
         res,
         400,
-        "Luggage count must be an integer >= 0.",
-        { code: "INVALID_LUGGAGE_COUNT" },
+        "Passengers are required (1 to 4 travelers).",
+        { code: "INVALID_PASSENGERS" },
       );
+    }
+    for (const passenger of passengers) {
+      if (
+        typeof passenger !== "object" ||
+        passenger === null ||
+        typeof passenger.fullName !== "string" ||
+        passenger.fullName.trim().length === 0 ||
+        typeof passenger.email !== "string" ||
+        passenger.email.trim().length === 0 ||
+        typeof passenger.phone !== "string" ||
+        passenger.phone.trim().length === 0 ||
+        typeof passenger.carriesLuggage !== "boolean"
+      ) {
+        return sendErrorResponse(
+          res,
+          400,
+          "Each passenger needs fullName, email, phone and carriesLuggage.",
+          { code: "INVALID_PASSENGERS" },
+        );
+      }
     }
     const parsedTripDate = parseDateOnly(tripDate);
     if (!parsedTripDate) {
@@ -247,24 +245,24 @@ export const createCheckoutBooking: RequestHandler = asyncHandler(
         userId: user.userId,
         routeId,
         tripDate: parsedTripDate,
-        vehicleType,
-        seatCount: parsedSeatCount,
-        timeMode,
+        tripType,
         selectedTime: selectedTime.trim(),
         boardingPoint,
-        luggageCount: parsedLuggageCount,
+        passengerCount: passengers.length,
       },
       () =>
         routeService.createCheckoutBooking(user.userId, {
           routeId,
           tripDate: parsedTripDate,
-          vehicleType,
-          seatCount: parsedSeatCount,
-          phone: phone.trim(),
-          timeMode,
+          tripType,
           selectedTime: selectedTime.trim(),
           boardingPoint,
-          luggageCount: parsedLuggageCount,
+          passengers: passengers.map((passenger) => ({
+            fullName: passenger.fullName.trim(),
+            email: passenger.email.trim(),
+            phone: passenger.phone.trim(),
+            carriesLuggage: passenger.carriesLuggage,
+          })),
         }),
     );
 

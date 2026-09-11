@@ -16,10 +16,6 @@ import { users } from "./auth-schema";
 import { driver } from "./driver-schema";
 
 export const statusEnum = pgEnum("status", ["inactive", "pending", "active"]);
-export const vehicleTypeEnum = pgEnum("vehicle_type", [
-  "car",
-  "bus",
-]);
 
 export const tripStatusEnum = pgEnum("trip_status", [
   "pending",
@@ -71,7 +67,6 @@ export const trip = pgTable(
     date: timestamp("date", { mode: "date" }).notNull(),
     departureTime: time("departure_time").notNull(),
     arrivalTime: time("arrival_time").notNull(),
-    vehicleType: vehicleTypeEnum("vehicle_type").notNull(),
     capacity: integer("capacity").notNull(),
     bookedSeats: integer("booked_seats").default(0).notNull(),
     status: tripStatusEnum("status").default("awaiting_driver").notNull(),
@@ -103,15 +98,10 @@ export const booking = pgTable(
       enum: ["pickup", "dropoff"],
     }).default("pickup").notNull(),
     luggageCount: integer("luggage_count").default(0).notNull(),
-    vehicleType: vehicleTypeEnum("vehicle_type").notNull(),
     tripId: uuid("trip_id").references(() => trip.id, { onDelete: "restrict" }),
     userId: uuid("user_id").references(() => users.id, { onDelete: "cascade" }).notNull(),
-    seatCount: integer("seat_count").default(1).notNull(),
-    phone: varchar("phone", { length: 20 }).notNull(),
-    firstName: text("first_name"),
-    lastName: text("last_name"),
-    fareAmount: bigint("fare_amount", { mode: "number" }).default(0).notNull(),
-    feeAmount: bigint("fee_amount", { mode: "number" }).default(0).notNull(),
+    totalAmount: bigint("total_amount", { mode: "number" }).default(0).notNull(),
+    totalFee: bigint("total_fee", { mode: "number" }).default(0).notNull(),
     currency: varchar("currency", { length: 8 }).default("NGN").notNull(),
     status: tripStatusEnum("status").default("pending").notNull(),
 
@@ -123,12 +113,11 @@ export const booking = pgTable(
     updatedAt: timestamp("updated_at", { mode: "date" }).defaultNow().notNull(),
   },
   (table) => [
-    uniqueIndex("booking_route_date_user_vehicletype_active_idx")
+    uniqueIndex("booking_route_date_user_active_idx")
       .on(
         table.routeId,
         table.tripDate,
         table.userId,
-        table.vehicleType,
         table.departureTime,
       )
       .where(sql`${table.status} in ('pending', 'confirmed')`),
@@ -140,7 +129,6 @@ export const vehicle = pgTable("vehicle", {
   driverId: uuid("driver_id")
     .references(() => driver.id, { onDelete: "cascade" })
     .notNull(),
-  vehicleType: vehicleTypeEnum("vehicle_type"),
   plateNumber: text("plate_number").notNull(),
   make: text("make").notNull(),
   model: text("model").notNull(),
@@ -150,10 +138,7 @@ export const vehicle = pgTable("vehicle", {
   updatedAt: timestamp("updated_at", { mode: "date" }).defaultNow().notNull(),
 });
 
-export const VEHICLE_CAPACITY: Record<string, number> = {
-  car: 7,
-  bus: 14,
-} as const;
+export const TRIP_CAPACITY = 4;
 
 export const routeSchema = {
   route,

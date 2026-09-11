@@ -1,9 +1,9 @@
-import { and, desc, eq, gte, inArray, lt, notInArray, sql, type SQL } from "drizzle-orm";
+import { and, asc, count, desc, eq, gte, inArray, lt, notInArray, sql, type SQL } from "drizzle-orm";
 import { db } from "../db/connection";
 import {
   booking,
   driver,
-  earning,
+  passenger,
   route,
   trip,
   users,
@@ -11,6 +11,7 @@ import {
   type TripRecord,
   type BookingRecord,
   type DriverRecord,
+  type PassengerRecord,
 } from "../db/index";
 import type { DbTransaction } from "../db/connection";
 
@@ -73,35 +74,41 @@ export class RouteRepository {
     await tx.delete(route).where(eq(route.id, id));
   }
 
-  async findTripByRouteId(routeId: string): Promise<TripRecord | null> {
-    return (await db.query.trip.findFirst({ where: eq(trip.routeId, routeId) })) ?? null;
-  }
-
-  async findTripByRouteAndDate(
+  async findTripsForSlot(
+    tx: RouteTransaction,
     routeId: string,
     start: Date,
     end: Date,
-  ): Promise<TripRecord | null> {
-    return (
-      (await db.query.trip.findFirst({
-        where: and(
+    departureTime: string,
+  ): Promise<TripRecord[]> {
+    return tx
+      .select()
+      .from(trip)
+      .where(
+        and(
           eq(trip.routeId, routeId),
           gte(trip.date, start),
           lt(trip.date, end),
+          eq(trip.departureTime, departureTime),
+          inArray(trip.status, ["pending", "confirmed", "awaiting_driver"]),
         ),
-      })) ?? null
-    );
+      )
+      .orderBy(
+        asc(sql`${trip.capacity} - ${trip.bookedSeats}`),
+        asc(trip.createdAt),
+      )
+      .for("update");
   }
 
-  async insertTrip(
+  async createTrip(
     tx: RouteTransaction,
     values: typeof trip.$inferInsert,
-  ): Promise<TripRecord | null> {
+  ): Promise<TripRecord> {
     const [record] = await tx
       .insert(trip)
       .values(values)
       .returning();
-    return record ?? null;
+    return record;
   }
 
   async lockTrip(tx: RouteTransaction, tripId: string): Promise<TripRecord | null> {
@@ -127,19 +134,7 @@ export class RouteRepository {
     return record ?? null;
   }
 
-  async updateTripStandalone(
-    id: string,
-    values: Partial<typeof trip.$inferInsert>,
-  ): Promise<TripRecord | null> {
-    const [record] = await db
-      .update(trip)
-      .set(values)
-      .where(eq(trip.id, id))
-      .returning();
-    return record ?? null;
-  }
-
-  async findTripWithRoute(tripId: string): Promise<TripWithRoute | null> {
+async findTripWithRoute(tripId: string): Promise<TripWithRoute | null> {
     const result = await db.query.trip.findFirst({
       where: eq(trip.id, tripId),
       with: {
@@ -189,16 +184,20 @@ export class RouteRepository {
     paymentReference: string,
     normalizedLastName: string,
   ): Promise<BookingRecord | null> {
-    return (
-      (await db.query.booking.findFirst({
-        where: and(
+    const [row] = await db
+      .select({ booking })
+      .from(booking)
+      .innerJoin(users, eq(users.id, booking.userId))
+      .where(
+        and(
           eq(booking.userId, userId),
           eq(booking.paymentReference, paymentReference),
-          sql`lower(${booking.lastName}) = ${normalizedLastName}`,
+          sql`lower(${users.lastName}) = ${normalizedLastName}`,
           eq(booking.status, "confirmed"),
         ),
-      })) ?? null
-    );
+      )
+      .limit(1);
+    return row?.booking ?? null;
   }
 
   async updateBookingsByTrip(
@@ -238,10 +237,38 @@ export class RouteRepository {
     });
   }
 
-  async findEarningByBookingId(bookingId: string) {
-    return db.query.earning.findFirst({
-      where: eq(earning.bookingId, bookingId),
+  async insertPassengers(
+    tx: RouteTransaction,
+    values: typeof passenger.$inferInsert[],
+  ): Promise<void> {
+    if (values.length === 0) return;
+    await tx.insert(passenger).values(values);
+  }
+
+  async findPassengersByBooking(
+    bookingId: string,
+  ): Promise<PassengerRecord[]> {
+    return db.query.passenger.findMany({
+      where: eq(passenger.bookingId, bookingId),
     });
+  }
+
+  async deletePassengersByBooking(
+    tx: RouteTransaction,
+    bookingId: string,
+  ): Promise<void> {
+    await tx.delete(passenger).where(eq(passenger.bookingId, bookingId));
+  }
+
+  async countPassengersByBooking(
+    tx: RouteTransaction,
+    bookingId: string,
+  ): Promise<number> {
+    const [row] = await tx
+      .select({ count: count() })
+      .from(passenger)
+      .where(eq(passenger.bookingId, bookingId));
+    return Number(row?.count ?? 0);
   }
 }
 

@@ -1,11 +1,12 @@
-import { and, eq, gt, gte, inArray, ne, sql } from "drizzle-orm";
+import { and, count, eq, gt, gte, inArray, ne, sql } from "drizzle-orm";
 import { createServiceError } from "@shared/utils";
 import { db } from "../db/connection";
 import {
   booking,
-  earning,
+  passenger,
   payment,
   refund,
+  route,
   trip,
   type BookingRecord,
 } from "../db/index";
@@ -32,19 +33,47 @@ export class PaymentRepository {
   }
 
   async findBookingFareByBookingId(bookingId: string, userId: string) {
-    const bookingRecord = await db.query.booking.findFirst({
-      where: eq(booking.id, bookingId),
-    });
+    const row = await db
+      .select({
+        totalAmount: booking.totalAmount,
+        totalFee: booking.totalFee,
+        luggageCount: booking.luggageCount,
+        currency: booking.currency,
+        userId: booking.userId,
+        luggageFee: route.luggage_fee,
+      })      .from(booking)
+      .innerJoin(route, eq(route.id, booking.routeId))
+      .where(eq(booking.id, bookingId));
 
+    const bookingRecord = row[0];
     if (!bookingRecord || bookingRecord.userId !== userId) {
       throw createServiceError("Booking not found", 404);
     }
 
+    const [{ passengerCount }] = await db
+      .select({ passengerCount: count() })
+      .from(passenger)
+      .where(eq(passenger.bookingId, bookingId));
+
     return {
-      fareAmount: bookingRecord.fareAmount,
-      feeAmount: bookingRecord.feeAmount ?? 0,
+      totalAmount: bookingRecord.totalAmount,
+      totalFee: bookingRecord.totalFee ?? 0,
+      passengerCount: Number(passengerCount),
+      luggageCount: bookingRecord.luggageCount,
+      luggageFee: bookingRecord.luggageFee ?? 0,
       currency: bookingRecord.currency.toUpperCase(),
     };
+  }
+
+  countPassengersByBooking(
+    tx: PaymentTransaction,
+    bookingId: string,
+  ) {
+    return tx
+      .select({ count: count() })
+      .from(passenger)
+      .where(eq(passenger.bookingId, bookingId))
+      .then((rows) => Number(rows[0]?.count ?? 0));
   }
 
   claimPayment(reference: string) {
@@ -136,9 +165,13 @@ export class PaymentRepository {
     }
 
     if (isCancellingTransition && existingBooking.tripId) {
+      const passengerCount = await this.countPassengersByBooking(
+        tx,
+        existingBooking.id,
+      );
       await tx
         .update(trip)
-        .set({ bookedSeats: sql`GREATEST(${trip.bookedSeats} - ${existingBooking.seatCount ?? 1}, 0)` })
+        .set({ bookedSeats: sql`GREATEST(${trip.bookedSeats} - ${Math.max(passengerCount, 1)}, 0)` })
         .where(
           and(eq(trip.id, existingBooking.tripId), gt(trip.bookedSeats, 0)),
         );
@@ -156,12 +189,6 @@ export class PaymentRepository {
       cancelled: isCancellingTransition,
       cancelledConfirmed: isCancellingConfirmedBooking,
     };
-  }
-
-  findEarningByBookingId(bookingId: string) {
-    return db.query.earning.findFirst({
-      where: eq(earning.bookingId, bookingId),
-    });
   }
 
   async findSuccessfulPaymentsForDriverUpcomingTrips(

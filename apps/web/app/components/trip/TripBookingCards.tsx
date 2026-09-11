@@ -1,9 +1,8 @@
 "use client";
 
 import { BuildingOfficeIcon, TrainIcon } from "@phosphor-icons/react";
-import { Checkbox } from "@repo/ui/components/checkbox";
 import { toast } from "@repo/ui/components/sonner";
-import { isApiError, useCreateTripCheckout, useGetMe } from "@repo/api";
+import { isApiError, useCreateTripCheckout } from "@repo/api";
 import type { Route } from "@shared/types";
 import dayjs from "dayjs";
 import { useRouter } from "next/navigation";
@@ -12,15 +11,7 @@ import { parseLocalDate } from "~/lib/utils";
 import PassengerCard, { type Passenger } from "./PassengerCard";
 import ReviewCard from "./ReviewCard";
 
-function isValidNigerianPhone(phone: string): boolean {
-  const digits = phone.replace(/\D/g, "");
-  return (
-    (digits.startsWith("0") && digits.length === 11) ||
-    (digits.startsWith("234") && digits.length === 13)
-  );
-}
-
-type TimeMode = "departure" | "arrival";
+type TripType = "departure" | "arrival";
 type BoardingPoint = "pickup" | "dropoff";
 
 const TripBookingCards = ({
@@ -30,10 +21,9 @@ const TripBookingCards = ({
 }: {
   route: Route;
   tripDate: string;
-  timeTab: TimeMode;
+  timeTab: TripType;
 }) => {
   const router = useRouter();
-  const { data: user } = useGetMe();
   const { mutateAsync: createTripCheckout, isPending: isCreatingCheckout } =
     useCreateTripCheckout();
 
@@ -41,10 +31,9 @@ const TripBookingCards = ({
 
   const [selected, setSelected] = useState<{
     time: string;
-    mode: TimeMode;
+    mode: TripType;
   } | null>(null);
   const [boardingPoint, setBoardingPoint] = useState<BoardingPoint | null>(null);
-  const [leadCarriesLuggage, setLeadCarriesLuggage] = useState(false);
   const [passengers, setPassengers] = useState<Passenger[]>([]);
 
   const isArrival = timeTab === "arrival";
@@ -95,20 +84,13 @@ const TripBookingCards = ({
     return dayjs().hour(hours).minute(minutes).format("h:mm A");
   };
 
-  const passengersCount = passengers.length + 1;
-  const luggageCount =
-    (leadCarriesLuggage ? 1 : 0) +
-    passengers.filter((p) => p.carriesLuggage).length;
+  const passengersCount = passengers.length;
+  const luggageCount = passengers.filter((p) => p.carriesLuggage).length;
 
   const baseTotal =
     ((route.price ?? 0) + (route.fee ?? 0)) * passengersCount;
   const luggageFee = (route.luggage_fee ?? 0) * luggageCount;
   const total = baseTotal + luggageFee;
-
-  const primaryPhone = user?.phone ?? "";
-  const primaryFullName = user
-    ? `${user.firstName} ${user.lastName}`
-    : "";
 
   const canCheckout = !isMock;
 
@@ -118,10 +100,8 @@ const TripBookingCards = ({
       return;
     }
 
-    if (!isValidNigerianPhone(primaryPhone)) {
-      toast.error(
-        "Please add your phone number in Settings → Profile before booking.",
-      );
+    if (passengers.length === 0) {
+      toast.warning("Add at least one traveler before booking.");
       return;
     }
 
@@ -131,7 +111,7 @@ const TripBookingCards = ({
           {
             route: `${route.origin_title} to ${destinationTitle ?? route.origin_title}`,
             date: tripDate,
-            timeMode: selected.mode,
+            tripType: selected.mode,
             selectedTime: formatTime(selected.time),
             boardingPoint: effectiveBoardingPoint,
             boardingLabel,
@@ -140,13 +120,6 @@ const TripBookingCards = ({
             luggageFee,
             total,
             seats: passengersCount,
-            phone: primaryPhone,
-            lead: {
-              fullName: primaryFullName,
-              email: user?.email,
-              phone: primaryPhone,
-              carriesLuggage: leadCarriesLuggage,
-            },
             passengers,
           },
           null,
@@ -160,13 +133,15 @@ const TripBookingCards = ({
       const checkout = await createTripCheckout({
         routeId: route.id,
         tripDate,
-        vehicleType: "car",
-        seatCount: passengersCount,
-        phone: primaryPhone,
-        timeMode: selected.mode,
+        tripType: selected.mode,
         selectedTime: selected.time,
         boardingPoint: effectiveBoardingPoint,
-        luggageCount,
+        passengers: passengers.map((p) => ({
+          fullName: p.fullName,
+          email: p.email,
+          phone: p.phone,
+          carriesLuggage: p.carriesLuggage,
+        })),
         channels: ["bank_transfer"],
         productName: `${route.origin_title} to ${destinationTitle ?? route.origin_title}`,
         productDescription: `Trip booking for ${dayjs(parseLocalDate(tripDate)).format("ddd, D MMM YYYY")}`,
@@ -257,24 +232,15 @@ const TripBookingCards = ({
           </div>
         </div>
 
-        <label className="flex items-center gap-2">
-          <Checkbox
-            checked={leadCarriesLuggage}
-            onCheckedChange={(value) =>
-              setLeadCarriesLuggage(value === true)
-            }
-          />
-          <span className="text-sm text-neutral-700">
-            Will you carry luggage?
-          </span>
-        </label>
+        <p className="text-sm text-neutral-500">
+          Luggage is selected per traveler below.
+        </p>
       </div>
 
       {/* Passenger Card */}
       <PassengerCard
         passengers={passengers}
         onPassengersChange={setPassengers}
-        leadCarriesLuggage={leadCarriesLuggage}
       />
 
       {/* Review Card */}

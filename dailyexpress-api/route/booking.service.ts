@@ -2,7 +2,7 @@ import type { CreateBooking } from "@shared/types";
 import { createServiceError } from "@shared/utils";
 import { and, desc, eq, getTableColumns, inArray, lt, ne, notInArray, or } from "drizzle-orm";
 import { db } from "../db/connection";
-import { booking, driver, route, trip, users, vehicle, type BookingRecord, type RouteRecord } from "../db/index";
+import { booking, driver, earning, passenger, route, trip, vehicle, type BookingRecord, type RouteRecord } from "../db/index";
 import { logger } from "../utils/logger";
 import {
     formatBusinessDate,
@@ -23,9 +23,9 @@ import {
 
 function resolveTripSlot(
   routeRecord: RouteRecord,
-  { timeMode, selectedTime }: Pick<CreateBooking, "timeMode" | "selectedTime">,
+  { tripType, selectedTime }: Pick<CreateBooking, "tripType" | "selectedTime">,
 ): { departureTime: string; arrivalTime: string } {
-  const isArrival = timeMode === "arrival";
+  const isArrival = tripType === "arrival";
   const picked = isArrival ? routeRecord.arrival_time : routeRecord.departure_time;
   const paired = isArrival ? routeRecord.departure_time : routeRecord.arrival_time;
 
@@ -33,7 +33,7 @@ function resolveTripSlot(
   const index = picked.indexOf(selectedTime);
   if (index === -1) {
     throw createServiceError(
-      `Selected ${timeMode} time is not available for this route`,
+      `Selected ${tripType} time is not available for this route`,
       400,
     );
   }
@@ -74,125 +74,141 @@ export class BookingService {
 
     const { start } = getBusinessDayWindow(input.tripDate);
 
-    const fareAmount = routeRecord.price;
-    const feeAmount = routeRecord.fee ?? 0;
+    const luggageCount = input.passengers.filter(
+      (traveler) => traveler.carriesLuggage,
+    ).length;
+    const passengerCount = input.passengers.length;
+    const totalAmount =
+      routeRecord.price * passengerCount +
+      luggageCount * (routeRecord.luggage_fee ?? 0);
+    const totalFee = (routeRecord.fee ?? 0) * passengerCount;
 
-    const existingBooking = await db.query.booking.findFirst({
-      where: and(
-        eq(booking.routeId, routeRecord.id),
-        eq(booking.tripDate, start),
-        eq(booking.userId, userId),
-        eq(booking.vehicleType, input.vehicleType),
-        eq(booking.departureTime, departureTime),
-        inArray(booking.status, ["pending", "confirmed"]),
-      ),
-    });
-
-    if (existingBooking) {
-      await db
-        .update(booking)
-        .set({
-          departureTime,
-          arrivalTime,
-          boardingPoint: input.boardingPoint,
-          luggageCount: input.luggageCount,
-          seatCount: input.seatCount,
-          phone: input.phone,
-          fareAmount,
-          feeAmount,
-          updatedAt: new Date(),
-        })
-        .where(eq(booking.id, existingBooking.id));
-
-      logger.info("booking.reused", {
-        bookingId: existingBooking.id,
-        routeId: existingBooking.routeId,
-        userId,
+    const bookingLookup = () =>
+      db.query.booking.findFirst({
+        where: and(
+          eq(booking.routeId, routeRecord.id),
+          eq(booking.tripDate, start),
+          eq(booking.userId, userId),
+          eq(booking.departureTime, departureTime),
+          inArray(booking.status, ["pending", "confirmed"]),
+        ),
       });
-      return {
-        booking: {
-          ...existingBooking,
+
+    return db.transaction(async (tx) => {
+      const existingBooking = await bookingLookup();
+
+      if (existingBooking) {
+        await tx
+          .update(booking)
+          .set({
+            departureTime,
+            arrivalTime,
+            boardingPoint: input.boardingPoint,
+            luggageCount,
+            totalAmount,
+            totalFee,
+            updatedAt: new Date(),
+          })
+          .where(eq(booking.id, existingBooking.id));
+
+        await this.repo.deletePassengersByBooking(tx, existingBooking.id);
+        await this.repo.insertPassengers(
+          tx,
+          input.passengers.map((traveler) => ({
+            bookingId: existingBooking.id,
+            fullName: traveler.fullName,
+            email: traveler.email,
+            phone: traveler.phone,
+            carriesLuggage: traveler.carriesLuggage,
+          })),
+        );
+
+        logger.info("booking.reused", {
+          bookingId: existingBooking.id,
+          routeId: existingBooking.routeId,
+          userId,
+        });
+        return {
+          booking: {
+            ...existingBooking,
+            departureTime,
+            arrivalTime,
+            boardingPoint: input.boardingPoint,
+            luggageCount,
+            totalAmount,
+            totalFee,
+          },
+          totalAmount,
+          totalFee,
+          currency: existingBooking.currency,
+        };
+      }
+
+      let newBooking: BookingRecord;
+      try {
+        newBooking = await this.repo.insertBooking(tx, {
+          routeId: routeRecord.id,
+          tripDate: start,
           departureTime,
           arrivalTime,
           boardingPoint: input.boardingPoint,
-          luggageCount: input.luggageCount,
-          fareAmount,
-          feeAmount,
-        },
-        fareAmount,
-        feeAmount,
-        currency: existingBooking.currency,
-      };
-    }
-
-    let newBooking: BookingRecord;
-    try {
-      [newBooking] = await db.insert(booking).values({
-        routeId: routeRecord.id,
-        tripDate: start,
-        departureTime,
-        arrivalTime,
-        boardingPoint: input.boardingPoint,
-        luggageCount: input.luggageCount,
-        vehicleType: input.vehicleType,
-        userId,
-        firstName: passengerRecord.firstName,
-        lastName: passengerRecord.lastName,
-        seatCount: input.seatCount,
-        phone: input.phone,
-        fareAmount,
-        feeAmount,
-        currency: "NGN",
-        status: "pending",
-      }).returning();
-    } catch (err: any) {
-      if (err?.code === "23505") {
-        const existing = await db.query.booking.findFirst({
-          where: and(
-            eq(booking.routeId, routeRecord.id),
-            eq(booking.tripDate, start),
-            eq(booking.userId, userId),
-            eq(booking.vehicleType, input.vehicleType),
-            eq(booking.departureTime, departureTime),
-            inArray(booking.status, ["pending", "confirmed"]),
-          ),
+          luggageCount,
+          userId,
+          totalAmount,
+          totalFee,
+          currency: "NGN",
+          status: "pending",
         });
-        if (existing) {
-          logger.warn("booking.duplicate_prevented", {
-            bookingId: existing.id,
-            routeId: existing.routeId,
-            userId,
-          });
-          return {
-            booking: existing,
-            fareAmount: existing.fareAmount,
-            feeAmount: existing.feeAmount,
-            currency: existing.currency,
-          };
+      } catch (err: any) {
+        if (err?.code === "23505") {
+          const existing = await bookingLookup();
+          if (existing) {
+            logger.warn("booking.duplicate_prevented", {
+              bookingId: existing.id,
+              routeId: existing.routeId,
+              userId,
+            });
+            return {
+              booking: existing,
+              totalAmount: existing.totalAmount,
+              totalFee: existing.totalFee,
+              currency: existing.currency,
+            };
+          }
         }
+        throw err;
       }
-      throw err;
-    }
 
-    logger.info("booking.created", {
-      bookingId: newBooking.id,
-      routeId: newBooking.routeId,
-      tripId: newBooking.tripId,
-      vehicleType: newBooking.vehicleType,
-      seatCount: newBooking.seatCount,
-      departureTime: newBooking.departureTime,
-      boardingPoint: newBooking.boardingPoint,
-      luggageCount: newBooking.luggageCount,
-      fareAmount: newBooking.fareAmount,
-      feeAmount: newBooking.feeAmount,
+      await this.repo.insertPassengers(
+        tx,
+        input.passengers.map((traveler) => ({
+          bookingId: newBooking.id,
+          fullName: traveler.fullName,
+          email: traveler.email,
+          phone: traveler.phone,
+          carriesLuggage: traveler.carriesLuggage,
+        })),
+      );
+
+      logger.info("booking.created", {
+        bookingId: newBooking.id,
+        routeId: newBooking.routeId,
+        tripId: newBooking.tripId,
+        passengerCount,
+        luggageCount,
+        departureTime: newBooking.departureTime,
+        boardingPoint: newBooking.boardingPoint,
+        totalAmount: newBooking.totalAmount,
+        totalFee: newBooking.totalFee,
+      });
+
+      return {
+        booking: newBooking,
+        totalAmount: newBooking.totalAmount,
+        totalFee: newBooking.totalFee,
+        currency: newBooking.currency,
+      };
     });
-
-    return {
-      booking: newBooking,
-      fareAmount: newBooking.fareAmount,
-      feeAmount: newBooking.feeAmount,
-      currency: newBooking.currency,
-    };
   }
 
   async getUserBookings(userId: string, limit = 20, cursor?: string) {
@@ -294,9 +310,8 @@ export class BookingService {
 
       return {
         id: row.booking.id,
-        seatCount: row.booking.seatCount,
-        fareAmount: row.booking.fareAmount,
-        feeAmount: row.booking.feeAmount ?? 0,
+        totalAmount: row.booking.totalAmount,
+        totalFee: row.booking.totalFee ?? 0,
         currency: row.booking.currency,
         status: row.booking.status,
         paymentReference: row.booking.paymentReference ?? null,
@@ -331,8 +346,7 @@ export class BookingService {
                 train_station_label: row.route.train_station_label,
                 pickup_point: row.route.pickup_point,
                 dropoff_point: row.route.dropoff_point,
-                price: row.booking.fareAmount,
-                vehicle_type: row.booking.vehicleType,
+                price: row.booking.totalAmount,
                 departure_time: row.booking.departureTime,
                 arrival_time: row.booking.arrivalTime,
                 boardingPoint: row.booking.boardingPoint,
@@ -374,46 +388,62 @@ export class BookingService {
       throw createServiceError("Driver not found", 404);
     }
 
-    const bookingRows = await db
-      .select({
-        tripId: trip.id,
-        booking: getTableColumns(booking),
-        userProfilePicture: users.profilePictureUrl,
-      })
-      .from(trip)
-      .leftJoin(
-        booking,
-        and(
-          eq(booking.tripId, trip.id),
-          inArray(booking.status, [...VISIBLE_BOOKING_STATUSES]),
-          notInArray(booking.paymentStatus, HIDDEN_BOOKING_PAYMENT_STATUSES),
-        ),
-      )
-      .leftJoin(users, eq(users.id, booking.userId))
-      .where(and(eq(trip.id, tripId), eq(trip.driverId, driverRecord.id)));
-
-    if (bookingRows.length === 0) {
+    const tripRecord = await this.repo.findTripWithRoute(tripId);
+    if (!tripRecord || tripRecord.trip.driverId !== driverRecord.id) {
       throw createServiceError("Trip not found", 404);
     }
 
-    return bookingRows.flatMap((row) =>
-      row.booking
-        ? [
-            {
-              id: row.booking.id,
-              seatCount: row.booking.seatCount,
-              status: row.booking.status,
-              paymentStatus: row.booking.paymentStatus,
-              createdAt: row.booking.createdAt,
-              user: {
-                firstName: row.booking.firstName ?? "Passenger",
-                lastName: row.booking.lastName ?? "",
-                profilePictureUrl: row.userProfilePicture,
-              },
-            },
-          ]
-        : [],
-    );
+    const passengerRows = await db
+      .select({
+        fullName: passenger.fullName,
+        email: passenger.email,
+        phone: passenger.phone,
+        carriesLuggage: passenger.carriesLuggage,
+      })
+      .from(passenger)
+      .innerJoin(booking, eq(passenger.bookingId, booking.id))
+      .where(
+        and(
+          eq(booking.tripId, tripId),
+          inArray(booking.status, [...VISIBLE_BOOKING_STATUSES]),
+          notInArray(booking.paymentStatus, HIDDEN_BOOKING_PAYMENT_STATUSES),
+        ),
+      );
+
+    const earningRecord = await db.query.earning.findFirst({
+      where: eq(earning.tripId, tripId),
+    });
+
+    const tripRow = tripRecord.trip;
+    const routeRow = tripRecord.route;
+
+    return {
+      trip: {
+        id: tripRow.id,
+        date: tripRow.date,
+        status: tripRow.status,
+        departureTime: tripRow.departureTime,
+        arrivalTime: tripRow.arrivalTime,
+        bookedSeats: tripRow.bookedSeats,
+        capacity: tripRow.capacity,
+        origin_label: routeRow.origin_label,
+        origin_title: routeRow.origin_title,
+        destination_title: routeRow.destination_title,
+        train_station_title: routeRow.train_station_title,
+        pickup_point: routeRow.pickup_point,
+        dropoff_point: routeRow.dropoff_point,
+        price: routeRow.price,
+      },
+      passengers: passengerRows,
+      earning: earningRecord
+        ? {
+            amount: earningRecord.amount,
+            currency: earningRecord.currency,
+            status: earningRecord.status,
+            driverId: earningRecord.driverId,
+          }
+        : null,
+    };
   }
 }
 

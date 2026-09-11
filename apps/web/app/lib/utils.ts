@@ -102,8 +102,8 @@ export function transformToTripStatusItem(
     remainingSeats: trip.availableSeats,
     paymentStatus: booking.paymentStatus,
     driverStatus: booking.driverStatus,
-    fareAmount: booking.fareAmount,
-    feeAmount: booking.feeAmount ?? 0,
+    totalAmount: booking.totalAmount,
+    totalFee: booking.totalFee ?? 0,
     trip: {
       origin: {
         title: route.origin_title,

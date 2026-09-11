@@ -18,8 +18,7 @@ import {
   DrawerHeader,
   DrawerTitle,
 } from "@repo/ui/components/drawer";
-import { useGetMe } from "@repo/api";
-import { Avatar, AvatarFallback, AvatarImage } from "@repo/ui/components/avatar";
+import { Avatar, AvatarFallback } from "@repo/ui/components/avatar";
 
 export interface Passenger {
   id: string;
@@ -28,6 +27,8 @@ export interface Passenger {
   phone: string;
   carriesLuggage: boolean;
 }
+
+const MAX_PASSENGERS = 4;
 
 const PassengerSchema = z.object({
   fullName: z
@@ -59,20 +60,12 @@ function getInitials(fullName: string): string {
 const PassengerCard = ({
   passengers,
   onPassengersChange,
-  leadCarriesLuggage,
 }: {
   passengers: Passenger[];
   onPassengersChange: (passengers: Passenger[]) => void;
-  leadCarriesLuggage: boolean;
 }) => {
   const [drawerOpen, setDrawerOpen] = useState(false);
   const [editingPassenger, setEditingPassenger] = useState<Passenger | null>(null);
-
-  const { data: user } = useGetMe();
-  const primaryFullName = user
-    ? `${user.firstName} ${user.lastName}`
-    : "";
-  const primaryPhone = user?.phone ?? "";
 
   const {
     control,
@@ -148,36 +141,12 @@ const PassengerCard = ({
         Passenger
       </h4>
 
-      <div className="flex items-center gap-3 rounded-xl border border-neutral-200 bg-white px-3 py-2.5 mb-2">
-        <Avatar className="size-9">
-          <AvatarImage
-            className="object-cover"
-            src={user?.profilePictureUrl || ""}
-            alt={primaryFullName || "You"}
-          />
-          <AvatarFallback>{getInitials(primaryFullName)}</AvatarFallback>
-        </Avatar>
-        <div className="min-w-0 flex-1">
-          <p className="truncate text-sm font-medium text-neutral-900">
-            {primaryFullName || "Loading…"}
-          </p>
-          <p className="truncate text-xs text-neutral-500">
-            {user
-              ? primaryPhone
-                ? user.email
-                : "Add your phone in Settings → Profile"
-              : ""}
-          </p>
-          {leadCarriesLuggage && (
-            <span className="mt-1 inline-flex items-center rounded-full bg-amber-100 px-2 py-0.5 text-[10px] font-semibold text-amber-700">
-              Luggage
-            </span>
-          )}
-        </div>
-        <span className="shrink-0 rounded-full bg-blue-100 px-2 py-0.5 text-[10px] font-semibold text-blue-700">
-          You
-        </span>
-      </div>
+      {passengers.length === 0 && (
+        <p className="mb-2 rounded-xl border border-dashed border-neutral-200 bg-neutral-50 px-3 py-3 text-sm text-neutral-500">
+          No travelers yet. Add who is riding — the trip holds up to{" "}
+          {MAX_PASSENGERS} people.
+        </p>
+      )}
 
       {passengers.map((passenger) => (
         <div
@@ -225,7 +194,7 @@ const PassengerCard = ({
         </div>
       ))}
 
-      {!drawerOpen && passengers.length < 3 && (
+      {!drawerOpen && passengers.length < MAX_PASSENGERS && (
         <UiButton
           type="button"
           variant="softBlue"
@@ -237,9 +206,9 @@ const PassengerCard = ({
         </UiButton>
       )}
 
-      {!drawerOpen && passengers.length >= 3 && (
+      {!drawerOpen && passengers.length >= MAX_PASSENGERS && (
         <p className="text-center text-xs text-neutral-500">
-          Maximum of 3 passengers reached.
+          Maximum of {MAX_PASSENGERS} travelers reached.
         </p>
       )}
 

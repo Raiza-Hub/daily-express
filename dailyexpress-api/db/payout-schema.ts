@@ -4,11 +4,12 @@ import {
   pgTable,
   text,
   timestamp,
+  uniqueIndex,
   uuid,
   varchar,
 } from "drizzle-orm/pg-core";
 import { driver } from "./driver-schema";
-import { booking, trip } from "./route-schema";
+import { trip } from "./route-schema";
 
 export const earningStatusEnum = pgEnum("earning_status", [
   "pending_trip_completion",
@@ -30,10 +31,9 @@ export const earning = pgTable(
   "earning",
   {
     id: uuid("id").defaultRandom().primaryKey(),
-    driverId: uuid("driver_id").references(() => driver.id, { onDelete: "restrict" }).notNull(),
-    bookingId: uuid("booking_id").references(() => booking.id, { onDelete: "restrict" }).notNull().unique(),
+    driverId: uuid("driver_id").references(() => driver.id, { onDelete: "restrict" }),
     tripId: uuid("trip_id").references(() => trip.id, { onDelete: "restrict" }).notNull(),
-        amount: bigint("amount", { mode: "number" }).notNull(),
+    amount: bigint("amount", { mode: "number" }).notNull(),
     currency: varchar("currency", { length: 8 }).default("NGN").notNull(),
     status: earningStatusEnum("status")
       .default("pending_trip_completion")
@@ -42,6 +42,9 @@ export const earning = pgTable(
     createdAt: timestamp("created_at", { mode: "date" }).defaultNow().notNull(),
     updatedAt: timestamp("updated_at", { mode: "date" }).defaultNow().notNull(),
   },
+  (table) => [
+    uniqueIndex("earning_trip_unique_idx").on(table.tripId),
+  ],
 );
 
 export const payout = pgTable(
