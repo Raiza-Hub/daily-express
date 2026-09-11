@@ -234,10 +234,6 @@ export class PaymentPayoutRefundService {
     }
 
     await db.transaction(async (tx) => {
-      await this.repo.updateRefundStatus(tx, resolvedRefund.id, {
-        status: "pending",
-      });
-
       const email = await this.sendTripCancelledEmail(
         paymentRecord,
         resolvedRefund.reference,
