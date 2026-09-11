@@ -34,22 +34,4 @@ router.delete(
   adminController.deleteRoute,
 );
 
-router.get(
-  "/trips/pending",
-  requireAdminApiKey,
-  adminController.getPendingTrips,
-);
-
-router.post(
-  "/trip/:id/assign-driver",
-  requireAdminApiKey,
-  adminController.assignPlatformDriver,
-);
-
-router.post(
-  "/trip/:id/refund",
-  requireAdminApiKey,
-  adminController.refundTripPassengers,
-);
-
 export default router;

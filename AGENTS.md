@@ -85,7 +85,7 @@ Dead claim feature fully removed; dispatch auto-assign is the only assignment pa
 - `route/route.service.ts`: dropped `TripClaimService`/`resolveDriverId` imports, `tripClaim` field/ctor, and `getAvailableTrips`/`getAvailableTripsCountByDate`/`claimTrip`.
 - `route/route.controller.ts`: removed `sseManager` import + `streamTripUpdates`, `getAvailableTrips`, `getAvailableTripsCountByDate`, `claimTrip` handlers.
 - `route/route.routes.ts`: removed `/trips/live`, `/driver/trips/available`, `/driver/trips/available/calendar`, `/driver/trip/:id/claim`. `driverActionLimiter` kept (completeTrip).
-- `route/route.repository.ts`: removed `TripWithRouteAndBookings`, `findTripsWithRouteAndBookingCount`, `countAvailableTripsByDateRange`, pruned `gt`/`or` drizzle imports. Kept `findTripsWithRoute` (admin), `lockTrip`/`assignDriverToTrip`/`findVehicleScheduledAtDeparture` (admin), `findTripWithRoute` (admin + trip.service).
+- `route/route.repository.ts`: removed `TripWithRouteAndBookings`, `findTripsWithRouteAndBookingCount`, `countAvailableTripsByDateRange`, pruned `gt`/`or` drizzle imports. Kept `lockTrip`/`updateTrip`/`findTripWithRoute`/`updateBookingsByTrip` (Phase 7 + trip.service); admin-only `findTripsWithRoute`/`assignDriverToTrip`/`findVehicleScheduledAtDeparture` removed later in Phase 12.
 - `workers/boss.ts` + `workers/index.ts`: removed `TRIP_DRIVER_ASSIGNED`/`_DLQ` queues, `TripDriverAssignedJobData`, queue creation, worker registration.
 - `admin/admin-trip.service.ts`: comment no longer references claimTrip (admin external assignment unchanged).
 - `packages/api/src/hooks/booking.ts`: removed `AvailableTrip`/`AvailableTripsResponse`/`AvailableTripsCountByDateResponse` + claim/available hooks. `useInfiniteQuery`/`useMutation`/`useQueryClient`/`keepPreviousData` still used by live hooks.
@@ -143,6 +143,14 @@ Route schema refactor: one route row per origin with parallel daily `time[]` dep
 - apps/web: FUNAAB mock to new fields (`destination_*` null, station in `train_station_*`, price 4500, luggage_fee 1000); `TripSearchSection.tsx` origin-only + `routes= data ?? []`; `TripBookingCards.tsx` rewritten (selectable departure/arrival slots, boarding-point picker, luggage checkbox, fee = `luggageCount × luggage_fee` in total, new product naming); `TripStatusCardItem.tsx`/`RouteSheetDetails.tsx` derive origin/destination/boarding labels; `lib/utils.ts` builds new TRoute. Deleted dead `components/trip/RouteCard.tsx` + `RouteBookingSheet.tsx` (no consumers). apps/drivers untouched (`RouteWithTrips` still unused).
 - Verified: turbo `check-types` (types/api/ui/web/drivers) 5/5 + `tsc --noEmit` for shared/packages/api/packages/types/apps/web clean. dailyexpress-api tsc reports only the pre-existing deleted-payment baseline (see Blocked).
 
+### Phase 12 — Remove admin trip assignment / pending / refund endpoints (COMPLETE 2026-09-11)
+Removed the 3 admin endpoints end-to-end: `GET /trips/pending`, `POST /trip/:id/assign-driver`, `POST /trip/:id/refund`. Strict admin scope — the orphaned `TRIP_REFUND` worker/queues/job method are left untouched (handled separately).
+- `admin/admin.routes.ts`: deleted the 3 route blocks; only route CRUD remains.
+- `admin/admin.controller.ts`: deleted `getPendingTrips`/`assignPlatformDriver`/`refundTripPassengers` handlers + the `adminTripService` import.
+- Deleted `admin/admin-trip.service.ts` entirely (`AdminTripService` had no other consumers). This also removes one of the broken `../payment/payment.repository` imports.
+- `route/route.repository.ts`: removed dead admin-only methods `findTripsWithRoute`, `findDriverById`, `assignDriverToTrip`, `findSuccessfulBookingsByTripId`, `findVehicleScheduledAtDeparture`, `findTripById`. Kept `lockTrip`/`updateTrip`/`findTripWithRoute`/`updateBookingsByTrip` (trip.service). Pruned `asc`/`isNull`/`ne`/`sql` imports (kept `sql` — still used by `findBookingByPaymentRef`) and dropped the `formatBusinessDate`/`getScheduledDepartureTime` import.
+- No migration, no frontend impact (Appsmith admin UI is external). `payment`/`refund`/`earning` rows and the TRIP_REFUND worker are unaffected.
+
 ### In Progress
 - Phase 9, Part A is code-complete but **not deployed/live-verified**. Blocked on user verification + live Cloudflare deployment of the `workers/` consumer (queue create, worker deploy, SES secrets) and wiring runtime CF env vars into dailyexpress-api. Part B (moving refund processing to CF) is unplanned until Part A is verified.
 
@@ -150,7 +158,7 @@ Route schema refactor: one route row per origin with parallel daily `time[]` dep
 - Migrations `0021_drop_zone.sql`, `0022_drop_notification.sql`, `0023_driver_onboarding_bank_nullable.sql`, `0024_google_only_auth.sql`, `0025_drop_external_driver.sql` not applied anywhere (needs a running DB; Docker quit; prod via `railway connect Postgres` when ready). Apply in order 0021 → 0022 → 0023 → 0024 → 0025.
 - Migration `0026_drop_driver_stats.sql` not applied anywhere (needs a running DB; prod via `railway connect Postgres` when ready). Dropping the table destroys historical per-driver `totalEarnings`/`pendingPayments`/`totalPassengers` — accepted (surfaced nowhere).
 - Migration `0027_route_multideparture.sql` not applied anywhere (needs a running DB). DESTRUCTIVE — `TRUNCATE payout, earning, booking, trip, route CASCADE`. Verify live column/index names (`\d route/trip/booking`) before running (intermediate migrations squashed; see pre-apply note in the file).
-- dailyexpress-api **won't compile** until the payment module is restored: `payment/` is deleted in the working tree but `admin-trip.service.ts`, `driver.service.ts`, `auth.service.ts`, `index.ts` (payment.routes), and `workers/trip-refund.worker.ts` still import it. Until restored, checkout also creates no charge — bookings stay `pending`/`initialized`.
+- dailyexpress-api **won't compile** until the payment module is restored: `payment/` is deleted in the working tree but `driver.service.ts`, `auth.service.ts`, `index.ts` (payment.routes), and `workers/trip-refund.worker.ts` still import it. Until restored, checkout also creates no charge — bookings stay `pending`/`initialized`.
 - Phase 9, Part A deploy: Cloudflare account/queue/worker create + secret binding (SES region/keys, `EMAIL_FROM`) + dailyexpress-api runtime env (`CLOUDFLARE_ACCOUNT_ID`, `CLOUDFLARE_EMAIL_QUEUE_ID`, `CLOUDFLARE_API_TOKEN`) not yet configured.
 
 ## Prod Migration Notes (0014)
@@ -200,6 +208,7 @@ Route schema refactor: one route row per origin with parallel daily `time[]` dep
 - `dailyexpress-api/workers/email.worker.ts` + `dailyexpress-api/mail/mail.service.ts` — pg-boss email consumer + raw-MIME SESv2 sender (Phase 9 Part A).
 - `dailyexpress-api/driver/driver-stats.service.ts` — `driver_stats` read/write service (Phase 10).
 - `apps/web/app/components/trip/RouteCard.tsx` + `RouteBookingSheet.tsx` — dead components (RouteBookingSheet only imported by RouteCard), removed in Phase 11.
+- `dailyexpress-api/admin/admin-trip.service.ts` — admin-only `getPendingTrips`/`assignPlatformDriver`/`refundTripPassengers` service, removed with the 3 admin endpoints (Phase 12).
 
 ### Edited
 - `dailyexpress-api/db/payout-schema.ts` — payout/earning schema (tripId, removed cols/enums, removed attempt table, 4-value payout_status).

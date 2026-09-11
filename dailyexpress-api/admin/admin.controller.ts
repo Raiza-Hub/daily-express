@@ -5,7 +5,6 @@ import { sendErrorResponse } from "../middleware/apiResponses";
 import { recordAdminAudit } from "../middleware/adminAudit";
 import { timeAsync } from "../utils/timing";
 import { routeCrudService } from "../route/route-crud.service";
-import { adminTripService } from "./admin-trip.service";
 
 function getParam(value: string | string[] | undefined): string | null {
   return typeof value === "string" ? value : (value?.[0] ?? null);
@@ -92,91 +91,5 @@ export const deleteRoute: RequestHandler = asyncHandler(
     return res
       .status(200)
       .json(createSuccessResponse(null, "Route deactivated successfully"));
-  },
-);
-
-export const getPendingTrips: RequestHandler = asyncHandler(
-  async (req: Request, res: Response) => {
-    const trips = await timeAsync(
-      "admin.pending_trips.service",
-      {},
-      () => adminTripService.getPendingTrips(),
-    );
-    return res
-      .status(200)
-      .json(
-        createSuccessResponse(trips, "Pending trips fetched successfully"),
-      );
-  },
-);
-
-export const assignPlatformDriver: RequestHandler = asyncHandler(
-  async (req: Request, res: Response) => {
-    const adminEmail = req.adminUser?.email;
-    if (!adminEmail) {
-      return sendErrorResponse(res, 401, "Admin authentication required.", {
-        code: "ADMIN_AUTHENTICATION_REQUIRED",
-      });
-    }
-    const tripId = getParam(req.params.id);
-    if (!tripId) {
-      return sendErrorResponse(res, 400, "Trip ID is required.", {
-        code: "MISSING_TRIP_ID",
-      });
-    }
-    const { driverId } = req.body;
-    if (!driverId) {
-      return sendErrorResponse(res, 400, "Driver ID is required.", {
-        code: "MISSING_DRIVER_ID",
-      });
-    }
-    const trip = await timeAsync(
-      "admin.assign_driver.service",
-      { tripId, driverId, adminEmail },
-      () => adminTripService.assignPlatformDriver(tripId, driverId, adminEmail),
-    );
-    await recordAdminAudit({
-      action: "assign_platform_driver",
-      adminEmail,
-      target: tripId,
-
-      details: JSON.stringify({ driverId }),
-    });
-    return res
-      .status(200)
-      .json(createSuccessResponse(trip, "Driver assigned successfully"));
-  },
-);
-
-export const refundTripPassengers: RequestHandler = asyncHandler(
-  async (req: Request, res: Response) => {
-    const adminEmail = req.adminUser?.email;
-    if (!adminEmail) {
-      return sendErrorResponse(res, 401, "Admin authentication required.", {
-        code: "ADMIN_AUTHENTICATION_REQUIRED",
-      });
-    }
-    const tripId = getParam(req.params.id);
-    if (!tripId) {
-      return sendErrorResponse(res, 400, "Trip ID is required.", {
-        code: "MISSING_TRIP_ID",
-      });
-    }
-    const reason: "no_driver_found" | "admin_cancelled" | undefined = req.body.reason;
-    const result = await timeAsync(
-      "admin.refund_trip.service",
-      { tripId, adminEmail },
-      () => adminTripService.refundTripPassengers(tripId, adminEmail, reason),
-    );
-    await recordAdminAudit({
-      action: "refund_trip_passengers",
-      adminEmail,
-      target: tripId,
-
-      details: JSON.stringify({ reason }),
-    });
-    return res
-      .status(200)
-      .json(createSuccessResponse(result, "Refund processed successfully"));
   },
 );
