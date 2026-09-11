@@ -7,7 +7,8 @@ interface CheckoutBookingResponse {
   booking: {
     id: string;
   };
-  fareAmount: number;
+  totalAmount: number;
+  totalFee: number;
   currency: string;
 }
 
@@ -25,13 +26,10 @@ export const createTripCheckoutFn = async (
     >("/user/booking/checkout", {
       routeId: data.routeId,
       tripDate: data.tripDate,
-      vehicleType: data.vehicleType,
-      seatCount: data.seatCount,
-      phone: data.phone,
-      timeMode: data.timeMode,
+      tripType: data.tripType,
       selectedTime: data.selectedTime,
       boardingPoint: data.boardingPoint,
-      luggageCount: data.luggageCount,
+      passengers: data.passengers,
     });
 
     if (!bookingResponse.data.success || !bookingResponse.data.data) {

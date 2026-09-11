@@ -1,10 +1,8 @@
-import { createServiceError } from "@shared/utils";
 import { randomInt } from "node:crypto";
 import type { KoraCheckoutChannel } from "@shared/types";
 import type { WebhookJobData } from "../workers/boss";
 
 type KoraChannel = KoraCheckoutChannel;
-const MAX_CHECKOUT_AMOUNT = 200_000;
 
 export function dedupeChannels(channels?: KoraChannel[]) {
   if (!channels?.length) {
@@ -44,14 +42,11 @@ export function parseDate(value?: string | Date | null) {
   return Number.isNaN(parsed.getTime()) ? null : parsed;
 }
 
-export function calculateTrustedChargeAmount(fareAmount: number, feeAmount: number = 0) {
-  return fareAmount + feeAmount;
-}
-
-export function assertCheckoutAmountWithinLimit(amount: number) {
-  if (amount > MAX_CHECKOUT_AMOUNT) {
-    throw createServiceError("Checkout amount exceeds NGN 200,000 limit", 400);
-  }
+export function calculateTripChargeAmount(input: {
+  totalAmount: number;
+  totalFee: number;
+}) {
+  return input.totalAmount + input.totalFee;
 }
 
 export function getPaymentReference(job: WebhookJobData) {

@@ -21,8 +21,8 @@ export interface UserBookingWithTrip {
   status: string;
   paymentReference: string | null;
   paymentStatus: string;
-  fareAmount: number;
-  feeAmount: number;
+  totalAmount: number;
+  totalFee: number;
   currency: string;
   createdAt: Date;
   updatedAt: Date;
@@ -184,24 +184,46 @@ export const useCompleteTrip = (options?: {
   });
 };
 
-interface TripBooking {
-  id: string;
-  seatNumber: number;
+interface TripBookingPassenger {
+  fullName: string;
+  email: string;
+  phone: string;
+  carriesLuggage: boolean;
+}
+
+interface TripBookingEarning {
+  amount: number;
+  currency: string;
   status: string;
-  paymentStatus: string;
-  createdAt: Date;
-  user: {
-    firstName: string;
-    lastName: string;
-    profilePictureUrl?: string | null;
+  driverId: string | null;
+}
+
+interface TripBookingDetails {
+  trip: {
+    id: string;
+    date: Date;
+    status: string;
+    departureTime: string;
+    arrivalTime: string;
+    bookedSeats: number;
+    capacity: number;
+    origin_label: string;
+    origin_title: string;
+    destination_title: string | null;
+    train_station_title: string | null;
+    pickup_point: string;
+    dropoff_point: string;
+    price: number;
   };
+  passengers: TripBookingPassenger[];
+  earning: TripBookingEarning | null;
 }
 
 export const getTripBookingsFn = async (
   tripId: string,
-): Promise<TripBooking[]> => {
+): Promise<TripBookingDetails> => {
   try {
-    const response = await routeApi.get<ApiResponse<TripBooking[]>>(
+    const response = await routeApi.get<ApiResponse<TripBookingDetails>>(
       `/driver/trip/${tripId}/bookings`,
     );
     if (!response.data.success || !response.data.data) {

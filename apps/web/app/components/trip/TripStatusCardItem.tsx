@@ -176,7 +176,7 @@ const TripStatusCardItem = ({
                             </p>
 
                             <p className="mt-2 text-xl font-medium text-neutral-900">
-                                {formatPrice(item.fareAmount + (item.feeAmount ?? 0))}
+                                {formatPrice(item.totalAmount + (item.totalFee ?? 0))}
                             </p>
                         </div>
                     </div>

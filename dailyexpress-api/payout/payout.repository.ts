@@ -1,4 +1,4 @@
-import { and, desc, eq, inArray } from "drizzle-orm";
+import { and, desc, eq, inArray, sql } from "drizzle-orm";
 import { db } from "../db/connection";
 import {
   driver,
@@ -23,12 +23,6 @@ export class PayoutRepository {
     });
   }
 
-  findEarningByBookingId(bookingId: string) {
-    return db.query.earning.findFirst({
-      where: eq(earning.bookingId, bookingId),
-    });
-  }
-
   insertEarning(
     tx: PayoutTransaction,
     values: typeof earning.$inferInsert,
@@ -36,7 +30,14 @@ export class PayoutRepository {
     return tx
       .insert(earning)
       .values(values)
-      .onConflictDoNothing({ target: earning.bookingId });
+      .onConflictDoUpdate({
+        target: earning.tripId,
+        set: {
+          amount: sql`excluded.amount`,
+          status: values.status,
+          updatedAt: new Date(),
+        },
+      });
   }
 
   updateEarningStatus(
@@ -72,17 +73,6 @@ export class PayoutRepository {
       });
   }
 
-  updateEarningByBookingId(
-    tx: PayoutTransaction,
-    bookingId: string,
-    fields: Partial<typeof earning.$inferInsert>,
-  ) {
-    return tx
-      .update(earning)
-      .set(fields)
-      .where(eq(earning.bookingId, bookingId));
-  }
-
   findPayoutByTripId(tx: PayoutTransaction | typeof db, tripId: string) {
     return tx.query.payout.findFirst({
       where: eq(payout.tripId, tripId),
@@ -102,12 +92,13 @@ export class PayoutRepository {
     });
   }
 
-  findTripPayoutEarnings(tripId: string) {
-    return db.query.earning.findMany({
+  findTripPayoutEarningByTripId(tripId: string) {
+    return db.query.earning.findFirst({
       where: and(
         eq(earning.tripId, tripId),
         inArray(earning.status, ["available", "processing"]),
       ),
+      orderBy: [desc(earning.createdAt), desc(earning.id)],
     });
   }
 

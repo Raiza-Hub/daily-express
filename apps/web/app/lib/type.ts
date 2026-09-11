@@ -22,9 +22,9 @@ export interface TripStatusItem {
   remainingSeats: number;
   paymentStatus: string;
   driverStatus: string;
-  fareAmount: number;
+  totalAmount: number;
   displayMessage?: string | null;
-  feeAmount?: number;
+  totalFee?: number;
 }
 
 

@@ -28,30 +28,29 @@ export class PayoutProcessorService {
   ) {}
 
   async processTripPayout(tripId: string) {
-    const earnings = await this.repo.findTripPayoutEarnings(tripId);
-    if (earnings.length === 0) return;
-
-    const payoutDriver = await this.getActivePayoutDriver(
-      earnings[0].driverId,
-    );
-    if (!payoutDriver) {
-      return;
-    }
-
     const latestPayout = await this.repo.findPayoutByTripId(db, tripId);
-    if (latestPayout && latestPayout.status !== "failed") {
+    if (latestPayout && latestPayout.status !== "failed") return;
+
+    const payoutEarning = await this.repo.findTripPayoutEarningByTripId(
+      tripId,
+    );
+    if (!payoutEarning) return;
+
+    const tripDriver = payoutEarning.driverId;
+    if (!tripDriver) return;
+
+    const payoutDriver = await this.getActivePayoutDriver(tripDriver);
+    if (!payoutDriver) return;
+
+    if (payoutEarning.amount < this.config.MINIMUM_PAYOUT_AMOUNT) {
       return;
     }
 
     const payoutRecord = await this.createTripPayout(
       tripId,
-      earnings,
+      payoutEarning,
       payoutDriver,
     );
-
-    if (payoutRecord.amount < this.config.MINIMUM_PAYOUT_AMOUNT) {
-      return;
-    }
 
     await this.executeAttempt(payoutRecord, payoutDriver);
   }
@@ -167,24 +166,19 @@ export class PayoutProcessorService {
 
   private async createTripPayout(
     tripId: string,
-    earnings: EarningRecord[],
+    payoutEarning: EarningRecord,
     payoutDriver: ActivePayoutDriver,
   ): Promise<PayoutRecord> {
-    const amount = earnings.reduce(
-      (sum, entry) => sum + entry.amount,
-      0,
-    );
-
     return db.transaction(async (tx) => {
       const [createdPayout] = await this.repo.insertPayout(tx, {
-        driverId: earnings[0].driverId,
+        driverId: payoutEarning.driverId!,
         driverEmail: payoutDriver.email,
         recipientBankName: payoutDriver.bankName,
         recipientAccountLast4: payoutDriver.accountNumber.slice(-4),
         tripId,
         reference: this.buildPayoutReference(),
-        amount,
-        currency: earnings[0].currency || "NGN",
+        amount: payoutEarning.amount,
+        currency: payoutEarning.currency || "NGN",
         status: "pending",
       });
 

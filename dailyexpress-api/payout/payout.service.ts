@@ -35,10 +35,9 @@ export class PayoutService {
   async createEarningForConfirmedBookingInTransaction(
     tx: PayoutTransaction,
     input: {
-      bookingId: string;
       tripId: string;
-      driverId: string;
-      fareAmount: number;
+      driverId: string | null;
+      amount: number;
       currency: string;
     },
   ) {

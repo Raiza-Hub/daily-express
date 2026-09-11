@@ -265,16 +265,32 @@ export interface Booking {
   arrivalTime: string;
   boardingPoint: "pickup" | "dropoff";
   luggageCount: number;
-  seatCount: number;
-  phone: string;
-  fareAmount: number;
-  feeAmount: number;
+  totalAmount: number;
+  totalFee: number;
   currency: string;
   status: TripStatus;
   paymentReference?: string | null;
   paymentStatus?: string | null;
   createdAt: Date;
   updatedAt: Date;
+}
+
+export interface Passenger {
+  id: string;
+  bookingId: string;
+  fullName: string;
+  email: string;
+  phone: string;
+  carriesLuggage: boolean;
+  createdAt: Date;
+  updatedAt: Date;
+}
+
+export interface PassengerInput {
+  fullName: string;
+  email: string;
+  phone: string;
+  carriesLuggage: boolean;
 }
 
 export interface UserBookingDetails extends Booking {
@@ -284,13 +300,10 @@ export interface UserBookingDetails extends Booking {
 export interface CreateBooking {
   routeId: string;
   tripDate: string;
-  vehicleType: "car" | "bus";
-  seatCount: number;
-  phone: string;
-  timeMode: "departure" | "arrival";
+  tripType: "departure" | "arrival";
   selectedTime: string;
   boardingPoint: "pickup" | "dropoff";
-  luggageCount: number;
+  passengers: PassengerInput[];
 }
 
 export interface updateBookingRequest {
@@ -346,13 +359,10 @@ export interface Payment {
 export interface CreateTripCheckoutRequest {
   routeId: string;
   tripDate: string;
-  vehicleType: "car" | "bus";
-  seatCount: number;
-  phone: string;
-  timeMode: "departure" | "arrival";
+  tripType: "departure" | "arrival";
   selectedTime: string;
   boardingPoint: "pickup" | "dropoff";
-  luggageCount: number;
+  passengers: PassengerInput[];
   channels?: KoraCheckoutChannel[];
   productName: string;
   productDescription: string;
