@@ -50,17 +50,5 @@ export function calculateTripChargeAmount(input: {
 }
 
 export function getPaymentReference(job: WebhookJobData) {
-  if (job.event.startsWith("refund.")) {
-    return (
-      (job.data.payment_reference as string | undefined) ||
-      (job.data.reference as string | undefined) ||
-      null
-    );
-  }
-
-  return (
-    (job.data.reference as string | undefined) ||
-    (job.data.payment_reference as string | undefined) ||
-    null
-  );
+  return typeof job.data.reference === "string" ? job.data.reference : null;
 }

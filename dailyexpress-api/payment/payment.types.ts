@@ -53,7 +53,6 @@ export interface KoraVerifyResponse {
   paid_at?: string | null;
   transaction_date?: string | null;
   payment_method?: string;
-  payment_reference?: string | null;
   metadata?: Record<string, unknown> | null;
   customer?: {
     email?: string | null;
@@ -88,7 +87,6 @@ export interface KoraWebhookPayload {
       email?: string | null;
     };
     metadata?: Record<string, unknown> | null;
-    payment_reference?: string | null;
     [key: string]: unknown;
   };
   [key: string]: unknown;
