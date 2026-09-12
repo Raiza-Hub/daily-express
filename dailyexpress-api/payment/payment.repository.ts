@@ -24,6 +24,26 @@ export class PaymentRepository {
     });
   }
 
+  insertPayment(values: typeof payment.$inferInsert) {
+    return db
+      .insert(payment)
+      .values(values)
+      .onConflictDoNothing({ target: payment.bookingId })
+      .returning();
+  }
+
+  setPendingCheckout(id: string, checkoutUrl: string) {
+    return db
+      .update(payment)
+      .set({ status: "pending", checkoutUrl, updatedAt: new Date() })
+      .where(eq(payment.id, id))
+      .returning();
+  }
+
+  deletePayment(id: string) {
+    return db.delete(payment).where(eq(payment.id, id));
+  }
+
   findPaymentsByBookingIds(bookingIds: string[]) {
     if (bookingIds.length === 0) return Promise.resolve([]);
     return db.query.payment.findMany({
