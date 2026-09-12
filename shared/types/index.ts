@@ -391,9 +391,6 @@ export interface DriverPayout {
   amount: number;
   currency: string;
   status: PayoutStatus;
-  failureCode?: string | null;
-  failureReason?: string | null;
-  failedAt?: Date | null;
   createdAt: Date;
   updatedAt: Date;
 }

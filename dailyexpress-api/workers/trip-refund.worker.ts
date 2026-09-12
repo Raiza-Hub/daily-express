@@ -107,7 +107,6 @@ export async function registerTripRefundWorker() {
         if (lockedRefund.status === "pending") {
           await paymentRepo.updateRefundStatus(tx, lockedRefund.id, {
             status: "failed",
-            failureReason: "All 3 pg-boss retry attempts exhausted",
             completedAt: new Date(),
           });
         }

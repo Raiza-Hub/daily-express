@@ -26,9 +26,6 @@ export class PayoutProcessorService {
   ) {}
 
   async processTripPayout(tripId: string) {
-    const latestPayout = await this.repo.findPayoutByTripId(db, tripId);
-    if (latestPayout && latestPayout.status !== "failed") return;
-
     const payoutEarning = await this.repo.findTripPayoutEarningByTripId(
       tripId,
     );
@@ -81,8 +78,6 @@ export class PayoutProcessorService {
         .update(payout)
         .set({
           status: "processing",
-          failureCode: null,
-          failureReason: null,
           updatedAt: new Date(),
         })
         .where(eq(payout.id, payoutRecord.id));

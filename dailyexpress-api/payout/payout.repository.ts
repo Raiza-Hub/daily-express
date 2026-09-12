@@ -73,13 +73,6 @@ export class PayoutRepository {
       });
   }
 
-  findPayoutByTripId(tx: PayoutTransaction | typeof db, tripId: string) {
-    return tx.query.payout.findFirst({
-      where: eq(payout.tripId, tripId),
-      orderBy: [desc(payout.createdAt), desc(payout.id)],
-    });
-  }
-
   findPayoutById(id: string) {
     return db.query.payout.findFirst({
       where: eq(payout.id, id),
