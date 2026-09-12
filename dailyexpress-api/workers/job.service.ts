@@ -2,6 +2,7 @@ import { sql, type SQL } from "drizzle-orm";
 import {
   QUEUES,
   type EmailSendJobData,
+  type PayerInfoJobData,
   type TripRefundJobData,
 } from "./boss";
 
@@ -73,6 +74,15 @@ export class JobService {
     payload: EmailSendJobData,
   ) {
     await this.enqueue(tx, QUEUES.EMAIL_SEND, payload);
+  }
+
+  async enqueuePayerInfoBackfill(
+    tx: JobExecutor,
+    payload: PayerInfoJobData,
+  ) {
+    await this.enqueue(tx, QUEUES.PAYER_INFO, payload, {
+      singletonKey: payload.reference,
+    });
   }
 }
 

@@ -37,12 +37,6 @@ export class PaymentService {
   async transitionPendingPayment(
     reference: string,
     nextStatus: Extract<PaymentStatus, "failed" | "cancelled" | "expired">,
-    reason: string,
-    options?: {
-      cleanupProjection?: boolean;
-      failureCode?: string;
-      failedAt?: Date | null;
-    },
   ) {
     const existingPayment = await this.repo.findPaymentByReference(reference);
     if (!existingPayment) return null;
@@ -55,9 +49,6 @@ export class PaymentService {
         .update(payment)
         .set({
           status: nextStatus,
-          failedAt: options?.failedAt ?? existingPayment.failedAt ?? new Date(),
-          failureCode: options?.failureCode || existingPayment.failureCode,
-          failureReason: reason,
           updatedAt: new Date(),
         })
         .where(
@@ -109,14 +100,7 @@ export class PaymentService {
         return tripStatusUrl;
       }
 
-      await this.transitionPendingPayment(
-        reference,
-        "expired",
-        verification.data.message || "Payment was not completed",
-        {
-          failureCode: "PAYMENT_NOT_COMPLETED",
-        },
-      );
+      await this.transitionPendingPayment(reference, "expired");
       return tripStatusUrl;
     } catch (error) {
       logger.error("payment.return_verification_failed", {

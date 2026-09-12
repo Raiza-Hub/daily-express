@@ -7,6 +7,9 @@ export const QUEUES = {
 
   EMAIL_SEND: "email.send",
   EMAIL_SEND_DLQ: "email.send.dlq",
+
+  PAYER_INFO: "payment.payer-info",
+  PAYER_INFO_DLQ: "payment.payer-info.dlq",
 } as const;
 
 export interface WebhookJobData {
@@ -28,6 +31,10 @@ export interface EmailSendJobData {
   to: string;
   subject: string;
   html: string;
+}
+
+export interface PayerInfoJobData {
+  reference: string;
 }
 
 let boss: PgBoss | null = null;
@@ -70,6 +77,8 @@ async function createQueues(instance: PgBoss) {
 
   await instance.createQueue(QUEUES.EMAIL_SEND_DLQ, { retryLimit: 0 });
 
+  await instance.createQueue(QUEUES.PAYER_INFO_DLQ, { retryLimit: 0 });
+
   // Create primary queues
   await instance.createQueue(QUEUES.TRIP_REFUND, {
     retryLimit: 3,
@@ -87,6 +96,15 @@ async function createQueues(instance: PgBoss) {
     retryDelayMax: 60,
     deleteAfterSeconds: 86400,
     deadLetter: QUEUES.EMAIL_SEND_DLQ,
+  });
+
+  await instance.createQueue(QUEUES.PAYER_INFO, {
+    retryLimit: 3,
+    retryDelay: 30,
+    retryBackoff: true,
+    retryDelayMax: 300,
+    deleteAfterSeconds: 86400,
+    deadLetter: QUEUES.PAYER_INFO_DLQ,
   });
 
   logger.info("pg_boss.queues_created");
