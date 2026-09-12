@@ -1,4 +1,4 @@
-import { and, count, eq, gt, gte, inArray, ne, sql } from "drizzle-orm";
+import { and, count, eq, gte, inArray, ne } from "drizzle-orm";
 import { createServiceError } from "@shared/utils";
 import { db } from "../db/connection";
 import {
@@ -8,7 +8,6 @@ import {
   refund,
   route,
   trip,
-  type BookingRecord,
 } from "../db/index";
 import type { PaymentStatus, PaymentTransaction } from "./payment.types";
 
@@ -90,105 +89,6 @@ export class PaymentRepository {
       .set({ status, ...fields, updatedAt: new Date() })
       .where(and(eq(payment.reference, reference), eq(payment.status, "processing")))
       .returning();
-  }
-
-  async updateBookingPaymentStatus(
-    tx: PaymentTransaction,
-    input: {
-      bookingId?: string | null;
-      paymentReference: string;
-      paymentStatus: "initialized" | "pending" | "successful" | "failed" | "cancelled" | "expired";
-    },
-  ): Promise<{
-    booking: BookingRecord | null;
-    confirmed: boolean;
-    cancelled: boolean;
-    cancelledConfirmed: boolean;
-  }> {
-    const bookingId = input.bookingId;
-    if (!bookingId) {
-      return {
-        booking: null,
-        confirmed: false,
-        cancelled: false,
-        cancelledConfirmed: false,
-      };
-    }
-
-    const existingBooking = await tx.query.booking.findFirst({
-      where: eq(booking.id, bookingId),
-    });
-
-    if (!existingBooking) {
-      return {
-        booking: null,
-        confirmed: false,
-        cancelled: false,
-        cancelledConfirmed: false,
-      };
-    }
-
-    const nextBookingStatus =
-      input.paymentStatus === "successful"
-        ? "confirmed"
-        : input.paymentStatus === "failed" ||
-            input.paymentStatus === "cancelled" ||
-            input.paymentStatus === "expired"
-          ? "cancelled"
-          : ("pending" as const);
-
-    const isCancellingTransition =
-      nextBookingStatus === "cancelled" &&
-      existingBooking.status !== "cancelled";
-    const isCancellingConfirmedBooking =
-      isCancellingTransition && existingBooking.status === "confirmed";
-    const shouldConfirm =
-      input.paymentStatus === "successful" &&
-      nextBookingStatus === "confirmed" &&
-      existingBooking.status !== "confirmed";
-
-    const updatePayload: Record<string, unknown> = {
-      paymentReference: input.paymentReference,
-      paymentStatus: input.paymentStatus,
-      updatedAt: new Date(),
-    };
-
-    if (
-      !(
-        (existingBooking.status === "confirmed" &&
-          nextBookingStatus !== "confirmed") ||
-        (existingBooking.status === "cancelled" &&
-          nextBookingStatus === "pending")
-      )
-    ) {
-      updatePayload.status = nextBookingStatus;
-    }
-
-    if (isCancellingTransition && existingBooking.tripId) {
-      const passengerCount = await this.countPassengersByBooking(
-        tx,
-        existingBooking.id,
-      );
-      await tx
-        .update(trip)
-        .set({ bookedSeats: sql`GREATEST(${trip.bookedSeats} - ${Math.max(passengerCount, 1)}, 0)` })
-        .where(
-          and(eq(trip.id, existingBooking.tripId), gt(trip.bookedSeats, 0)),
-        );
-    }
-
-    const [updatedBooking] = await tx
-      .update(booking)
-      .set(updatePayload)
-      .where(eq(booking.id, bookingId))
-      .returning();
-
-    return {
-      booking: updatedBooking,
-      confirmed: shouldConfirm,
-      cancelled: isCancellingTransition,
-      cancelledConfirmed: isCancellingConfirmedBooking,
-    };
   }
 
   async findSuccessfulPaymentsForDriverUpcomingTrips(
