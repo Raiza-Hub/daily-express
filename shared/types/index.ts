@@ -349,9 +349,6 @@ export interface Payment {
   checkoutUrl?: string | null;
   redirectUrl: string;
   cancelUrl?: string | null;
-  failedAt?: Date | null;
-  failureCode?: string | null;
-  failureReason?: string | null;
   createdAt: Date;
   updatedAt: Date;
 }

@@ -84,7 +84,7 @@ export class PaymentRepository {
       .returning();
   }
 
-  updateProcessingPayment(reference: string, status: PaymentStatus, fields: Partial<typeof payment.$inferInsert>) {
+  updateProcessingPayment(reference: string, status: PaymentStatus, fields?: Partial<typeof payment.$inferInsert>) {
     return db
       .update(payment)
       .set({ status, ...fields, updatedAt: new Date() })

@@ -9,6 +9,7 @@
     "dev": "bun --watch index.ts",
     "start": "bun index.ts",
     "db:generate": "bun x drizzle-kit generate",
+    "typecheck": "tsc --noEmit",
     "db:push": "bun x drizzle-kit push",
     "db:pull": "bun x drizzle-kit pull",
     "db:migrate": "bun x drizzle-kit migrate",

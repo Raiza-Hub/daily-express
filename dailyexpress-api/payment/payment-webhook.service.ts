@@ -5,6 +5,7 @@ import { logger } from "../utils/logger";
 import { getPaymentReference } from "../utils/payment";
 import { bookingFinalizerService } from "../route/booking-finalizer.service";
 import type { WebhookJobData } from "../workers/boss";
+import { jobService } from "../workers/job.service";
 import { koraClient } from "./kora.client";
 import { PaymentRepository } from "./payment.repository";
 import { PaymentPayoutRefundService } from "./payment-payout-refund.service";
@@ -98,27 +99,15 @@ export class PaymentWebhookService {
       return;
     }
 
-    const verification = await this.kora.verifyTransaction(reference);
-    if (verification.data.status.toLowerCase() !== "success") {
-      await this.repo.updateProcessingPayment(reference, "failed", {
-        failureCode: "VERIFICATION_MISMATCH",
-        failureReason: `Webhook indicated success but verification returned ${verification.data.status}`,
-      });
-      return;
-    }
-
-    const payerAccount = verification.data.bank_transfer?.payer_bank_account;
-
     await db.transaction(async (tx) => {
       await tx.update(payment)
         .set({
           status: "successful",
-          payerBankName: payerAccount?.bank_name ?? null,
-          payerAccountNumber: payerAccount?.account_number ?? null,
-          payerAccountName: payerAccount?.account_name ?? null,
           updatedAt: new Date(),
         })
         .where(and(eq(payment.reference, reference), eq(payment.status, "processing")));
+
+      await jobService.enqueuePayerInfoBackfill(tx, { reference });
     });
 
     if (claimed.bookingId) {
@@ -127,22 +116,12 @@ export class PaymentWebhookService {
   }
 
   private async processChargeFailure(reference: string) {
-    const verification = await this.kora.verifyTransaction(reference);
-
-    if (verification.data.status.toLowerCase() === "success") {
-      await this.processChargeSuccess(reference);
-      return;
-    }
-
     const [claimed] = await this.repo.claimPayment(reference);
     if (!claimed) {
       logger.info("payment.webhook_fail_already_claimed", { reference });
       return;
     }
 
-    await this.repo.updateProcessingPayment(reference, "failed", {
-      failureCode: "PAYMENT_FAILED",
-      failureReason: verification.data.message || "Payment provider reported a failed charge",
-    });
+    await this.repo.updateProcessingPayment(reference, "failed");
   }
 }
