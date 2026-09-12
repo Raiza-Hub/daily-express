@@ -136,7 +136,6 @@ export class PaymentPayoutRefundService {
           reference: existingRefundReference,
           amount: refundAmount,
           currency: paymentRecord.currency,
-          reason,
           status: "pending",
         });
         return row;

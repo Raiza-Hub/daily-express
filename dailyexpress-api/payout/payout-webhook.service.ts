@@ -22,32 +22,31 @@ export class PayoutWebhookService {
       input.event.data,
       input.signature,
     );
-    if (!signatureValid) return { processed: false, signatureValid };
+    if (!signatureValid) return;
 
     const reference = input.event.data.reference;
-    if (!reference) return { processed: false, signatureValid };
+    if (!reference) return;
 
     const payoutRecord = await this.repo.findPayoutByReference(reference);
-    if (!payoutRecord) return { processed: false, signatureValid };
+    if (!payoutRecord) return;
 
     if (payoutRecord.status === "success" || payoutRecord.status === "failed") {
-      return { processed: true, signatureValid };
+      return;
     }
 
-    if (input.event.event === "transfer.success") {
-      await this.settlementService.finalizePayout(payoutRecord);
-      return { processed: true, signatureValid };
+    switch (input.event.event) {
+      case "transfer.success":
+        await this.settlementService.finalizePayout(payoutRecord);
+        return;
+      case "transfer.failed":
+        await this.notificationService.processPayoutFailure(
+          payoutRecord,
+          this.getWebhookFailureReason(input.event),
+        );
+        return;
+      default:
+        return;
     }
-
-    if (input.event.event === "transfer.failed") {
-      await this.notificationService.processPayoutFailure(
-        payoutRecord,
-        this.getWebhookFailureReason(input.event),
-      );
-      return { processed: true, signatureValid };
-    }
-
-    return { processed: false, signatureValid };
   }
 
   private getWebhookFailureReason(event: KoraPayoutWebhookPayload): string {

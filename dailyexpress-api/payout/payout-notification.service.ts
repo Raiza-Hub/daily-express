@@ -48,9 +48,6 @@ export class PayoutNotificationService {
         .update(payout)
         .set({
           status: "failed",
-          failureCode: reason,
-          failureReason: reason,
-          failedAt: new Date(),
           updatedAt: new Date(),
         })
         .where(eq(payout.id, lockedPayout.id));

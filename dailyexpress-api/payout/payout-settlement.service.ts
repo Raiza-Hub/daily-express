@@ -68,8 +68,6 @@ export class PayoutSettlementService {
         .update(payoutTable)
         .set({
           status: "success",
-          failureCode: null,
-          failureReason: null,
           updatedAt: new Date(),
         })
         .where(eq(payoutTable.id, lockedPayout.id));
