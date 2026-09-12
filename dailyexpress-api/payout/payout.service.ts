@@ -108,10 +108,6 @@ export class PayoutService {
     return this.processorService.processTripPayout(tripId);
   }
 
-  async hasUnsettledEarnings(tripId: string) {
-    return this.repo.hasUnsettledEarnings(db, tripId);
-  }
-
   async processWebhook(input: {
     signature?: string;
     event: KoraPayoutWebhookPayload;

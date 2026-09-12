@@ -102,20 +102,6 @@ export class PayoutRepository {
     });
   }
 
-  hasUnsettledEarnings(tx: PayoutTransaction | typeof db, tripId: string) {
-    return tx.query.earning.findFirst({
-      where: and(
-        eq(earning.tripId, tripId),
-        inArray(earning.status, [
-          "pending_trip_completion",
-          "available",
-          "processing",
-        ]),
-      ),
-      columns: { id: true },
-    });
-  }
-
   insertPayout(tx: PayoutTransaction, values: typeof payout.$inferInsert) {
     return tx
       .insert(payout)

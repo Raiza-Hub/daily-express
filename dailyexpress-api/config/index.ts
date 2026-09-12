@@ -74,11 +74,6 @@ const envSchema = z.object({
         ? "https://dailyexpress.app"
         : "http://localhost:3000",
     ),
-  MINIMUM_PAYOUT_AMOUNT: z.coerce
-    .number()
-    .int()
-    .nonnegative()
-    .default(1000),
 
   // Database
   DATABASE_URL: z.url(),

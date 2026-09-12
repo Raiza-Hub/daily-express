@@ -30,14 +30,6 @@ export class TripService {
     if (tripWithRoute.trip.status === "cancelled") {
       throw createServiceError("Cancelled trips cannot be completed", 400);
     }
-    if (tripWithRoute.trip.status === "completed") {
-      const unsettledEarnings = await this.payoutService.hasUnsettledEarnings(
-        tripId,
-      );
-      if (!unsettledEarnings) {
-        throw createServiceError("Trip is already completed", 400);
-      }
-    }
 
     const arrivalAt = getTripArrivalAt(tripWithRoute.trip);
     if (arrivalAt.getTime() > Date.now()) {
@@ -60,14 +52,6 @@ export class TripService {
       }
       if (lockedTrip.status === "cancelled") {
         throw createServiceError("Cancelled trips cannot be completed", 400);
-      }
-      if (lockedTrip.status === "completed") {
-        const unsettledEarnings = await this.payoutService.hasUnsettledEarnings(
-          tripId,
-        );
-        if (!unsettledEarnings) {
-          throw createServiceError("Trip is already completed", 400);
-        }
       }
 
       const updatedTrip = await this.repo.updateTrip(tx, tripId, {
