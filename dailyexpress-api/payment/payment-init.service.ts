@@ -107,7 +107,7 @@ export class PaymentInitService {
       amount: params.amount,
       reference: params.reference,
       currency: params.currency,
-      redirect_url: this.getReturnUrl(params.reference),
+      redirect_url: this.getReturnUrl(),
       notification_url: this.getWebhookUrl(),
       merchant_bears_cost: false,
       ...(params.channels ? { channels: params.channels } : {}),
@@ -119,27 +119,19 @@ export class PaymentInitService {
   }
 
   private getPaymentPublicBaseUrl() {
-    const configured =
-      this.config.PAYMENT_PUBLIC_BASE_URL || this.config.KORA_WEBHOOK_URL;
+    const configured = this.config.PAYMENT_PUBLIC_BASE_URL;
     if (!configured) {
       throw createServiceError(
-        "PAYMENT_PUBLIC_BASE_URL or KORA_WEBHOOK_URL must be configured",
+        "PAYMENT_PUBLIC_BASE_URL must be configured",
         500,
       );
     }
 
-    return configured
-      .replace(/\/api\/v1\/payments\/webhooks\/kora$/, "")
-      .replace(/\/api\/v1\/payments\/return$/, "")
-      .replace(/\/api\/payments\/v1\/payments\/webhooks\/kora$/, "")
-      .replace(/\/api\/payments\/v1\/payments\/return$/, "")
-      .replace(/\/api\/payments\/webhooks\/kora$/, "")
-      .replace(/\/api\/payments\/return$/, "")
-      .replace(/\/$/, "");
+    return configured.replace(/\/$/, "");
   }
 
-  private getReturnUrl(reference: string) {
-    return `${this.getPaymentPublicBaseUrl()}/api/v1/payments/return?ref=${encodeURIComponent(reference)}`;
+  private getReturnUrl() {
+    return `${this.getPaymentPublicBaseUrl()}/api/v1/payments/return`;
   }
 
   private getWebhookUrl() {

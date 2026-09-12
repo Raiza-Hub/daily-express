@@ -1,14 +1,7 @@
 import { and, count, eq, gte, inArray, ne } from "drizzle-orm";
 import { createServiceError } from "@shared/utils";
 import { db } from "../db/connection";
-import {
-  booking,
-  passenger,
-  payment,
-  refund,
-  route,
-  trip,
-} from "../db/index";
+import { booking, passenger, payment, refund, route, trip } from "../db/index";
 import type { PaymentStatus, PaymentTransaction } from "./payment.types";
 
 export class PaymentRepository {
@@ -60,7 +53,8 @@ export class PaymentRepository {
         currency: booking.currency,
         userId: booking.userId,
         luggageFee: route.luggage_fee,
-      })      .from(booking)
+      })
+      .from(booking)
       .innerJoin(route, eq(route.id, booking.routeId))
       .where(eq(booking.id, bookingId));
 
@@ -84,10 +78,7 @@ export class PaymentRepository {
     };
   }
 
-  countPassengersByBooking(
-    tx: PaymentTransaction,
-    bookingId: string,
-  ) {
+  countPassengersByBooking(tx: PaymentTransaction, bookingId: string) {
     return tx
       .select({ count: count() })
       .from(passenger)
@@ -99,15 +90,23 @@ export class PaymentRepository {
     return db
       .update(payment)
       .set({ status: "processing", updatedAt: new Date() })
-      .where(and(eq(payment.reference, reference), eq(payment.status, "pending")))
+      .where(
+        and(eq(payment.reference, reference), eq(payment.status, "pending")),
+      )
       .returning();
   }
 
-  updateProcessingPayment(reference: string, status: PaymentStatus, fields?: Partial<typeof payment.$inferInsert>) {
+  updateProcessingPayment(
+    reference: string,
+    status: PaymentStatus,
+    fields?: Partial<typeof payment.$inferInsert>,
+  ) {
     return db
       .update(payment)
       .set({ status, ...fields, updatedAt: new Date() })
-      .where(and(eq(payment.reference, reference), eq(payment.status, "processing")))
+      .where(
+        and(eq(payment.reference, reference), eq(payment.status, "processing")),
+      )
       .returning();
   }
 

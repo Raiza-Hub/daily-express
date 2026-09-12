@@ -36,8 +36,7 @@ services:
       DATABASE_URL: ${DAILYEXPRESS_API_DATABASE_URL}
       FRONTEND_URL: http://localhost:3000
       DRIVER_APP_URL: http://localhost:3001
-      PAYMENT_PUBLIC_BASE_URL: http://localhost:8000/api/v1/payments
-      KORA_WEBHOOK_URL: http://localhost:8000/api/v1/payments/webhooks/kora
+      PAYMENT_PUBLIC_BASE_URL: http://localhost:8000
       CORS_ORIGINS: http://localhost:3000,http://localhost:3001,http://localhost:8080,http://localhost:3002
     command: ["bun", "/app/dailyexpress-api/index.ts"]
     ports:
