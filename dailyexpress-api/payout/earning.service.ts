@@ -1,6 +1,5 @@
 import { type DbTransaction } from "../db/connection";
 import { PayoutRepository, payoutRepository } from "./payout.repository";
-import { jobService } from "../workers/job.service";
 
 type PayoutTransaction = DbTransaction;
 
@@ -39,14 +38,6 @@ export class EarningService {
         updatedAt: new Date(),
       },
     );
-
-    const unsettledEarning = await this.repo.hasUnsettledEarnings(
-      tx,
-      input.tripId,
-    );
-    if (unsettledEarning) {
-      await jobService.enqueuePayout(tx, { tripId: input.tripId });
-    }
   }
 }
 

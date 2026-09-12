@@ -52,6 +52,8 @@ export class PayoutProcessorService {
       payoutDriver,
     );
 
+    if (!payoutRecord) return;
+
     await this.executeAttempt(payoutRecord, payoutDriver);
   }
 
@@ -168,7 +170,7 @@ export class PayoutProcessorService {
     tripId: string,
     payoutEarning: EarningRecord,
     payoutDriver: ActivePayoutDriver,
-  ): Promise<PayoutRecord> {
+  ): Promise<PayoutRecord | null> {
     return db.transaction(async (tx) => {
       const [createdPayout] = await this.repo.insertPayout(tx, {
         driverId: payoutEarning.driverId!,
@@ -183,7 +185,7 @@ export class PayoutProcessorService {
       });
 
       if (!createdPayout) {
-        throw new Error(`Failed to create payout for trip ${tripId}`);
+        return null;
       }
 
       await tx

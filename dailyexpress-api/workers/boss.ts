@@ -2,9 +2,6 @@ import { PgBoss } from "pg-boss";
 import { logger } from "../utils/logger";
 
 export const QUEUES = {
-  PAYOUT_PROCESS: "payout.process",
-  PAYOUT_PROCESS_DLQ: "payout.process.dlq",
-
   TRIP_REFUND: "trip.refund",
   TRIP_REFUND_DLQ: "trip.refund.dlq",
 
@@ -16,10 +13,6 @@ export interface WebhookJobData {
   event: string;
   data: Record<string, unknown>;
   _retryCount: number;
-}
-
-export interface PayoutProcessJobData {
-  tripId: string;
 }
 
 export interface TripRefundJobData {
@@ -73,23 +66,11 @@ export async function getBoss(): Promise<PgBoss> {
 
 async function createQueues(instance: PgBoss) {
   // Create DLQs first
-  await instance.createQueue(QUEUES.PAYOUT_PROCESS_DLQ, { retryLimit: 0 });
-
   await instance.createQueue(QUEUES.TRIP_REFUND_DLQ, { retryLimit: 0 });
 
   await instance.createQueue(QUEUES.EMAIL_SEND_DLQ, { retryLimit: 0 });
 
   // Create primary queues
-  await instance.createQueue(QUEUES.PAYOUT_PROCESS, {
-    retryLimit: 0,
-    retryDelay: 30,
-    retryBackoff: true,
-    retryDelayMax: 300,
-    expireInSeconds: 900,
-    deleteAfterSeconds: 86400,
-    deadLetter: QUEUES.PAYOUT_PROCESS_DLQ,
-  });
-
   await instance.createQueue(QUEUES.TRIP_REFUND, {
     retryLimit: 3,
     retryDelay: 30,
