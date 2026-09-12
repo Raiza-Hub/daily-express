@@ -1,4 +1,4 @@
-import { createHmac, timingSafeEqual } from "node:crypto";
+import { createHmac } from "node:crypto";
 import { getConfig } from "../config/index";
 import { logger } from "../utils/logger";
 import type {
@@ -308,23 +308,11 @@ export class KoraClient {
       return false;
     }
 
-    const normalizedSignature = signature.trim();
-    if (!/^[a-f0-9]{64}$/i.test(normalizedSignature)) {
-      return false;
-    }
-
     const expectedSignature = createHmac("sha256", this.secretKey)
       .update(JSON.stringify(payload))
       .digest("hex");
 
-    try {
-      return timingSafeEqual(
-        Buffer.from(expectedSignature, "hex"),
-        Buffer.from(normalizedSignature, "hex"),
-      );
-    } catch {
-      return false;
-    }
+    return expectedSignature === signature.trim().toLowerCase();
   }
 }
 
