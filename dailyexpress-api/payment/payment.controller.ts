@@ -57,18 +57,9 @@ export const handleKoraWebhook: RequestHandler = asyncHandler(
 );
 
 export const getPaymentReturn: RequestHandler = asyncHandler(
-  async (req: Request, res: Response) => {
-    const reference =
-      typeof req.query.ref === "string"
-        ? req.query.ref
-        : typeof req.query.reference === "string"
-          ? req.query.reference
-          : null;
-
-    const redirectUrl = await timeAsync(
-      "payment.return.service",
-      { hasReference: Boolean(reference) },
-      () => paymentService.resolveReturnUrl(reference),
+  async (_req: Request, res: Response) => {
+    const redirectUrl = await timeAsync("payment.return.service", {}, () =>
+      paymentService.resolveReturnUrl(),
     );
     return res.redirect(redirectUrl);
   },
