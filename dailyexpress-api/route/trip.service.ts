@@ -3,6 +3,7 @@ import { createServiceError } from "@shared/utils";
 import { eq, ne, notInArray } from "drizzle-orm";
 import { db } from "../db/connection";
 import { booking, trip } from "../db/index";
+import { logger } from "../utils/logger";
 import { HIDDEN_BOOKING_PAYMENT_STATUSES } from "../utils/route";
 import { RouteRepository, routeRepository } from "./route.repository";
 import { payoutService as sharedPayoutService } from "../payout/payout.service";
@@ -95,6 +96,12 @@ export class TripService {
 
       return { updatedTrip };
     });
+
+    try {
+      await this.payoutService.triggerPayout(tripId);
+    } catch (error) {
+      logger.error("payout.trigger_after_complete.failed", { tripId, error });
+    }
 
     return result.updatedTrip;
   }

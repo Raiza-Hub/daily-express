@@ -2,7 +2,6 @@ import { sql, type SQL } from "drizzle-orm";
 import {
   QUEUES,
   type EmailSendJobData,
-  type PayoutProcessJobData,
   type TripRefundJobData,
 } from "./boss";
 
@@ -60,17 +59,6 @@ export class JobService {
       FROM pgboss.queue q
       WHERE q.name = ${queueName}
     `);
-  }
-
-  async enqueuePayout(
-    tx: JobExecutor,
-    payload: PayoutProcessJobData,
-    startAfter?: Date,
-  ) {
-    await this.enqueue(tx, QUEUES.PAYOUT_PROCESS, payload, {
-      startAfter,
-      singletonKey: payload.tripId,
-    });
   }
 
   async enqueueTripRefund(

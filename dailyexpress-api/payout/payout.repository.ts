@@ -117,7 +117,14 @@ export class PayoutRepository {
   }
 
   insertPayout(tx: PayoutTransaction, values: typeof payout.$inferInsert) {
-    return tx.insert(payout).values(values).returning();
+    return tx
+      .insert(payout)
+      .values(values)
+      .onConflictDoNothing({
+        target: payout.tripId,
+        where: sql`${payout.tripId} is not null and ${payout.status} <> 'failed'`,
+      })
+      .returning();
   }
 
   updatePayout(
