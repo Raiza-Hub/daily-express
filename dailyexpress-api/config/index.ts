@@ -66,7 +66,6 @@ const envSchema = z.object({
   KORA_SECRET_KEY: z.string().min(1),
   KORA_PUBLIC_KEY: z.string().min(1),
   KORA_BASE_URL: z.url().default("https://api.korapay.com"),
-  KORA_WEBHOOK_URL: z.url().optional(),
   FRONTEND_URL: z
     .url()
     .default(
