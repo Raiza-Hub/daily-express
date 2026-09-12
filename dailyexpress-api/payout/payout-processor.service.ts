@@ -1,7 +1,6 @@
 import { db } from "../db/connection";
 import { and, eq, inArray } from "drizzle-orm";
 import { driver, earning, payout, type PayoutRecord, type EarningRecord } from "../db/index";
-import { getConfig } from "../config/index";
 import { generateReference } from "../utils/payment";
 import { PayoutRepository, payoutRepository } from "./payout.repository";
 import { PayoutSettlementService, payoutSettlementService } from "./payout-settlement.service";
@@ -18,7 +17,6 @@ type ActivePayoutDriver = typeof driver.$inferSelect & {
 };
 
 export class PayoutProcessorService {
-  private readonly config = getConfig();
   private readonly kora = koraClient;
 
   constructor(
@@ -41,10 +39,6 @@ export class PayoutProcessorService {
 
     const payoutDriver = await this.getActivePayoutDriver(tripDriver);
     if (!payoutDriver) return;
-
-    if (payoutEarning.amount < this.config.MINIMUM_PAYOUT_AMOUNT) {
-      return;
-    }
 
     const payoutRecord = await this.createTripPayout(
       tripId,
