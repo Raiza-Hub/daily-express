@@ -1,6 +1,7 @@
 import type { Request, RequestHandler, Response } from "express";
 import { asyncHandler } from "@shared/middleware";
 import { createSuccessResponse } from "@shared/utils";
+import z from "zod/v4";
 import { getAuthenticatedUser } from "../middleware/auth";
 import { sendErrorResponse } from "../middleware/apiResponses";
 import { paymentService } from "./payment.service";
@@ -9,6 +10,16 @@ import type {
   KoraWebhookPayload,
 } from "./payment.types";
 import { timeAsync } from "../utils/timing";
+
+const koraWebhookPayloadSchema = z.object({
+  event: z.string(),
+  data: z.object({
+    status: z.string(),
+    currency: z.string(),
+    reference: z.string(),
+    amount: z.number().or(z.string()),
+  }),
+});
 
 export const initializePayment: RequestHandler = asyncHandler(
   async (req: Request, res: Response) => {
@@ -66,24 +77,5 @@ export const getPaymentReturn: RequestHandler = asyncHandler(
 );
 
 function isKoraWebhookPayload(value: unknown): value is KoraWebhookPayload {
-  if (!value || typeof value !== "object") {
-    return false;
-  }
-
-  const payload = value as Record<string, unknown>;
-  const data = payload.data;
-  if (!data || typeof data !== "object") {
-    return false;
-  }
-
-  const webhookData = data as Record<string, unknown>;
-  return (
-    typeof payload.event === "string" &&
-    typeof webhookData.status === "string" &&
-    typeof webhookData.currency === "string" &&
-    (typeof webhookData.reference === "string" ||
-      typeof webhookData.payment_reference === "string") &&
-    (typeof webhookData.amount === "number" ||
-      typeof webhookData.amount === "string")
-  );
+  return koraWebhookPayloadSchema.safeParse(value).success;
 }

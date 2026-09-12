@@ -51,7 +51,7 @@ export class PaymentWebhookService {
       signature,
     );
 
-    const paymentRef = webhook.data.payment_reference || webhook.data.reference;
+    const paymentRef = webhook.data.reference;
     if (!paymentRef) {
       logger.warn("payment.webhook_missing_reference", { event: webhook.event });
       return;
