@@ -45,23 +45,6 @@ export function formatDateKey(
   return `${parts.year}-${month}-${day}`;
 }
 
-export function formatRouteDate(date: Date) {
-  return new Intl.DateTimeFormat("en-NG", {
-    timeZone: getRouteServiceTimeZone(),
-    month: "short",
-    day: "numeric",
-    year: "numeric",
-  }).format(date);
-}
-
-export function formatRouteTime(date: Date) {
-  return new Intl.DateTimeFormat("en-NG", {
-    timeZone: getRouteServiceTimeZone(),
-    hour: "2-digit",
-    minute: "2-digit",
-  }).format(date);
-}
-
 export function getStartOfTodayInRouteTimezone(): Date {
   const tz = getRouteServiceTimeZone();
   const todayKey = formatDateKey(new Date(), tz);

@@ -33,15 +33,6 @@ export function generateReference(): string {
   return `${yymmdd}${hhmmss}${random}`;
 }
 
-export function parseDate(value?: string | Date | null) {
-  if (!value) {
-    return null;
-  }
-
-  const parsed = value instanceof Date ? value : new Date(value);
-  return Number.isNaN(parsed.getTime()) ? null : parsed;
-}
-
 export function calculateTripChargeAmount(input: {
   totalAmount: number;
   totalFee: number;
