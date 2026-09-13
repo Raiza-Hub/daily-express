@@ -2,6 +2,7 @@ import { lte, sql } from "drizzle-orm";
 import {
   bigint,
   check,
+  date,
   integer,
   pgEnum,
   pgTable,
@@ -64,7 +65,7 @@ export const trip = pgTable(
     id: uuid("id").defaultRandom().primaryKey(),
     routeId: uuid("route_id").references(() => route.id, { onDelete: "restrict" }).notNull(),
     driverId: uuid("driver_id").references(() => driver.id, { onDelete: "restrict" }),
-    date: timestamp("date", { mode: "date" }).notNull(),
+    date: date("date").notNull(),
     departureTime: time("departure_time").notNull(),
     arrivalTime: time("arrival_time").notNull(),
     capacity: integer("capacity").notNull(),
@@ -91,7 +92,7 @@ export const booking = pgTable(
   {
     id: uuid("id").defaultRandom().primaryKey(),
     routeId: uuid("route_id").references(() => route.id, { onDelete: "restrict" }).notNull(),
-    tripDate: timestamp("trip_date", { mode: "date" }).notNull(),
+    tripDate: date("trip_date").notNull(),
     departureTime: time("departure_time").notNull(),
     arrivalTime: time("arrival_time").notNull(),
     boardingPoint: text("boarding_point", {

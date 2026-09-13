@@ -32,7 +32,7 @@ export interface UserBookingWithTrip {
   driverInfo: DriverInfoResponse | null;
   trip: {
     id: string;
-    date: Date;
+    date: string;
     status: string;
     bookedSeats: number;
     capacity: number;
@@ -201,7 +201,7 @@ interface TripBookingEarning {
 interface TripBookingDetails {
   trip: {
     id: string;
-    date: Date;
+    date: string;
     status: string;
     departureTime: string;
     arrivalTime: string;

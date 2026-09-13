@@ -64,6 +64,13 @@ CREATE UNIQUE INDEX "booking_route_date_user_vehicletype_active_idx"
   ON "booking" ("route_id", "trip_date", "user_id", "vehicle_type", "departure_time")
   WHERE "status" IN ('pending', 'confirmed');
 
+-- Trip/booking dates are calendar days in the business timezone
+-- (ROUTE_SERVICE_TIMEZONE). Instants are derived at query time via
+-- `AT TIME ZONE` (see dailyexpress-api/utils/db-datetime.ts).
+-- Tables were TRUNCATEd above, so the timestamp → date narrowing casts no rows.
+ALTER TABLE "trip" ALTER COLUMN "date" TYPE date USING "date"::date;
+ALTER TABLE "booking" ALTER COLUMN "trip_date" TYPE date USING "trip_date"::date;
+
 -- PRE-APPLY CHECK: intermediate migrations (0001-0017, 0020) were squashed and are
 -- not on disk. Before running, confirm against the target DB that the column
 -- (origin_*/destination_*/train_station_*, departure_time) and index names used

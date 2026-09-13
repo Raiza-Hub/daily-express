@@ -2,11 +2,7 @@ import type { JWTPayload } from "@shared/types";
 import { createServiceError } from "@shared/utils";
 import { eq } from "drizzle-orm";
 import { db } from "../db/connection";
-import { driver, type TripRecord } from "../db/index";
-import {
-  formatBusinessDate,
-  getScheduledDepartureTime,
-} from "../utils/route";
+import { driver } from "../db/index";
 
 export const ROUTE_SEARCH_SCORE_THRESHOLD = 0.15;
 export const VISIBLE_BOOKING_STATUSES = ["confirmed", "completed", "awaiting_driver"] as const;
@@ -65,22 +61,4 @@ export function isValidUserBookingsCursor(value: unknown): value is { tripDate: 
     !Number.isNaN(new Date(cursor.tripDate).getTime()) &&
     typeof cursor.id === "string"
   );
-}
-
-export function getTripArrivalAt(tripRecord: TripRecord) {
-  const dateKey = formatBusinessDate(tripRecord.date);
-  const departureAt = getScheduledDepartureTime(
-    dateKey,
-    tripRecord.departureTime,
-  );
-  const arrivalAt = getScheduledDepartureTime(
-    dateKey,
-    tripRecord.arrivalTime,
-  );
-
-  if (arrivalAt <= departureAt) {
-    return new Date(arrivalAt.getTime() + 24 * 60 * 60 * 1000);
-  }
-
-  return arrivalAt;
 }

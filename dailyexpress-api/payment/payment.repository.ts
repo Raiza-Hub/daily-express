@@ -1,8 +1,9 @@
-import { and, count, eq, gte, inArray, ne } from "drizzle-orm";
+import { and, count, eq, gte, inArray, ne, sql } from "drizzle-orm";
 import { createServiceError } from "@shared/utils";
 import { db } from "../db/connection";
 import { booking, passenger, payment, refund, route, trip } from "../db/index";
 import type { PaymentStatus, PaymentTransaction } from "./payment.types";
+import { getRouteServiceTimeZone } from "../utils/db-datetime";
 
 export class PaymentRepository {
   findPaymentByReference(reference: string) {
@@ -110,10 +111,7 @@ export class PaymentRepository {
       .returning();
   }
 
-  async findSuccessfulPaymentsForDriverUpcomingTrips(
-    driverId: string,
-    startDate: Date,
-  ) {
+  async findSuccessfulPaymentsForDriverUpcomingTrips(driverId: string) {
     return db
       .select({
         payment: payment,
@@ -126,7 +124,7 @@ export class PaymentRepository {
       .where(
         and(
           eq(trip.driverId, driverId),
-          gte(trip.date, startDate),
+          gte(trip.date, sql`(now() AT TIME ZONE ${getRouteServiceTimeZone()})::date`),
           ne(trip.status, "cancelled"),
           eq(booking.status, "confirmed"),
           eq(payment.status, "successful"),

@@ -4,7 +4,6 @@ import { DriverRepository } from "./driver.repository";
 import { DriverProfileService } from "./driver-profile.service";
 import { db } from "../db/connection";
 import { paymentRepository } from "../payment/payment.repository";
-import { getStartOfTodayInRouteTimezone } from "../utils/timezone";
 
 export class DriverService {
   private readonly repo: DriverRepository;
@@ -43,7 +42,6 @@ export class DriverService {
 
     const upcomingTrips = await paymentRepository.findSuccessfulPaymentsForDriverUpcomingTrips(
       driverRecord.id,
-      getStartOfTodayInRouteTimezone(),
     );
     if (upcomingTrips.length > 0) {
       throw createServiceError(
