@@ -1,7 +1,7 @@
 import type { Request, RequestHandler, Response } from "express";
 import { asyncHandler } from "@shared/middleware";
 import { createSuccessResponse } from "@shared/utils";
-import z from "zod/v4";
+import z from "zod";
 import { getAuthenticatedUser } from "../middleware/auth";
 import { sendErrorResponse } from "../middleware/apiResponses";
 import { paymentService } from "./payment.service";

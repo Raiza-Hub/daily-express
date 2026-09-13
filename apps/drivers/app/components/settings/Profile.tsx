@@ -19,7 +19,7 @@ import { Input } from "@repo/ui/components/input";
 import dayjs from "dayjs";
 import { useEffect, useState } from "react";
 import { Controller, useForm } from "react-hook-form";
-import { z } from "zod/v4";
+import { z } from "zod";
 import { isValidDateString } from "~/lib/utils";
 import DeleteAccount from "./DeleteAccount";
 import { usePostHog } from "posthog-js/react";

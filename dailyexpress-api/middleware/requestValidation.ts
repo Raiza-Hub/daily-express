@@ -1,4 +1,4 @@
-import z from "zod/v4";
+import z from "zod";
 import type { Request, RequestHandler, Response, NextFunction } from "express";
 import type { FieldErrors } from "./apiResponses";
 import { sendErrorResponse } from "./apiResponses";

@@ -20,7 +20,7 @@ import dayjs from "dayjs";
 import { usePostHog } from "posthog-js/react";
 import { useEffect } from "react";
 import { Controller, useForm } from "react-hook-form";
-import { z } from "zod/v4";
+import { z } from "zod";
 import { isValidDateString } from "~/lib/utils";
 import { posthogEvents } from "~/lib/posthog-events";
 import DeleteAccount from "./DeleteAccount";

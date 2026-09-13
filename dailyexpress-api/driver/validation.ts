@@ -1,4 +1,4 @@
-import z from "zod/v4";
+import z from "zod";
 import { KORA_SUPPORTED_COUNTRIES } from "@shared/constants";
 
 const phoneRegex = /^\+?[1-9]\d{1,14}$/;

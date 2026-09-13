@@ -1,4 +1,4 @@
-import { z } from "zod/v4";
+import { z } from "zod";
 
 export const vehicleFormSchema = z.object({
   plateNumber: z.string().min(1, { error: "Plate number is required" }),

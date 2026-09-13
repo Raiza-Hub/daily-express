@@ -1,4 +1,4 @@
-import { z } from "zod/v4";
+import { z } from "zod";
 
 const locationSchema = z.object({
   title: z.string().min(1, { error: "Location title is required" }),

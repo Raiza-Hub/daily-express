@@ -4,7 +4,7 @@ import { UserPlus, X } from "@phosphor-icons/react";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { useState } from "react";
 import { Controller, useForm } from "react-hook-form";
-import { z } from "zod/v4";
+import { z } from "zod";
 import { Button as UiButton } from "@repo/ui/components/button";
 import { Checkbox } from "@repo/ui/components/checkbox";
 import { Input } from "@repo/ui/components/input";

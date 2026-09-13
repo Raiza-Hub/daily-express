@@ -1,4 +1,4 @@
-import z from "zod/v4";
+import z from "zod";
 
 const timePattern = /^\d{2}:\d{2}(:\d{2})?$/;
 
