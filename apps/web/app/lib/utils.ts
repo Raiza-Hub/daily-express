@@ -72,7 +72,7 @@ export function transformToTripStatusItem(
 
   const trip = booking.trip;
   const route = trip.route;
-  const tripDate = new Date(trip.date);
+  const tripDate = parseLocalDate(trip.date);
   const departureTime = parseTimeString(route.departure_time, tripDate);
   let estimatedArrivalTime = parseTimeString(route.arrival_time, tripDate);
 

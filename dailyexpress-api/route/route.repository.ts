@@ -14,6 +14,11 @@ import {
   type PassengerRecord,
 } from "../db/index";
 import type { DbTransaction } from "../db/connection";
+import {
+  getRouteServiceTimeZone,
+  scheduledAtSql,
+} from "../utils/db-datetime";
+import { addDaysToDateKey } from "../utils/route";
 
 type RouteTransaction = DbTransaction;
 
@@ -22,6 +27,7 @@ type RouteWithAssociations = RouteRecord;
 type TripWithRoute = {
   trip: TripRecord;
   route: RouteRecord;
+  hasArrived: boolean;
 };
 
 export class RouteRepository {
@@ -77,8 +83,7 @@ export class RouteRepository {
   async findTripsForSlot(
     tx: RouteTransaction,
     routeId: string,
-    start: Date,
-    end: Date,
+    dateKey: string,
     departureTime: string,
   ): Promise<TripRecord[]> {
     return tx
@@ -87,8 +92,8 @@ export class RouteRepository {
       .where(
         and(
           eq(trip.routeId, routeId),
-          gte(trip.date, start),
-          lt(trip.date, end),
+          gte(trip.date, dateKey),
+          lt(trip.date, addDaysToDateKey(dateKey, 1)),
           eq(trip.departureTime, departureTime),
           inArray(trip.status, ["pending", "confirmed", "awaiting_driver"]),
         ),
@@ -135,15 +140,32 @@ export class RouteRepository {
   }
 
 async findTripWithRoute(tripId: string): Promise<TripWithRoute | null> {
-    const result = await db.query.trip.findFirst({
-      where: eq(trip.id, tripId),
-      with: {
-        route: true,
-      },
-    });
+    const [result] = await db
+      .select({
+        trip: trip,
+        route: route,
+        hasArrived: sql<boolean>`${scheduledAtSql(trip.date, trip.arrivalTime)} <= now()`,
+      })
+      .from(trip)
+      .innerJoin(route, eq(trip.routeId, route.id))
+      .where(eq(trip.id, tripId))
+      .limit(1);
     if (!result) return null;
-    const { route: routeRecord, ...tripRecord } = result;
-    return { trip: tripRecord as TripRecord, route: routeRecord as TripWithRoute["route"] };
+    return {
+      trip: result.trip as TripRecord,
+      route: result.route as RouteRecord,
+      hasArrived: Boolean(result.hasArrived),
+    };
+  }
+
+  async hasTripSlotDeparted(
+    tripDate: string,
+    departureTime: string,
+  ): Promise<boolean> {
+    const rows = (await db.execute(
+      sql`select ((${tripDate}::date + ${departureTime}::time) AT TIME ZONE ${getRouteServiceTimeZone()}) <= now() as "departed"`,
+    )) as Array<{ departed: boolean }>;
+    return Boolean(rows[0]?.departed);
   }
 
   async findBookingById(id: string): Promise<BookingRecord | null> {

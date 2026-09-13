@@ -233,7 +233,7 @@ export interface Trip {
   id: string;
   routeId: string;
   driverId: string | null;
-  date: Date;
+  date: string;
   departureTime: string;
   arrivalTime: string;
   capacity: number;
@@ -259,7 +259,9 @@ export interface TripsSummary {
 
 export interface Booking {
   id: string;
+  routeId: string;
   tripId: string | null;
+  tripDate: string;
   userId: string;
   departureTime: string;
   arrivalTime: string;

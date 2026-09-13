@@ -6,7 +6,6 @@ import type { UpdateUserRequest, OnboardingInput } from "@shared/types";
 import { AuthRepository } from "./auth.repository";
 import { DriverRepository } from "../driver/driver.repository";
 import { paymentRepository } from "../payment/payment.repository";
-import { getStartOfTodayInRouteTimezone } from "../utils/timezone";
 
 interface ConstraintError {
   code?: string;
@@ -112,7 +111,6 @@ export class AuthService {
     if (existingDriver) {
       const upcomingTrips = await paymentRepository.findSuccessfulPaymentsForDriverUpcomingTrips(
         existingDriver.id,
-        getStartOfTodayInRouteTimezone(),
       );
       if (upcomingTrips.length > 0) {
         throw createServiceError(

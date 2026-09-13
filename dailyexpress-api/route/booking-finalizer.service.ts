@@ -13,7 +13,6 @@ import {
 import { getConfig } from "../config/index";
 import { logger } from "../utils/logger";
 import { formatAmount } from "../utils/payout";
-import { formatBusinessDate, getBusinessDayWindow } from "../utils/route";
 import { enqueueEmail } from "../mail/email-dispatcher.service";
 import { earningService } from "../payout/earning.service";
 import { RouteRepository, routeRepository } from "./route.repository";
@@ -86,16 +85,12 @@ export class BookingFinalizerService {
           return null;
         }
 
-        const { dateKey, start, end } = getBusinessDayWindow(
-          formatBusinessDate(updatedBooking.tripDate),
-        );
+        const dateKey = updatedBooking.tripDate;
 
         const tripId = await this.assignBookingToTrip(tx, {
           bookingId,
           routeId: routeRecord.id,
           dateKey,
-          start,
-          end,
           departureTime: updatedBooking.departureTime,
           arrivalTime: updatedBooking.arrivalTime,
           passengerCount,
@@ -152,7 +147,7 @@ export class BookingFinalizerService {
       pricePaid: formatAmount(groupTotal, "NGN"),
       pickupTitle,
       dropoffTitle,
-      tripDate: formatBusinessDate(bookingRecord.tripDate),
+      tripDate: bookingRecord.tripDate,
       departureTime: bookingRecord.departureTime,
       timeZone: "Africa/Lagos",
       meetingPoint: pickupTitle,
@@ -179,8 +174,6 @@ export class BookingFinalizerService {
       bookingId: string;
       routeId: string;
       dateKey: string;
-      start: Date;
-      end: Date;
       departureTime: string;
       arrivalTime: string;
       passengerCount: number;
@@ -192,8 +185,7 @@ export class BookingFinalizerService {
     const trips = await this.repo.findTripsForSlot(
       tx,
       input.routeId,
-      input.start,
-      input.end,
+      input.dateKey,
       input.departureTime,
     );
 
@@ -206,7 +198,13 @@ export class BookingFinalizerService {
       return fit.id;
     }
 
-    const createdTrip = await this.createSlotTrip(tx, input);
+    const createdTrip = await this.createSlotTrip(tx, {
+      routeId: input.routeId,
+      date: input.dateKey,
+      departureTime: input.departureTime,
+      arrivalTime: input.arrivalTime,
+      passengerCount: input.passengerCount,
+    });
     await tx
       .update(booking)
       .set({ tripId: createdTrip.id, updatedAt: new Date() })
@@ -218,7 +216,7 @@ export class BookingFinalizerService {
     tx: RouteTransaction,
     input: {
       routeId: string;
-      start: Date;
+      date: string;
       departureTime: string;
       arrivalTime: string;
       passengerCount: number;
@@ -227,7 +225,7 @@ export class BookingFinalizerService {
     const createdTrip = await this.repo.createTrip(tx, {
       routeId: input.routeId,
       driverId: null,
-      date: input.start,
+      date: input.date,
       departureTime: input.departureTime,
       arrivalTime: input.arrivalTime,
       capacity: TRIP_CAPACITY,
@@ -237,7 +235,7 @@ export class BookingFinalizerService {
     logger.info("booking_finalizer.trip_created", {
       tripId: createdTrip.id,
       routeId: input.routeId,
-      date: input.start,
+      date: input.date,
       departureTime: input.departureTime,
       bookedSeats: createdTrip.bookedSeats,
     });

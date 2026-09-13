@@ -7,7 +7,7 @@ import { logger } from "../utils/logger";
 import { HIDDEN_BOOKING_PAYMENT_STATUSES } from "../utils/route";
 import { RouteRepository, routeRepository } from "./route.repository";
 import { payoutService as sharedPayoutService } from "../payout/payout.service";
-import { getTripArrivalAt, resolveDriverId } from "./utils";
+import { resolveDriverId } from "./utils";
 
 export class TripService {
   private readonly payoutService = sharedPayoutService;
@@ -31,8 +31,7 @@ export class TripService {
       throw createServiceError("Cancelled trips cannot be completed", 400);
     }
 
-    const arrivalAt = getTripArrivalAt(tripWithRoute.trip);
-    if (arrivalAt.getTime() > Date.now()) {
+    if (!tripWithRoute.hasArrived) {
       throw createServiceError(
         "Trip cannot be completed before the scheduled arrival time",
         400,

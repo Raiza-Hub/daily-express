@@ -1,15 +1,11 @@
 import type { CreateBooking } from "@shared/types";
 import { createServiceError } from "@shared/utils";
-import { and, desc, eq, getTableColumns, inArray, lt, ne, notInArray, or } from "drizzle-orm";
+import { and, desc, eq, getTableColumns, inArray, lt, ne, notInArray, or, sql } from "drizzle-orm";
 import { db } from "../db/connection";
 import { booking, driver, earning, passenger, route, trip, vehicle, type BookingRecord, type RouteRecord } from "../db/index";
 import { logger } from "../utils/logger";
-import {
-    formatBusinessDate,
-    getBusinessDayWindow,
-    getScheduledDepartureTime,
-    HIDDEN_BOOKING_PAYMENT_STATUSES,
-} from "../utils/route";
+import { scheduledAtSql } from "../utils/db-datetime";
+import { HIDDEN_BOOKING_PAYMENT_STATUSES, parseDateKey } from "../utils/route";
 import { timeAsync } from "../utils/timing";
 import { RouteRepository, routeRepository } from "./route.repository";
 import {
@@ -61,18 +57,13 @@ export class BookingService {
     const { departureTime, arrivalTime } =
       resolveTripSlot(routeRecord, input);
 
-    const scheduledDepartureTime = getScheduledDepartureTime(
-      input.tripDate,
-      departureTime,
-    );
-    if (scheduledDepartureTime <= new Date()) {
+    const tripDate = parseDateKey(input.tripDate);
+    if (await this.repo.hasTripSlotDeparted(tripDate, departureTime)) {
       throw createServiceError(
         "This trip has already departed and can no longer be booked",
         400,
       );
     }
-
-    const { start } = getBusinessDayWindow(input.tripDate);
 
     const luggageCount = input.passengers.filter(
       (traveler) => traveler.carriesLuggage,
@@ -87,7 +78,7 @@ export class BookingService {
       db.query.booking.findFirst({
         where: and(
           eq(booking.routeId, routeRecord.id),
-          eq(booking.tripDate, start),
+          eq(booking.tripDate, tripDate),
           eq(booking.userId, userId),
           eq(booking.departureTime, departureTime),
           inArray(booking.status, ["pending", "confirmed"]),
@@ -148,7 +139,7 @@ export class BookingService {
       try {
         newBooking = await this.repo.insertBooking(tx, {
           routeId: routeRecord.id,
-          tripDate: start,
+          tripDate,
           departureTime,
           arrivalTime,
           boardingPoint: input.boardingPoint,
@@ -221,9 +212,9 @@ export class BookingService {
     );
     const cursorCondition = decodedCursor
       ? or(
-          lt(booking.tripDate, new Date(decodedCursor.tripDate)),
+          lt(booking.tripDate, decodedCursor.tripDate),
           and(
-            eq(booking.tripDate, new Date(decodedCursor.tripDate)),
+            eq(booking.tripDate, decodedCursor.tripDate),
             lt(booking.id, decodedCursor.id),
           ),
         )
@@ -239,6 +230,7 @@ export class BookingService {
             route: getTableColumns(route),
             driver: getTableColumns(driver),
             vehicle: getTableColumns(vehicle),
+            hasDeparted: sql<boolean>`${scheduledAtSql(trip.date, booking.departureTime)} <= now()`,
           })
           .from(booking)
           .innerJoin(route, eq(booking.routeId, route.id))
@@ -272,12 +264,7 @@ export class BookingService {
         displayMessage = "Booking confirmed. Assigning trip shortly.";
         driverInfo = null;
       } else {
-        const dateKey = formatBusinessDate(row.trip.date);
-        const scheduledDeparture = getScheduledDepartureTime(
-          dateKey,
-          row.booking.departureTime,
-        );
-        const hasDeparted = scheduledDeparture <= new Date();
+        const hasDeparted = Boolean(row.hasDeparted);
 
         if (row.driver) {
           driverStatus = "assigned";
@@ -362,7 +349,7 @@ export class BookingService {
       bookings,
       nextCursor: nextBookingRow && lastBookingRow
         ? encodeCursor({
-            tripDate: lastBookingRow.booking.tripDate.toISOString(),
+            tripDate: lastBookingRow.booking.tripDate,
             id: lastBookingRow.booking.id,
           })
         : null,
