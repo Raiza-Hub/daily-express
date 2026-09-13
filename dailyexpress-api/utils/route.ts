@@ -1,7 +1,4 @@
-import { sql } from "drizzle-orm";
-
 import { createServiceError } from "@shared/utils";
-import type { BookingRecord } from "../db/index";
 import {
   formatDateKey,
   getDateTimeParts,
@@ -9,7 +6,6 @@ import {
 } from "./timezone";
 
 const DATE_ONLY_REGEX = /^\d{4}-\d{2}-\d{2}$/;
-const VISIBLE_BOOKING_STATUSES = ["confirmed", "completed"] as const;
 export const HIDDEN_BOOKING_PAYMENT_STATUSES = [
   "failed",
   "cancelled",
@@ -18,59 +14,6 @@ export const HIDDEN_BOOKING_PAYMENT_STATUSES = [
   "refunded",
   "refund_failed",
 ];
-
-export function normalizeSearchText(value: string): string {
-  return value.trim().toLowerCase().replace(/\s+/g, " ");
-}
-
-export function isVisibleBooking(record: BookingRecord): boolean {
-  return (
-    VISIBLE_BOOKING_STATUSES.includes(
-      record.status as (typeof VISIBLE_BOOKING_STATUSES)[number],
-    ) && !HIDDEN_BOOKING_PAYMENT_STATUSES.includes(record.paymentStatus)
-  );
-}
-
-export function createNormalizedSearchScore(
-  column: any,
-  rawQuery: string,
-  normalizedQuery: string,
-) {
-  const normalizedColumn = sql`lower(regexp_replace(${column}, '\s+', ' ', 'g'))`;
-  const containsNormalizedQuery = `%${normalizedQuery}%`;
-
-  return sql<number>`greatest(
-    similarity(${column}, ${rawQuery}),
-    similarity(${normalizedColumn}, ${normalizedQuery}),
-    CASE
-      WHEN ${normalizedColumn} LIKE ${containsNormalizedQuery} THEN 1
-      ELSE 0
-    END
-  )`;
-}
-
-export function isConstraintError(
-  error: unknown,
-  constraintName: string,
-): boolean {
-  if (!error || typeof error !== "object") {
-    return false;
-  }
-
-  const dbError = error as {
-    code?: string;
-    constraint?: string;
-    constraint_name?: string;
-    message?: string;
-  };
-
-  return (
-    dbError.code === "23505" &&
-    (dbError.constraint === constraintName ||
-      dbError.constraint_name === constraintName ||
-      dbError.message?.includes(constraintName) === true)
-  );
-}
 
 export function parseDateKey(value: string): string {
   const trimmed = value.trim();
@@ -165,6 +108,3 @@ export function getScheduledDepartureTime(
 export function formatBusinessDate(date: Date): string {
   return formatDateKey(date);
 }
-
-
-
