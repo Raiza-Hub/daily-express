@@ -1,4 +1,4 @@
-import { z } from "zod/v4";
+import { z } from "zod";
 
 export const PHONE_NUMBER_REGEX = /^\+234[789]\d{9}$/;
 

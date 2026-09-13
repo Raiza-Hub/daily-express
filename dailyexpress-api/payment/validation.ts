@@ -1,4 +1,4 @@
-import z from "zod/v4";
+import z from "zod";
 import { KORA_CHECKOUT_CHANNELS } from "@shared/types";
 
 const koraChannel = z.enum(KORA_CHECKOUT_CHANNELS);

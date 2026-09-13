@@ -16,7 +16,7 @@ import { useFileUpload } from "@repo/ui/hooks/use-file-upload";
 import { useEffect, useState } from "react";
 import { useForm } from "react-hook-form";
 import "react-phone-number-input/style.css";
-import { z } from "zod/v4";
+import { z } from "zod";
 import CountryList from "../../../country-list.json";
 import {
   CountryField,

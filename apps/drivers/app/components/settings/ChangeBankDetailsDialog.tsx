@@ -42,7 +42,7 @@ import {
   type FieldErrors,
   type UseFormSetValue,
 } from "react-hook-form";
-import { z } from "zod/v4";
+import { z } from "zod";
 import { posthogEvents } from "~/lib/posthog-events";
 import { Bank } from "~/lib/type";
 import BankList from "../../../bank-names.json";
