@@ -1,4 +1,4 @@
-import Joi from "joi";
+import z from "zod/v4";
 
 export const MINIMUM_ACCOUNT_AGE = 14;
 
@@ -15,61 +15,46 @@ export function isUnder14(dateOfBirth: Date): boolean {
   return dateOfBirth > threshold;
 }
 
-export const completeOnboardingSchema = Joi.object({
-  phoneNumber: Joi.string()
-    .pattern(ONBOARDING_PHONE_REGEX)
-    .required()
-    .messages({
-      "string.pattern.base":
-        "Enter a valid Nigerian phone number in international format (e.g. +2348012345678)",
-      "any.required": "Phone number is required",
-    }),
-  dateOfBirth: Joi.date()
-    .required()
-    .custom((value, helpers) => {
-      if (isUnder14(value)) {
-        return helpers.error("dateOfBirth.under14");
-      }
-      return value;
-    })
-    .messages({
-      "any.required": "Date of birth is required",
-      "dateOfBirth.under14": `You must be at least ${MINIMUM_ACCOUNT_AGE} years old`,
-    }),
-  gender: Joi.string()
-    .valid(...ONBOARDING_GENDERS)
-    .required()
-    .messages({
-      "any.only": "Please select your gender",
-      "any.required": "Gender is required",
-    }),
-});
+const dateOfBirth = () =>
+  z
+    .coerce.date({ error: "must be a valid date" })
+    .refine(
+      (value) => !isUnder14(value),
+      `You must be at least ${MINIMUM_ACCOUNT_AGE} years old`,
+    );
 
-export const updateProfileSchema = Joi.object({
-  firstName: Joi.string().optional(),
-  lastName: Joi.string().optional(),
-  dateOfBirth: Joi.date()
-    .optional()
-    .custom((value, helpers) => {
-      if (isUnder14(value)) {
-        return helpers.error("dateOfBirth.under14");
-      }
-      return value;
-    })
-    .messages({
-      "dateOfBirth.under14": `You must be at least ${MINIMUM_ACCOUNT_AGE} years old`,
-    }),
-  phoneNumber: Joi.string()
-    .pattern(ONBOARDING_PHONE_REGEX)
-    .optional()
-    .messages({
-      "string.pattern.base":
-        "Enter a valid Nigerian phone number in international format (e.g. +2348012345678)",
-    }),
-  gender: Joi.string()
-    .valid(...ONBOARDING_GENDERS)
-    .optional()
-    .messages({
-      "any.only": "Please select your gender",
-    }),
+const phoneNumber = () =>
+  z
+    .string({ error: "Phone number is required" })
+    .regex(
+      ONBOARDING_PHONE_REGEX,
+      "Enter a valid Nigerian phone number in international format (e.g. +2348012345678)",
+    );
+
+export const completeOnboardingSchema = z
+  .object({
+    phoneNumber: phoneNumber(),
+    dateOfBirth: dateOfBirth().optional(),
+    gender: z
+      .string({ error: "Gender is required" })
+      .pipe(z.enum(ONBOARDING_GENDERS, "Please select your gender")),
+  })
+  .superRefine((value, ctx) => {
+    if (value.dateOfBirth === undefined) {
+      ctx.addIssue({
+        code: "custom",
+        path: ["dateOfBirth"],
+        message: "Date of birth is required",
+      });
+    }
+  });
+
+export const updateProfileSchema = z.object({
+  firstName: z.string().optional(),
+  lastName: z.string().optional(),
+  dateOfBirth: dateOfBirth().optional(),
+  phoneNumber: phoneNumber().optional(),
+  gender: z
+    .enum(ONBOARDING_GENDERS, "Please select your gender")
+    .optional(),
 });

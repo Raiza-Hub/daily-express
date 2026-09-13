@@ -1,81 +1,74 @@
-import Joi from "joi";
+import z from "zod/v4";
 import { KORA_SUPPORTED_COUNTRIES } from "@shared/constants";
 
 const phoneRegex = /^\+?[1-9]\d{1,14}$/;
 
-export const createDriverSchema = Joi.object({
-  firstName: Joi.string().min(1).max(50).required().messages({
-    "string.empty": "First name is required",
-    "string.min": "First name must be at least 1 character long",
-    "string.max": "First name must not exceed 50 characters",
-  }),
-  lastName: Joi.string().min(1).max(50).required().messages({
-    "string.empty": "Last name is required",
-    "string.min": "Last name must be at least 1 character long",
-    "string.max": "Last name must not exceed 50 characters",
-  }),
-  email: Joi.string().email().required().messages({
-    "string.email": "Please provide a valid email address",
-    "string.empty": "Email is required",
-  }),
-  profile_pic: Joi.string().allow("").optional(),
-  phone: Joi.string().regex(phoneRegex).required().messages({
-    "string.pattern.base": "Phone number must be a valid international format",
-    "string.empty": "Phone number is required",
-  }),
-  country: Joi.string().valid(...KORA_SUPPORTED_COUNTRIES).required().messages({
-    "any.only": "This country is not supported at the moment",
-    "string.empty": "Country is required",
-  }),
-  currency: Joi.string().min(2).max(3).required().messages({
-    "string.empty": "Currency is required",
-  }),
-  state: Joi.string().min(2).max(100).required().messages({
-    "string.empty": "State is required",
-  }),
-  city: Joi.string().min(2).max(100).required().messages({
-    "string.empty": "City is required",
-  }),
-  address: Joi.string().min(1).max(200).required().messages({
-    "string.empty": "Address is required",
-  }),
+const requiredString = (field: string, min: number, max: number) =>
+  z
+    .string({ error: `${field} is required` })
+    .min(min, {
+      error: (issue) =>
+        typeof issue.input === "string" && issue.input.length === 0
+          ? `${field} is required`
+          : `${field} must be at least ${min} characters long`,
+    })
+    .max(max, `${field} must not exceed ${max} characters`);
+
+export const createDriverSchema = z.object({
+  firstName: requiredString("First name", 1, 50),
+  lastName: requiredString("Last name", 1, 50),
+  email: z
+    .string({ error: "Email is required" })
+    .min(1, "Email is required")
+    .pipe(z.email("Please provide a valid email address")),
+  profile_pic: z.string().optional(),
+  phone: z
+    .string({ error: "Phone number is required" })
+    .regex(phoneRegex, {
+      error: (issue) =>
+        typeof issue.input === "string" && issue.input.length === 0
+          ? "Phone number is required"
+          : "Phone number must be a valid international format",
+    }),
+  country: z
+    .string({ error: "Country is required" })
+    .min(1, "Country is required")
+    .pipe(z.enum(KORA_SUPPORTED_COUNTRIES, "This country is not supported at the moment")),
+  currency: z
+    .string({ error: "Currency is required" })
+    .min(2, {
+      error: (issue) =>
+        typeof issue.input === "string" && issue.input.length === 0
+          ? "Currency is required"
+          : "must be at least 2 characters long",
+    })
+    .max(3),
+  state: requiredString("State", 2, 100),
+  city: requiredString("City", 2, 100),
+  address: requiredString("Address", 1, 200),
 });
 
-export const updateDriverSchema = Joi.object({
-  firstName: Joi.string().min(1).max(50).optional().messages({
-    "string.min": "First name must be at least 1 character long",
-    "string.max": "First name must not exceed 50 characters",
-  }),
-  lastName: Joi.string().min(1).max(50).optional().messages({
-    "string.min": "Last name must be at least 1 character long",
-    "string.max": "Last name must not exceed 50 characters",
-  }),
-  email: Joi.string().email().optional().messages({
-    "string.email": "Please provide a valid email address",
-  }),
-  phone: Joi.string().regex(phoneRegex).optional().messages({
-    "string.pattern.base": "Phone number must be a valid international format",
-  }),
-  profile_pic: Joi.string().allow("").optional(),
-  country: Joi.string().valid(...KORA_SUPPORTED_COUNTRIES).optional().messages({
-    "any.only": "This country is not supported at the moment",
-  }),
-  currency: Joi.string().min(2).max(3).optional(),
-  state: Joi.string().min(2).max(100).optional(),
-  city: Joi.string().min(2).max(100).optional(),
-  address: Joi.string().min(1).max(200).optional(),
-  bankName: Joi.string().min(2).max(100).optional(),
-  bankCode: Joi.string().min(2).max(20).optional(),
-  accountNumber: Joi.string().min(2).max(100).optional(),
-  accountName: Joi.string().min(2).max(100).optional(),
-  kycType: Joi.string().valid("bvn", "nin").optional().messages({
-    "any.only": "KYC type must be either 'bvn' or 'nin'",
-  }),
-  kycId: Joi.string().min(10).max(20).optional().messages({
-    "string.min": "KYC ID must be at least 10 characters",
-    "string.max": "KYC ID must not exceed 20 characters",
-  }),
-  kycConsent: Joi.boolean().valid(true).optional().messages({
-    "any.only": "You must consent to identity verification",
-  }),
-}).min(1); // Ensures at least one field is provided for an update
+export const updateDriverSchema = z
+  .object({
+    firstName: z.string().min(1, "First name must be at least 1 character long").max(50, "First name must not exceed 50 characters").optional(),
+    lastName: z.string().min(1, "Last name must be at least 1 character long").max(50, "Last name must not exceed 50 characters").optional(),
+    email: z.string().pipe(z.email("Please provide a valid email address")).optional(),
+    phone: z.string().regex(phoneRegex, "Phone number must be a valid international format").optional(),
+    profile_pic: z.string().optional(),
+    country: z.enum(KORA_SUPPORTED_COUNTRIES, "This country is not supported at the moment").optional(),
+    currency: z.string().min(2).max(3).optional(),
+    state: z.string().min(2).max(100).optional(),
+    city: z.string().min(2).max(100).optional(),
+    address: z.string().min(1).max(200).optional(),
+    bankName: z.string().min(2).max(100).optional(),
+    bankCode: z.string().min(2).max(20).optional(),
+    accountNumber: z.string().min(2).max(100).optional(),
+    accountName: z.string().min(2).max(100).optional(),
+    kycType: z.enum(["bvn", "nin"], { error: "KYC type must be either 'bvn' or 'nin'" }).optional(),
+    kycId: z.string().min(10, "KYC ID must be at least 10 characters").max(20, "KYC ID must not exceed 20 characters").optional(),
+    kycConsent: z.literal(true, { error: "You must consent to identity verification" }).optional(),
+  })
+  .refine((value) => Object.keys(value).length >= 1, {
+    message: "must contain at least 1 keys",
+    path: ["request"],
+  });
