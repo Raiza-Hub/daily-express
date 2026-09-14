@@ -11,33 +11,21 @@
     "check-types": "next typegen && tsc --noEmit"
   },
   "dependencies": {
-    "@hookform/resolvers": "^5.2.2",
-    "@phosphor-icons/react": "^2.1.10",
-    "@repo/api": "workspace:*",
-    "@repo/types": "workspace:*",
     "@repo/ui": "workspace:*",
-    "@t3-oss/env-nextjs": "^0.13.11",
-    "dayjs": "^1.11.20",
-    "framer-motion": "^12.38.0",
+    "lucide-react": "^1.7.0",
     "next": "16.2.6",
-    "nuqs": "^2.8.9",
-    "posthog-js": "^1.373.4",
     "react": "^19.2.6",
-    "react-aria-components": "^1.20.0",
-    "react-dom": "^19.2.6",
-    "react-hook-form": "^7.75.0",
-    "react-use": "^17.6.1",
-    "zod": "^4.4.3"
+    "react-dom": "^19.2.6"
   },
   "devDependencies": {
     "@repo/eslint-config": "workspace:*",
     "@repo/typescript-config": "workspace:*",
     "@tailwindcss/postcss": "^4.3.0",
-    "@types/node": "^25.7.0",
-    "@types/react": "19.2.14",
-    "@types/react-dom": "19.2.3",
+    "@types/node": "^22.15.3",
+    "@types/react": "19.2.2",
+    "@types/react-dom": "19.2.2",
     "eslint": "^9.39.1",
     "postcss": "^8.5.14",
-    "typescript": "6.0.3"
+    "typescript": "5.9.2"
   }
 }
