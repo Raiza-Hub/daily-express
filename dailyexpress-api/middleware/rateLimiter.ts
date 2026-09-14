@@ -1,14 +1,15 @@
-import rateLimit, { ipKeyGenerator } from "express-rate-limit";
+import { Ratelimit } from "@upstash/ratelimit";
 import { Redis } from "@upstash/redis";
-import { RedisStore, type RedisReply } from "rate-limit-redis";
+import type { Request, RequestHandler } from "express";
+import { asyncHandler } from "@shared/middleware";
 import { getConfig } from "../config/index";
-import type { Request } from "express";
 import {
   getRequestPath,
   isPublicAuthPath,
 } from "./publicPaths";
-import { createErrorPayload } from "./apiResponses";
+import { sendErrorResponse } from "./apiResponses";
 import { getClientIp } from "./utils";
+import { logger } from "../utils/logger";
 
 const config = getConfig();
 const hasUpstashCredentials = Boolean(
@@ -31,48 +32,74 @@ const redis =
       })
     : null;
 
-function getClientKey(req: Request): string {
-  return `ip:${ipKeyGenerator(getClientIp(req))}`;
-}
-
-function createLimiter(options: {
-  windowMs: number;
+function createSlidingWindowLimiter(options: {
+  windowSec: number;
   max: number;
   prefix: string;
   message: string;
-  keyGenerator?: (req: Request) => string;
   skip?: (req: Request) => boolean;
-}) {
-  return rateLimit({
-    windowMs: options.windowMs,
-    max: options.max,
-    standardHeaders: true,
-    legacyHeaders: false,
-    store: redis
-      ? new RedisStore({
-          sendCommand: (...args: string[]) =>
-            redis.exec(args as [string, ...string[]]) as Promise<RedisReply>,
-          prefix: `rl:${options.prefix}:`,
-        })
-      : undefined,
-    keyGenerator: options.keyGenerator ?? getClientKey,
-    message: createErrorPayload(429, options.message, {
-      code: "RATE_LIMITED",
-    }),
-    skip: options.skip,
+}): RequestHandler {
+  if (!redis) {
+    logger.warn("rate_limit.redis_not_configured", { prefix: options.prefix });
+    return (_req, _res, next) => next();
+  }
+
+  const ratelimit = new Ratelimit({
+    redis,
+    prefix: `rl:${options.prefix}`,
+    limiter: Ratelimit.slidingWindow(options.max, `${options.windowSec} s`),
+  });
+
+  return asyncHandler(async (req, res, next) => {
+    if (options.skip?.(req)) {
+      next();
+      return;
+    }
+
+    let success: boolean;
+    let limit: number;
+    let remaining: number;
+    let reset: number;
+    try {
+      const result = await ratelimit.limit(`ip:${getClientIp(req)}`);
+      success = result.success;
+      limit = result.limit;
+      remaining = result.remaining;
+      reset = result.reset;
+    } catch (error) {
+      logger.warn("rate_limit.redis_unavailable", {
+        prefix: options.prefix,
+        error: error instanceof Error ? error.message : String(error),
+      });
+      next();
+      return;
+    }
+
+    res.setHeader("RateLimit-Limit", limit);
+    res.setHeader("RateLimit-Remaining", remaining);
+    res.setHeader("RateLimit-Reset", Math.ceil(reset / 1000));
+
+    if (!success) {
+      sendErrorResponse(res, 429, options.message, {
+        code: "RATE_LIMITED",
+      });
+      return;
+    }
+
+    next();
   });
 }
 
-export const authLimiter = createLimiter({
-  windowMs: 60 * 1000,
+export const authLimiter = createSlidingWindowLimiter({
+  windowSec: 60,
   max: config.RATE_LIMIT_PUBLIC_AUTH,
   prefix: "auth",
   message: "Too many authentication attempts. Please try again shortly.",
   skip: (req) => !isPublicAuthPath(getRequestPath(req), req.method),
 });
 
-export const adminLimiter = createLimiter({
-  windowMs: 60 * 1000,
+export const adminLimiter = createSlidingWindowLimiter({
+  windowSec: 60,
   max: 30,
   prefix: "admin",
   message: "Too many admin requests. Please try again shortly.",
