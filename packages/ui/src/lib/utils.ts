@@ -1,19 +1,23 @@
 import { clsx, type ClassValue } from "clsx"
 import { twMerge } from "tailwind-merge"
-import { Time } from '@internationalized/date'
 
 export function cn(...inputs: ClassValue[]) {
   return twMerge(clsx(inputs))
 }
 
+export type TimeValue = {
+  hour: number;
+  minute: number;
+};
+
 export function dateToTime(date?: Date | string | null) {
   if (!date) return null
   const d = date instanceof Date ? date : new Date(date)
   if (isNaN(d.getTime())) return null
-  return new Time(d.getHours(), d.getMinutes())
+  return { hour: d.getHours(), minute: d.getMinutes() } satisfies TimeValue
 }
 
-export function timeToDate(time: Time, baseDate?: Date | null) {
+export function timeToDate(time: TimeValue, baseDate?: Date | null) {
   const date = baseDate ? new Date(baseDate) : new Date()
   date.setHours(time.hour, time.minute, 0, 0)
   return date
