@@ -28,7 +28,7 @@ export type FileUploadOptions = {
   maxSize?: number; // in bytes
   accept?: string;
   multiple?: boolean; // Defaults to false
-  initialFiles?: FileMetadata[];
+  initialFiles?: (File | FileMetadata)[];
   onFilesChange?: (files: FileWithPreview[]) => void; // Callback when files change
   onFilesAdded?: (addedFiles: FileWithPreview[]) => void; // Callback when new files are added
 };
@@ -76,8 +76,11 @@ export const useFileUpload = (
     errors: [],
     files: initialFiles.map((file) => ({
       file,
-      id: file.id,
-      preview: file.url,
+      id:
+        file instanceof File
+          ? `${file.name}-${Date.now()}-${Math.random().toString(36).substring(2, 9)}`
+          : file.id,
+      preview: file instanceof File ? URL.createObjectURL(file) : file.url,
     })),
     isDragging: false,
   });

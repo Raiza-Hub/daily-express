@@ -9,7 +9,8 @@
     "paths": {
       "@/*": ["./src/*"],
       "~/*": ["./app/*"],
-      "@repo/ui/*": ["../../packages/ui/src/*"]
+      "@repo/ui/*": ["../../packages/ui/src/*"],
+      "@shared/*": ["../../shared/*"]
     }
   },
   "include": [
