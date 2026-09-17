@@ -11,7 +11,11 @@
     "check-types": "next typegen && tsc --noEmit"
   },
   "dependencies": {
+    "@repo/api": "workspace:*",
+    "@repo/types": "workspace:*",
     "@repo/ui": "workspace:*",
+    "date-fns": "^4.4.0",
+    "framer-motion": "^13.3.0",
     "lucide-react": "^1.7.0",
     "next": "16.2.6",
     "react": "^19.2.6",

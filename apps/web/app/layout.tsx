@@ -1,5 +1,12 @@
 import type { Metadata } from "next";
+import { Onest } from "next/font/google";
+import { QueryProvider } from "@repo/api";
 import "./globals.css";
+
+const onest = Onest({
+  subsets: ["latin"],
+  variable: "--font-sans",
+});
 
 export const metadata: Metadata = {
   title: "Daily Express",
@@ -12,9 +19,9 @@ export default function RootLayout({
   children: React.ReactNode;
 }) {
   return (
-    <html lang="en">
-      <body className="min-h-screen bg-background text-foreground antialiased">
-        {children}
+    <html lang="en" className={onest.variable}>
+      <body className="flex min-h-dvh flex-col antialiased font-sans">
+        <QueryProvider>{children}</QueryProvider>
       </body>
     </html>
   );
