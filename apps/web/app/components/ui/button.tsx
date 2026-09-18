@@ -1,6 +1,7 @@
 "use client";
 
 import * as React from "react";
+import { cn } from "@repo/ui/lib/utils";
 
 const buttonVariants = {
     default: "bg-primary text-primary-foreground hover:bg-primary/90",
@@ -24,7 +25,13 @@ const Button = React.forwardRef<HTMLButtonElement, ButtonProps>(
         <button
             ref={ref}
             type={type ?? "button"}
-            className={`inline-flex cursor-pointer items-center justify-center gap-2 whitespace-nowrap font-medium transition-colors duration-150 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ring disabled:pointer-events-none disabled:opacity-50 [&_svg]:pointer-events-none ${pill ? "rounded-full" : "rounded-md"} ${buttonVariants[variant]} ${buttonSizes[size]} ${className}`}
+            className={cn(
+                "inline-flex cursor-pointer items-center justify-center gap-2 whitespace-nowrap font-medium transition-colors duration-150 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ring disabled:pointer-events-none disabled:opacity-50 [&_svg]:pointer-events-none",
+                pill ? "rounded-full" : "rounded-md",
+                buttonVariants[variant],
+                buttonSizes[size],
+                className,
+            )}
             {...props}
         />
     ),
