@@ -39,7 +39,8 @@ export const useGetMe = (options?: { enabled?: boolean }) => {
     queryKey: ["user"],
     queryFn: getMeFn,
     enabled: options?.enabled ?? true,
-    staleTime: 5 * 60 * 1000,
+    staleTime: Infinity,
+    gcTime: 30 * 60 * 1000,
     refetchOnMount: false,
     refetchOnWindowFocus: false,
   });
@@ -101,18 +102,34 @@ export const useLogout = () => {
 };
 
 export const useUpdateProfile = (options?: {
-  onSuccess?: (data: any) => void;
-  onError?: (error: any) => void;
-}) =>
-  useMutation({
+  onSuccess?: (data: User) => void;
+  onError?: (error: Error) => void;
+}) => {
+  const queryClient = useQueryClient();
+  return useMutation({
     mutationFn: updateProfileFn,
-    ...options,
+    onSuccess: (data) => {
+      queryClient.setQueryData(["user"], data);
+      options?.onSuccess?.(data);
+    },
+    onError: options?.onError,
   });
+};
 
-export const useDeleteAccount = () =>
-  useMutation({
+export const useDeleteAccount = (options?: {
+  onSuccess?: () => void;
+  onError?: (error: Error) => void;
+}) => {
+  const queryClient = useQueryClient();
+  return useMutation({
     mutationFn: deleteAccountFn,
+    onSuccess: () => {
+      queryClient.clear();
+      options?.onSuccess?.();
+    },
+    onError: options?.onError,
   });
+};
 
 export const useCompleteOnboarding = (options?: {
   onSuccess?: (data: User) => void;
