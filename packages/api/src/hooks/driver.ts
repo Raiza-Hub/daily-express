@@ -1,4 +1,4 @@
-import { useMutation, useQuery } from "@tanstack/react-query";
+import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { driverApi } from "../api";
 import type {
   Driver,
@@ -55,15 +55,18 @@ export const uploadToR2Fn = async (uploadUrl: string, file: File): Promise<void>
   }
 };
 
-export const confirmProfileUploadFn = async (key: string): Promise<void> => {
+export const confirmProfileUploadFn = async (
+  key: string,
+): Promise<{ profile_pic: string }> => {
   try {
     const response = await driverApi.post<ApiResponse<{ profile_pic: string }>>(
       "/profile/confirm",
       { key },
     );
-    if (!response.data.success) {
+    if (!response.data.success || !response.data.data) {
       throw new Error(response.data.error || "Failed to confirm profile upload");
     }
+    return response.data.data;
   } catch (err) {
     return handleApiError(err, "Failed to confirm profile upload") as never;
   }
@@ -113,6 +116,10 @@ export const useGetDriver = (options?: { enabled?: boolean }) => {
     queryKey: ["driver"],
     queryFn: getDriverFn,
     enabled: options?.enabled ?? true,
+    staleTime: Infinity,
+    gcTime: 30 * 60 * 1000,
+    refetchOnMount: false,
+    refetchOnWindowFocus: false,
   });
 };
 
@@ -130,9 +137,14 @@ export const useUpdateDriver = (options?: {
   onSuccess?: (data: Driver) => void;
   onError?: (error: Error) => void;
 }) => {
+  const queryClient = useQueryClient();
   return useMutation({
     mutationFn: updateDriverFn,
-    ...options,
+    onSuccess: (data) => {
+      queryClient.setQueryData(["driver"], data);
+      options?.onSuccess?.(data);
+    },
+    onError: options?.onError,
   });
 };
 
@@ -140,8 +152,13 @@ export const useDeactivateDriver = (options?: {
   onSuccess?: () => void;
   onError?: (error: Error) => void;
 }) => {
+  const queryClient = useQueryClient();
   return useMutation({
     mutationFn: deactivateDriverFn,
-    ...options,
+    onSuccess: () => {
+      queryClient.clear();
+      options?.onSuccess?.();
+    },
+    onError: options?.onError,
   });
 };
