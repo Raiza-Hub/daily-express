@@ -77,7 +77,7 @@ const DrawerHeader = ({ className, ...props }: React.ComponentProps<"div">) => (
 const DrawerFooter = ({ className, ...props }: React.ComponentProps<"div">) => (
     <div
         data-slot="drawer-footer"
-        className={cn("mt-auto flex flex-col gap-2 p-4", className)}
+        className={cn("mt-auto flex flex-row flex-wrap items-center justify-center gap-2 p-6", className)}
         {...props}
     />
 )
