@@ -11,6 +11,7 @@
         "NEXT_PUBLIC_POSTHOG_HOST",
         "NEXT_PUBLIC_POSTHOG_KEY",
         "NEXT_PUBLIC_POSTHOG_UI_HOST",
+        "NEXT_PUBLIC_R2_HOSTNAME",
         "NEXT_PUBLIC_WEB_APP_URL"
       ],
       "passThroughEnv": [],
