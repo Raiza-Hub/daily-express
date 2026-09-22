@@ -64,7 +64,7 @@ export const createTripCheckoutFn = async (
       checkoutUrl: payment.checkoutUrl,
     };
   } catch (err) {
-    return handleApiError(err, "Failed to create trip checkout") as never;
+    throw handleApiError(err, "Failed to create trip checkout") ;
   }
 };
 

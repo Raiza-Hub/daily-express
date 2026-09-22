@@ -16,7 +16,7 @@ export const getDriverFn = async (): Promise<Driver | null> => {
     }
     return response.data.data ?? null;
   } catch (err) {
-    return handleApiError(err, "Failed to get driver profile") as never;
+    throw handleApiError(err, "Failed to get driver profile") ;
   }
 };
 
@@ -40,7 +40,7 @@ export const presignProfileUploadFn = async (
     }
     return response.data.data;
   } catch (err) {
-    return handleApiError(err, "Failed to generate upload URL") as never;
+    throw handleApiError(err, "Failed to generate upload URL") ;
   }
 };
 
@@ -68,7 +68,7 @@ export const confirmProfileUploadFn = async (
     }
     return response.data.data;
   } catch (err) {
-    return handleApiError(err, "Failed to confirm profile upload") as never;
+    throw handleApiError(err, "Failed to confirm profile upload") ;
   }
 };
 
@@ -82,7 +82,7 @@ export const createDriverFn = async (
     }
     return response.data.data;
   } catch (err) {
-    return handleApiError(err, "Failed to create driver profile") as never;
+    throw handleApiError(err, "Failed to create driver profile") ;
   }
 };
 
@@ -96,7 +96,7 @@ export const updateDriverFn = async (
     }
     return response.data.data;
   } catch (err) {
-    return handleApiError(err, "Failed to update driver profile") as never;
+    throw handleApiError(err, "Failed to update driver profile") ;
   }
 };
 
@@ -107,7 +107,7 @@ export const deactivateDriverFn = async (): Promise<void> => {
       throw new Error(response.data.error || "Failed to deactivate driver profile");
     }
   } catch (err) {
-    return handleApiError(err, "Failed to deactivate driver profile") as never;
+    throw handleApiError(err, "Failed to deactivate driver profile") ;
   }
 };
 

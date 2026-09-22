@@ -18,7 +18,7 @@ export const logoutFn = async (): Promise<void> => {
       throw new Error(response.data.error || "Logout failed");
     }
   } catch (err) {
-    return handleApiError(err, "Logout failed") as never;
+    throw handleApiError(err, "Logout failed") ;
   }
 };
 
@@ -30,7 +30,7 @@ export const getMeFn = async (): Promise<User> => {
     }
     return response.data.data;
   } catch (err) {
-    return handleApiError(err, "Failed to get user") as never;
+    throw handleApiError(err, "Failed to get user") ;
   }
 };
 
@@ -59,7 +59,7 @@ export const updateProfileFn = async (
     }
     return response.data.data;
   } catch (err) {
-    return handleApiError(err, "Failed to update profile") as never;
+    throw handleApiError(err, "Failed to update profile") ;
   }
 };
 
@@ -70,7 +70,7 @@ export const deleteAccountFn = async (): Promise<void> => {
       throw new Error(response.data.error || "Failed to delete account");
     }
   } catch (err) {
-    return handleApiError(err, "Failed to delete account") as never;
+    throw handleApiError(err, "Failed to delete account") ;
   }
 };
 
@@ -87,7 +87,7 @@ export const completeOnboardingFn = async (
     }
     return response.data.data;
   } catch (err) {
-    return handleApiError(err, "Failed to complete onboarding") as never;
+    throw handleApiError(err, "Failed to complete onboarding") ;
   }
 };
 

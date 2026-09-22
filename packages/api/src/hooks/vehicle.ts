@@ -16,7 +16,7 @@ export const getVehiclesFn = async (): Promise<Vehicle[]> => {
     }
     return response.data.data;
   } catch (err) {
-    return handleApiError(err, "Failed to get vehicles") as never;
+    throw handleApiError(err, "Failed to get vehicles") ;
   }
 };
 
@@ -33,7 +33,7 @@ export const createVehicleFn = async (
     }
     return response.data.data;
   } catch (err) {
-    return handleApiError(err, "Failed to create vehicle") as never;
+    throw handleApiError(err, "Failed to create vehicle") ;
   }
 };
 
@@ -54,7 +54,7 @@ export const updateVehicleFn = async ({
     }
     return response.data.data;
   } catch (err) {
-    return handleApiError(err, "Failed to update vehicle") as never;
+    throw handleApiError(err, "Failed to update vehicle") ;
   }
 };
 
@@ -67,7 +67,7 @@ export const deleteVehicleFn = async (id: string): Promise<void> => {
       throw new Error(response.data.error || "Failed to delete vehicle");
     }
   } catch (err) {
-    return handleApiError(err, "Failed to delete vehicle") as never;
+    throw handleApiError(err, "Failed to delete vehicle") ;
   }
 };
 

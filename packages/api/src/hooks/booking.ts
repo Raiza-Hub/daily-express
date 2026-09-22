@@ -76,7 +76,7 @@ export const completeTripFn = async ({ id }: { id: string }): Promise<Trip> => {
     }
     return response.data.data;
   } catch (err) {
-    return handleApiError(err, "Failed to complete trip") as never;
+    throw handleApiError(err, "Failed to complete trip") ;
   }
 };
 
@@ -95,7 +95,7 @@ export const searchRoutesFn = async (
     }
     return response.data.data;
   } catch (err) {
-    return handleApiError(err, "Failed to search routes") as never;
+    throw handleApiError(err, "Failed to search routes") ;
   }
 };
 
@@ -134,7 +134,7 @@ export const getUserBookingsFn = async (
     }
     return response.data.data;
   } catch (err) {
-    return handleApiError(err, "Failed to get user bookings") as never;
+    throw handleApiError(err, "Failed to get user bookings") ;
   }
 };
 
@@ -164,20 +164,22 @@ export const useCompleteTrip = (options?: {
 
   return useMutation({
     mutationFn: completeTripFn,
-    onSuccess: (data, variables) => {
-      void queryClient.invalidateQueries({ queryKey: ["driverRoutes"] });
-      void queryClient.invalidateQueries({
-        queryKey: ["tripBookings", variables.id],
-      });
-      void queryClient.invalidateQueries({
-        queryKey: ["driver-payout-balance"],
-      });
-      void queryClient.invalidateQueries({
-        queryKey: ["driver-payout-history"],
-      });
-      void queryClient.invalidateQueries({
-        queryKey: ["driver-payout-summary"],
-      });
+    onSuccess: async (data, variables) => {
+      await Promise.all([
+        queryClient.invalidateQueries({ queryKey: ["driverRoutes"] }),
+        queryClient.invalidateQueries({
+          queryKey: ["tripBookings", variables.id],
+        }),
+        queryClient.invalidateQueries({
+          queryKey: ["driver-payout-balance"],
+        }),
+        queryClient.invalidateQueries({
+          queryKey: ["driver-payout-history"],
+        }),
+        queryClient.invalidateQueries({
+          queryKey: ["driver-payout-summary"],
+        }),
+      ]);
       options?.onSuccess?.(data);
     },
     onError: options?.onError,
@@ -231,7 +233,7 @@ export const getTripBookingsFn = async (
     }
     return response.data.data;
   } catch (err) {
-    return handleApiError(err, "Failed to get trip bookings") as never;
+    throw handleApiError(err, "Failed to get trip bookings") ;
   }
 };
 
