@@ -44,7 +44,7 @@ export const getDriverPayoutHistoryFn = async (params?: {
 
     return response.data.data;
   } catch (err) {
-    return handleApiError(err, "Failed to fetch payout history") as never;
+    throw handleApiError(err, "Failed to fetch payout history") ;
   }
 };
 

@@ -25,6 +25,7 @@ import { Input } from "~/components/ui/input";
 import { Select } from "~/components/ui/select";
 import { Row, EditLink, getInitials } from "../user/settings-shared";
 import { NIGERIAN_STATES } from "~/lib/driverData";
+import { formatPhoneDisplay, PHONE_PLACEHOLDER, toE164 } from "~/lib/phone";
 import { KORA_SUPPORTED_COUNTRIES } from "@shared/constants";
 import type { Driver, UpdateProfileRequest } from "@shared/types";
 
@@ -162,7 +163,7 @@ const DriverCard = () => {
             firstName: driver.firstName,
             lastName: driver.lastName,
             email: driver.email,
-            phone: driver.phone ?? "",
+            phone: formatPhoneDisplay(driver.phone ?? ""),
         });
         setIsPersonalOpen(true);
     };
@@ -306,7 +307,7 @@ return (
                 required
                 description="Your contact phone number."
             >
-                <span className="text-sm text-foreground">{driver.phone ?? "Not set"}</span>
+                <span className="text-sm text-foreground">{driver.phone ? formatPhoneDisplay(driver.phone) : "Not set"}</span>
                 <EditLink onClick={openPersonal} />
             </Row>
             <Row label="Location" description="Your country, state, and city.">
@@ -402,11 +403,14 @@ return (
                             <Input
                                 id="edit-driver-phone"
                                 type="tel"
+                                inputMode="numeric"
+                                autoComplete="tel"
+                                placeholder={PHONE_PLACEHOLDER}
                                 value={personalDraft.phone}
                                 onChange={(event) =>
                                     setPersonalDraft((current) => ({
                                         ...current,
-                                        phone: event.target.value,
+                                        phone: formatPhoneDisplay(event.target.value),
                                     }))
                                 }
                             />
@@ -422,7 +426,7 @@ return (
                                     firstName: personalDraft.firstName.trim(),
                                     lastName: personalDraft.lastName.trim(),
                                     email: personalDraft.email.trim(),
-                                    phone: personalDraft.phone.trim(),
+                                    phone: toE164(personalDraft.phone),
                                 })
                             }
                             disabled={updateDriver.isPending}

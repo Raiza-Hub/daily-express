@@ -18,6 +18,7 @@ import { Field } from "~/components/ui/field";
 import { Input } from "~/components/ui/input";
 import { Select } from "~/components/ui/select";
 import { Row, EditLink, getInitials } from "./settings-shared";
+import { formatPhoneDisplay, PHONE_PLACEHOLDER, toE164 } from "~/lib/phone";
 
 // TEMP: preview profile shown while no real user is signed in.
 const FAKE_PROFILE = {
@@ -81,7 +82,7 @@ const ProfileCard = () => {
         setDraft({
             firstName: apiUser?.firstName ?? FAKE_PROFILE.firstName,
             lastName: apiUser?.lastName ?? FAKE_PROFILE.lastName,
-            phoneNumber: apiUser?.phone ?? FAKE_PROFILE.phone ?? "",
+            phoneNumber: formatPhoneDisplay(apiUser?.phone ?? FAKE_PROFILE.phone ?? ""),
             gender: apiUser?.gender ?? FAKE_PROFILE.gender ?? "",
             dateOfBirth: dateOfBirth
                 ? new Date(dateOfBirth).toISOString().slice(0, 10)
@@ -94,7 +95,7 @@ const ProfileCard = () => {
         updateProfile.mutate({
             firstName: draft.firstName.trim(),
             lastName: draft.lastName.trim(),
-            phoneNumber: draft.phoneNumber.trim(),
+            phoneNumber: toE164(draft.phoneNumber),
             gender: draft.gender as "male" | "female" | undefined,
             dateOfBirth: draft.dateOfBirth
                 ? new Date(`${draft.dateOfBirth}T00:00:00`)
@@ -158,7 +159,7 @@ const ProfileCard = () => {
                 required
                 description="Your contact phone number."
             >
-                <span className="text-sm text-foreground">{phone ?? "Not set"}</span>
+                <span className="text-sm text-foreground">{phone ? formatPhoneDisplay(phone) : "Not set"}</span>
                 <EditLink onClick={openEdit} />
             </Row>
             <Row label="Gender" description="Your gender.">
@@ -210,11 +211,14 @@ const ProfileCard = () => {
                             <Input
                                 id="edit-phone"
                                 type="tel"
+                                inputMode="numeric"
+                                autoComplete="tel"
+                                placeholder={PHONE_PLACEHOLDER}
                                 value={draft.phoneNumber}
                                 onChange={(event) =>
                                     setDraft((current) => ({
                                         ...current,
-                                        phoneNumber: event.target.value,
+                                        phoneNumber: formatPhoneDisplay(event.target.value),
                                     }))
                                 }
                             />
