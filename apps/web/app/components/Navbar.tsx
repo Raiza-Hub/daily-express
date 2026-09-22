@@ -50,10 +50,10 @@ export async function Navbar() {
 
                 <div className="flex items-center gap-3 ml-auto">
                     {/* TODO: wire to driver app + sign-in routes */}
-                    <div className="cursor-pointer rounded-full border border-neutral-300 px-5 py-2 text-sm font-medium text-neutral-700 transition-colors hover:bg-neutral-50">
+                    <div className="cursor-pointer rounded-full border border-neutral-300 px-5 py-2 text-sm font-semibold text-neutral-700 transition-colors hover:bg-neutral-50">
                         Become a driver
                     </div>
-                    <div className="cursor-pointer rounded-full bg-neutral-900 px-5 py-2 text-sm font-medium text-white transition-colors hover:bg-neutral-800">
+                    <div className="cursor-pointer rounded-full bg-neutral-900 px-5 py-2 text-sm font-semibold text-white transition-colors hover:bg-neutral-800">
                         Sign in
                     </div>
                 </div>
