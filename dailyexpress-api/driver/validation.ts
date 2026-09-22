@@ -65,7 +65,7 @@ export const updateDriverSchema = z
     accountNumber: z.string().min(2).max(100).optional(),
     accountName: z.string().min(2).max(100).optional(),
     kycType: z.enum(["bvn", "nin"], { error: "KYC type must be either 'bvn' or 'nin'" }).optional(),
-    kycId: z.string().min(10, "KYC ID must be at least 10 characters").max(20, "KYC ID must not exceed 20 characters").optional(),
+    kycId: z.string().regex(/^\d{11}$/, "KYC ID must be exactly 11 digits").optional(),
     kycConsent: z.literal(true, { error: "You must consent to identity verification" }).optional(),
   })
   .refine((value) => Object.keys(value).length >= 1, {

@@ -4,6 +4,7 @@ import { Field } from "~/components/ui/field";
 import { Input } from "~/components/ui/input";
 import { Select } from "~/components/ui/select";
 import { NIGERIAN_STATES } from "~/lib/driverData";
+import { formatPhoneDisplay, PHONE_PLACEHOLDER } from "~/lib/phone";
 import type { DriverSignupData, DriverStepErrors } from "~/lib/driverSignup";
 
 interface AddressInfoStepProps {
@@ -84,10 +85,10 @@ const AddressInfoStep = ({ data, errors, onChange }: AddressInfoStepProps) => {
                     type="tel"
                     inputMode="numeric"
                     value={data.phoneNumber}
-                    onChange={(event) => onChange({ phoneNumber: event.target.value })}
+                    onChange={(event) => onChange({ phoneNumber: formatPhoneDisplay(event.target.value) })}
                     invalid={Boolean(errors.phoneNumber)}
                     autoComplete="tel"
-                    placeholder="+234 801 234 5678"
+                    placeholder={PHONE_PLACEHOLDER}
                 />
             </Field>
         </div>
