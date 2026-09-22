@@ -73,6 +73,7 @@ function Calendar({ selected, onSelect }: CalendarProps) {
                     <Button
                         variant={step === "year" ? "default" : "outline"}
                         size="sm"
+                        className="h-10"
                         onClick={() => setStep("year")}
                     >
                         Year
@@ -80,6 +81,7 @@ function Calendar({ selected, onSelect }: CalendarProps) {
                     <Button
                         variant={step === "month" ? "default" : "outline"}
                         size="sm"
+                        className="h-10"
                         onClick={() => setStep("month")}
                         disabled={step === "year"} // can't go to month before selecting a year
                     >
@@ -116,7 +118,7 @@ function Calendar({ selected, onSelect }: CalendarProps) {
                                                     : "outline"
                                             }
                                             size="sm"
-                                            className="h-10"
+                                            className="h-12"
                                             onClick={() => {
                                                 setSelectedYear(year.getFullYear());
                                                 setStep("month");
@@ -178,7 +180,7 @@ function Calendar({ selected, onSelect }: CalendarProps) {
                             exit={{ opacity: 0, y: -20 }}
                             transition={stepTransition}
                         >
-                            <div className="rounded-lg border border-border bg-card p-3">
+                            <div className="rounded-lg bg-card p-3">
                                 <div className="grid grid-cols-7 gap-1 text-center text-xs font-medium text-muted-foreground mb-2">
                                     {WEEKDAYS.map((day) => (
                                         <span key={day} className="py-1">
@@ -195,7 +197,7 @@ function Calendar({ selected, onSelect }: CalendarProps) {
                                                 key={`day-${day}`}
                                                 variant={isSelectedDay(day) ? "default" : "outline"}
                                                 size="sm"
-                                                className="h-9 w-full"
+                                                className="h-12 w-full"
                                                 onClick={() => {
                                                     selectDate(new Date(selectedYear, selectedMonth, day));
                                                 }}
