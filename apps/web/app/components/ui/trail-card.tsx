@@ -67,7 +67,7 @@ const TrailCard = React.forwardRef<HTMLDivElement, TrailCardProps>(
               {originLabel ? (
                 <p className="text-sm font-medium text-white/70">{originLabel}</p>
               ) : null}
-              <h3 className="text-xl font-semibold">{origin}</h3>
+              <h3 className="text-xl font-bold">{origin}</h3>
             </div>
             {/* The button will animate in on hover of the parent card */}
             {/* <motion.div
@@ -93,9 +93,9 @@ const TrailCard = React.forwardRef<HTMLDivElement, TrailCardProps>(
             {destinationLabel ? (
               <p className="text-sm font-medium text-muted-foreground">{destinationLabel}</p>
             ) : null}
-<p className="font-semibold text-foreground">{destination}</p>
-            <p className="text-xs text-muted-foreground">
-              <span className="font-bold text-foreground">{date}</span>
+            <p className="font-bold text-foreground">{destination}</p>
+            <p className="text-sm font-medium text-muted-foreground">
+              {date}
               {" \u2022 "}
               {departureTime}
             </p>
