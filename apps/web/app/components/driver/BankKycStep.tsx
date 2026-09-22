@@ -96,7 +96,7 @@ const BankKycStep = ({
         <Button
             type="button"
             pill
-            className="w-full"
+            className="w-full font-semibold text-sm"
             onClick={onVerifyBank}
             disabled={isVerifyingBank || bankVerified}
         >
@@ -164,7 +164,7 @@ const BankKycStep = ({
                     <Input
                         id="kycId"
                         inputMode="numeric"
-                        maxLength={20}
+                        maxLength={11}
                         value={data.kycId}
                         onChange={(event) => onChange({ kycId: event.target.value })}
                         invalid={Boolean(errors.kycId)}
@@ -192,7 +192,7 @@ const BankKycStep = ({
                     />
                     <span
                         aria-hidden
-                        className={`mt-0.5 flex h-4 w-4 shrink-0 items-center justify-center rounded-[4px] border transition-colors duration-150 peer-focus-visible:outline-2 peer-focus-visible:outline-offset-2 peer-focus-visible:outline-ring ${
+                        className={`mt-0.5 flex h-4 w-4 shrink-0 items-center justify-center rounded-sm border transition-colors duration-150 peer-focus-visible:outline-2 peer-focus-visible:outline-offset-2 peer-focus-visible:outline-ring ${
                             data.kycConsent ? "border-primary bg-primary" : "border-border"
                         }`}
                     >
@@ -211,7 +211,7 @@ const BankKycStep = ({
                 <Button
                     type="button"
                     pill
-                    className="w-full"
+                    className="w-full font-semibold text-sm"
                     onClick={onVerifyIdentity}
                     disabled={isVerifyingIdentity || identityVerified || !data.kycConsent}
                 >

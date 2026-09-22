@@ -48,10 +48,7 @@ export const onboardingSchema = z.object({
     error: "KYC type is required",
   }),
 
-  kycId: z
-    .string()
-    .min(10, { error: "KYC ID must be at least 10 characters" })
-    .max(20, { error: "KYC ID must not exceed 20 characters" }),
+  kycId: z.string().regex(/^\d{11}$/, { error: "KYC ID must be exactly 11 digits" }),
 
   kycConsent: z.boolean().refine((val) => val === true, {
     message: "You must consent to identity verification.",

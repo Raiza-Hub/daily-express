@@ -16,6 +16,7 @@ import {
     validateKyc,
     validatePersonal,
 } from "~/lib/driverSignup";
+import { toE164 } from "~/lib/phone";
 
 const stepTransition: Transition = { duration: 0.25, ease: "easeOut" };
 
@@ -103,7 +104,7 @@ function DriverSignupForm() {
                 address: data.address,
                 city: data.city,
                 state: data.state,
-                phoneNumber: data.phoneNumber,
+                phoneNumber: toE164(data.phoneNumber),
                 bankName: data.bankName,
                 bankCode: data.bankCode,
                 accountNumber: data.accountNumber,
@@ -178,14 +179,14 @@ function DriverSignupForm() {
                             type="button"
                             variant="outline"
                             pill
-                            className="flex-1"
+                            className="flex-1 font-semibold text-sm"
                             onClick={() => setStep((current) => current - 1)}
                         >
                             Back
                         </Button>
                     )}
                     {showSubmit && (
-                        <Button type="submit" pill className="flex-1">
+                        <Button type="submit" pill className="flex-1 font-semibold text-sm">
                             Create account
                         </Button>
                     )}
@@ -193,7 +194,7 @@ function DriverSignupForm() {
                         <Button
                             type="button"
                             pill
-                            className="flex-1"
+                            className="flex-1 font-semibold text-sm"
                             onClick={handleContinue}
                         >
                             Continue

@@ -58,25 +58,28 @@ const PersonalInfoStep = ({ data, errors, onChange }: PersonalInfoStepProps) => 
                             "aria-label": "Profile photo",
                         })}
                     />
-                    <button
-                        type="button"
-                        onClick={uploadActions.openFileDialog}
-                        className="relative h-28 w-28 cursor-pointer rounded-full focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ring"
-                    >
-                        <span className="absolute inset-0 block overflow-hidden rounded-full border border-border bg-background">
-                            {photoEntry?.preview ? (
-                                <Image
-                                    src={photoEntry.preview}
-                                    alt="Profile preview"
-                                    fill
-                                    unoptimized
-                                    sizes="112px"
-                                    className="object-cover"
-                                />
-                            ) : (
-                                <User className="absolute inset-0 m-auto h-8 w-8 text-muted-foreground" />
-                            )}
-                        </span>
+                    <div className="relative h-28 w-28">
+                        <button
+                            type="button"
+                            onClick={uploadActions.openFileDialog}
+                            aria-label="Upload profile photo"
+                            className="h-28 w-28 cursor-pointer rounded-full focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ring"
+                        >
+                            <span className="absolute inset-0 block overflow-hidden rounded-full border border-border bg-background">
+                                {photoEntry?.preview ? (
+                                    <Image
+                                        src={photoEntry.preview}
+                                        alt="Profile preview"
+                                        fill
+                                        unoptimized
+                                        sizes="112px"
+                                        className="object-cover"
+                                    />
+                                ) : (
+                                    <User className="absolute inset-0 m-auto h-8 w-8 text-muted-foreground" />
+                                )}
+                            </span>
+                        </button>
                         {photoEntry && (
                             <button
                                 type="button"
@@ -87,7 +90,7 @@ const PersonalInfoStep = ({ data, errors, onChange }: PersonalInfoStepProps) => 
                                 <Trash2 className="h-3.5 w-3.5" />
                             </button>
                         )}
-                    </button>
+                    </div>
                 </div>
             </Field>
             {(errors.file || uploadState.errors[0]) && (
