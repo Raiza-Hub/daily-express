@@ -12,8 +12,8 @@ import {
     DrawerTitle,
 } from "@repo/ui/Drawer";
 import { CalendarIcon } from "lucide-react";
+import { formatPhoneDisplay, isValidNigerianPhone, toE164 } from "~/lib/phone";
 
-const PHONE_REGEX = /^\+234[789]\d{9}$/;
 const MINIMUM_ACCOUNT_AGE = 14;
 const GENDERS = ["male", "female"] as const;
 type Gender = (typeof GENDERS)[number];
@@ -45,9 +45,9 @@ function OnboardingForm() {
         const nextErrors: FieldErrors = {};
         if (!phone.trim()) {
             nextErrors.phone = "Phone number is required";
-        } else if (!PHONE_REGEX.test(phone.trim())) {
+        } else if (!isValidNigerianPhone(phone)) {
             nextErrors.phone =
-                "Enter a valid Nigerian phone number in international format (e.g. +2348012345678)";
+                "Enter a valid Nigerian phone number in international format (e.g. +234 801 234 5678)";
         }
         if (!dateOfBirth) {
             nextErrors.dateOfBirth = "Date of birth is required";
@@ -66,7 +66,7 @@ function OnboardingForm() {
         setErrors(nextErrors);
         if (Object.keys(nextErrors).length > 0) return;
         // UI-only for now: no real mutation wired up yet.
-        console.log({ phone, dateOfBirth, gender });
+        console.log({ phone: toE164(phone), dateOfBirth, gender });
     };
 
     return (
@@ -87,7 +87,7 @@ function OnboardingForm() {
                     placeholder="+234 801 234 5678"
                     value={phone}
                     onChange={(event) => {
-                        setPhone(event.target.value);
+                        setPhone(formatPhoneDisplay(event.target.value));
                         if (errors.phone) setErrors((current) => ({ ...current, phone: undefined }));
                     }}
                     className={`h-10 w-full rounded-md border bg-background px-3 text-sm text-foreground placeholder:text-muted-foreground focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ring ${
@@ -168,7 +168,7 @@ function OnboardingForm() {
                 )}
             </fieldset>
 
-            <Button type="submit" pill className="w-full">
+            <Button type="submit" pill className="w-full font-semibold text-sm">
                 Continue
             </Button>
 
