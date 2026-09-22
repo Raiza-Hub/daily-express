@@ -12,6 +12,10 @@ const nextConfig = {
       },
       {
         protocol: "https",
+        hostname: "randomuser.me",
+      },
+      {
+        protocol: "https",
         hostname: process.env.NEXT_PUBLIC_R2_HOSTNAME,
       },
     ],

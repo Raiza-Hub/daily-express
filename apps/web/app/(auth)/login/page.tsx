@@ -1,6 +1,6 @@
-import Image from "next/image";
 import Link from "next/link";
 import GoogleSignInButton from "~/components/auth/GoogleSigInButton";
+import { AuthLogo } from "~/components/auth/AuthLogo";
 
 
 const Page = () => {
@@ -8,13 +8,7 @@ const Page = () => {
         <main className="flex flex-col items-center px-4 pt-20 pb-16">
             <div className="flex w-full max-w-sm flex-col space-y-6">
                 <div className="flex flex-col items-center space-y-2 text-center">
-                    <Image
-                        src="/auth-nav-logo.png"
-                        alt="Logo"
-                        width={100}
-                        height={75}
-                        priority
-                    />
+                    <AuthLogo />
                     <h1 className="text-3xl font-semibold tracking-tight">
                         Sign in or sign up
                     </h1>
