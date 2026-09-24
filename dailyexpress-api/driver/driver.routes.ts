@@ -88,32 +88,4 @@ router.delete(
   driverController.deactivateDriver,
 );
 
-router.get(
-  "/vehicles",
-  authenticateVerifiedGatewayRequest,
-  requireActiveDriver,
-  driverController.getVehicles,
-);
-router.post(
-  "/vehicles",
-  authenticateVerifiedGatewayRequest,
-  requireActiveDriver,
-  driverActionLimiter,
-  driverController.createVehicle,
-);
-router.patch(
-  "/vehicles/:id",
-  authenticateVerifiedGatewayRequest,
-  requireActiveDriver,
-  driverActionLimiter,
-  driverController.updateVehicle,
-);
-router.delete(
-  "/vehicles/:id",
-  authenticateVerifiedGatewayRequest,
-  requireActiveDriver,
-  driverActionLimiter,
-  driverController.deleteVehicle,
-);
-
 export default router;

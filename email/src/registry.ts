@@ -1,7 +1,6 @@
 import * as React from "react";
 import { render } from "@react-email/render";
 import BookingConfirmedEmail from "./emails/BookingConfirmedEmail";
-import DriverAssignedEmail from "./emails/DriverAssignedEmail";
 import RefundFailedEmail from "./emails/RefundFailedEmail";
 import RefundSuccessfulEmail from "./emails/RefundSuccessfulEmail";
 import ResetPasswordEmail from "./emails/ResetPasswordEmail";
@@ -11,7 +10,6 @@ import TripCancelledEmail from "./emails/TripCancelledEmail";
 
 export const templates = {
   BookingConfirmedEmail: BookingConfirmedEmail,
-  DriverAssignedEmail: DriverAssignedEmail,
   RefundFailedEmail: RefundFailedEmail,
   RefundSuccessfulEmail: RefundSuccessfulEmail,
   ResetPasswordEmail: ResetPasswordEmail,
@@ -46,8 +44,6 @@ export function getEmailSubject(
   switch (templateName) {
     case "BookingConfirmedEmail":
       return `Booking Confirmed - ${props.pickupTitle} to ${props.dropoffTitle}`;
-    case "DriverAssignedEmail":
-      return `Driver Assigned - ${props.pickupTitle} to ${props.dropoffTitle}`;
     case "RefundFailedEmail":
       return `Refund could not be completed yet`;
     case "RefundSuccessfulEmail":

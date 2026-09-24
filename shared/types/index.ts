@@ -442,36 +442,6 @@ export interface ResolveBankAccountResponse {
   bankCode: string;
 }
 
-export type VehicleStatus = "available" | "in_use";
-
-export interface Vehicle {
-  id: string;
-  plateNumber: string;
-  make: string;
-  model: string;
-  capacity: number;
-  color: string;
-  status: VehicleStatus;
-  createdAt: Date;
-  updatedAt: Date;
-}
-
-export interface CreateVehicleRequest {
-  plateNumber: string;
-  make: string;
-  model: string;
-  capacity: number;
-  color: string;
-}
-
-export interface UpdateVehicleRequest {
-  plateNumber?: string;
-  make?: string;
-  model?: string;
-  capacity?: number;
-  color?: string;
-}
-
 export interface DriverInfoResponse {
   firstName: string;
   lastName: string;
@@ -479,8 +449,4 @@ export interface DriverInfoResponse {
   country: string;
   state: string;
   profilePictureUrl: string | null;
-  vehicleMake: string;
-  vehicleModel: string;
-  vehiclePlateNumber: string;
-  vehicleColor: string;
 }

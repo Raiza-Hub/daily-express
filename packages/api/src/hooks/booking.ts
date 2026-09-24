@@ -51,7 +51,6 @@ export interface UserBookingWithTrip {
       pickup_point: string;
       dropoff_point: string;
       price: number;
-      vehicle_type: string;
       departure_time: string;
       arrival_time: string;
       boardingPoint: "pickup" | "dropoff";
