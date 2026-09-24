@@ -20,7 +20,6 @@ export const routeSchema = z.object({
     .string()
     .min(2, { error: "Dropoff point is required" })
     .max(500, { error: "Dropoff point is too long" }),
-  vehicleType: z.enum(["car", "bus"]),
   departureTime: z.date({ error: "Departure time is required" }),
   estimatedArrivalTime: z.date({ error: "Arrival time is required" }),
   boardingPoint: z.enum(["pickup", "dropoff"]),

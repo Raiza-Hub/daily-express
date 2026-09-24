@@ -5,6 +5,5 @@ export * from "./src/hooks/driver";
 export * from "./src/hooks/checkout";
 export * from "./src/hooks/payout";
 export * from "./src/hooks/booking";
-export * from "./src/hooks/vehicle";
 export * from "./src/api";
 export * from "./src/utils";

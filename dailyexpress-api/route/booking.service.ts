@@ -2,7 +2,7 @@ import type { CreateBooking } from "@shared/types";
 import { createServiceError } from "@shared/utils";
 import { and, desc, eq, getTableColumns, inArray, lt, ne, notInArray, or, sql } from "drizzle-orm";
 import { db } from "../db/connection";
-import { booking, driver, earning, passenger, route, trip, vehicle, type BookingRecord, type RouteRecord } from "../db/index";
+import { booking, driver, earning, passenger, route, trip, type BookingRecord, type RouteRecord } from "../db/index";
 import { logger } from "../utils/logger";
 import { scheduledAtSql } from "../utils/db-datetime";
 import { HIDDEN_BOOKING_PAYMENT_STATUSES, parseDateKey } from "../utils/route";
@@ -229,14 +229,12 @@ export class BookingService {
             trip: getTableColumns(trip),
             route: getTableColumns(route),
             driver: getTableColumns(driver),
-            vehicle: getTableColumns(vehicle),
             hasDeparted: sql<boolean>`${scheduledAtSql(trip.date, booking.departureTime)} <= now()`,
           })
           .from(booking)
           .innerJoin(route, eq(booking.routeId, route.id))
           .leftJoin(trip, eq(booking.tripId, trip.id))
           .leftJoin(driver, eq(trip.driverId, driver.id))
-          .leftJoin(vehicle, eq(vehicle.driverId, driver.id))
           .where(
             and(
               visibleBookingConditions,
@@ -277,10 +275,6 @@ export class BookingService {
             profilePictureUrl: row.driver.profile_pic ?? null,
             country: row.driver.country,
             state: row.driver.state,
-            vehicleMake: row.vehicle?.make ?? "",
-            vehicleModel: row.vehicle?.model ?? "",
-            vehiclePlateNumber: row.vehicle?.plateNumber ?? "",
-            vehicleColor: row.vehicle?.color ?? "",
           };
         } else if (hasDeparted) {
           driverStatus = "overdue";

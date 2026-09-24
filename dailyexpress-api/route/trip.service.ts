@@ -55,7 +55,6 @@ export class TripService {
 
       const updatedTrip = await this.repo.updateTrip(tx, tripId, {
         status: "completed",
-        vehicleId: null,
         updatedAt: new Date(),
       });
       if (!updatedTrip) {

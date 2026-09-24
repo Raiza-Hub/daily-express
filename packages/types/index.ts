@@ -1,5 +1,4 @@
 export * from "./onboardingSchema";
 export * from "./routeSchema";
 export * from "./authSchema";
-export * from "./vehicleSchema";
 export * from "./settingsSchema";

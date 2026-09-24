@@ -112,10 +112,6 @@ const BookingConfirmedEmail = ({
 
             <Text style={sectionTitle}>What happens next?</Text>
             <Text style={bullet}>
-              • If a driver accepts before departure, we'll send you the driver
-              and vehicle details immediately.
-            </Text>
-            <Text style={bullet}>
               • If no driver is assigned by the departure deadline, we'll notify
               you with available options (reschedule or refund).
             </Text>

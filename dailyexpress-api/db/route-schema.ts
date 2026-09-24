@@ -72,7 +72,6 @@ export const trip = pgTable(
     bookedSeats: integer("booked_seats").default(0).notNull(),
     status: tripStatusEnum("status").default("awaiting_driver").notNull(),
     driverClaimedAt: timestamp("driver_claimed_at", { mode: "date" }),
-    vehicleId: uuid("vehicle_id").references(() => vehicle.id, { onDelete: "set null" }),
     createdAt: timestamp("created_at", { mode: "date" }).defaultNow().notNull(),
     updatedAt: timestamp("updated_at", { mode: "date" }).defaultNow().notNull(),
   },
@@ -125,27 +124,12 @@ export const booking = pgTable(
   ],
 );
 
-export const vehicle = pgTable("vehicle", {
-  id: uuid("id").defaultRandom().primaryKey(),
-  driverId: uuid("driver_id")
-    .references(() => driver.id, { onDelete: "cascade" })
-    .notNull(),
-  plateNumber: text("plate_number").notNull(),
-  make: text("make").notNull(),
-  model: text("model").notNull(),
-  capacity: integer("capacity").notNull(),
-  color: text("color").notNull(),
-  createdAt: timestamp("created_at", { mode: "date" }).defaultNow().notNull(),
-  updatedAt: timestamp("updated_at", { mode: "date" }).defaultNow().notNull(),
-});
-
 export const TRIP_CAPACITY = 4;
 
 export const routeSchema = {
   route,
   trip,
   booking,
-  vehicle,
 };
 
 export type Route = typeof route.$inferSelect;
@@ -154,5 +138,3 @@ export type Trip = typeof trip.$inferSelect;
 export type TripRecord = Trip;
 export type Booking = typeof booking.$inferSelect;
 export type BookingRecord = Booking;
-export type Vehicle = typeof vehicle.$inferSelect;
-export type VehicleRecord = Vehicle;

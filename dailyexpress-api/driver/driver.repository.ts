@@ -1,10 +1,9 @@
-import { and, desc, eq, inArray, ne, notInArray } from "drizzle-orm";
+import { and, eq, inArray, ne, notInArray } from "drizzle-orm";
 import { db } from "../db/connection";
-import { driver, trip, vehicle, type DriverRecord, type VehicleRecord } from "../db/index";
+import { driver, trip, type DriverRecord } from "../db/index";
 import type { DbTransaction } from "../db/connection";
 
 type DriverTransaction = DbTransaction;
-type VehicleInsert = typeof vehicle.$inferInsert;
 
 export class DriverRepository {
   async findDriverByUserId(userId: string): Promise<DriverRecord | null> {
@@ -61,45 +60,6 @@ export class DriverRepository {
       .set({ isActive: false, deletedAt: now, updatedAt: now })
       .where(eq(driver.id, driverId));
   }
-
-  // --- Vehicle ---
-
-  async findVehiclesByDriverId(driverId: string): Promise<VehicleRecord[]> {
-    return db.query.vehicle.findMany({
-      where: eq(vehicle.driverId, driverId),
-      orderBy: [desc(vehicle.createdAt)],
-    });
-  }
-
-  async findVehicleById(id: string): Promise<VehicleRecord | null> {
-    return (await db.query.vehicle.findFirst({ where: eq(vehicle.id, id) })) ?? null;
-  }
-
-  async insertVehicle(
-    tx: DriverTransaction,
-    data: VehicleInsert,
-  ): Promise<VehicleRecord> {
-    const [record] = await tx.insert(vehicle).values(data).returning();
-    return record;
-  }
-
-  async updateVehicle(
-    tx: DriverTransaction,
-    id: string,
-    data: Partial<VehicleInsert>,
-  ): Promise<VehicleRecord | null> {
-    const [record] = await tx
-      .update(vehicle)
-      .set({ ...data, updatedAt: new Date() })
-      .where(eq(vehicle.id, id))
-      .returning();
-    return record ?? null;
-  }
-
-  async deleteVehicle(tx: DriverTransaction, id: string): Promise<void> {
-    await tx.delete(vehicle).where(eq(vehicle.id, id));
-  }
-
 }
 
 export const driverRepository = new DriverRepository();

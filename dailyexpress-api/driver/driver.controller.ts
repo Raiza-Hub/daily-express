@@ -1,7 +1,6 @@
 import type { Request, Response, RequestHandler } from "express";
 import { asyncHandler } from "@shared/middleware";
 import { driverService } from "./driver.service";
-import { vehicleService } from "./vehicle.service";
 import { driverRepository } from "./driver.repository";
 import { r2ProfileService } from "./r2-profile.service";
 import { db } from "../db/connection";
@@ -9,12 +8,6 @@ import { createSuccessResponse } from "@shared/utils";
 import { getAuthenticatedUser } from "../middleware/auth";
 import { sendErrorResponse } from "../middleware/apiResponses";
 import { timeAsync } from "../utils/timing";
-
-function getParam(value: string | string[] | undefined): string | null {
-  return typeof value === "string" ? value : (value?.[0] ?? null);
-}
-
-
 
 export const getDriver: RequestHandler = asyncHandler(
   async (req: Request, res: Response) => {
@@ -213,126 +206,5 @@ export const confirmProfileUpload: RequestHandler = asyncHandler(
     return res.status(200).json(
       createSuccessResponse({ profile_pic: publicUrl }, "Profile picture updated successfully"),
     );
-  },
-);
-
-// --- Vehicle ---
-
-export const createVehicle: RequestHandler = asyncHandler(
-  async (req: Request, res: Response) => {
-    const user = getAuthenticatedUser(req);
-    if (!user) {
-      return sendErrorResponse(res, 401, "Please sign in again to continue.", {
-        code: "AUTHENTICATION_REQUIRED",
-      });
-    }
-    const { plateNumber, make, model, capacity, color } = req.body;
-    if (!plateNumber || !make || !model || !capacity || !color) {
-      return sendErrorResponse(res, 400, "All vehicle fields are required.", {
-        code: "MISSING_VEHICLE_FIELDS",
-      });
-    }
-    const driverRecord = await driverRepository.findDriverByUserId(user.userId);
-    if (!driverRecord) {
-      return sendErrorResponse(res, 404, "Driver not found.", {
-        code: "DRIVER_NOT_FOUND",
-      });
-    }
-    const vehicle = await timeAsync(
-      "driver.create_vehicle.service",
-      { driverId: driverRecord.id },
-      () => vehicleService.createVehicle(driverRecord.id, { plateNumber, make, model, capacity, color }),
-    );
-    return res
-      .status(201)
-      .json(createSuccessResponse(vehicle, "Vehicle created successfully"));
-  },
-);
-
-export const getVehicles: RequestHandler = asyncHandler(
-  async (req: Request, res: Response) => {
-    const user = getAuthenticatedUser(req);
-    if (!user) {
-      return sendErrorResponse(res, 401, "Please sign in again to continue.", {
-        code: "AUTHENTICATION_REQUIRED",
-      });
-    }
-    const driverRecord = await driverRepository.findDriverByUserId(user.userId);
-    if (!driverRecord) {
-      return sendErrorResponse(res, 404, "Driver not found.", {
-        code: "DRIVER_NOT_FOUND",
-      });
-    }
-    const vehicles = await timeAsync(
-      "driver.get_vehicles.service",
-      { driverId: driverRecord.id },
-      () => vehicleService.getVehicles(driverRecord.id),
-    );
-    return res
-      .status(200)
-      .json(createSuccessResponse(vehicles, "Vehicles fetched successfully"));
-  },
-);
-
-export const updateVehicle: RequestHandler = asyncHandler(
-  async (req: Request, res: Response) => {
-    const user = getAuthenticatedUser(req);
-    if (!user) {
-      return sendErrorResponse(res, 401, "Please sign in again to continue.", {
-        code: "AUTHENTICATION_REQUIRED",
-      });
-    }
-    const vehicleId = getParam(req.params.id);
-    if (!vehicleId) {
-      return sendErrorResponse(res, 400, "Vehicle ID is required.", {
-        code: "MISSING_VEHICLE_ID",
-      });
-    }
-    const driverRecord = await driverRepository.findDriverByUserId(user.userId);
-    if (!driverRecord) {
-      return sendErrorResponse(res, 404, "Driver not found.", {
-        code: "DRIVER_NOT_FOUND",
-      });
-    }
-    const { plateNumber, make, model, capacity, color } = req.body;
-    const vehicle = await timeAsync(
-      "driver.update_vehicle.service",
-      { driverId: driverRecord.id, vehicleId },
-      () => vehicleService.updateVehicle(driverRecord.id, vehicleId, { plateNumber, make, model, capacity, color }),
-    );
-    return res
-      .status(200)
-      .json(createSuccessResponse(vehicle, "Vehicle updated successfully"));
-  },
-);
-
-export const deleteVehicle: RequestHandler = asyncHandler(
-  async (req: Request, res: Response) => {
-    const user = getAuthenticatedUser(req);
-    if (!user) {
-      return sendErrorResponse(res, 401, "Please sign in again to continue.", {
-        code: "AUTHENTICATION_REQUIRED",
-      });
-    }
-    const vehicleId = getParam(req.params.id);
-    if (!vehicleId) {
-      return sendErrorResponse(res, 400, "Vehicle ID is required.", {
-        code: "MISSING_VEHICLE_ID",
-      });
-    }
-    const driverRecord = await driverRepository.findDriverByUserId(user.userId);
-    if (!driverRecord) {
-      return sendErrorResponse(res, 404, "Driver not found.", {
-        code: "DRIVER_NOT_FOUND",
-      });
-    }
-    await timeAsync(
-      "driver.delete_vehicle.service",
-      { driverId: driverRecord.id, vehicleId },
-      () => vehicleService.deleteVehicle(driverRecord.id, vehicleId),
-    );
-    return res
-      .status(200)
-      .json(createSuccessResponse(null, "Vehicle deleted successfully"));
   },
 );
