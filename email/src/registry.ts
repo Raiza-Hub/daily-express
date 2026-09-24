@@ -3,8 +3,6 @@ import { render } from "@react-email/render";
 import BookingConfirmedEmail from "./emails/BookingConfirmedEmail";
 import RefundFailedEmail from "./emails/RefundFailedEmail";
 import RefundSuccessfulEmail from "./emails/RefundSuccessfulEmail";
-import ResetPasswordEmail from "./emails/ResetPasswordEmail";
-import VerifyOtpEmail from "./emails/VerifyOtpEmail";
 import PayoutFailedEmail from "./emails/PayoutFailedEmail";
 import TripCancelledEmail from "./emails/TripCancelledEmail";
 
@@ -12,8 +10,6 @@ export const templates = {
   BookingConfirmedEmail: BookingConfirmedEmail,
   RefundFailedEmail: RefundFailedEmail,
   RefundSuccessfulEmail: RefundSuccessfulEmail,
-  ResetPasswordEmail: ResetPasswordEmail,
-  VerifyOtpEmail: VerifyOtpEmail,
   PayoutFailedEmail: PayoutFailedEmail,
   TripCancelledEmail: TripCancelledEmail,
 } as const;
@@ -48,10 +44,6 @@ export function getEmailSubject(
       return `Refund could not be completed yet`;
     case "RefundSuccessfulEmail":
       return `Your refund has been processed`;
-    case "ResetPasswordEmail":
-      return `Reset Password`;
-    case "VerifyOtpEmail":
-      return `Verify your email`;
     case "PayoutFailedEmail":
       return `Payout Failed - Action Required`;
     case "TripCancelledEmail":
