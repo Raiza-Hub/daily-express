@@ -1,4 +1,4 @@
-export const PHONE_PLACEHOLDER = "+234 801 234 5678";
+export const PHONE_PLACEHOLDER = "+234 801 000 0000";
 
 export function normalizePhone(value: string): string {
   const digits = value.replace(/\D/g, "");

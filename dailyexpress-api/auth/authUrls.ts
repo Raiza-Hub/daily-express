@@ -4,7 +4,7 @@ const config = getConfig();
 
 export const FRONTEND_URL = config.FRONTEND_URL;
 export const DRIVER_APP_URL = config.DRIVER_APP_URL;
-export const GOOGLE_AUTH_FAILURE_REDIRECT_URL = `${FRONTEND_URL}/sign-in?error=google_auth_failed`;
+export const GOOGLE_AUTH_FAILURE_REDIRECT_URL = `${FRONTEND_URL}/login?error=google_auth_failed`;
 
 export function resolveFrontendRedirect(redirect?: string) {
   if (!redirect) {

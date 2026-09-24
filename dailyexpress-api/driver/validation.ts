@@ -46,6 +46,69 @@ export const createDriverSchema = z.object({
   state: requiredString("State", 2, 100),
   city: requiredString("City", 2, 100),
   address: requiredString("Address", 1, 200),
+  bankName: requiredString("Bank name", 2, 100),
+  bankCode: z
+    .string({ error: "Bank code is required" })
+    .min(2, "Bank code must be at least 2 characters long")
+    .max(20, "Bank code must not exceed 20 characters"),
+  accountNumber: z
+    .string({ error: "Account number is required" })
+    .regex(/^\d{10}$/, {
+      error: (issue) =>
+        typeof issue.input === "string" && issue.input.length === 0
+          ? "Account number is required"
+          : "Account number must be exactly 10 digits",
+    }),
+  accountName: requiredString("Account name", 2, 100),
+  kycType: z.enum(["bvn", "nin"], {
+    error: "KYC type must be either 'bvn' or 'nin'",
+  }),
+  kycId: z
+    .string({ error: "KYC ID is required" })
+    .regex(/^\d{11}$/, {
+      error: (issue) =>
+        typeof issue.input === "string" && issue.input.length === 0
+          ? "KYC ID is required"
+          : "KYC ID must be exactly 11 digits",
+    }),
+});
+
+export const verifyBankSchema = z.object({
+  bankCode: z
+    .string({ error: "Bank code is required" })
+    .min(2, "Bank code must be at least 2 characters long")
+    .max(20, "Bank code must not exceed 20 characters"),
+  accountNumber: z
+    .string({ error: "Account number is required" })
+    .regex(/^\d{10}$/, {
+      error: (issue) =>
+        typeof issue.input === "string" && issue.input.length === 0
+          ? "Account number is required"
+          : "Account number must be exactly 10 digits",
+    }),
+  currency: z
+    .string({ error: "Currency is required" })
+    .min(2, {
+      error: (issue) =>
+        typeof issue.input === "string" && issue.input.length === 0
+          ? "Currency is required"
+          : "Currency must be at least 2 characters long",
+    })
+    .max(3),
+});
+
+export const verifyKycSchema = z.object({
+  kycType: z.enum(["bvn", "nin"], {
+    error: "KYC type must be either 'bvn' or 'nin'",
+  }),
+  kycId: z
+    .string({ error: "KYC ID is required" })
+    .regex(/^\d{11}$/, {
+      error: (issue) =>
+        typeof issue.input === "string" && issue.input.length === 0
+          ? "KYC ID is required"
+          : "KYC ID must be exactly 11 digits",
+    }),
 });
 
 export const updateDriverSchema = z

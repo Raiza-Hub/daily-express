@@ -40,6 +40,34 @@ export interface CreateDriverRequest {
   state: string;
   city: string;
   address: string;
+  bankName: string;
+  bankCode: string;
+  accountNumber: string;
+  accountName: string;
+  kycType: "bvn" | "nin";
+  kycId: string;
+}
+
+export interface VerifyBankRequest {
+  bankCode: string;
+  accountNumber: string;
+  currency: string;
+}
+
+export interface VerifyBankResponse {
+  bankName: string;
+  bankCode: string;
+  accountNumber: string;
+  accountName: string;
+}
+
+export interface VerifyKycRequest {
+  kycType: "bvn" | "nin";
+  kycId: string;
+}
+
+export interface VerifyKycResponse {
+  reference: string;
 }
 
 export interface Driver {

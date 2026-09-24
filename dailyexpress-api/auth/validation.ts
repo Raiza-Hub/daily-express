@@ -50,8 +50,16 @@ export const completeOnboardingSchema = z
   });
 
 export const updateProfileSchema = z.object({
-  firstName: z.string().optional(),
-  lastName: z.string().optional(),
+  firstName: z
+    .string()
+    .min(1, "First name is required")
+    .max(50, "First name must not exceed 50 characters")
+    .optional(),
+  lastName: z
+    .string()
+    .min(1, "Last name is required")
+    .max(50, "Last name must not exceed 50 characters")
+    .optional(),
   dateOfBirth: dateOfBirth().optional(),
   phoneNumber: phoneNumber().optional(),
   gender: z

@@ -4,13 +4,15 @@ import { useEffect, useRef, useState } from "react";
 import Image from "next/image";
 import { BadgeCheck } from "lucide-react";
 import {
-    useGetDriver,
-    useUpdateDriver,
+    confirmProfileUploadFn,
+    getApiErrorMessage,
     presignProfileUploadFn,
     uploadToR2Fn,
-    confirmProfileUploadFn,
+    useGetDriver,
     useQueryClient,
+    useUpdateDriver,
 } from "@repo/api";
+import { DriverEditSchema, zodFieldErrors } from "@repo/types";
 import { Button } from "~/components/ui/button";
 import {
     Drawer,
@@ -26,8 +28,10 @@ import { Select } from "~/components/ui/select";
 import { Row, EditLink, getInitials } from "../user/settings-shared";
 import { NIGERIAN_STATES } from "~/lib/driverData";
 import { formatPhoneDisplay, PHONE_PLACEHOLDER, toE164 } from "~/lib/phone";
+import { createDraftUpdater } from "~/lib/draftFields";
 import { KORA_SUPPORTED_COUNTRIES } from "@shared/constants";
-import type { Driver, UpdateProfileRequest } from "@shared/types";
+import type { Driver } from "@shared/types";
+import { DriverProfileUnavailable } from "./DriverProfileUnavailable";
 
 import bankNames from "../../../bank-names.json";
 
@@ -35,33 +39,6 @@ const BANKS = bankNames.map((bank) => ({
     name: bank.name,
     code: bank.code,
 }));
-
-// TEMP: preview driver profile shown while no real driver profile exists.
-const FAKE_DRIVER: Driver = {
-    id: "00000000-0000-4000-8000-000000000001",
-    userId: "00000000-0000-4000-8000-000000000000",
-    firstName: "Chidi",
-    lastName: "Adeyemi",
-    email: "chidi.adeyemi@gmail.com",
-    profile_pic: null,
-    phone: "+234 803 456 7890",
-    address: "14 Allen Avenue, Ikeja",
-    country: "Nigeria",
-    currency: "NGN",
-    state: "Lagos",
-    city: "Ikeja",
-    bankName: "Guaranty Trust Bank",
-    bankCode: "058",
-    accountNumber: "0123456789",
-    accountName: "Chidi Adeyemi",
-    bankVerificationStatus: "active",
-    kycStatus: "active",
-    kycType: "bvn",
-    kycVerificationReference: "ref-preview",
-    isActive: true,
-    createdAt: new Date("2024-05-02"),
-    updatedAt: new Date("2024-05-02"),
-};
 
 function VerifiedCheck({ className = "fill-blue-500" }: { className?: string }) {
     return <BadgeCheck className={`h-4 w-4 shrink-0 ${className} text-white`} />;
@@ -98,19 +75,15 @@ function KycStatus({ status, kycType }: { status: "active" | "failed" | null; ky
 }
 
 const DriverCard = () => {
-    const { data, isPending } = useGetDriver();
+    const { data, isPending, isError, error } = useGetDriver();
     const queryClient = useQueryClient();
-
-    const driver = data ?? FAKE_DRIVER;
-    const name = `${driver.firstName} ${driver.lastName}`.trim() || "Driver";
-    const initials = getInitials(name);
 
     // --- Photo upload (presign → R2 → confirm) ---
 
     const fileInputRef = useRef<HTMLInputElement>(null);
     const [photoPreview, setPhotoPreview] = useState<string | null>(null);
     const [isUploading, setIsUploading] = useState(false);
-    const photoSrc = photoPreview ?? driver?.profile_pic ?? null;
+    const photoSrc = photoPreview ?? data?.profile_pic ?? null;
 
     useEffect(() => {
         return () => {
@@ -158,12 +131,13 @@ const DriverCard = () => {
     });
 
     const openPersonal = () => {
-        if (!driver) return;
+        if (!data) return;
+        setPersonalErrors({});
         setPersonalDraft({
-            firstName: driver.firstName,
-            lastName: driver.lastName,
-            email: driver.email,
-            phone: formatPhoneDisplay(driver.phone ?? ""),
+            firstName: data.firstName,
+            lastName: data.lastName,
+            email: data.email,
+            phone: formatPhoneDisplay(data.phone ?? ""),
         });
         setIsPersonalOpen(true);
     };
@@ -180,13 +154,14 @@ const DriverCard = () => {
     });
 
     const openAddress = () => {
-        if (!driver) return;
+        if (!data) return;
+        setAddressErrors({});
         setAddressDraft({
-            country: driver.country,
-            currency: driver.currency,
-            state: driver.state,
-            city: driver.city,
-            address: driver.address,
+            country: data.country,
+            currency: data.currency,
+            state: data.state,
+            city: data.city,
+            address: data.address,
         });
         setIsAddressOpen(true);
     };
@@ -205,12 +180,13 @@ const DriverCard = () => {
     });
 
     const openBank = () => {
-        if (!driver) return;
+        if (!data) return;
+        setBankErrors({});
         setBankDraft({
-            bankName: driver.bankName ?? "",
-            bankCode: driver.bankCode ?? "",
-            accountNumber: driver.accountNumber ?? "",
-            accountName: driver.accountName ?? "",
+            bankName: data.bankName ?? "",
+            bankCode: data.bankCode ?? "",
+            accountNumber: data.accountNumber ?? "",
+            accountName: data.accountName ?? "",
         });
         setIsBankOpen(true);
     };
@@ -220,11 +196,68 @@ const DriverCard = () => {
             setIsPersonalOpen(false);
             setIsAddressOpen(false);
             setIsBankOpen(false);
+            setPersonalErrors({});
+            setAddressErrors({});
+            setBankErrors({});
         },
     });
 
-    const handleSave = (data: UpdateProfileRequest) => {
-        updateDriver.mutate(data);
+    // --- Drawer validation + save ---
+
+    const [personalErrors, setPersonalErrors] = useState<Record<string, string>>({});
+    const [addressErrors, setAddressErrors] = useState<Record<string, string>>({});
+    const [bankErrors, setBankErrors] = useState<Record<string, string>>({});
+
+    const validateDrawer = (
+        schema: typeof DriverEditSchema,
+        payload: Record<string, unknown>,
+        setErrors: React.Dispatch<React.SetStateAction<Record<string, string>>>,
+    ): boolean => {
+        const fieldErrors = zodFieldErrors(schema, payload);
+        if (fieldErrors) {
+            setErrors(fieldErrors);
+            return false;
+        }
+        setErrors({});
+        return true;
+    };
+
+    const updatePersonalDraft = createDraftUpdater(setPersonalDraft, setPersonalErrors);
+    const updateAddressDraft = createDraftUpdater(setAddressDraft, setAddressErrors);
+    const updateBankDraft = createDraftUpdater(setBankDraft, setBankErrors);
+
+    const handleSavePersonal = () => {
+        const payload = {
+            firstName: personalDraft.firstName.trim(),
+            lastName: personalDraft.lastName.trim(),
+            email: personalDraft.email.trim(),
+            phone: toE164(personalDraft.phone),
+        };
+        if (!validateDrawer(DriverEditSchema, payload, setPersonalErrors)) return;
+        updateDriver.mutate(payload);
+    };
+
+    const handleSaveAddress = () => {
+        const payload = {
+            country: addressDraft.country,
+            currency: addressDraft.currency,
+            state: addressDraft.state,
+            city: addressDraft.city,
+            address: addressDraft.address.trim(),
+        };
+        if (!validateDrawer(DriverEditSchema, payload, setAddressErrors)) return;
+        updateDriver.mutate(payload);
+    };
+
+    const handleSaveBank = () => {
+        const payload = {
+            bankName: bankDraft.bankName,
+            bankCode: bankDraft.bankCode,
+            accountNumber: bankDraft.accountNumber,
+            accountName: bankDraft.accountName,
+        };
+        if (!validateDrawer(DriverEditSchema, payload, setBankErrors)) return;
+        updateDriver.mutate(payload);
     };
 
     if (isPending) {
@@ -238,6 +271,14 @@ const DriverCard = () => {
             </div>
         );
     }
+
+    if (isError || !data) {
+        return <DriverProfileUnavailable error={error} />;
+    }
+
+    const driver = data;
+    const name = `${driver.firstName} ${driver.lastName}`.trim() || "Driver";
+    const initials = getInitials(name);
 
 return (
         <div className="w-full min-w-0 max-w-3xl">
@@ -361,45 +402,44 @@ return (
                     </DrawerHeader>
                     <div className="flex flex-col gap-4 px-4">
                         <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
-                            <Field label="First name" htmlFor="edit-driver-firstName">
+                            <Field
+                                label="First name"
+                                htmlFor="edit-driver-firstName"
+                                error={personalErrors.firstName}
+                            >
                                 <Input
                                     id="edit-driver-firstName"
                                     value={personalDraft.firstName}
                                     onChange={(event) =>
-                                        setPersonalDraft((current) => ({
-                                            ...current,
-                                            firstName: event.target.value,
-                                        }))
+                                        updatePersonalDraft("firstName", event.target.value)
                                     }
                                 />
                             </Field>
-                            <Field label="Last name" htmlFor="edit-driver-lastName">
+                            <Field
+                                label="Last name"
+                                htmlFor="edit-driver-lastName"
+                                error={personalErrors.lastName}
+                            >
                                 <Input
                                     id="edit-driver-lastName"
                                     value={personalDraft.lastName}
                                     onChange={(event) =>
-                                        setPersonalDraft((current) => ({
-                                            ...current,
-                                            lastName: event.target.value,
-                                        }))
+                                        updatePersonalDraft("lastName", event.target.value)
                                     }
                                 />
                             </Field>
                         </div>
-                        <Field label="Email" htmlFor="edit-driver-email">
+                        <Field label="Email" htmlFor="edit-driver-email" error={personalErrors.email}>
                             <Input
                                 id="edit-driver-email"
                                 type="email"
                                 value={personalDraft.email}
                                 onChange={(event) =>
-                                    setPersonalDraft((current) => ({
-                                        ...current,
-                                        email: event.target.value,
-                                    }))
+                                    updatePersonalDraft("email", event.target.value)
                                 }
                             />
                         </Field>
-                        <Field label="Phone" htmlFor="edit-driver-phone">
+                        <Field label="Phone" htmlFor="edit-driver-phone" error={personalErrors.phone}>
                             <Input
                                 id="edit-driver-phone"
                                 type="tel"
@@ -408,27 +448,28 @@ return (
                                 placeholder={PHONE_PLACEHOLDER}
                                 value={personalDraft.phone}
                                 onChange={(event) =>
-                                    setPersonalDraft((current) => ({
-                                        ...current,
-                                        phone: formatPhoneDisplay(event.target.value),
-                                    }))
+                                    updatePersonalDraft(
+                                        "phone",
+                                        formatPhoneDisplay(event.target.value),
+                                    )
                                 }
                             />
                         </Field>
                     </div>
                     </div>
                     <DrawerFooter>
+                        {updateDriver.isError && (
+                            <p className="w-full text-center text-sm text-destructive">
+                                {getApiErrorMessage(
+                                    updateDriver.error,
+                                    "Something went wrong. Please try again.",
+                                )}
+                            </p>
+                        )}
                         <Button
                             type="button"
                             pill
-                            onClick={() =>
-                                handleSave({
-                                    firstName: personalDraft.firstName.trim(),
-                                    lastName: personalDraft.lastName.trim(),
-                                    email: personalDraft.email.trim(),
-                                    phone: toE164(personalDraft.phone),
-                                })
-                            }
+                            onClick={handleSavePersonal}
                             disabled={updateDriver.isPending}
                             className="font-semibold text-sm"
                         >
@@ -449,15 +490,16 @@ return (
                     </DrawerHeader>
                     <div className="flex flex-col gap-4 px-4">
                         <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
-                            <Field label="Country" htmlFor="edit-driver-country">
+                            <Field
+                                label="Country"
+                                htmlFor="edit-driver-country"
+                                error={addressErrors.country}
+                            >
                                 <Select
                                     id="edit-driver-country"
                                     value={addressDraft.country}
                                     onChange={(event) =>
-                                        setAddressDraft((current) => ({
-                                            ...current,
-                                            country: event.target.value,
-                                        }))
+                                        updateAddressDraft("country", event.target.value)
                                     }
                                 >
                                     {KORA_SUPPORTED_COUNTRIES.map((country) => (
@@ -467,7 +509,11 @@ return (
                                     ))}
                                 </Select>
                             </Field>
-                            <Field label="Currency" htmlFor="edit-driver-currency">
+                            <Field
+                                label="Currency"
+                                htmlFor="edit-driver-currency"
+                                error={addressErrors.currency}
+                            >
                                 <Input
                                     id="edit-driver-currency"
                                     maxLength={3}
@@ -478,17 +524,18 @@ return (
                             </Field>
                         </div>
                         <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
-                            <Field label="State" htmlFor="edit-driver-state">
+                            <Field
+                                label="State"
+                                htmlFor="edit-driver-state"
+                                error={addressErrors.state}
+                            >
                                 <Select
                                     id="edit-driver-state"
                                     value={addressDraft.state}
-                                    onChange={(event) =>
-                                        setAddressDraft((current) => ({
-                                            ...current,
-                                            state: event.target.value,
-                                            city: "",
-                                        }))
-                                    }
+                                    onChange={(event) => {
+                                        updateAddressDraft("state", event.target.value);
+                                        updateAddressDraft("city", "");
+                                    }}
                                 >
                                     <option value="" disabled>
                                         Select state
@@ -500,16 +547,17 @@ return (
                                     ))}
                                 </Select>
                             </Field>
-                            <Field label="City" htmlFor="edit-driver-city">
+                            <Field
+                                label="City"
+                                htmlFor="edit-driver-city"
+                                error={addressErrors.city}
+                            >
                                 <Select
                                     id="edit-driver-city"
                                     value={addressDraft.city}
                                     disabled={!addressDraft.state}
                                     onChange={(event) =>
-                                        setAddressDraft((current) => ({
-                                            ...current,
-                                            city: event.target.value,
-                                        }))
+                                        updateAddressDraft("city", event.target.value)
                                     }
                                 >
                                     <option value="" disabled>
@@ -523,33 +571,34 @@ return (
                                 </Select>
                             </Field>
                         </div>
-                        <Field label="Home address" htmlFor="edit-driver-address">
+                        <Field
+                            label="Home address"
+                            htmlFor="edit-driver-address"
+                            error={addressErrors.address}
+                        >
                             <Input
                                 id="edit-driver-address"
                                 value={addressDraft.address}
                                 onChange={(event) =>
-                                    setAddressDraft((current) => ({
-                                        ...current,
-                                        address: event.target.value,
-                                    }))
+                                    updateAddressDraft("address", event.target.value)
                                 }
                             />
                         </Field>
                     </div>
                     </div>
                     <DrawerFooter>
+                        {updateDriver.isError && (
+                            <p className="w-full text-center text-sm text-destructive">
+                                {getApiErrorMessage(
+                                    updateDriver.error,
+                                    "Something went wrong. Please try again.",
+                                )}
+                            </p>
+                        )}
                         <Button
                             type="button"
                             pill
-                            onClick={() =>
-                                handleSave({
-                                    country: addressDraft.country,
-                                    currency: addressDraft.currency,
-                                    state: addressDraft.state,
-                                    city: addressDraft.city,
-                                    address: addressDraft.address,
-                                })
-                            }
+                            onClick={handleSaveAddress}
                             disabled={updateDriver.isPending}
                             className="font-semibold text-sm"
                         >
@@ -569,7 +618,7 @@ return (
                         </DrawerDescription>
                     </DrawerHeader>
                     <div className="flex flex-col gap-4 px-4">
-                        <Field label="Bank" htmlFor="edit-driver-bankName">
+                        <Field label="Bank" htmlFor="edit-driver-bankName" error={bankErrors.bankName}>
                             <Select
                                 id="edit-driver-bankName"
                                 value={bankDraft.bankName}
@@ -577,11 +626,8 @@ return (
                                     const bank = BANKS.find(
                                         (option) => option.name === event.target.value,
                                     );
-                                    setBankDraft((current) => ({
-                                        ...current,
-                                        bankName: event.target.value,
-                                        bankCode: bank?.code ?? "",
-                                    }));
+                                    updateBankDraft("bankName", event.target.value);
+                                    updateBankDraft("bankCode", bank?.code ?? "");
                                 }}
                             >
                                 <option value="" disabled>
@@ -594,30 +640,24 @@ return (
                                 ))}
                             </Select>
                         </Field>
-                        <Field label="Account number" htmlFor="edit-driver-accountNumber">
+                        <Field label="Account number" htmlFor="edit-driver-accountNumber" error={bankErrors.accountNumber}>
                             <Input
                                 id="edit-driver-accountNumber"
                                 inputMode="numeric"
                                 maxLength={10}
                                 value={bankDraft.accountNumber}
                                 onChange={(event) =>
-                                    setBankDraft((current) => ({
-                                        ...current,
-                                        accountNumber: event.target.value,
-                                    }))
+                                    updateBankDraft("accountNumber", event.target.value)
                                 }
                                 placeholder="0123456789"
                             />
                         </Field>
-                        <Field label="Account name" htmlFor="edit-driver-accountName">
+                        <Field label="Account name" htmlFor="edit-driver-accountName" error={bankErrors.accountName}>
                             <Input
                                 id="edit-driver-accountName"
                                 value={bankDraft.accountName}
                                 onChange={(event) =>
-                                    setBankDraft((current) => ({
-                                        ...current,
-                                        accountName: event.target.value,
-                                    }))
+                                    updateBankDraft("accountName", event.target.value)
                                 }
                                 placeholder="Account holder name"
                             />
@@ -625,17 +665,18 @@ return (
                     </div>
                     </div>
                     <DrawerFooter>
+                        {updateDriver.isError && (
+                            <p className="w-full text-center text-sm text-destructive">
+                                {getApiErrorMessage(
+                                    updateDriver.error,
+                                    "Something went wrong. Please try again.",
+                                )}
+                            </p>
+                        )}
                         <Button
                             type="button"
                             pill
-                            onClick={() =>
-                                handleSave({
-                                    bankName: bankDraft.bankName,
-                                    bankCode: bankDraft.bankCode,
-                                    accountNumber: bankDraft.accountNumber,
-                                    accountName: bankDraft.accountName,
-                                })
-                            }
+                            onClick={handleSaveBank}
                             disabled={updateDriver.isPending}
                             className="font-semibold text-sm"
                         >

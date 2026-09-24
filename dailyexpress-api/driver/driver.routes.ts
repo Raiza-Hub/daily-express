@@ -5,7 +5,12 @@ import { requireActiveDriver } from "../middleware/requireActiveDriver";
 import { createTokenBucketLimiter } from "../middleware/tokenBucket";
 import { getConfig } from "../config/index";
 import { validateRequest } from "../middleware/requestValidation";
-import { createDriverSchema, updateDriverSchema } from "./validation";
+import {
+  createDriverSchema,
+  updateDriverSchema,
+  verifyBankSchema,
+  verifyKycSchema,
+} from "./validation";
 
 const config = getConfig();
 
@@ -48,6 +53,22 @@ router.post(
   driverActionLimiter,
   validateRequest(createDriverSchema),
   driverController.createDriver,
+);
+
+router.post(
+  "/verify/bank",
+  authenticateVerifiedGatewayRequest,
+  driverActionLimiter,
+  validateRequest(verifyBankSchema),
+  driverController.verifyBank,
+);
+
+router.post(
+  "/verify/kyc",
+  authenticateVerifiedGatewayRequest,
+  driverActionLimiter,
+  validateRequest(verifyKycSchema),
+  driverController.verifyKyc,
 );
 
 router.put(

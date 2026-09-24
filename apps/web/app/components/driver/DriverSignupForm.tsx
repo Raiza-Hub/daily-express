@@ -1,7 +1,17 @@
 "use client";
 
-import { useCallback, useState } from "react";
+import { useRef, useState } from "react";
+import { useRouter } from "next/navigation";
 import { AnimatePresence, motion, type Transition } from "framer-motion";
+import {
+    confirmProfileUploadFn,
+    presignProfileUploadFn,
+    uploadToR2Fn,
+    useCreateDriver,
+    useVerifyBank,
+    useVerifyKyc,
+} from "@repo/api";
+import { Loader2 } from "lucide-react";
 import { Button } from "~/components/ui/button";
 import { AddressInfoStep } from "~/components/driver/AddressInfoStep";
 import { BankKycStep } from "~/components/driver/BankKycStep";
@@ -17,19 +27,88 @@ import {
     validatePersonal,
 } from "~/lib/driverSignup";
 import { toE164 } from "~/lib/phone";
+import { makeFieldErrorMapper } from "~/lib/formErrors";
 
 const stepTransition: Transition = { duration: 0.25, ease: "easeOut" };
 
 function DriverSignupForm() {
+    const router = useRouter();
     const [step, setStep] = useState(1);
     const [data, setData] = useState<DriverSignupData>(initialDriverSignupData);
     const [errors, setErrors] = useState<DriverStepErrors>({});
+    const [formError, setFormError] = useState<string | undefined>(undefined);
     const [bankVerified, setBankVerified] = useState(false);
     const [identityVerified, setIdentityVerified] = useState(false);
-    const [isVerifyingBank, setIsVerifyingBank] = useState(false);
-    const [isVerifyingIdentity, setIsVerifyingIdentity] = useState(false);
+    const fileRef = useRef<File | undefined>(undefined);
 
-    const patch = useCallback((update: Partial<DriverSignupData>) => {
+    const mapFieldError = makeFieldErrorMapper<DriverSignupKey>(
+        (name, message) =>
+            setErrors((current) => ({ ...current, [name]: message })),
+        setFormError,
+    );
+
+    const createDriver = useCreateDriver({
+        onSuccess: () => {
+            const file = fileRef.current;
+            fileRef.current = undefined;
+            router.push("/driver/calendar");
+            if (!file) return;
+            void (async () => {
+                try {
+                    const presign = await presignProfileUploadFn(file.type, file.size);
+                    await uploadToR2Fn(presign.uploadUrl, file);
+                    await confirmProfileUploadFn(presign.key);
+                } catch (uploadError) {
+                    console.error("driver.signup.profile_upload.failed", uploadError);
+                }
+            })();
+        },
+        onError: (error: Error) => {
+            mapFieldError(error, "Something went wrong. Please try again.");
+        },
+    });
+
+    const verifyBank = useVerifyBank({
+        onSuccess: (result) => {
+            setData((current) => ({
+                ...current,
+                accountName: result.accountName,
+            }));
+            setErrors((current) => ({
+                ...current,
+                accountName: undefined,
+                bankCode: undefined,
+                accountNumber: undefined,
+            }));
+            setBankVerified(true);
+        },
+        onError: (error: Error) => {
+            mapFieldError(
+                error,
+                "Could not verify your bank account. Check the details and try again.",
+            );
+        },
+    });
+
+    const verifyKyc = useVerifyKyc({
+        onSuccess: () => setIdentityVerified(true),
+        onError: (error: Error) => {
+            const apiError = error as { code?: string; message?: string };
+            if (apiError.code === "KYC_ALREADY_USED" && apiError.message) {
+                setErrors((current) => ({
+                    ...current,
+                    kycId: apiError.message as string,
+                }));
+                return;
+            }
+            mapFieldError(
+                error,
+                "Could not verify your identity. Check your details and try again.",
+            );
+        },
+    });
+
+    const patch = (update: Partial<DriverSignupData>) => {
         setData((current) => ({ ...current, ...update }));
 
         setErrors((current) => {
@@ -55,70 +134,66 @@ function DriverSignupForm() {
         ) {
             setIdentityVerified(false);
         }
-    }, []);
+    };
 
-    const handleContinue = useCallback(() => {
+    const handleContinue = () => {
         const nextErrors = step === 1 ? validatePersonal(data) : validateAddress(data);
         setErrors(nextErrors);
         if (Object.keys(nextErrors).length > 0) return;
         setStep((current) => current + 1);
         setErrors({});
-    }, [step, data]);
+    };
 
-    const handleVerifyBank = useCallback(() => {
+    const handleVerifyBank = () => {
         const nextErrors = validateBank(data);
         setErrors(nextErrors);
         if (Object.keys(nextErrors).length > 0) return;
-        setIsVerifyingBank(true);
-        window.setTimeout(() => {
-            setBankVerified(true);
-            setIsVerifyingBank(false);
-        }, 1200);
-    }, [data]);
+        setFormError(undefined);
+        verifyBank.mutate({
+            bankCode: data.bankCode,
+            accountNumber: data.accountNumber,
+            currency: data.currency,
+        });
+    };
 
-    const handleVerifyIdentity = useCallback(() => {
+    const handleVerifyIdentity = () => {
         const nextErrors = validateKyc(data);
         setErrors(nextErrors);
         if (Object.keys(nextErrors).length > 0) return;
-        setIsVerifyingIdentity(true);
-        window.setTimeout(() => {
-            setIdentityVerified(true);
-            setIsVerifyingIdentity(false);
-        }, 1200);
-    }, [data]);
+        setFormError(undefined);
+        verifyKyc.mutate({
+            kycType: data.kycType as "bvn" | "nin",
+            kycId: data.kycId,
+        });
+    };
 
-    const handleSubmit = useCallback(
-        (event: React.FormEvent<HTMLFormElement>) => {
-            event.preventDefault();
-            if (step !== 3) {
-                handleContinue();
-                return;
-            }
-            console.log({
-                file: data.file?.name ?? null,
-                firstName: data.firstName,
-                lastName: data.lastName,
-                email: data.email,
-                country: data.country,
-                currency: data.currency,
-                address: data.address,
-                city: data.city,
-                state: data.state,
-                phoneNumber: toE164(data.phoneNumber),
-                bankName: data.bankName,
-                bankCode: data.bankCode,
-                accountNumber: data.accountNumber,
-                accountName: data.accountName,
-                kycType: data.kycType,
-                kycId: data.kycId,
-                kycConsent: data.kycConsent,
-            });
-        },
-        [step, data, handleContinue],
-    );
+    const handleSubmit = (event: React.FormEvent<HTMLFormElement>) => {
+        event.preventDefault();
+        if (createDriver.isPending) return;
+        fileRef.current = data.file;
+        setFormError(undefined);
+        createDriver.mutate({
+            firstName: data.firstName,
+            lastName: data.lastName,
+            email: data.email,
+            phone: toE164(data.phoneNumber),
+            country: data.country,
+            currency: data.currency,
+            state: data.state,
+            city: data.city,
+            address: data.address,
+            bankName: data.bankName,
+            bankCode: data.bankCode,
+            accountNumber: data.accountNumber,
+            accountName: data.accountName,
+            kycType: data.kycType as "bvn" | "nin",
+            kycId: data.kycId,
+        });
+    };
 
     const showSubmit = step === 3 && bankVerified && identityVerified;
     const showContinue = step < 3;
+    const isPending = createDriver.isPending;
 
     return (
         <form
@@ -162,10 +237,10 @@ function DriverSignupForm() {
                             errors={errors}
                             onChange={patch}
                             bankVerified={bankVerified}
-                            isVerifyingBank={isVerifyingBank}
+                            isVerifyingBank={verifyBank.isPending}
                             onVerifyBank={handleVerifyBank}
                             identityVerified={identityVerified}
-                            isVerifyingIdentity={isVerifyingIdentity}
+                            isVerifyingIdentity={verifyKyc.isPending}
                             onVerifyIdentity={handleVerifyIdentity}
                         />
                     </motion.div>
@@ -173,6 +248,11 @@ function DriverSignupForm() {
             </AnimatePresence>
 
             <div className="flex flex-col gap-3 pt-2">
+                {formError && (
+                    <p role="alert" className="text-center text-sm text-destructive">
+                        {formError}
+                    </p>
+                )}
                 <div className="flex gap-3">
                     {step > 1 && (
                         <Button
@@ -186,7 +266,18 @@ function DriverSignupForm() {
                         </Button>
                     )}
                     {showSubmit && (
-                        <Button type="submit" pill className="flex-1 font-semibold text-sm">
+                        <Button
+                            type="submit"
+                            pill
+                            className="flex-1 font-semibold text-sm"
+                            disabled={isPending}
+                        >
+                            {isPending && (
+                                <Loader2
+                                    className="h-4 w-4 animate-spin"
+                                    aria-hidden
+                                />
+                            )}
                             Create account
                         </Button>
                     )}

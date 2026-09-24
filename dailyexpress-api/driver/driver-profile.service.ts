@@ -20,33 +20,102 @@ export class DriverProfileService {
       throw createServiceError("Driver profile already exists", 400);
     }
 
-    try {
-      const sanitizeData = this.sanitizeProfileData(driverData);
+    const { bankCode, accountNumber, kycType, kycId, ...profileData } =
+      driverData;
 
-      const result = await timeAsync(
-        "driver.create.transaction",
-        { userId },
-        () =>
-          db.transaction(async (tx) => {
-            const createdDriver = await this.repo.insertDriver(tx, {
-              ...sanitizeData,
-              userId,
-              bankVerificationStatus: null,
-              kycStatus: null,
-              kycType: null,
-              kycId: null,
-            } as typeof driver.$inferInsert);
-
-            return {
-              driver: createdDriver,
-            };
-          }),
-      );
-
-      return result.driver;
-    } catch (error) {
-      throw error;
+    if (!bankCode || !accountNumber) {
+      throw createServiceError("Bank code and account number are required", 400);
     }
+    if (!kycType || !kycId) {
+      throw createServiceError("KYC type and ID are required", 400);
+    }
+
+    const bank = await this.verifyBank({
+      bankCode,
+      accountNumber,
+      currency: driverData.currency || "NGN",
+    });
+    const kyc = await this.verifyKycIdentity({
+      kycType: kycType as "bvn" | "nin",
+      kycId,
+    });
+
+    const sanitizeData = this.sanitizeProfileData(profileData);
+
+    const result = await timeAsync(
+      "driver.create.transaction",
+      { userId },
+      () =>
+        db.transaction(async (tx) => {
+          const createdDriver = await this.repo.insertDriver(tx, {
+            ...sanitizeData,
+            userId,
+            bankName: bank.bankName,
+            bankCode: bank.bankCode,
+            accountNumber: bank.accountNumber,
+            accountName: bank.accountName,
+            bankVerificationStatus: "active",
+            kycStatus: "active",
+            kycType: kycType as "bvn" | "nin",
+            kycId: hashKycId(kycId),
+            kycVerificationReference: kyc.reference,
+          } as typeof driver.$inferInsert);
+
+          return {
+            driver: createdDriver,
+          };
+        }),
+    );
+
+    return result.driver;
+  }
+
+  async verifyBank(input: {
+    bankCode: string;
+    accountNumber: string;
+    currency: string;
+  }): Promise<{
+    bankName: string;
+    bankCode: string;
+    accountNumber: string;
+    accountName: string;
+  }> {
+    const resolved = await koraClient.resolveAccountNumber(
+      input.bankCode,
+      input.accountNumber,
+      input.currency,
+    );
+
+    return {
+      bankName: resolved.data.bank_name,
+      bankCode: resolved.data.bank_code,
+      accountNumber: resolved.data.account_number,
+      accountName: resolved.data.account_name,
+    };
+  }
+
+  async verifyKycIdentity(
+    input: { kycType: "bvn" | "nin"; kycId: string },
+    excludeDriverId?: string,
+  ): Promise<{ reference: string }> {
+    const existing = await this.repo.findDriverByKycId(
+      hashKycId(input.kycId),
+      excludeDriverId,
+    );
+    if (existing) {
+      throw createServiceError(
+        "This identity document has already been verified with another driver account",
+        409,
+        "KYC_ALREADY_USED",
+      );
+    }
+
+    const verified =
+      input.kycType === "bvn"
+        ? await koraIdentityClient.verifyBVN(input.kycId)
+        : await koraIdentityClient.verifyNIN(input.kycId);
+
+    return { reference: verified.reference };
   }
 
   async getProfile(userId: string): Promise<Driver | null> {
@@ -64,21 +133,11 @@ export class DriverProfileService {
       throw createServiceError("Driver not found", 404);
     }
 
-    if (kycData) {
-      if (existingDriver.kycStatus === "active") {
-        throw createServiceError(
-          "Your identity has already been verified and cannot be changed",
-          400,
-        );
-      }
-
-      const existing = await this.repo.findDriverByKycId(hashKycId(kycData.kycId), existingDriver.id);
-      if (existing) {
-        throw createServiceError(
-          "This identity document has already been verified with another driver account",
-          409,
-        );
-      }
+    if (kycData && existingDriver.kycStatus === "active") {
+      throw createServiceError(
+        "Your identity has already been verified and cannot be changed",
+        400,
+      );
     }
 
     const sanitizedData = this.sanitizeProfileData(driverData);
@@ -126,18 +185,18 @@ export class DriverProfileService {
     }
 
     try {
-      const resolved = await koraClient.resolveAccountNumber(
-        record.bankCode,
-        record.accountNumber,
-        record.currency,
-      );
+      const resolved = await this.verifyBank({
+        bankCode: record.bankCode,
+        accountNumber: record.accountNumber,
+        currency: record.currency,
+      });
 
       await db.transaction(async (tx) =>
         this.repo.updateDriver(tx, userId, {
-          bankName: resolved.data.bank_name,
-          bankCode: resolved.data.bank_code,
-          accountNumber: resolved.data.account_number,
-          accountName: resolved.data.account_name,
+          bankName: resolved.bankName,
+          bankCode: resolved.bankCode,
+          accountNumber: resolved.accountNumber,
+          accountName: resolved.accountName,
           bankVerificationStatus: "active",
           updatedAt: new Date(),
         }),
@@ -158,10 +217,8 @@ export class DriverProfileService {
     kycData: { kycType: "bvn" | "nin"; kycId: string },
   ): Promise<void> {
     try {
-      const verified =
-        kycData.kycType === "bvn"
-          ? await koraIdentityClient.verifyBVN(kycData.kycId)
-          : await koraIdentityClient.verifyNIN(kycData.kycId);
+      const record = await this.repo.findDriverByUserId(userId);
+      const verified = await this.verifyKycIdentity(kycData, record?.id);
 
       await db.transaction(async (tx) =>
         this.repo.updateDriver(tx, userId, {

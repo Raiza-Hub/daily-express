@@ -134,8 +134,14 @@ export const useDeleteAccount = (options?: {
 export const useCompleteOnboarding = (options?: {
   onSuccess?: (data: User) => void;
   onError?: (error: any) => void;
-}) =>
-  useMutation({
+}) => {
+  const queryClient = useQueryClient();
+  return useMutation({
     mutationFn: completeOnboardingFn,
-    ...options,
+    onSuccess: (data) => {
+      queryClient.setQueryData(["user"], data);
+      options?.onSuccess?.(data);
+    },
+    onError: options?.onError,
   });
+};
