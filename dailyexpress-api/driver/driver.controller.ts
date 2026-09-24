@@ -70,6 +70,52 @@ export const createDriver: RequestHandler = asyncHandler(
   },
 );
 
+export const verifyBank: RequestHandler = asyncHandler(
+  async (req: Request, res: Response) => {
+    const gatewayUser = getAuthenticatedUser(req);
+    const userId = gatewayUser?.userId;
+
+    if (!userId) {
+      return sendErrorResponse(res, 401, "Please sign in again to continue.", {
+        code: "AUTHENTICATION_REQUIRED",
+      });
+    }
+
+    const verified = await timeAsync("driver.verify_bank.service", { userId }, () =>
+      driverService.verifyBank(req.body),
+    );
+
+    return res
+      .status(200)
+      .json(
+        createSuccessResponse(verified, "Bank account verified successfully"),
+      );
+  },
+);
+
+export const verifyKyc: RequestHandler = asyncHandler(
+  async (req: Request, res: Response) => {
+    const gatewayUser = getAuthenticatedUser(req);
+    const userId = gatewayUser?.userId;
+
+    if (!userId) {
+      return sendErrorResponse(res, 401, "Please sign in again to continue.", {
+        code: "AUTHENTICATION_REQUIRED",
+      });
+    }
+
+    const verified = await timeAsync("driver.verify_kyc.service", { userId }, () =>
+      driverService.verifyKycIdentity(req.body),
+    );
+
+    return res
+      .status(200)
+      .json(
+        createSuccessResponse(verified, "Identity verified successfully"),
+      );
+  },
+);
+
 export const updateDriver: RequestHandler = asyncHandler(
   async (req: Request, res: Response) => {
     const { kycType, kycId, kycConsent: _, ...driverData } = req.body;

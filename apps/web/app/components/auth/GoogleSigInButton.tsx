@@ -1,7 +1,8 @@
 "use client";
 
 import { useState } from "react";
-// import { googleAuthUrl } from "@repo/api";
+import { googleAuthUrl } from "@repo/api";
+import { Loader2 } from "lucide-react";
 
 import { Google } from "../Icons";
 
@@ -10,7 +11,12 @@ const GoogleSignInButton = () => {
 
     const handleSignInWithGoogle = () => {
         setIsLoading(true);
-        // window.location.assign(googleAuthUrl);
+        const url = new URL(googleAuthUrl);
+        const next = new URLSearchParams(window.location.search).get("next");
+        if (next) {
+            url.searchParams.set("redirect", next);
+        }
+        window.location.assign(url.toString());
     };
 
     const showSpinner = isLoading;
@@ -23,10 +29,7 @@ const GoogleSignInButton = () => {
             disabled={isLoading}
         >
             {showSpinner ? (
-                <span
-                    className="h-4 w-4 animate-spin rounded-full border-2 border-current border-r-transparent"
-                    aria-hidden="true"
-                />
+                <Loader2 className="h-4 w-4 animate-spin" aria-hidden />
             ) : (
                 <Google className="h-5 w-5" />
             )}

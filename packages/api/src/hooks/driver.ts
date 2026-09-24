@@ -5,6 +5,10 @@ import type {
   ApiResponse,
   CreateDriverRequest,
   UpdateProfileRequest,
+  VerifyBankRequest,
+  VerifyBankResponse,
+  VerifyKycRequest,
+  VerifyKycResponse,
 } from "@shared/types";
 import { handleApiError } from "../utils";
 
@@ -86,6 +90,40 @@ export const createDriverFn = async (
   }
 };
 
+export const verifyBankFn = async (
+  data: VerifyBankRequest,
+): Promise<VerifyBankResponse> => {
+  try {
+    const response = await driverApi.post<ApiResponse<VerifyBankResponse>>(
+      "/verify/bank",
+      data,
+    );
+    if (!response.data.success || !response.data.data) {
+      throw new Error(response.data.error || "Failed to verify bank account");
+    }
+    return response.data.data;
+  } catch (err) {
+    throw handleApiError(err, "Failed to verify bank account") ;
+  }
+};
+
+export const verifyKycFn = async (
+  data: VerifyKycRequest,
+): Promise<VerifyKycResponse> => {
+  try {
+    const response = await driverApi.post<ApiResponse<VerifyKycResponse>>(
+      "/verify/kyc",
+      data,
+    );
+    if (!response.data.success || !response.data.data) {
+      throw new Error(response.data.error || "Failed to verify identity");
+    }
+    return response.data.data;
+  } catch (err) {
+    throw handleApiError(err, "Failed to verify identity") ;
+  }
+};
+
 export const updateDriverFn = async (
   data: UpdateProfileRequest,
 ): Promise<Driver> => {
@@ -127,8 +165,33 @@ export const useCreateDriver = (options?: {
   onSuccess?: (data: Driver) => void;
   onError?: (error: Error) => void;
 }) => {
+  const queryClient = useQueryClient();
   return useMutation({
     mutationFn: createDriverFn,
+    onSuccess: (data) => {
+      queryClient.setQueryData(["driver"], data);
+      options?.onSuccess?.(data);
+    },
+    onError: options?.onError,
+  });
+};
+
+export const useVerifyBank = (options?: {
+  onSuccess?: (data: VerifyBankResponse) => void;
+  onError?: (error: Error) => void;
+}) => {
+  return useMutation({
+    mutationFn: verifyBankFn,
+    ...options,
+  });
+};
+
+export const useVerifyKyc = (options?: {
+  onSuccess?: (data: VerifyKycResponse) => void;
+  onError?: (error: Error) => void;
+}) => {
+  return useMutation({
+    mutationFn: verifyKycFn,
     ...options,
   });
 };

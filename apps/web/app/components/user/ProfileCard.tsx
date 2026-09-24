@@ -1,7 +1,8 @@
 "use client";
 
 import { useState } from "react";
-import { useGetMe, useUpdateProfile } from "@repo/api";
+import { getApiErrorMessage, useGetMe, useUpdateProfile } from "@repo/api";
+import { ProfileEditSchema, zodFieldErrors } from "@repo/types";
 import { BadgeCheck } from "lucide-react";
 import Image from "next/image";
 import { Button } from "~/components/ui/button";
@@ -19,19 +20,7 @@ import { Input } from "~/components/ui/input";
 import { Select } from "~/components/ui/select";
 import { Row, EditLink, getInitials } from "./settings-shared";
 import { formatPhoneDisplay, PHONE_PLACEHOLDER, toE164 } from "~/lib/phone";
-
-// TEMP: preview profile shown while no real user is signed in.
-const FAKE_PROFILE = {
-    firstName: "Adaeze",
-    lastName: "Okafor",
-    email: "adaeze.okafor@gmail.com",
-    emailVerified: true,
-    phone: "+234 803 456 7890",
-    gender: "female",
-    dateOfBirth: new Date("1994-05-12"),
-    createdAt: new Date("2024-03-02"),
-    profilePictureUrl: null as string | null,
-};
+import { createDraftUpdater } from "~/lib/draftFields";
 
 function VerifiedBadge() {
     return <BadgeCheck className="h-4 w-4 shrink-0 fill-blue-500 text-white" />;
@@ -40,22 +29,20 @@ function VerifiedBadge() {
 const ProfileCard = () => {
     const { data: apiUser, isPending } = useGetMe();
 
-    const name = apiUser
-        ? `${apiUser.firstName} ${apiUser.lastName}`.trim() || "Not set"
-        : `${FAKE_PROFILE.firstName} ${FAKE_PROFILE.lastName}`;
-    const email = apiUser ? apiUser.email : FAKE_PROFILE.email;
-    const emailVerified = apiUser ? apiUser.emailVerified : FAKE_PROFILE.emailVerified;
-    const phone = apiUser ? apiUser.phone : FAKE_PROFILE.phone;
-    const gender = apiUser ? apiUser.gender : FAKE_PROFILE.gender;
-    const dateOfBirth = apiUser ? apiUser.dateOfBirth : FAKE_PROFILE.dateOfBirth;
-    const profilePictureUrl = apiUser
-        ? apiUser.profilePictureUrl
-        : FAKE_PROFILE.profilePictureUrl;
+    const name =
+        `${apiUser?.firstName ?? ""} ${apiUser?.lastName ?? ""}`.trim() || "Not set";
+    const email = apiUser?.email ?? "";
+    const emailVerified = apiUser?.emailVerified ?? false;
+    const phone = apiUser?.phone ?? null;
+    const gender = apiUser?.gender ?? null;
+    const dateOfBirth = apiUser?.dateOfBirth ?? null;
+    const profilePictureUrl = apiUser?.profilePictureUrl ?? null;
 
     const photoSrc = profilePictureUrl ?? null;
     const initials = getInitials(name);
 
     const [isEditOpen, setIsEditOpen] = useState(false);
+    const [errors, setErrors] = useState<Record<string, string>>({});
     const [draft, setDraft] = useState({
         firstName: "",
         lastName: "",
@@ -75,15 +62,22 @@ const ProfileCard = () => {
     const updateProfile = useUpdateProfile({
         onSuccess: () => {
             setIsEditOpen(false);
+            setErrors({});
+        },
+        onError: () => {
+            setErrors({});
         },
     });
 
+    const updateDraft = createDraftUpdater(setDraft, setErrors);
+
     const openEdit = () => {
+        setErrors({});
         setDraft({
-            firstName: apiUser?.firstName ?? FAKE_PROFILE.firstName,
-            lastName: apiUser?.lastName ?? FAKE_PROFILE.lastName,
-            phoneNumber: formatPhoneDisplay(apiUser?.phone ?? FAKE_PROFILE.phone ?? ""),
-            gender: apiUser?.gender ?? FAKE_PROFILE.gender ?? "",
+            firstName: apiUser?.firstName ?? "",
+            lastName: apiUser?.lastName ?? "",
+            phoneNumber: formatPhoneDisplay(apiUser?.phone ?? ""),
+            gender: apiUser?.gender ?? "",
             dateOfBirth: dateOfBirth
                 ? new Date(dateOfBirth).toISOString().slice(0, 10)
                 : "",
@@ -92,15 +86,24 @@ const ProfileCard = () => {
     };
 
     const handleSave = () => {
-        updateProfile.mutate({
+        const payload = {
             firstName: draft.firstName.trim(),
             lastName: draft.lastName.trim(),
             phoneNumber: toE164(draft.phoneNumber),
-            gender: draft.gender as "male" | "female" | undefined,
+            gender: (draft.gender as "male" | "female") || undefined,
             dateOfBirth: draft.dateOfBirth
                 ? new Date(`${draft.dateOfBirth}T00:00:00`)
                 : undefined,
-        });
+        };
+
+        const fieldErrors = zodFieldErrors(ProfileEditSchema, payload);
+        if (fieldErrors) {
+            setErrors(fieldErrors);
+            return;
+        }
+
+        setErrors({});
+        updateProfile.mutate(payload);
     };
 
     if (isPending) {
@@ -182,32 +185,34 @@ const ProfileCard = () => {
                     </DrawerHeader>
                     <div className="flex flex-col gap-4 px-4">
                         <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
-                            <Field label="First name" htmlFor="edit-firstName">
+                            <Field
+                                label="First name"
+                                htmlFor="edit-firstName"
+                                error={errors.firstName}
+                            >
                                 <Input
                                     id="edit-firstName"
                                     value={draft.firstName}
                                     onChange={(event) =>
-                                        setDraft((current) => ({
-                                            ...current,
-                                            firstName: event.target.value,
-                                        }))
+                                        updateDraft("firstName", event.target.value)
                                     }
                                 />
                             </Field>
-                            <Field label="Last name" htmlFor="edit-lastName">
+                            <Field
+                                label="Last name"
+                                htmlFor="edit-lastName"
+                                error={errors.lastName}
+                            >
                                 <Input
                                     id="edit-lastName"
                                     value={draft.lastName}
                                     onChange={(event) =>
-                                        setDraft((current) => ({
-                                            ...current,
-                                            lastName: event.target.value,
-                                        }))
+                                        updateDraft("lastName", event.target.value)
                                     }
                                 />
                             </Field>
                         </div>
-                        <Field label="Phone" htmlFor="edit-phone">
+                        <Field label="Phone" htmlFor="edit-phone" error={errors.phoneNumber}>
                             <Input
                                 id="edit-phone"
                                 type="tel"
@@ -216,39 +221,37 @@ const ProfileCard = () => {
                                 placeholder={PHONE_PLACEHOLDER}
                                 value={draft.phoneNumber}
                                 onChange={(event) =>
-                                    setDraft((current) => ({
-                                        ...current,
-                                        phoneNumber: formatPhoneDisplay(event.target.value),
-                                    }))
+                                    updateDraft(
+                                        "phoneNumber",
+                                        formatPhoneDisplay(event.target.value),
+                                    )
                                 }
                             />
                         </Field>
                         <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
-                            <Field label="Gender" htmlFor="edit-gender">
+                            <Field label="Gender" htmlFor="edit-gender" error={errors.gender}>
                                 <Select
                                     id="edit-gender"
                                     value={draft.gender}
                                     onChange={(event) =>
-                                        setDraft((current) => ({
-                                            ...current,
-                                            gender: event.target.value,
-                                        }))
+                                        updateDraft("gender", event.target.value)
                                     }
                                 >
                                     <option value="male">Male</option>
                                     <option value="female">Female</option>
                                 </Select>
                             </Field>
-                            <Field label="Date of birth" htmlFor="edit-dateOfBirth">
+                            <Field
+                                label="Date of birth"
+                                htmlFor="edit-dateOfBirth"
+                                error={errors.dateOfBirth}
+                            >
                                 <Input
                                     id="edit-dateOfBirth"
                                     type="date"
                                     value={draft.dateOfBirth}
                                     onChange={(event) =>
-                                        setDraft((current) => ({
-                                            ...current,
-                                            dateOfBirth: event.target.value,
-                                        }))
+                                        updateDraft("dateOfBirth", event.target.value)
                                     }
                                 />
                             </Field>
@@ -256,6 +259,14 @@ const ProfileCard = () => {
                     </div>
                     </div>
                     <DrawerFooter>
+                        {updateProfile.isError && (
+                            <p className="w-full text-center text-sm text-destructive">
+                                {getApiErrorMessage(
+                                    updateProfile.error,
+                                    "Something went wrong. Please try again.",
+                                )}
+                            </p>
+                        )}
                         <Button
                             type="submit"
                             onClick={handleSave}

@@ -39,4 +39,6 @@ export const payoutApi = axios.create({
   withCredentials: true,
 });
 
+export const googleAuthUrl = `${AUTH_BASE_URL}/google`;
+
 

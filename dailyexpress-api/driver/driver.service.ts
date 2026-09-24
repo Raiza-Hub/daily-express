@@ -21,6 +21,21 @@ export class DriverService {
     return this.profileService.createDriver(userId, driverData);
   }
 
+  async verifyBank(input: {
+    bankCode: string;
+    accountNumber: string;
+    currency: string;
+  }) {
+    return this.profileService.verifyBank(input);
+  }
+
+  async verifyKycIdentity(input: {
+    kycType: "bvn" | "nin";
+    kycId: string;
+  }) {
+    return this.profileService.verifyKycIdentity(input);
+  }
+
   async getProfile(userId: string): Promise<Driver | null> {
     return this.profileService.getProfile(userId);
   }

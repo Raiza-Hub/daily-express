@@ -1,7 +1,13 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { format } from "date-fns";
+import { useRouter } from "next/navigation";
+import {
+    useCompleteOnboarding,
+    useGetMe,
+} from "@repo/api";
+import type { OnboardingInput } from "@shared/types";
 import { Button } from "~/components/ui/button";
 import { Calendar } from "~/components/ui/calendar";
 import {
@@ -11,8 +17,9 @@ import {
     DrawerHeader,
     DrawerTitle,
 } from "@repo/ui/Drawer";
-import { CalendarIcon } from "lucide-react";
+import { CalendarIcon, Loader2 } from "lucide-react";
 import { formatPhoneDisplay, isValidNigerianPhone, toE164 } from "~/lib/phone";
+import { makeFieldErrorMapper } from "~/lib/formErrors";
 
 const MINIMUM_ACCOUNT_AGE = 14;
 const GENDERS = ["male", "female"] as const;
@@ -35,11 +42,29 @@ function isUnder14(dateOfBirth: Date): boolean {
 }
 
 function OnboardingForm() {
+    const router = useRouter();
+    const { data: user } = useGetMe();
+    const completeOnboarding = useCompleteOnboarding({
+        onSuccess: () => router.push("/"),
+    });
     const [phone, setPhone] = useState("");
     const [dateOfBirth, setDateOfBirth] = useState<Date | undefined>(undefined);
     const [gender, setGender] = useState<Gender | undefined>(undefined);
     const [errors, setErrors] = useState<FieldErrors>({});
+    const [formError, setFormError] = useState<string | undefined>(undefined);
     const [isCalendarOpen, setIsCalendarOpen] = useState(false);
+
+    useEffect(() => {
+        if (user?.phone) {
+            router.replace("/");
+        }
+    }, [user?.phone, router]);
+
+    const mapFieldError = makeFieldErrorMapper<keyof FieldErrors>(
+        (name, message) =>
+            setErrors((current) => ({ ...current, [name]: message })),
+        setFormError,
+    );
 
     const validate = (): FieldErrors => {
         const nextErrors: FieldErrors = {};
@@ -47,7 +72,7 @@ function OnboardingForm() {
             nextErrors.phone = "Phone number is required";
         } else if (!isValidNigerianPhone(phone)) {
             nextErrors.phone =
-                "Enter a valid Nigerian phone number in international format (e.g. +234 801 234 5678)";
+                "Enter a valid Nigerian phone number in international format (e.g. +234 801 000 0000)";
         }
         if (!dateOfBirth) {
             nextErrors.dateOfBirth = "Date of birth is required";
@@ -62,11 +87,33 @@ function OnboardingForm() {
 
     const handleSubmit = (event: React.FormEvent<HTMLFormElement>) => {
         event.preventDefault();
+        if (completeOnboarding.isPending) return;
         const nextErrors = validate();
         setErrors(nextErrors);
+        setFormError(undefined);
         if (Object.keys(nextErrors).length > 0) return;
-        // UI-only for now: no real mutation wired up yet.
-        console.log({ phone: toE164(phone), dateOfBirth, gender });
+
+        const input: OnboardingInput = {
+            phoneNumber: toE164(phone),
+            dateOfBirth: dateOfBirth as Date,
+            gender: gender as Gender,
+        };
+
+        completeOnboarding.mutate(input, {
+            onError: (error: Error) => {
+                const apiError = error as { code?: string; message?: string };
+                if (apiError.code === "PHONE_TAKEN" && apiError.message) {
+                    setErrors((current) => ({
+                        ...current,
+                        phone: apiError.message as string,
+                    }));
+                    return;
+                }
+                mapFieldError(error, "Something went wrong. Please try again.", {
+                    phoneNumber: "phone",
+                });
+            },
+        });
     };
 
     return (
@@ -168,8 +215,24 @@ function OnboardingForm() {
                 )}
             </fieldset>
 
-            <Button type="submit" pill className="w-full font-semibold text-sm">
-                Continue
+            {formError && (
+                <p role="alert" className="text-center text-sm text-destructive">
+                    {formError}
+                </p>
+            )}
+            <Button
+                type="submit"
+                pill
+                className="w-full font-semibold text-sm"
+                disabled={completeOnboarding.isPending}
+            >
+                {completeOnboarding.isPending && (
+                        <Loader2
+                            className="h-4 w-4 animate-spin"
+                            aria-hidden
+                        />
+                    )}
+                    Continue
             </Button>
 
             <Drawer open={isCalendarOpen} onOpenChange={setIsCalendarOpen}>
