@@ -24,11 +24,10 @@ export const createTripCheckoutFn = async (
     const bookingResponse = await routeApi.post<
       ApiResponse<CheckoutBookingResponse>
     >("/user/booking/checkout", {
-      routeId: data.routeId,
+      originId: data.originId,
+      destinationId: data.destinationId,
       tripDate: data.tripDate,
-      tripType: data.tripType,
-      selectedTime: data.selectedTime,
-      boardingPoint: data.boardingPoint,
+      departureTime: data.departureTime,
       passengers: data.passengers,
     });
 
@@ -46,8 +45,7 @@ export const createTripCheckoutFn = async (
       {
         bookingId: checkoutBooking.booking.id,
         channels: data.channels,
-        productName: data.productName,
-        productDescription: data.productDescription,
+        productName: "Daily Express Trip",
       },
     );
 

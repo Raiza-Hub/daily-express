@@ -5,8 +5,6 @@ import cors from "cors";
 import cookieParser from "cookie-parser";
 import { Redis } from "@upstash/redis";
 import { loadConfig, getConfig } from "./config/index";
-import { authMiddleware } from "./middleware/auth";
-import { authLimiter, adminLimiter } from "./middleware/rateLimiter";
 import { errorHandler, notFoundHandler } from "./middleware/errorHandler";
 import authRoutes from "./auth/auth.routes";
 import driverRoutes from "./driver/driver.routes";
@@ -160,12 +158,12 @@ async function createApp(): Promise<Express> {
   }
 
   // Mount routes
-  app.use("/api/v1/auth", authLimiter, authMiddleware, authRoutes);
-  app.use("/api/v1/driver", authMiddleware, driverRoutes);
-  app.use("/api/v1/admin", adminLimiter, adminRoutes);
-  app.use("/api/v1/route", authMiddleware, routeRoutes);
-  app.use("/api/v1/payments", authMiddleware, paymentRoutes);
-  app.use("/api/v1/payouts", authMiddleware, payoutRoutes);
+  app.use("/api/v1/auth", authRoutes);
+  app.use("/api/v1/driver", driverRoutes);
+  app.use("/api/v1/admin", adminRoutes);
+  app.use("/api/v1/route", routeRoutes);
+  app.use("/api/v1/payments", paymentRoutes);
+  app.use("/api/v1/payouts", payoutRoutes);
   // Error handling
   app.use(notFoundHandler);
   app.use(errorHandler);

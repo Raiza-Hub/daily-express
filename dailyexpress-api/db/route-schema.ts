@@ -1,4 +1,5 @@
 import { lte, sql } from "drizzle-orm";
+import { relations } from "drizzle-orm";
 import {
   bigint,
   check,
@@ -26,35 +27,44 @@ export const tripStatusEnum = pgEnum("trip_status", [
   "awaiting_driver",
 ]);
 
-export const route = pgTable(
-  "route",
+export const origin = pgTable(
+  "origin",
   {
     id: uuid("id").defaultRandom().primaryKey(),
-    origin_title: text("origin_title").notNull(),
-    origin_locality: text("origin_locality").notNull(),
-    origin_label: text("origin_label").notNull(),
-    destination_title: text("destination_title"),
-    destination_locality: text("destination_locality"),
-    destination_label: text("destination_label"),
-    train_station_title: text("train_station_title"),
-    train_station_locality: text("train_station_locality"),
-    train_station_label: text("train_station_label"),
-    pickup_point: text("pickup_point").notNull(),
-    dropoff_point: text("dropoff_point").notNull(),
+    title: text("title").notNull(),
+    locality: text("locality").notNull(),
+    meetingPoint: text("meeting_point").notNull(),
+    departureTime: time("departure_time").array().notNull(),
     price: bigint("price", { mode: "number" }).notNull(),
-    fee: bigint("fee", { mode: "number" }),
-    luggage_fee: bigint("luggage_fee", { mode: "number" }).notNull(),
-    departure_time: time("departure_time").array().notNull(),
-    arrival_time: time("arrival_time").array().notNull(),
+    fee: bigint("fee", { mode: "number" }).notNull(),
+    luggageFee: bigint("luggage_fee", { mode: "number" }).notNull(),
+    destinationIds: uuid("destination_ids").array().notNull(),
     status: statusEnum("status").default("active").notNull(),
     createdAt: timestamp("created_at", { mode: "date" }).defaultNow().notNull(),
     updatedAt: timestamp("updated_at", { mode: "date" }).defaultNow().notNull(),
   },
   (table) => [
-    uniqueIndex("route_origin_unique_idx").on(
-      table.origin_title,
-      table.origin_locality,
-      table.origin_label,
+    uniqueIndex("origin_title_locality_unique_idx").on(
+      table.title,
+      table.locality,
+    ),
+  ],
+);
+
+export const destination = pgTable(
+  "destination",
+  {
+    id: uuid("id").defaultRandom().primaryKey(),
+    title: text("title").notNull(),
+    locality: text("locality").notNull(),
+    status: statusEnum("status").default("active").notNull(),
+    createdAt: timestamp("created_at", { mode: "date" }).defaultNow().notNull(),
+    updatedAt: timestamp("updated_at", { mode: "date" }).defaultNow().notNull(),
+  },
+  (table) => [
+    uniqueIndex("destination_title_locality_unique_idx").on(
+      table.title,
+      table.locality,
     ),
   ],
 );
@@ -63,21 +73,21 @@ export const trip = pgTable(
   "trip",
   {
     id: uuid("id").defaultRandom().primaryKey(),
-    routeId: uuid("route_id").references(() => route.id, { onDelete: "restrict" }).notNull(),
+    originId: uuid("origin_id").references(() => origin.id, { onDelete: "restrict" }).notNull(),
+    destinationId: uuid("destination_id").references(() => destination.id, { onDelete: "restrict" }).notNull(),
     driverId: uuid("driver_id").references(() => driver.id, { onDelete: "restrict" }),
     date: date("date").notNull(),
     departureTime: time("departure_time").notNull(),
-    arrivalTime: time("arrival_time").notNull(),
     capacity: integer("capacity").notNull(),
     bookedSeats: integer("booked_seats").default(0).notNull(),
     status: tripStatusEnum("status").default("awaiting_driver").notNull(),
-    driverClaimedAt: timestamp("driver_claimed_at", { mode: "date" }),
     createdAt: timestamp("created_at", { mode: "date" }).defaultNow().notNull(),
     updatedAt: timestamp("updated_at", { mode: "date" }).defaultNow().notNull(),
   },
   (table) => [
-    uniqueIndex("trip_route_driver_date_departure_unique_idx").on(
-      table.routeId,
+    uniqueIndex("trip_origin_destination_driver_date_departure_unique_idx").on(
+      table.originId,
+      table.destinationId,
       table.driverId,
       table.date,
       table.departureTime,
@@ -90,13 +100,10 @@ export const booking = pgTable(
   "booking",
   {
     id: uuid("id").defaultRandom().primaryKey(),
-    routeId: uuid("route_id").references(() => route.id, { onDelete: "restrict" }).notNull(),
+    originId: uuid("origin_id").references(() => origin.id, { onDelete: "restrict" }).notNull(),
+    destinationId: uuid("destination_id").references(() => destination.id, { onDelete: "restrict" }).notNull(),
     tripDate: date("trip_date").notNull(),
     departureTime: time("departure_time").notNull(),
-    arrivalTime: time("arrival_time").notNull(),
-    boardingPoint: text("boarding_point", {
-      enum: ["pickup", "dropoff"],
-    }).default("pickup").notNull(),
     luggageCount: integer("luggage_count").default(0).notNull(),
     tripId: uuid("trip_id").references(() => trip.id, { onDelete: "restrict" }),
     userId: uuid("user_id").references(() => users.id, { onDelete: "cascade" }).notNull(),
@@ -113,9 +120,10 @@ export const booking = pgTable(
     updatedAt: timestamp("updated_at", { mode: "date" }).defaultNow().notNull(),
   },
   (table) => [
-    uniqueIndex("booking_route_date_user_active_idx")
+    uniqueIndex("booking_origin_destination_date_user_departure_active_idx")
       .on(
-        table.routeId,
+        table.originId,
+        table.destinationId,
         table.tripDate,
         table.userId,
         table.departureTime,
@@ -126,14 +134,25 @@ export const booking = pgTable(
 
 export const TRIP_CAPACITY = 4;
 
+export const bookingRelations = relations(booking, ({ one }) => ({
+  origin: one(origin, {
+    fields: [booking.originId],
+    references: [origin.id],
+  }),
+}));
+
 export const routeSchema = {
-  route,
+  origin,
+  destination,
   trip,
   booking,
+  bookingRelations,
 };
 
-export type Route = typeof route.$inferSelect;
-export type RouteRecord = Route;
+export type Origin = typeof origin.$inferSelect;
+export type OriginRecord = Origin;
+export type Destination = typeof destination.$inferSelect;
+export type DestinationRecord = Destination;
 export type Trip = typeof trip.$inferSelect;
 export type TripRecord = Trip;
 export type Booking = typeof booking.$inferSelect;

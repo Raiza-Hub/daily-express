@@ -3,6 +3,7 @@ import { authenticateVerifiedGatewayRequest } from "../middleware/gatewayAuth";
 import { createTokenBucketLimiter } from "../middleware/tokenBucket";
 import { getConfig } from "../config/index";
 import * as routeController from "./route.controller";
+import { authenticateSession } from "../middleware/auth";
 const config = getConfig();
 
 const bookingLimiter = createTokenBucketLimiter({
@@ -23,30 +24,36 @@ const driverActionLimiter = createTokenBucketLimiter({
 
 const router: Router = Router();
 
+router.get("/origins", routeController.getOrigins);
+
 router.patch(
   "/driver/trip/:id/complete",
+  authenticateSession,
   authenticateVerifiedGatewayRequest,
   driverActionLimiter,
   routeController.completeTrip,
 );
 router.get(
   "/driver/trip/:tripId/bookings",
+  authenticateSession,
   authenticateVerifiedGatewayRequest,
   routeController.getTripBookings,
 );
 router.get(
   "/user/bookings",
+  authenticateSession,
   authenticateVerifiedGatewayRequest,
   routeController.getUserBookings,
 );
 router.get(
   "/user/bookings/search",
+  authenticateSession,
   authenticateVerifiedGatewayRequest,
   routeController.searchBookingByRef,
 );
-router.get("/search", routeController.searchRoutes);
 router.post(
   "/user/booking/checkout",
+  authenticateSession,
   authenticateVerifiedGatewayRequest,
   bookingLimiter,
   routeController.createCheckoutBooking,

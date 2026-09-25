@@ -1,5 +1,6 @@
 import type { Metadata } from "next";
 import { Onest } from "next/font/google";
+import { NuqsAdapter } from "nuqs/adapters/next/app";
 import { QueryProvider } from "@repo/api";
 import "./globals.css";
 
@@ -21,7 +22,9 @@ export default function RootLayout({
   return (
     <html lang="en" className={onest.variable}>
       <body className="flex min-h-dvh flex-col antialiased font-sans">
-        <QueryProvider>{children}</QueryProvider>
+        <NuqsAdapter>
+          <QueryProvider>{children}</QueryProvider>
+        </NuqsAdapter>
       </body>
     </html>
   );

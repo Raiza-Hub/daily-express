@@ -1,13 +1,15 @@
-import { and, asc, count, desc, eq, gte, inArray, lt, notInArray, sql, type SQL } from "drizzle-orm";
+import { and, asc, desc, eq, gte, inArray, lt, notInArray, sql, type SQL } from "drizzle-orm";
 import { db } from "../db/connection";
 import {
   booking,
   driver,
+  origin,
+  destination,
   passenger,
-  route,
   trip,
   users,
-  type RouteRecord,
+  type OriginRecord,
+  type DestinationRecord,
   type TripRecord,
   type BookingRecord,
   type DriverRecord,
@@ -22,67 +24,147 @@ import { addDaysToDateKey } from "../utils/route";
 
 type RouteTransaction = DbTransaction;
 
-type RouteWithAssociations = RouteRecord;
-
-type TripWithRoute = {
+type TripWithOriginDestination = {
   trip: TripRecord;
-  route: RouteRecord;
-  hasArrived: boolean;
+  origin: OriginRecord;
+  destination: DestinationRecord;
+  hasDeparted: boolean;
 };
 
 export class RouteRepository {
-  async findRouteById(id: string): Promise<RouteWithAssociations | null> {
-    const result = await db.query.route.findFirst({
-      where: eq(route.id, id),
+  async findOriginById(id: string, tx?: RouteTransaction): Promise<OriginRecord | null> {
+    if (tx) {
+      const result = await tx.query.origin.findFirst({
+        where: eq(origin.id, id),
+      });
+      return result ?? null;
+    }
+    const result = await db.query.origin.findFirst({
+      where: eq(origin.id, id),
     });
     return result ?? null;
   }
 
-  async findAllRoutes(): Promise<RouteWithAssociations[]> {
-    return db.query.route.findMany({
-      orderBy: [desc(route.createdAt)],
+  async findDestinationById(id: string, tx?: RouteTransaction): Promise<DestinationRecord | null> {
+    if (tx) {
+      const result = await tx.query.destination.findFirst({
+        where: eq(destination.id, id),
+      });
+      return result ?? null;
+    }
+    const result = await db.query.destination.findFirst({
+      where: eq(destination.id, id),
     });
+    return result ?? null;
   }
 
-  async findRouteConflict(input: {
-    origin_title: string;
-    origin_locality: string;
-    origin_label: string;
-  }): Promise<RouteRecord | undefined> {
-    return db.query.route.findFirst({
+  async findActiveOrigins(): Promise<Array<OriginRecord & { destinations: DestinationRecord[] }>> {
+    const origins = await db.query.origin.findMany({
+      where: eq(origin.status, "active"),
+      orderBy: [desc(origin.createdAt)],
+    });
+
+    if (origins.length === 0) {
+      return [];
+    }
+
+    const destIds = origins.flatMap((o) => o.destinationIds).filter(Boolean) as string[];
+
+    let destMap = new Map<string, DestinationRecord>();
+    if (destIds.length > 0) {
+      const dests = await db.query.destination.findMany({
+        where: and(
+          inArray(destination.id, destIds),
+          eq(destination.status, "active"),
+        ),
+      });
+      destMap = new Map(dests.map((d) => [d.id, d]));
+    }
+
+    return origins.map((o) => ({
+      ...o,
+      destinations: (o.destinationIds || []).map((id) => destMap.get(id)).filter(Boolean) as DestinationRecord[],
+    }));
+  }
+
+  async findOriginConflict(input: {
+    title: string;
+    locality: string;
+  }): Promise<OriginRecord | undefined> {
+    return db.query.origin.findFirst({
       where: and(
-        eq(route.origin_title, input.origin_title),
-        eq(route.origin_locality, input.origin_locality),
-        eq(route.origin_label, input.origin_label),
+        eq(origin.title, input.title),
+        eq(origin.locality, input.locality),
       ),
     });
   }
 
-  async insertRoute(tx: RouteTransaction, values: typeof route.$inferInsert): Promise<RouteRecord> {
-    const [record] = await tx.insert(route).values(values).returning();
+  async findDestinationConflict(input: {
+    title: string;
+    locality: string;
+  }): Promise<DestinationRecord | undefined> {
+    return db.query.destination.findFirst({
+      where: and(
+        eq(destination.title, input.title),
+        eq(destination.locality, input.locality),
+      ),
+    });
+  }
+
+  async insertOrigin(tx: RouteTransaction, values: typeof origin.$inferInsert): Promise<OriginRecord> {
+    const [record] = await tx.insert(origin).values(values).returning();
     return record;
   }
 
-  async updateRoute(
+  async updateOrigin(
     tx: RouteTransaction,
     id: string,
-    values: Partial<typeof route.$inferInsert>,
-  ): Promise<RouteRecord> {
+    values: Partial<typeof origin.$inferInsert>,
+  ): Promise<OriginRecord> {
     const [record] = await tx
-      .update(route)
+      .update(origin)
       .set(values)
-      .where(eq(route.id, id))
+      .where(eq(origin.id, id))
       .returning();
     return record;
   }
 
-  async deleteRoute(tx: RouteTransaction, id: string): Promise<void> {
-    await tx.delete(route).where(eq(route.id, id));
+  async deactivateOrigin(tx: RouteTransaction, id: string): Promise<void> {
+    await tx
+      .update(origin)
+      .set({ status: "inactive", updatedAt: new Date() })
+      .where(eq(origin.id, id));
+  }
+
+  async insertDestination(tx: RouteTransaction, values: typeof destination.$inferInsert): Promise<DestinationRecord> {
+    const [record] = await tx.insert(destination).values(values).returning();
+    return record;
+  }
+
+  async updateDestination(
+    tx: RouteTransaction,
+    id: string,
+    values: Partial<typeof destination.$inferInsert>,
+  ): Promise<DestinationRecord> {
+    const [record] = await tx
+      .update(destination)
+      .set(values)
+      .where(eq(destination.id, id))
+      .returning();
+    return record;
+  }
+
+  async deactivateDestination(tx: RouteTransaction, id: string): Promise<void> {
+    await tx
+      .update(destination)
+      .set({ status: "inactive", updatedAt: new Date() })
+      .where(eq(destination.id, id));
   }
 
   async findTripsForSlot(
     tx: RouteTransaction,
-    routeId: string,
+    originId: string,
+    destinationId: string,
     dateKey: string,
     departureTime: string,
   ): Promise<TripRecord[]> {
@@ -91,7 +173,8 @@ export class RouteRepository {
       .from(trip)
       .where(
         and(
-          eq(trip.routeId, routeId),
+          eq(trip.originId, originId),
+          eq(trip.destinationId, destinationId),
           gte(trip.date, dateKey),
           lt(trip.date, addDaysToDateKey(dateKey, 1)),
           eq(trip.departureTime, departureTime),
@@ -139,22 +222,25 @@ export class RouteRepository {
     return record ?? null;
   }
 
-async findTripWithRoute(tripId: string): Promise<TripWithRoute | null> {
+  async findTripWithOriginDestination(tripId: string): Promise<TripWithOriginDestination | null> {
     const [result] = await db
       .select({
         trip: trip,
-        route: route,
-        hasArrived: sql<boolean>`${scheduledAtSql(trip.date, trip.arrivalTime)} <= now()`,
+        origin: origin,
+        destination: destination,
+        hasDeparted: sql<boolean>`${scheduledAtSql(trip.date, trip.departureTime)} <= now()`,
       })
       .from(trip)
-      .innerJoin(route, eq(trip.routeId, route.id))
+      .innerJoin(origin, eq(trip.originId, origin.id))
+      .innerJoin(destination, eq(trip.destinationId, destination.id))
       .where(eq(trip.id, tripId))
       .limit(1);
     if (!result) return null;
     return {
       trip: result.trip as TripRecord,
-      route: result.route as RouteRecord,
-      hasArrived: Boolean(result.hasArrived),
+      origin: result.origin as OriginRecord,
+      destination: result.destination as DestinationRecord,
+      hasDeparted: Boolean(result.hasDeparted),
     };
   }
 
@@ -281,17 +367,4 @@ async findTripWithRoute(tripId: string): Promise<TripWithRoute | null> {
   ): Promise<void> {
     await tx.delete(passenger).where(eq(passenger.bookingId, bookingId));
   }
-
-  async countPassengersByBooking(
-    tx: RouteTransaction,
-    bookingId: string,
-  ): Promise<number> {
-    const [row] = await tx
-      .select({ count: count() })
-      .from(passenger)
-      .where(eq(passenger.bookingId, bookingId));
-    return Number(row?.count ?? 0);
-  }
 }
-
-export const routeRepository = new RouteRepository();

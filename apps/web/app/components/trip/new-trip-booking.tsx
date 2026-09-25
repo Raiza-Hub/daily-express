@@ -1,10 +1,13 @@
 "use client";
 
 import { useMemo, useState } from "react";
-import { ChevronDown, Plus } from "lucide-react";
+import { parseAsString, useQueryStates } from "nuqs";
+import { ChevronDown, Loader2, Plus } from "lucide-react";
 import { format } from "date-fns";
 import { cn } from "@repo/ui/lib/utils";
 import { Button } from "~/components/ui/button";
+import { useGetOrigins, useCreateTripCheckout, useGetMe } from "@repo/api";
+import type { OriginDetails, PassengerInput } from "@shared/types";
 import {
   PassengerDrawer,
   MAX_PASSENGERS,
@@ -12,28 +15,30 @@ import {
 } from "./passenger-drawer";
 import { PassengerListItem } from "./passenger-list-item";
 import {
-  MOCK_ORIGINS,
-  getDestinationsForOrigin,
   getUpcomingDateSlots,
   formatTripTime,
 } from "~/lib/trip";
-
-function SectionLabel({ children }: { children: React.ReactNode }) {
-  return (
-    <p className="text-base font-semibold text-neutral-900">
-      {children}
-    </p>
-  );
-}
+import NewTripBookingSkeleton from "./new-trip-booking-skeleton";
+import TripNotFound from "./trip-not-found";
+import SectionLabel from "./section-label";
 
 export default function NewTripBooking() {
-  const [selectedOrigin, setSelectedOrigin] = useState<string>("");
-  const [selectedDestinationId, setSelectedDestinationId] = useState<string>("");
-  const [selectedDateKey, setSelectedDateKey] = useState<string>("");
-  const [selectedTime, setSelectedTime] = useState<string>("");
+  const [selection, setSelection] = useQueryStates(
+    {
+      origin: parseAsString.withDefault(""),
+      destination: parseAsString.withDefault(""),
+      date: parseAsString.withDefault(""),
+      time: parseAsString.withDefault(""),
+    },
+    { history: "replace" },
+  );
   const [passengers, setPassengers] = useState<TripPassenger[]>([]);
   const [drawerOpen, setDrawerOpen] = useState(false);
   const [editingId, setEditingId] = useState<string | null>(null);
+
+  const { data: origins = [], isPending: isOriginsPending } = useGetOrigins();
+  const { data: user, isPending: isUserPending } = useGetMe();
+  const createCheckout = useCreateTripCheckout();
 
   const atLimit = passengers.length >= MAX_PASSENGERS;
 
@@ -54,44 +59,56 @@ export default function NewTripBooking() {
     if (editingId === id) setEditingId(null);
   };
 
-  const dateSlots = useMemo(() => getUpcomingDateSlots(3), []);
+  const originTitle = selection.origin;
+  const destinationTitle = selection.destination;
+
+  const dateSlots = getUpcomingDateSlots(3);
   const effectiveDateKey =
-    selectedDateKey || dateSlots[0]?.dateKey || "";
+    (dateSlots.some((slot) => slot.dateKey === selection.date)
+      ? selection.date
+      : "") || dateSlots[0]?.dateKey || "";
 
-  const selectedOriginData = MOCK_ORIGINS.find(
-    (origin) => origin.id === selectedOrigin,
+  const selectedOriginData: OriginDetails | undefined = origins.find(
+    (origin: OriginDetails) => origin.title === originTitle,
   );
+  const selectedOrigin = selectedOriginData?.id ?? "";
+  const selectedDestinationId =
+    selectedOriginData?.destinations.find(
+      (destination) => destination.title === destinationTitle,
+    )?.id ?? "";
 
-  const destinations = useMemo(
-    () => (selectedOriginData ? getDestinationsForOrigin(selectedOriginData) : []),
-    [selectedOriginData],
-  );
+  const destinations = selectedOriginData?.destinations ?? [];
 
-  const handleOriginChange = (origin: string) => {
-    setSelectedOrigin(origin);
-    setSelectedDestinationId("");
-    setSelectedTime("");
+  const handleOriginChange = (originTitle: string) => {
+    setSelection({ origin: originTitle, destination: "", time: "" });
   };
 
-  const departureSlots = useMemo(() => {
+  const departureSlots = useMemo<
+    Array<{ time: string; disabled: boolean }>
+  >(() => {
     if (!selectedOriginData) return [];
     const nowTime = format(new Date(), "HH:mm");
     const isToday = effectiveDateKey === format(new Date(), "yyyy-MM-dd");
-    return selectedOriginData.departureTime.map((time) => ({
+    return selectedOriginData.departureTime.map((time: string) => ({
       time,
       disabled: isToday && time <= nowTime,
     }));
   }, [selectedOriginData, effectiveDateKey]);
 
-  const handleDestinationChange = (destinationId: string) => {
-    setSelectedDestinationId(destinationId);
-    setSelectedTime("");
+  const selectedTime = departureSlots.some(
+    (slot) => slot.time === selection.time && !slot.disabled,
+  )
+    ? selection.time
+    : "";
+
+  const handleDestinationChange = (destinationTitle: string) => {
+    setSelection({ destination: destinationTitle, time: "" });
   };
 
   const luggageCount = passengers.filter((p) => p.carriesLuggage).length;
   const fareTotal =
     passengers.length *
-    ((selectedOriginData?.fare ?? 0) + (selectedOriginData?.fee ?? 0));
+    ((selectedOriginData?.price ?? 0) + (selectedOriginData?.fee ?? 0));
   const luggageTotal = luggageCount * (selectedOriginData?.luggageFee ?? 0);
   const total = fareTotal + luggageTotal;
 
@@ -100,11 +117,60 @@ export default function NewTripBooking() {
     selectedDestinationId !== "" &&
     selectedTime !== "" &&
     passengers.length >= 1 &&
-    !drawerOpen;
+    !drawerOpen &&
+    !createCheckout.isPending;
 
   const handleConfirm = () => {
     if (!canConfirm) return;
+    if (isOriginsPending || isUserPending) return;
+
+    if (!user) {
+      const tripNewUrl =
+        originTitle !== ""
+          ? `/trip/new?origin=${encodeURIComponent(originTitle)}`
+          : "/trip/new";
+      window.location.assign(
+        `/login?next=${encodeURIComponent(tripNewUrl)}`,
+      );
+      return;
+    }
+    if (!user.phone) {
+      window.location.assign("/onboarding");
+      return;
+    }
+
+    const passengerInput: PassengerInput[] = passengers.map((p) => ({
+      fullName: p.fullName,
+      email: p.email,
+      phone: p.phone,
+      carriesLuggage: p.carriesLuggage,
+    }));
+
+    createCheckout.mutate(
+      {
+        originId: selectedOrigin,
+        destinationId: selectedDestinationId,
+        tripDate: effectiveDateKey,
+        departureTime: selectedTime,
+        passengers: passengerInput,
+      },
+      {
+        onSuccess: (checkout) => {
+          if (checkout?.checkoutUrl) {
+            window.location.href = checkout.checkoutUrl;
+          }
+        },
+      },
+    );
   };
+
+  if (isOriginsPending || isUserPending) {
+    return <NewTripBookingSkeleton />;
+  }
+
+  if (originTitle !== "" ? !selectedOriginData : origins.length === 0) {
+    return <TripNotFound />;
+  }
 
   return (
     <div className="flex w-full flex-col gap-10">
@@ -119,7 +185,7 @@ export default function NewTripBooking() {
                 type="button"
                 disabled={slot.isPast}
                 onClick={() => {
-                  setSelectedDateKey(slot.dateKey);
+                  setSelection({ date: slot.dateKey });
                 }}
                 className={cn(
                   "flex w-16 cursor-pointer flex-col items-center gap-2 rounded-2xl border px-2 py-3 transition-colors",
@@ -156,15 +222,15 @@ export default function NewTripBooking() {
         <SectionLabel>Origin</SectionLabel>
         <div className="relative mt-4">
           <select
-            value={selectedOrigin}
+            value={originTitle}
             onChange={(event) => handleOriginChange(event.target.value)}
             className="h-12 w-full cursor-pointer appearance-none rounded-full border border-neutral-300 bg-background px-6 pr-12 text-sm text-foreground transition-colors hover:bg-neutral-50 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-neutral-400"
           >
             <option value="" disabled>
               Choose an origin
             </option>
-            {MOCK_ORIGINS.map((origin) => (
-              <option key={origin.id} value={origin.id}>
+            {origins.map((origin: OriginDetails) => (
+              <option key={origin.id} value={origin.title}>
                 {origin.title}
               </option>
             ))}
@@ -177,15 +243,15 @@ export default function NewTripBooking() {
         <SectionLabel>Destination</SectionLabel>
         <div className="relative mt-4">
           <select
-            value={selectedDestinationId}
+            value={destinationTitle}
             onChange={(event) => handleDestinationChange(event.target.value)}
             className="h-12 w-full cursor-pointer appearance-none rounded-full border border-neutral-300 bg-background px-6 pr-12 text-sm text-foreground transition-colors hover:bg-neutral-50 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-neutral-400"
           >
             <option value="" disabled>
               Choose a destination
             </option>
-            {destinations.map((destination) => (
-              <option key={destination.id} value={destination.id}>
+            {destinations.map((destination: { id: string; title: string }) => (
+              <option key={destination.id} value={destination.title}>
                 {destination.title}
               </option>
             ))}
@@ -206,7 +272,7 @@ export default function NewTripBooking() {
                   type="button"
                   disabled={disabled}
                   onClick={() => {
-                    setSelectedTime(time);
+                    setSelection({ time });
                   }}
                   className={cn(
                     "cursor-pointer rounded-full border px-4 py-2 text-sm font-medium transition-colors",
@@ -287,6 +353,9 @@ export default function NewTripBooking() {
           onClick={handleConfirm}
           className="mt-5 w-full text font-semibold"
         >
+          {createCheckout.isPending && (
+            <Loader2 className="h-4 w-4 animate-spin" aria-hidden />
+          )}
           Confirm Booking
         </Button>
       </div>

@@ -16,6 +16,17 @@ interface TokenBucketConfig {
 }
 
 const config = getConfig();
+const hasUpstashCredentials = Boolean(
+  config.RATE_LIMIT_UPSTASH_REDIS_REST_URL &&
+  config.RATE_LIMIT_UPSTASH_REDIS_REST_TOKEN,
+);
+
+if (config.NODE_ENV === "production" && !hasUpstashCredentials) {
+  throw new Error(
+    "Redis-backed rate limiting requires RATE_LIMIT_UPSTASH_REDIS_REST_URL and RATE_LIMIT_UPSTASH_REDIS_REST_TOKEN.",
+  );
+}
+
 const redis =
   config.RATE_LIMIT_UPSTASH_REDIS_REST_URL &&
   config.RATE_LIMIT_UPSTASH_REDIS_REST_TOKEN
