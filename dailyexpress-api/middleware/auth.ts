@@ -7,7 +7,6 @@ import jwt, {
 import { getConfig } from "../config/index";
 import type { JWTPayload } from "@shared/types";
 import { createServiceError } from "@shared/utils";
-import { getRequestPath, isPublicPath } from "./publicPaths";
 import { logger } from "../utils/logger";
 import { sendErrorResponse } from "./apiResponses";
 
@@ -92,18 +91,11 @@ export function setAuthCookies(
   );
 }
 
-export function authMiddleware(
+export function authenticateSession(
   req: Request,
   res: Response,
   next: NextFunction,
 ): void {
-  const path = getRequestPath(req);
-  const method = req.method;
-
-  if (isPublicPath(path, method)) {
-    return next();
-  }
-
   const accessToken = req.cookies?.token;
   const refreshToken = req.cookies?.refreshToken;
   const config = getConfig();

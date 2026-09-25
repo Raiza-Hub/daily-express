@@ -25,7 +25,7 @@ export * from "./payout-schema";
 export * from "./route-schema";
 
 export type { PaymentRecord, RefundRecord } from "./payment-schema";
-export type { BookingRecord, TripRecord, RouteRecord } from "./route-schema";
+export type { BookingRecord, TripRecord, OriginRecord, DestinationRecord } from "./route-schema";
 export type { EarningRecord, PayoutRecord } from "./payout-schema";
 export type { PassengerRecord } from "./passenger-schema";
 export type { DriverRecord } from "./driver-schema";

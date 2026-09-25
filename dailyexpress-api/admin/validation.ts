@@ -1,107 +1,83 @@
 import z from "zod";
 
-const timePattern = /^\d{2}:\d{2}(:\d{2})?$/;
-
-const requiredString = (field: string, min: number, max: number) =>
-  z
-    .string({ error: `${field} is required` })
-    .min(min, {
-      error: (issue) =>
-        typeof issue.input === "string" && issue.input.length === 0
-          ? `${field} is required`
-          : `${field} must be at least ${min} characters long`,
+export const createOriginSchema = z.object({
+  title: z
+    .string({ error: "Origin title is required" })
+    .min(2, "Origin title must be at least 2 characters long")
+    .max(255, "Origin title must not exceed 255 characters"),
+  locality: z
+    .string({ error: "Origin locality is required" })
+    .min(2, "Origin locality must be at least 2 characters long")
+    .max(255, "Origin locality must not exceed 255 characters"),
+  meetingPoint: z
+    .string({ error: "Meeting point is required" })
+    .min(2, "Meeting point must be at least 2 characters long")
+    .max(500, "Meeting point must not exceed 500 characters"),
+  departureTime: z
+    .array(z.iso.time("Departure times must be in HH:MM or HH:MM:SS format"), {
+      error: "Departure is required",
     })
-    .max(max, `${field} must not exceed ${max} characters`);
+    .min(1, "Departure must include at least one time"),
+  price: z.coerce
+    .number("Price must be a number")
+    .int("Price must be a whole number")
+    .min(0, "Price cannot be negative"),
+  fee: z.coerce
+    .number("Fee must be a number")
+    .int("Fee must be a whole number")
+    .min(0, "Fee cannot be negative"),
+  luggageFee: z.coerce
+    .number("Luggage fee must be a number")
+    .int("Luggage fee must be a whole number")
+    .min(0, "Luggage fee cannot be negative"),
+  destinationIds: z
+    .array(z.uuid(), "Destinations must be an array of valid IDs")
+    .min(1, "Destinations must include at least one destination"),
+  status: z
+    .enum(["inactive", "pending", "active"], {
+      error: "Status must be one of: inactive, pending, active",
+    }),
+});
 
-const moneyNumber = (label: string) =>
-  z
-    .coerce.number({ error: `${label} must be a number` })
-    .int(`${label} must be a whole number`)
-    .min(0, `${label} cannot be negative`);
-
-const timeArray = (label: string) =>
-  z
-    .array(
-      z.string().regex(timePattern, `${label} times must be in HH:MM or HH:MM:SS format`),
-      { error: `${label} is required` },
-    )
-    .min(1, `${label} must include at least one time`);
-
-const nullableString = (min: number, max: number) =>
-  z.union([z.string().min(min).max(max), z.null()]).optional();
-
-const nullableOrEmptyString = (min: number, max: number) =>
-  z
-    .union([z.string().min(min).max(max), z.literal(""), z.null()])
-    .optional();
-
-const atLeastOneField = (value: object) =>
-  Object.keys(value).length >= 1;
-
-export const createRouteSchema = z
+export const updateOriginSchema = z
   .object({
-    origin_title: requiredString("Origin title", 2, 255),
-    origin_locality: requiredString("Origin locality", 2, 255),
-    origin_label: requiredString("Origin label", 2, 255),
-    destination_title: nullableOrEmptyString(2, 255),
-    destination_locality: nullableOrEmptyString(2, 255),
-    destination_label: nullableOrEmptyString(2, 255),
-    train_station_title: nullableOrEmptyString(2, 255),
-    train_station_locality: nullableOrEmptyString(2, 255),
-    train_station_label: nullableOrEmptyString(2, 255),
-    pickup_point: requiredString("Pickup point", 2, 500),
-    dropoff_point: requiredString("Dropoff point", 2, 500),
-    price: moneyNumber("Price").optional(),
-    fee: moneyNumber("Fee").nullable().optional(),
-    luggage_fee: moneyNumber("Luggage fee").optional(),
-    departure_time: timeArray("Departure"),
-    arrival_time: timeArray("Arrival"),
-    status: z
-      .enum(["inactive", "pending", "active"], {
-        error: "Status must be one of: inactive, pending, active",
-      })
+    title: z
+      .string()
+      .min(2, "Origin title must be at least 2 characters long")
+      .max(255, "Origin title must not exceed 255 characters")
       .optional(),
-  })
-  .superRefine((value, ctx) => {
-    if (value.price === undefined) {
-      ctx.addIssue({
-        code: "custom",
-        path: ["price"],
-        message: "Price is required",
-      });
-    }
-    if (value.luggage_fee === undefined) {
-      ctx.addIssue({
-        code: "custom",
-        path: ["luggage_fee"],
-        message: "Luggage fee is required",
-      });
-    }
-  });
-
-export const updateRouteSchema = z
-  .object({
-    origin_title: nullableString(2, 255),
-    origin_locality: nullableString(2, 255),
-    origin_label: nullableString(2, 255),
-    destination_title: nullableString(2, 255),
-    destination_locality: nullableString(2, 255),
-    destination_label: nullableString(2, 255),
-    train_station_title: nullableString(2, 255),
-    train_station_locality: nullableString(2, 255),
-    train_station_label: nullableString(2, 255),
-    pickup_point: z.string().min(2).max(500).optional(),
-    dropoff_point: z.string().min(2).max(500).optional(),
-    price: moneyNumber("Price").optional(),
-    fee: moneyNumber("Fee").nullable().optional(),
-    luggage_fee: moneyNumber("Luggage fee").optional(),
-    departure_time: z
-      .array(z.string().regex(timePattern, "Departure times must be in HH:MM or HH:MM:SS format"))
+    locality: z
+      .string()
+      .min(2, "Origin locality must be at least 2 characters long")
+      .max(255, "Origin locality must not exceed 255 characters")
+      .optional(),
+    meetingPoint: z
+      .string()
+      .min(2, "Meeting point must be at least 2 characters long")
+      .max(500, "Meeting point must not exceed 500 characters")
+      .optional(),
+    departureTime: z
+      .array(z.iso.time("Departure times must be in HH:MM or HH:MM:SS format"))
       .min(1, "Departure must include at least one time")
       .optional(),
-    arrival_time: z
-      .array(z.string().regex(timePattern, "Arrival times must be in HH:MM or HH:MM:SS format"))
-      .min(1, "Arrival must include at least one time")
+    price: z.coerce
+      .number("Price must be a number")
+      .int("Price must be a whole number")
+      .min(0, "Price cannot be negative")
+      .optional(),
+    fee: z.coerce
+      .number("Fee must be a number")
+      .int("Fee must be a whole number")
+      .min(0, "Fee cannot be negative")
+      .optional(),
+    luggageFee: z.coerce
+      .number("Luggage fee must be a number")
+      .int("Luggage fee must be a whole number")
+      .min(0, "Luggage fee cannot be negative")
+      .optional(),
+    destinationIds: z
+      .array(z.uuid(), "Destinations must be an array of valid IDs")
+      .min(1, "Destinations must include at least one destination")
       .optional(),
     status: z
       .enum(["inactive", "pending", "active"], {
@@ -109,7 +85,41 @@ export const updateRouteSchema = z
       })
       .optional(),
   })
-  .refine(atLeastOneField, {
+  .refine((value) => Object.keys(value).length >= 1, {
+    message: "must contain at least 1 keys",
+    path: ["request"],
+  });
+
+export const createDestinationSchema = z.object({
+  title: z
+    .string({ error: "Destination title is required" })
+    .min(2, "Destination title must be at least 2 characters long")
+    .max(255, "Destination title must not exceed 255 characters"),
+  locality: z
+    .string({ error: "Destination locality is required" })
+    .min(2, "Destination locality must be at least 2 characters long")
+    .max(255, "Destination locality must not exceed 255 characters"),
+});
+
+export const updateDestinationSchema = z
+  .object({
+    title: z
+      .string()
+      .min(2, "Destination title must be at least 2 characters long")
+      .max(255, "Destination title must not exceed 255 characters")
+      .optional(),
+    locality: z
+      .string()
+      .min(2, "Destination locality must be at least 2 characters long")
+      .max(255, "Destination locality must not exceed 255 characters")
+      .optional(),
+    status: z
+      .enum(["inactive", "pending", "active"], {
+        error: "Status must be one of: inactive, pending, active",
+      })
+      .optional(),
+  })
+  .refine((value) => Object.keys(value).length >= 1, {
     message: "must contain at least 1 keys",
     path: ["request"],
   });

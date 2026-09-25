@@ -3,35 +3,26 @@ import { and, eq, inArray, sql } from "drizzle-orm";
 import { db, type DbTransaction } from "../db/connection";
 import {
   booking,
-  route,
+  origin,
+  destination,
   TRIP_CAPACITY,
   type BookingRecord,
-  type RouteRecord,
+  type OriginRecord,
+  type DestinationRecord,
   type TripRecord,
-  type UserRecord,
 } from "../db/index";
 import { getConfig } from "../config/index";
 import { logger } from "../utils/logger";
 import { formatAmount } from "../utils/payout";
 import { enqueueEmail } from "../mail/email-dispatcher.service";
 import { earningService } from "../payout/earning.service";
-import { RouteRepository, routeRepository } from "./route.repository";
+import { RouteRepository } from "./route.repository";
 
 type RouteTransaction = DbTransaction;
 
 export class BookingFinalizerService {
   constructor(private repo: RouteRepository) {}
 
-  /**
-   * Payment-success finalizer. Runs entirely inside a transaction serialized
-   * on a slot-level advisory lock, so it either:
-   *  - assigns the booking to the best-fit existing trip for its slot
-   *    (tightest fit first, locked FOR UPDATE), or
-   *  - creates a new trip for the slot (TRIP_CAPACITY, awaiting a driver)
-   * Then upserts the trip's single earning row (amount = aggregate over the
-   * trip's confirmed/completed bookings, platform fee excluded) and sends the
-   * booking-confirmed email to the booker.
-   */
   async finalizeBooking(bookingId: string, reference: string) {
     const bookingRecord = await this.repo.findBookingById(bookingId);
     if (!bookingRecord) {
@@ -43,20 +34,20 @@ export class BookingFinalizerService {
       return;
     }
 
-    const routeRecord = await db.query.route.findFirst({
-      where: eq(route.id, bookingRecord.routeId),
+    const originRecord = await db.query.origin.findFirst({
+      where: eq(origin.id, bookingRecord.originId),
     });
-    if (!routeRecord) {
+    const destinationRecord = await db.query.destination.findFirst({
+      where: eq(destination.id, bookingRecord.destinationId),
+    });
+    if (!originRecord || !destinationRecord) {
       logger.warn("booking_finalizer.route_not_found", {
         bookingId,
-        routeId: bookingRecord.routeId,
+        originId: bookingRecord.originId,
+        destinationId: bookingRecord.destinationId,
       });
       return;
     }
-
-    const passengerUser = bookingRecord.userId
-      ? await this.repo.findUserById(bookingRecord.userId)
-      : null;
 
     const finalized = await db.transaction<{ tripId: string } | null>(
       async (tx) => {
@@ -76,11 +67,8 @@ export class BookingFinalizerService {
           return null;
         }
 
-        const passengerCount = await this.repo.countPassengersByBooking(
-          tx,
-          bookingId,
-        );
-        if (passengerCount === 0) {
+        const passengers = await this.repo.findPassengersByBooking(bookingId);
+        if (passengers.length === 0) {
           logger.warn("booking_finalizer.no_passengers", { bookingId, reference });
           return null;
         }
@@ -89,20 +77,18 @@ export class BookingFinalizerService {
 
         const tripId = await this.assignBookingToTrip(tx, {
           bookingId,
-          routeId: routeRecord.id,
+          originId: originRecord.id,
+          destinationId: destinationRecord.id,
           dateKey,
           departureTime: updatedBooking.departureTime,
-          arrivalTime: updatedBooking.arrivalTime,
-          passengerCount,
+          passengerCount: passengers.length,
         });
 
         if (!tripId) return null;
 
         await this.upsertTripEarning(tx, tripId);
 
-        if (passengerUser?.email) {
-          await this.dispatchConfirmationEmail(tx, bookingRecord, routeRecord, passengerUser, reference);
-        }
+        await this.dispatchConfirmationEmails(tx, updatedBooking, originRecord, destinationRecord, passengers);
 
         return { tripId };
       },
@@ -117,74 +103,58 @@ export class BookingFinalizerService {
     }
   }
 
-  private async dispatchConfirmationEmail(
+  private async dispatchConfirmationEmails(
     tx: RouteTransaction,
     bookingRecord: BookingRecord,
-    routeRecord: RouteRecord,
-    passengerUser: UserRecord,
-    reference: string,
+    originRecord: OriginRecord,
+    destinationRecord: DestinationRecord,
+    passengers: Array<{ fullName: string; email: string }>,
   ) {
     const config = getConfig();
-    const boardingFromPickup = bookingRecord.boardingPoint !== "dropoff";
-    const pickupTitle = boardingFromPickup
-      ? routeRecord.pickup_point
-      : routeRecord.dropoff_point;
-    const dropoffTitle = boardingFromPickup
-      ? (routeRecord.train_station_title ?? routeRecord.destination_title)
-      : routeRecord.origin_title;
-
-    const passengerCount = await this.repo.countPassengersByBooking(
-      tx,
-      bookingRecord.id,
-    );
     const groupTotal = bookingRecord.totalAmount + bookingRecord.totalFee;
-    const propsJson = JSON.stringify({
-      frontendUrl: config.FRONTEND_URL,
-      passengerName:
-        `${passengerUser.firstName ?? ""} ${passengerUser.lastName ?? ""}`.trim() ||
-        null,
-      paymentReference: reference,
-      pricePaid: formatAmount(groupTotal, "NGN"),
-      pickupTitle,
-      dropoffTitle,
-      tripDate: bookingRecord.tripDate,
-      departureTime: bookingRecord.departureTime,
-      timeZone: "Africa/Lagos",
-      meetingPoint: pickupTitle,
-    });
-    const emailHtml = await renderEmail("BookingConfirmedEmail", propsJson);
-    const emailSubject = getEmailSubject("BookingConfirmedEmail", propsJson);
-    await enqueueEmail(tx, {
-      emailName: "email.booking_confirmed",
-      to: passengerUser.email,
-      subject: emailSubject,
-      html: emailHtml,
-    });
+    const pricePaid = formatAmount(groupTotal, "NGN");
+
+    for (const passenger of passengers) {
+      const propsJson = JSON.stringify({
+        frontendUrl: config.FRONTEND_URL,
+        passengerName: passenger.fullName || null,
+        pricePaid,
+        origin: originRecord.title,
+        destination: destinationRecord.title,
+        tripDate: bookingRecord.tripDate,
+        departureTime: bookingRecord.departureTime,
+        timeZone: "Africa/Lagos",
+        meetingPoint: originRecord.meetingPoint,
+      });
+      const emailHtml = await renderEmail("BookingConfirmedEmail", propsJson);
+      const emailSubject = getEmailSubject("BookingConfirmedEmail", propsJson);
+      enqueueEmail(tx, {
+        emailName: "email.booking_confirmed",
+        to: passenger.email,
+        subject: emailSubject,
+        html: emailHtml,
+      });
+    }
   }
 
-  /**
-   * Serializes on the slot key so concurrent confirmations for the same slot
-   * run one at a time (an advisory lock can guard the empty-list race where
-   * FOR UPDATE cannot), then picks the tightest-fit trip that still has room
-   * or creates a new one.
-   */
   private async assignBookingToTrip(
     tx: RouteTransaction,
     input: {
       bookingId: string;
-      routeId: string;
+      originId: string;
+      destinationId: string;
       dateKey: string;
       departureTime: string;
-      arrivalTime: string;
       passengerCount: number;
     },
   ): Promise<string | null> {
-    const slotKey = `${input.routeId}::${input.dateKey}::${input.departureTime}`;
+    const slotKey = `${input.originId}::${input.destinationId}::${input.dateKey}::${input.departureTime}`;
     await tx.execute(sql`select pg_advisory_xact_lock(hashtextextended(${slotKey}, 0))`);
 
     const trips = await this.repo.findTripsForSlot(
       tx,
-      input.routeId,
+      input.originId,
+      input.destinationId,
       input.dateKey,
       input.departureTime,
     );
@@ -199,10 +169,10 @@ export class BookingFinalizerService {
     }
 
     const createdTrip = await this.createSlotTrip(tx, {
-      routeId: input.routeId,
+      originId: input.originId,
+      destinationId: input.destinationId,
       date: input.dateKey,
       departureTime: input.departureTime,
-      arrivalTime: input.arrivalTime,
       passengerCount: input.passengerCount,
     });
     await tx
@@ -215,26 +185,27 @@ export class BookingFinalizerService {
   private async createSlotTrip(
     tx: RouteTransaction,
     input: {
-      routeId: string;
+      originId: string;
+      destinationId: string;
       date: string;
       departureTime: string;
-      arrivalTime: string;
       passengerCount: number;
     },
   ): Promise<TripRecord> {
     const createdTrip = await this.repo.createTrip(tx, {
-      routeId: input.routeId,
+      originId: input.originId,
+      destinationId: input.destinationId,
       driverId: null,
       date: input.date,
       departureTime: input.departureTime,
-      arrivalTime: input.arrivalTime,
       capacity: TRIP_CAPACITY,
       bookedSeats: input.passengerCount,
       status: "awaiting_driver",
     });
     logger.info("booking_finalizer.trip_created", {
       tripId: createdTrip.id,
-      routeId: input.routeId,
+      originId: input.originId,
+      destinationId: input.destinationId,
       date: input.date,
       departureTime: input.departureTime,
       bookedSeats: createdTrip.bookedSeats,
@@ -242,12 +213,6 @@ export class BookingFinalizerService {
     return createdTrip;
   }
 
-  /**
-   * Recomputes the trip's aggregate earning from its confirmed/completed
-   * bookings: (fareAmount x passengerCount) + (luggageCount x luggage_fee),
-   * platform fee excluded. One earning row per trip (unique tripId), driverId
-   * stays NULL until dispatch backfills it.
-   */
   private async upsertTripEarning(
     tx: RouteTransaction,
     tripId: string,
@@ -261,10 +226,6 @@ export class BookingFinalizerService {
 
     const firstBooking = tripBookings[0];
     if (!firstBooking) return;
-
-    const routeRecord = await tx.query.route.findFirst({
-      where: eq(route.id, firstBooking.routeId),
-    });
 
     let amount = 0;
     for (const tripBooking of tripBookings) {
@@ -288,4 +249,4 @@ export class BookingFinalizerService {
   }
 }
 
-export const bookingFinalizerService = new BookingFinalizerService(routeRepository);
+export const bookingFinalizerService = new BookingFinalizerService(new RouteRepository());

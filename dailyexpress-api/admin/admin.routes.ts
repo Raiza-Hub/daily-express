@@ -3,35 +3,63 @@ import { requireAdminApiKey } from "../middleware/adminAuth";
 import { requireAppsmithSignature } from "../middleware/appsmithSignature";
 import { validateRequest } from "../middleware/requestValidation";
 import * as adminController from "./admin.controller";
-import { createRouteSchema, updateRouteSchema } from "./validation";
+import {
+  createOriginSchema,
+  updateOriginSchema,
+  createDestinationSchema,
+  updateDestinationSchema,
+} from "./validation";
 
 const router: Router = Router();
 
 router.use(requireAppsmithSignature);
 
-router.get("/",
-  requireAdminApiKey,
-  adminController.getAllRoutes
-);
+router.get("/origins", requireAdminApiKey, adminController.getAllOrigins);
 
 router.post(
-  "/route/create",
+  "/origins",
   requireAdminApiKey,
-  validateRequest(createRouteSchema),
-  adminController.createRoute,
+  validateRequest(createOriginSchema),
+  adminController.createOrigin,
 );
 
 router.put(
-  "/route/:id",
+  "/origins/:id",
   requireAdminApiKey,
-  validateRequest(updateRouteSchema),
-  adminController.updateRoute,
+  validateRequest(updateOriginSchema),
+  adminController.updateOrigin,
 );
 
 router.delete(
-  "/route/:id",
+  "/origins/:id",
   requireAdminApiKey,
-  adminController.deleteRoute,
+  adminController.deactivateOrigin,
+);
+
+router.get(
+  "/destinations",
+  requireAdminApiKey,
+  adminController.getAllDestinations,
+);
+
+router.post(
+  "/destinations",
+  requireAdminApiKey,
+  validateRequest(createDestinationSchema),
+  adminController.createDestination,
+);
+
+router.put(
+  "/destinations/:id",
+  requireAdminApiKey,
+  validateRequest(updateDestinationSchema),
+  adminController.updateDestination,
+);
+
+router.delete(
+  "/destinations/:id",
+  requireAdminApiKey,
+  adminController.deactivateDestination,
 );
 
 export default router;

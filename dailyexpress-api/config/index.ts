@@ -47,7 +47,6 @@ const envSchema = z.object({
       z.string().min(1),
     )
     .optional(),
-  RATE_LIMIT_PUBLIC_AUTH: z.coerce.number().int().positive().default(20),
   RATE_LIMIT_UPSTASH_REDIS_REST_URL: optionalUrl(),
   RATE_LIMIT_UPSTASH_REDIS_REST_TOKEN: optionalString(),
 

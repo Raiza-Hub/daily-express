@@ -1,7 +1,7 @@
 import { and, count, eq, gte, inArray, ne, sql } from "drizzle-orm";
 import { createServiceError } from "@shared/utils";
 import { db } from "../db/connection";
-import { booking, passenger, payment, refund, route, trip } from "../db/index";
+import { booking, passenger, payment, refund, trip } from "../db/index";
 import type { PaymentStatus, PaymentTransaction } from "./payment.types";
 import { getRouteServiceTimeZone } from "../utils/db-datetime";
 
@@ -46,20 +46,20 @@ export class PaymentRepository {
   }
 
   async findBookingFareByBookingId(bookingId: string, userId: string) {
-    const row = await db
-      .select({
-        totalAmount: booking.totalAmount,
-        totalFee: booking.totalFee,
-        luggageCount: booking.luggageCount,
-        currency: booking.currency,
-        userId: booking.userId,
-        luggageFee: route.luggage_fee,
-      })
-      .from(booking)
-      .innerJoin(route, eq(route.id, booking.routeId))
-      .where(eq(booking.id, bookingId));
+    const bookingRecord = await db.query.booking.findFirst({
+      where: eq(booking.id, bookingId),
+      columns: {
+        totalAmount: true,
+        totalFee: true,
+        luggageCount: true,
+        currency: true,
+        userId: true,
+      },
+      with: {
+        origin: { columns: { luggageFee: true } },
+      },
+    });
 
-    const bookingRecord = row[0];
     if (!bookingRecord || bookingRecord.userId !== userId) {
       throw createServiceError("Booking not found", 404);
     }
@@ -74,7 +74,7 @@ export class PaymentRepository {
       totalFee: bookingRecord.totalFee ?? 0,
       passengerCount: Number(passengerCount),
       luggageCount: bookingRecord.luggageCount,
-      luggageFee: bookingRecord.luggageFee ?? 0,
+      luggageFee: bookingRecord.origin?.luggageFee ?? 0,
       currency: bookingRecord.currency.toUpperCase(),
     };
   }

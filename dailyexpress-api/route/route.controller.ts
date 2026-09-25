@@ -45,25 +45,16 @@ export const completeTrip: RequestHandler = asyncHandler(
   },
 );
 
-export const searchRoutes: RequestHandler = asyncHandler(
-  async (req: Request, res: Response) => {
-    const { origin } = req.query;
-    const parsedOrigin = typeof origin === "string" ? origin.trim() : "";
-
-    if (!parsedOrigin) {
-      return sendErrorResponse(res, 400, "Origin is required.", {
-        code: "MISSING_ROUTE_SEARCH_ORIGIN",
-      });
-    }
-
-    const routes = await timeAsync(
-      "route.search.service",
-      { origin: parsedOrigin },
-      () => routeService.searchRoutes({ origin: parsedOrigin }),
+export const getOrigins: RequestHandler = asyncHandler(
+  async (_req: Request, res: Response) => {
+    const origins = await timeAsync(
+      "route.origins.service",
+      {},
+      () => routeService.getOrigins(),
     );
     return res
       .status(200)
-      .json(createSuccessResponse(routes, "Routes fetched successfully"));
+      .json(createSuccessResponse(origins, "Origins fetched successfully"));
   },
 );
 
@@ -163,11 +154,10 @@ export const createCheckoutBooking: RequestHandler = asyncHandler(
   async (req: Request, res: Response) => {
     const user = getAuthenticatedUser(req);
     const {
-      routeId,
+      originId,
+      destinationId,
       tripDate,
-      tripType,
-      selectedTime,
-      boardingPoint,
+      departureTime,
       passengers,
     } = req.body;
     if (!user) {
@@ -175,31 +165,20 @@ export const createCheckoutBooking: RequestHandler = asyncHandler(
         code: "AUTHENTICATION_REQUIRED",
       });
     }
-    if (!routeId) {
-      return sendErrorResponse(res, 400, "Route ID is required.", {
-        code: "MISSING_ROUTE_ID",
+    if (!originId) {
+      return sendErrorResponse(res, 400, "Origin ID is required.", {
+        code: "MISSING_ORIGIN_ID",
       });
     }
-    if (tripType !== "departure" && tripType !== "arrival") {
-      return sendErrorResponse(
-        res,
-        400,
-        "tripType must be either 'departure' or 'arrival'.",
-        { code: "INVALID_TRIP_TYPE" },
-      );
+    if (!destinationId) {
+      return sendErrorResponse(res, 400, "Destination ID is required.", {
+        code: "MISSING_DESTINATION_ID",
+      });
     }
-    if (typeof selectedTime !== "string" || selectedTime.trim().length === 0) {
+    if (typeof departureTime !== "string" || departureTime.trim().length === 0) {
       return sendErrorResponse(res, 400, "Selected time is required.", {
         code: "MISSING_SELECTED_TIME",
       });
-    }
-    if (boardingPoint !== "pickup" && boardingPoint !== "dropoff") {
-      return sendErrorResponse(
-        res,
-        400,
-        "boardingPoint must be either 'pickup' or 'dropoff'.",
-        { code: "INVALID_BOARDING_POINT" },
-      );
     }
     if (!Array.isArray(passengers) || passengers.length < 1 || passengers.length > 4) {
       return sendErrorResponse(
@@ -229,6 +208,19 @@ export const createCheckoutBooking: RequestHandler = asyncHandler(
         );
       }
     }
+    const seenEmails = new Set<string>();
+    for (const passenger of passengers) {
+      const normalizedEmail = passenger.email.trim().toLowerCase();
+      if (seenEmails.has(normalizedEmail)) {
+        return sendErrorResponse(
+          res,
+          400,
+          "Each passenger must have a unique email address.",
+          { code: "INVALID_PASSENGERS" },
+        );
+      }
+      seenEmails.add(normalizedEmail);
+    }
     const parsedTripDate = parseDateOnly(tripDate);
     if (!parsedTripDate) {
       return sendErrorResponse(
@@ -243,20 +235,18 @@ export const createCheckoutBooking: RequestHandler = asyncHandler(
       "route.create_checkout_booking.service",
       {
         userId: user.userId,
-        routeId,
+        originId,
+        destinationId,
         tripDate: parsedTripDate,
-        tripType,
-        selectedTime: selectedTime.trim(),
-        boardingPoint,
+        departureTime: departureTime.trim(),
         passengerCount: passengers.length,
       },
       () =>
         routeService.createCheckoutBooking(user.userId, {
-          routeId,
+          originId,
+          destinationId,
           tripDate: parsedTripDate,
-          tripType,
-          selectedTime: selectedTime.trim(),
-          boardingPoint,
+          departureTime: departureTime.trim(),
           passengers: passengers.map((passenger) => ({
             fullName: passenger.fullName.trim(),
             email: passenger.email.trim(),

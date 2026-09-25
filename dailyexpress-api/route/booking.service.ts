@@ -1,43 +1,20 @@
 import type { CreateBooking } from "@shared/types";
 import { createServiceError } from "@shared/utils";
-import { and, desc, eq, getTableColumns, inArray, lt, ne, notInArray, or, sql } from "drizzle-orm";
+import { and, desc, eq, getTableColumns, inArray, lt, notInArray, or, sql } from "drizzle-orm";
 import { db } from "../db/connection";
-import { booking, driver, earning, passenger, route, trip, type BookingRecord, type RouteRecord } from "../db/index";
+import { booking, driver, earning, passenger, origin, destination, trip, type BookingRecord } from "../db/index";
 import { logger } from "../utils/logger";
 import { scheduledAtSql } from "../utils/db-datetime";
 import { HIDDEN_BOOKING_PAYMENT_STATUSES, parseDateKey } from "../utils/route";
 import { timeAsync } from "../utils/timing";
-import { RouteRepository, routeRepository } from "./route.repository";
+import { RouteRepository } from "./route.repository";
 import {
-    normalizePageLimit,
-    decodeCursor,
-    encodeCursor,
-    isValidUserBookingsCursor,
-    VISIBLE_BOOKING_STATUSES,
+  normalizePageLimit,
+  decodeCursor,
+  encodeCursor,
+  isValidUserBookingsCursor,
+  VISIBLE_BOOKING_STATUSES,
 } from "./utils";
-
-
-function resolveTripSlot(
-  routeRecord: RouteRecord,
-  { tripType, selectedTime }: Pick<CreateBooking, "tripType" | "selectedTime">,
-): { departureTime: string; arrivalTime: string } {
-  const isArrival = tripType === "arrival";
-  const picked = isArrival ? routeRecord.arrival_time : routeRecord.departure_time;
-  const paired = isArrival ? routeRecord.departure_time : routeRecord.arrival_time;
-
-  // departure_time / arrival_time are parallel: same index = same daily run.
-  const index = picked.indexOf(selectedTime);
-  if (index === -1) {
-    throw createServiceError(
-      `Selected ${tripType} time is not available for this route`,
-      400,
-    );
-  }
-
-  return isArrival
-    ? { departureTime: paired[index], arrivalTime: selectedTime }
-    : { departureTime: selectedTime, arrivalTime: paired[index] };
-}
 
 export class BookingService {
   constructor(private repo: RouteRepository) {}
@@ -48,17 +25,27 @@ export class BookingService {
       throw createServiceError("Passenger not found", 404);
     }
 
-    const routeRecord = await this.repo.findRouteById(input.routeId);
-    if (!routeRecord) throw createServiceError("Route not found", 404);
-    if (routeRecord.status !== "active") {
+    const originRecord = await this.repo.findOriginById(input.originId);
+    if (!originRecord) throw createServiceError("Origin not found", 404);
+    if (originRecord.status !== "active") {
       throw createServiceError("Route is not open for booking", 400);
     }
 
-    const { departureTime, arrivalTime } =
-      resolveTripSlot(routeRecord, input);
+    const dest = await this.repo.findDestinationById(input.destinationId);
+    if (!dest) throw createServiceError("Destination not found", 404);
+    if (dest.status !== "active") {
+      throw createServiceError("Destination is not available for this origin", 400);
+    }
+    if (!(originRecord.destinationIds || []).includes(dest.id)) {
+      throw createServiceError("Destination is not available for this origin", 400);
+    }
+
+    if (!(originRecord.departureTime || []).includes(input.departureTime)) {
+      throw createServiceError("Selected departure time is not available for this route", 400);
+    }
 
     const tripDate = parseDateKey(input.tripDate);
-    if (await this.repo.hasTripSlotDeparted(tripDate, departureTime)) {
+    if (await this.repo.hasTripSlotDeparted(tripDate, input.departureTime)) {
       throw createServiceError(
         "This trip has already departed and can no longer be booked",
         400,
@@ -70,17 +57,18 @@ export class BookingService {
     ).length;
     const passengerCount = input.passengers.length;
     const totalAmount =
-      routeRecord.price * passengerCount +
-      luggageCount * (routeRecord.luggage_fee ?? 0);
-    const totalFee = (routeRecord.fee ?? 0) * passengerCount;
+      originRecord.price * passengerCount +
+      luggageCount * (originRecord.luggageFee ?? 0);
+    const totalFee = originRecord.fee * passengerCount;
 
     const bookingLookup = () =>
       db.query.booking.findFirst({
         where: and(
-          eq(booking.routeId, routeRecord.id),
+          eq(booking.originId, originRecord.id),
+          eq(booking.destinationId, dest.id),
           eq(booking.tripDate, tripDate),
           eq(booking.userId, userId),
-          eq(booking.departureTime, departureTime),
+          eq(booking.departureTime, input.departureTime),
           inArray(booking.status, ["pending", "confirmed"]),
         ),
       });
@@ -92,9 +80,7 @@ export class BookingService {
         await tx
           .update(booking)
           .set({
-            departureTime,
-            arrivalTime,
-            boardingPoint: input.boardingPoint,
+            departureTime: input.departureTime,
             luggageCount,
             totalAmount,
             totalFee,
@@ -116,19 +102,20 @@ export class BookingService {
 
         logger.info("booking.reused", {
           bookingId: existingBooking.id,
-          routeId: existingBooking.routeId,
+          originId: existingBooking.originId,
+          destinationId: existingBooking.destinationId,
           userId,
         });
         return {
           booking: {
             ...existingBooking,
-            departureTime,
-            arrivalTime,
-            boardingPoint: input.boardingPoint,
+            departureTime: input.departureTime,
             luggageCount,
             totalAmount,
             totalFee,
           },
+          origin: originRecord,
+          destination: dest,
           totalAmount,
           totalFee,
           currency: existingBooking.currency,
@@ -138,11 +125,10 @@ export class BookingService {
       let newBooking: BookingRecord;
       try {
         newBooking = await this.repo.insertBooking(tx, {
-          routeId: routeRecord.id,
+          originId: originRecord.id,
+          destinationId: dest.id,
           tripDate,
-          departureTime,
-          arrivalTime,
-          boardingPoint: input.boardingPoint,
+          departureTime: input.departureTime,
           luggageCount,
           userId,
           totalAmount,
@@ -156,11 +142,14 @@ export class BookingService {
           if (existing) {
             logger.warn("booking.duplicate_prevented", {
               bookingId: existing.id,
-              routeId: existing.routeId,
+              originId: existing.originId,
+              destinationId: existing.destinationId,
               userId,
             });
             return {
               booking: existing,
+              origin: originRecord,
+              destination: dest,
               totalAmount: existing.totalAmount,
               totalFee: existing.totalFee,
               currency: existing.currency,
@@ -183,18 +172,20 @@ export class BookingService {
 
       logger.info("booking.created", {
         bookingId: newBooking.id,
-        routeId: newBooking.routeId,
+        originId: newBooking.originId,
+        destinationId: newBooking.destinationId,
         tripId: newBooking.tripId,
         passengerCount,
         luggageCount,
         departureTime: newBooking.departureTime,
-        boardingPoint: newBooking.boardingPoint,
         totalAmount: newBooking.totalAmount,
         totalFee: newBooking.totalFee,
       });
 
       return {
         booking: newBooking,
+        origin: originRecord,
+        destination: dest,
         totalAmount: newBooking.totalAmount,
         totalFee: newBooking.totalFee,
         currency: newBooking.currency,
@@ -219,134 +210,55 @@ export class BookingService {
           ),
         )
       : undefined;
-    const bookingRows = await timeAsync(
-      "route.get_user_bookings.query_bookings",
-      { userId, limit: parsedLimit, hasCursor: Boolean(cursor) },
-      () =>
-        db
-          .select({
-            booking: getTableColumns(booking),
-            trip: getTableColumns(trip),
-            route: getTableColumns(route),
-            driver: getTableColumns(driver),
-            hasDeparted: sql<boolean>`${scheduledAtSql(trip.date, booking.departureTime)} <= now()`,
-          })
-          .from(booking)
-          .innerJoin(route, eq(booking.routeId, route.id))
-          .leftJoin(trip, eq(booking.tripId, trip.id))
-          .leftJoin(driver, eq(trip.driverId, driver.id))
-          .where(
-            and(
-              visibleBookingConditions,
-              or(
-                ne(trip.status, "cancelled"),
-                inArray(booking.paymentStatus, ["successful", "refund_pending", "refunded", "refund_failed"]),
-              ),
-              cursorCondition,
-            ),
-          )
-          .orderBy(desc(booking.tripDate), desc(booking.id))
-          .limit(parsedLimit + 1),
-    );
-    const pageBookingRows = bookingRows.slice(0, parsedLimit);
-    const nextBookingRow = bookingRows[parsedLimit];
-    const lastBookingRow = pageBookingRows[pageBookingRows.length - 1];
 
-    const bookings = pageBookingRows.map((row) => {
-      let driverStatus: "assigned" | "overdue" | "awaiting" | "unassigned";
-      let displayMessage: string | null;
-      let driverInfo: Record<string, unknown> | null;
+    const baseQuery = db
+      .select({
+        booking: getTableColumns(booking),
+        trip: trip,
+        origin: origin,
+        destination: destination,
+        driver: driver,
+        earning: earning,
+        hasDeparted: sql<boolean>`${scheduledAtSql(trip.date, trip.departureTime)} <= now()`,
+      })
+      .from(booking)
+      .leftJoin(trip, eq(trip.id, booking.tripId))
+      .leftJoin(origin, eq(origin.id, booking.originId))
+      .leftJoin(destination, eq(destination.id, booking.destinationId))
+      .leftJoin(driver, eq(driver.id, trip.driverId))
+      .leftJoin(earning, eq(earning.tripId, trip.id))
+      .where(cursorCondition ? and(visibleBookingConditions, cursorCondition) : visibleBookingConditions)
+      .orderBy(desc(booking.tripDate), desc(booking.id))
+      .limit(parsedLimit + 1);
 
-      if (!row.trip) {
-        driverStatus = "unassigned";
-        displayMessage = "Booking confirmed. Assigning trip shortly.";
-        driverInfo = null;
-      } else {
-        const hasDeparted = Boolean(row.hasDeparted);
+    const rows = await baseQuery;
 
-        if (row.driver) {
-          driverStatus = "assigned";
-          displayMessage = null;
-          driverInfo = {
-            source: "platform",
-            firstName: row.driver.firstName,
-            lastName: row.driver.lastName,
-            phoneNumber: row.driver.phone,
-            profilePictureUrl: row.driver.profile_pic ?? null,
-            country: row.driver.country,
-            state: row.driver.state,
-          };
-        } else if (hasDeparted) {
-          driverStatus = "overdue";
-          displayMessage =
-            "We weren't able to confirm a driver in time for departure. We'll continue searching for the next 30 minutes. If unsuccessful, your payment will be refunded automatically.";
-          driverInfo = null;
-        } else {
-          driverStatus = "awaiting";
-          displayMessage =
-            "We're matching you with a nearby driver. This usually takes a few minutes, and we'll email you as soon as a driver is confirmed.";
-          driverInfo = null;
-        }
-      }
+    const hasMore = rows.length > parsedLimit;
+    const sliced = hasMore ? rows.slice(0, parsedLimit) : rows;
+    const last = sliced[sliced.length - 1];
 
-      return {
-        id: row.booking.id,
-        totalAmount: row.booking.totalAmount,
-        totalFee: row.booking.totalFee ?? 0,
-        currency: row.booking.currency,
-        status: row.booking.status,
-        paymentReference: row.booking.paymentReference ?? null,
-        paymentStatus: row.booking.paymentStatus,
-        createdAt: row.booking.createdAt,
-        updatedAt: row.booking.updatedAt,
-        tripId: row.booking.tripId,
-        driverStatus,
-        displayMessage,
-        driverInfo,
-        trip: row.trip
-          ? {
-              id: row.trip.id,
-              date: row.trip.date,
-              status: row.trip.status,
-              bookedSeats: row.trip.bookedSeats,
-              capacity: row.trip.capacity,
-              availableSeats: Math.max(
-                row.trip.capacity - row.trip.bookedSeats,
-                0,
-              ),
-              route: {
-                id: row.route.id,
-                origin_title: row.route.origin_title,
-                origin_locality: row.route.origin_locality,
-                origin_label: row.route.origin_label,
-                destination_title: row.route.destination_title,
-                destination_locality: row.route.destination_locality,
-                destination_label: row.route.destination_label,
-                train_station_title: row.route.train_station_title,
-                train_station_locality: row.route.train_station_locality,
-                train_station_label: row.route.train_station_label,
-                pickup_point: row.route.pickup_point,
-                dropoff_point: row.route.dropoff_point,
-                price: row.booking.totalAmount,
-                departure_time: row.booking.departureTime,
-                arrival_time: row.booking.arrivalTime,
-                boardingPoint: row.booking.boardingPoint,
-                luggageCount: row.booking.luggageCount,
-                luggage_fee: row.route.luggage_fee,
-              },
-            }
-          : null,
-      };
-    });
+    const nextCursor = hasMore && last
+      ? encodeCursor({
+          tripDate: last.booking.tripDate,
+          id: last.booking.id,
+        })
+      : undefined;
 
     return {
-      bookings,
-      nextCursor: nextBookingRow && lastBookingRow
-        ? encodeCursor({
-            tripDate: lastBookingRow.booking.tripDate,
-            id: lastBookingRow.booking.id,
-          })
-        : null,
+      bookings: sliced.map((row) => ({
+        ...row.booking,
+        trip: row.trip
+          ? {
+              ...row.trip,
+              origin: row.origin,
+              destination: row.destination,
+              driver: row.driver,
+              earnings: row.earning?.amount ?? 0,
+            }
+          : null,
+        hasDeparted: Boolean(row.hasDeparted),
+      })),
+      nextCursor,
     };
   }
 
@@ -354,78 +266,58 @@ export class BookingService {
     userId: string,
     paymentReference: string,
     lastName: string,
-  ): Promise<BookingRecord | null> {
+  ) {
     const normalizedLastName = lastName.trim().toLowerCase();
-    return this.repo.findBookingByPaymentRef(
+    const bookingRecord = await this.repo.findBookingByPaymentRef(
       userId,
       paymentReference,
       normalizedLastName,
     );
-  }
-
-  async getTripBookings(user: { userId: string }, tripId: string) {
-    const driverRecord = await this.repo.findDriverByUserId(user.userId);
-    if (!driverRecord) {
-      throw createServiceError("Driver not found", 404);
-    }
-
-    const tripRecord = await this.repo.findTripWithRoute(tripId);
-    if (!tripRecord || tripRecord.trip.driverId !== driverRecord.id) {
-      throw createServiceError("Trip not found", 404);
-    }
-
-    const passengerRows = await db
-      .select({
-        fullName: passenger.fullName,
-        email: passenger.email,
-        phone: passenger.phone,
-        carriesLuggage: passenger.carriesLuggage,
-      })
-      .from(passenger)
-      .innerJoin(booking, eq(passenger.bookingId, booking.id))
-      .where(
-        and(
-          eq(booking.tripId, tripId),
-          inArray(booking.status, [...VISIBLE_BOOKING_STATUSES]),
-          notInArray(booking.paymentStatus, HIDDEN_BOOKING_PAYMENT_STATUSES),
-        ),
-      );
-
-    const earningRecord = await db.query.earning.findFirst({
-      where: eq(earning.tripId, tripId),
-    });
-
-    const tripRow = tripRecord.trip;
-    const routeRow = tripRecord.route;
-
+    if (!bookingRecord) return null;
+    const tripDetails = bookingRecord.tripId
+      ? await db
+          .select({
+            trip: trip,
+            origin: origin,
+            destination: destination,
+            driver: driver,
+            earning: earning,
+            hasDeparted: sql<boolean>`${scheduledAtSql(trip.date, trip.departureTime)} <= now()`,
+          })
+          .from(trip)
+          .leftJoin(origin, eq(origin.id, trip.originId))
+          .leftJoin(destination, eq(destination.id, trip.destinationId))
+          .leftJoin(driver, eq(driver.id, trip.driverId))
+          .leftJoin(earning, eq(earning.tripId, trip.id))
+          .where(eq(trip.id, bookingRecord.tripId))
+      : [];
+    const row = tripDetails[0];
     return {
-      trip: {
-        id: tripRow.id,
-        date: tripRow.date,
-        status: tripRow.status,
-        departureTime: tripRow.departureTime,
-        arrivalTime: tripRow.arrivalTime,
-        bookedSeats: tripRow.bookedSeats,
-        capacity: tripRow.capacity,
-        origin_label: routeRow.origin_label,
-        origin_title: routeRow.origin_title,
-        destination_title: routeRow.destination_title,
-        train_station_title: routeRow.train_station_title,
-        pickup_point: routeRow.pickup_point,
-        dropoff_point: routeRow.dropoff_point,
-        price: routeRow.price,
-      },
-      passengers: passengerRows,
-      earning: earningRecord
+      ...bookingRecord,
+      trip: row
         ? {
-            amount: earningRecord.amount,
-            currency: earningRecord.currency,
-            status: earningRecord.status,
-            driverId: earningRecord.driverId,
+            ...row.trip,
+            origin: row.origin,
+            destination: row.destination,
+            driver: row.driver,
+            earnings: row.earning?.amount ?? 0,
           }
         : null,
+      hasDeparted: row ? Boolean(row.hasDeparted) : false,
     };
   }
-}
 
-export const bookingService = new BookingService(routeRepository);
+  async getTripBookings(user: any, tripId: string) {
+    const driverId = await (await import("./utils")).resolveDriverId(user);
+    const t = await this.repo.findTripWithOriginDestination(tripId);
+    if (!t) throw new Error("Trip not found");
+    if (t.trip.driverId !== driverId) throw new Error("Forbidden");
+    const bookings = await db
+      .select({ booking: getTableColumns(booking) })
+      .from(booking)
+      .where(eq(booking.tripId, tripId))
+      .orderBy(desc(booking.createdAt));
+    return bookings.map((b) => ({ ...b.booking }));
+  }
+}
+export const bookingService = new BookingService(new RouteRepository());

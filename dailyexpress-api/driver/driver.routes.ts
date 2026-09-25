@@ -5,6 +5,7 @@ import { requireActiveDriver } from "../middleware/requireActiveDriver";
 import { createTokenBucketLimiter } from "../middleware/tokenBucket";
 import { getConfig } from "../config/index";
 import { validateRequest } from "../middleware/requestValidation";
+import { authenticateSession } from "../middleware/auth";
 import {
   createDriverSchema,
   updateDriverSchema,
@@ -26,6 +27,7 @@ const router: Router = Router();
 
 router.get(
   "/profile",
+  authenticateSession,
   authenticateVerifiedGatewayRequest,
   requireActiveDriver,
   driverController.getDriver,
@@ -33,6 +35,7 @@ router.get(
 
 router.post(
   "/profile/presign",
+  authenticateSession,
   authenticateVerifiedGatewayRequest,
   requireActiveDriver,
   driverActionLimiter,
@@ -41,6 +44,7 @@ router.post(
 
 router.post(
   "/profile/confirm",
+  authenticateSession,
   authenticateVerifiedGatewayRequest,
   requireActiveDriver,
   driverActionLimiter,
@@ -49,6 +53,7 @@ router.post(
 
 router.post(
   "/create",
+  authenticateSession,
   authenticateVerifiedGatewayRequest,
   driverActionLimiter,
   validateRequest(createDriverSchema),
@@ -57,6 +62,7 @@ router.post(
 
 router.post(
   "/verify/bank",
+  authenticateSession,
   authenticateVerifiedGatewayRequest,
   driverActionLimiter,
   validateRequest(verifyBankSchema),
@@ -65,6 +71,7 @@ router.post(
 
 router.post(
   "/verify/kyc",
+  authenticateSession,
   authenticateVerifiedGatewayRequest,
   driverActionLimiter,
   validateRequest(verifyKycSchema),
@@ -73,6 +80,7 @@ router.post(
 
 router.put(
   "/update",
+  authenticateSession,
   authenticateVerifiedGatewayRequest,
   requireActiveDriver,
   driverActionLimiter,
@@ -82,6 +90,7 @@ router.put(
 
 router.delete(
   "/deactivate",
+  authenticateSession,
   authenticateVerifiedGatewayRequest,
   requireActiveDriver,
   driverActionLimiter,

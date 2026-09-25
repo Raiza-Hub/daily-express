@@ -5,7 +5,7 @@ import { db } from "../db/connection";
 import { booking, trip } from "../db/index";
 import { logger } from "../utils/logger";
 import { HIDDEN_BOOKING_PAYMENT_STATUSES } from "../utils/route";
-import { RouteRepository, routeRepository } from "./route.repository";
+import { RouteRepository } from "./route.repository";
 import { payoutService as sharedPayoutService } from "../payout/payout.service";
 import { resolveDriverId } from "./utils";
 
@@ -16,7 +16,7 @@ export class TripService {
 
   async completeTrip(user: JWTPayload, tripId: string) {
     const driverId = await resolveDriverId(user);
-    const tripWithRoute = await this.repo.findTripWithRoute(tripId);
+    const tripWithRoute = await this.repo.findTripWithOriginDestination(tripId);
 
     if (!tripWithRoute) {
       throw createServiceError("Trip not found", 404);
@@ -31,9 +31,9 @@ export class TripService {
       throw createServiceError("Cancelled trips cannot be completed", 400);
     }
 
-    if (!tripWithRoute.hasArrived) {
+    if (!tripWithRoute.hasDeparted) {
       throw createServiceError(
-        "Trip cannot be completed before the scheduled arrival time",
+        "Trip cannot be completed before the scheduled departure time",
         400,
       );
     }
@@ -89,4 +89,4 @@ export class TripService {
   }
 }
 
-export const tripService = new TripService(routeRepository);
+export const tripService = new TripService(new RouteRepository());

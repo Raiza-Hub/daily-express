@@ -1,39 +1,31 @@
-import type { Booking, CreateBooking, CreateRoute, JWTPayload, Route, updateRouteRequest } from "@shared/types";
+import type { Booking, CreateBooking, JWTPayload, OriginDetails } from "@shared/types";
 import { BookingService } from "./booking.service";
-import { RouteCrudService } from "./route-crud.service";
 import { RouteRepository } from "./route.repository";
-import { SearchService } from "./search.service";
 import { TripService } from "./trip.service";
 
 export class RouteService {
-  private readonly crud: RouteCrudService;
   private readonly booking: BookingService;
   private readonly trip: TripService;
-  private readonly search: SearchService;
   private readonly repo: RouteRepository;
 
   constructor() {
     this.repo = new RouteRepository();
-    this.crud = new RouteCrudService(this.repo);
     this.booking = new BookingService(this.repo);
     this.trip = new TripService(this.repo);
-    this.search = new SearchService();
   }
 
-  async createRoute(routeData: CreateRoute): Promise<Route> {
-    return this.crud.createRoute(routeData);
-  }
-
-  async getAllRoutes(): Promise<Route[]> {
-    return this.crud.getAllRoutes();
-  }
-
-  async updateRoute(routeId: string, routeData: updateRouteRequest): Promise<Route> {
-    return this.crud.updateRoute(routeId, routeData);
-  }
-
-  async deleteRoute(routeId: string): Promise<void> {
-    return this.crud.deleteRoute(routeId);
+  async getOrigins(): Promise<OriginDetails[]> {
+    const rows = await this.repo.findActiveOrigins();
+    return rows.map((o) => ({
+      id: o.id,
+      title: o.title,
+      meetingPoint: o.meetingPoint,
+      departureTime: o.departureTime,
+      price: o.price,
+      fee: o.fee,
+      luggageFee: o.luggageFee,
+      destinations: o.destinations.map((d) => ({ id: d.id, title: d.title })),
+    }));
   }
 
   async completeTrip(user: JWTPayload, tripId: string) {
@@ -60,11 +52,6 @@ export class RouteService {
     return this.booking.getTripBookings(user, tripId);
   }
 
-  async searchRoutes(params: {
-    origin: string;
-  }): Promise<Route[]> {
-    return this.search.searchRoutes(params);
-  }
 }
 
 export const routeService = new RouteService();

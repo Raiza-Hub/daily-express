@@ -7,17 +7,17 @@ import {
 } from "@tanstack/react-query";
 import { routeApi } from "../api";
 import type {
-  Route,
   Trip,
   ApiResponse,
-  SearchRoutesRequest,
   DriverInfoResponse,
+  Origin,
+  OriginDetails,
+  Destination,
 } from "@shared/types";
 import { handleApiError } from "../utils";
 
 export interface UserBookingWithTrip {
   id: string;
-  seatNumber: number;
   status: string;
   paymentReference: string | null;
   paymentStatus: string;
@@ -37,26 +37,10 @@ export interface UserBookingWithTrip {
     bookedSeats: number;
     capacity: number;
     availableSeats: number;
-    route: {
-      id: string;
-      origin_title: string;
-      origin_locality: string;
-      origin_label: string;
-      destination_title: string | null;
-      destination_locality: string | null;
-      destination_label: string | null;
-      train_station_title: string | null;
-      train_station_locality: string | null;
-      train_station_label: string | null;
-      pickup_point: string;
-      dropoff_point: string;
-      price: number;
-      departure_time: string;
-      arrival_time: string;
-      boardingPoint: "pickup" | "dropoff";
-      luggageCount: number;
-      luggage_fee: number;
-    };
+    origin: Origin;
+    destination: Destination;
+    driver?: any;
+    earnings?: number;
   } | null;
 }
 
@@ -79,37 +63,22 @@ export const completeTripFn = async ({ id }: { id: string }): Promise<Trip> => {
   }
 };
 
-export const searchRoutesFn = async (
-  params: SearchRoutesRequest,
-): Promise<Route[]> => {
+export const getOriginsFn = async (): Promise<OriginDetails[]> => {
   try {
-    const searchParams = new URLSearchParams();
-    if (params.origin) searchParams.set("origin", params.origin);
-
-    const response = await routeApi.get<ApiResponse<Route[]>>(
-      `/search?${searchParams.toString()}`,
-    );
+    const response = await routeApi.get<ApiResponse<OriginDetails[]>>("/origins");
     if (!response.data.success || !response.data.data) {
-      throw new Error(response.data.error || "Failed to search routes");
+      throw new Error(response.data.error || "Failed to get origins");
     }
     return response.data.data;
   } catch (err) {
-    throw handleApiError(err, "Failed to search routes") ;
+    throw handleApiError(err, "Failed to get origins");
   }
 };
 
-export const useSearchRoutes = ({
-  params,
-  enabled,
-}: {
-  params: SearchRoutesRequest;
-  enabled: boolean;
-}) => {
+export const useGetOrigins = () => {
   return useQuery({
-    queryKey: ["search-routes", params.origin],
-    queryFn: () => searchRoutesFn(params),
-    placeholderData: keepPreviousData,
-    enabled,
+    queryKey: ["origins"],
+    queryFn: getOriginsFn,
   });
 };
 
@@ -185,46 +154,30 @@ export const useCompleteTrip = (options?: {
   });
 };
 
-interface TripBookingPassenger {
-  fullName: string;
-  email: string;
-  phone: string;
-  carriesLuggage: boolean;
-}
-
-interface TripBookingEarning {
-  amount: number;
+type TripBookingsResponse = Array<{
+  id: string;
+  originId: string;
+  destinationId: string;
+  tripDate: string;
+  departureTime: string;
+  luggageCount: number;
+  tripId: string | null;
+  userId: string;
+  totalAmount: number;
+  totalFee: number;
   currency: string;
   status: string;
-  driverId: string | null;
-}
-
-interface TripBookingDetails {
-  trip: {
-    id: string;
-    date: string;
-    status: string;
-    departureTime: string;
-    arrivalTime: string;
-    bookedSeats: number;
-    capacity: number;
-    origin_label: string;
-    origin_title: string;
-    destination_title: string | null;
-    train_station_title: string | null;
-    pickup_point: string;
-    dropoff_point: string;
-    price: number;
-  };
-  passengers: TripBookingPassenger[];
-  earning: TripBookingEarning | null;
-}
+  paymentReference: string | null;
+  paymentStatus: string;
+  createdAt: string;
+  updatedAt: string;
+}>;
 
 export const getTripBookingsFn = async (
   tripId: string,
-): Promise<TripBookingDetails> => {
+): Promise<TripBookingsResponse> => {
   try {
-    const response = await routeApi.get<ApiResponse<TripBookingDetails>>(
+    const response = await routeApi.get<ApiResponse<TripBookingsResponse>>(
       `/driver/trip/${tripId}/bookings`,
     );
     if (!response.data.success || !response.data.data) {

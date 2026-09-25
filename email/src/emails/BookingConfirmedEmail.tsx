@@ -17,10 +17,9 @@ import { getEmailLogoSrc } from "../assets";
 export interface BookingConfirmedEmailProps {
   frontendUrl: string;
   passengerName: string | null;
-  paymentReference: string;
   pricePaid: string;
-  pickupTitle: string;
-  dropoffTitle: string;
+  origin: string;
+  destination: string;
   tripDate: string | Date;
   departureTime: string | Date;
   timeZone: string;
@@ -29,16 +28,15 @@ export interface BookingConfirmedEmailProps {
 
 const BookingConfirmedEmail = ({
   passengerName,
-  paymentReference,
   pricePaid,
-  pickupTitle,
-  dropoffTitle,
+  origin,
+  destination,
   tripDate,
   departureTime,
   timeZone,
   meetingPoint,
 }: BookingConfirmedEmailProps) => {
-  const previewText = `Your booking to ${dropoffTitle} is confirmed!`;
+  const previewText = `Your booking to ${destination} is confirmed!`;
   const formattedTripDate = formatTripDate(tripDate, timeZone);
   const formattedDepartureTime = formatTripTime(departureTime, timeZone);
 
@@ -75,11 +73,11 @@ const BookingConfirmedEmail = ({
             <Section style={infoTable}>
               <Row style={row}>
                 <Column style={labelCol}>
-                  <Text style={label}>Route:</Text>
+                  <Text style={label}>Trip:</Text>
                 </Column>
                 <Column style={valueCol}>
                   <Text style={value}>
-                    {pickupTitle} to {dropoffTitle}
+                    {origin} to {destination}
                   </Text>
                 </Column>
               </Row>
@@ -89,14 +87,6 @@ const BookingConfirmedEmail = ({
                 </Column>
                 <Column style={valueCol}>
                   <Text style={value}>{formattedDepartureTime}</Text>
-                </Column>
-              </Row>
-              <Row style={row}>
-                <Column style={labelCol}>
-                  <Text style={label}>Booking Reference:</Text>
-                </Column>
-                <Column style={valueCol}>
-                  <Text style={value}>{paymentReference}</Text>
                 </Column>
               </Row>
             </Section>
@@ -338,13 +328,13 @@ const footerText = {
 BookingConfirmedEmail.PreviewProps = {
   frontendUrl: "",
   passengerName: "Ada Okafor",
-  paymentReference: "BK-92A7F4D1",
   pricePaid: "NGN 12,500.00",
-  pickupTitle: "Yaba",
-  dropoffTitle: "Ibadan",
+  origin: "Yaba",
+  destination: "Ibadan",
   tripDate: "Saturday, April 25, 2026",
-  departureTime: "08:30 AM",
-  meetingPoint: "Daily Express Terminal, Yaba",
+  departureTime: "08:00 AM",
+  meetingPoint: "Yaba Terminal",
+  timeZone: "Africa/Lagos",
 } as BookingConfirmedEmailProps;
 
 export default BookingConfirmedEmail;

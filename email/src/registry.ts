@@ -39,7 +39,7 @@ export function getEmailSubject(
 
   switch (templateName) {
     case "BookingConfirmedEmail":
-      return `Booking Confirmed - ${props.pickupTitle} to ${props.dropoffTitle}`;
+      return `Booking Confirmed - ${props.origin} to ${props.destination}`;
     case "RefundFailedEmail":
       return `Refund could not be completed yet`;
     case "RefundSuccessfulEmail":

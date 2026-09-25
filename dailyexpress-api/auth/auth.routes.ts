@@ -5,6 +5,7 @@ import {
 } from "../middleware/gatewayAuth";
 import { validateRequest } from "../middleware/requestValidation";
 import { completeOnboardingSchema, updateProfileSchema } from "./validation";
+import { authenticateSession } from "../middleware/auth";
 
 const router: Router = Router();
 
@@ -20,24 +21,28 @@ router.get(
 
 router.get(
   "/logout",
+  authenticateSession,
   authenticateVerifiedGatewayRequest,
   authcontroller.logout,
 );
 
 router.get(
   "/profile",
+  authenticateSession,
   authenticateVerifiedGatewayRequest,
   authcontroller.getProfile,
 );
 
 router.delete(
   "/delete-account",
+  authenticateSession,
   authenticateVerifiedGatewayRequest,
   authcontroller.deleteAccount,
 );
 
 router.put(
   "/update-profile",
+  authenticateSession,
   authenticateVerifiedGatewayRequest,
   validateRequest(updateProfileSchema),
   authcontroller.updateProfile,
@@ -45,6 +50,7 @@ router.put(
 
 router.patch(
   "/profile/complete",
+  authenticateSession,
   authenticateVerifiedGatewayRequest,
   validateRequest(completeOnboardingSchema),
   authcontroller.completeOnboarding,
