@@ -9,21 +9,6 @@ interface PassengerListItemProps {
   onRemove?: (id: string) => void;
 }
 
-function maskPart(part: string) {
-  if (part.length <= 1) return part;
-  if (part.length === 2) return `${part[0]}*`;
-  return `${part[0]}${"*".repeat(part.length - 2)}${part[part.length - 1]}`;
-}
-
-function maskEmailAddress(email: string) {
-  const [local = "", ...domainParts] = email.split("@");
-  if (!local) return email;
-  const [username = "", ...tldParts] = (domainParts.join("@") || "").split(".");
-  if (!username) return email;
-  const tld = tldParts.length > 0 ? `.${tldParts.join(".")}` : "";
-  return `${maskPart(local)}@${maskPart(username)}${tld}`;
-}
-
 function PassengerListItem({
   passenger,
   onEdit,
@@ -36,7 +21,7 @@ function PassengerListItem({
           {passenger.fullName}
         </p>
         <p className="truncate text-sm text-muted-foreground">
-          {maskEmailAddress(passenger.email)}
+          {passenger.email}
         </p>
       </div>
       <div className="flex shrink-0 items-center gap-2">

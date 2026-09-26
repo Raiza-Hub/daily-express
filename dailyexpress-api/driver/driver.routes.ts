@@ -29,7 +29,6 @@ router.get(
   "/profile",
   authenticateSession,
   authenticateVerifiedGatewayRequest,
-  requireActiveDriver,
   driverController.getDriver,
 );
 

@@ -273,7 +273,7 @@ const DriverCard = () => {
     }
 
     if (isError || !data) {
-        return <DriverProfileUnavailable error={error} />;
+        return <DriverProfileUnavailable error={error} notFound={!isError} />;
     }
 
     const driver = data;

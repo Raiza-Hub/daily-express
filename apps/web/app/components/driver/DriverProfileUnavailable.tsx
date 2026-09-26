@@ -4,8 +4,8 @@ import Link from "next/link";
 import { getApiErrorMessage, isApiError } from "@repo/api";
 import { Button } from "~/components/ui/button";
 
-const DriverProfileUnavailable = ({ error }: { error: unknown }) => {
-    const isNotFound = isApiError(error) && error.code === "DRIVER_NOT_FOUND";
+const DriverProfileUnavailable = ({ error, notFound }: { error: unknown; notFound?: boolean }) => {
+    const isNotFound = notFound ?? (isApiError(error) && error.code === "DRIVER_NOT_FOUND");
 
     return (
         <div className="w-full min-w-0 max-w-3xl">

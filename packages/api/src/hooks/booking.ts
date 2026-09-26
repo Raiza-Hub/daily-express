@@ -75,10 +75,11 @@ export const getOriginsFn = async (): Promise<OriginDetails[]> => {
   }
 };
 
-export const useGetOrigins = () => {
+export const useGetOrigins = (options?: { initialData?: OriginDetails[] }) => {
   return useQuery({
     queryKey: ["origins"],
     queryFn: getOriginsFn,
+    initialData: options?.initialData,
   });
 };
 

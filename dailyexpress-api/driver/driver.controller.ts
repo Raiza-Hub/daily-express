@@ -32,6 +32,12 @@ export const getDriver: RequestHandler = asyncHandler(
         );
     }
 
+    if (driver.isActive === false) {
+      return sendErrorResponse(res, 403, "Your account has been deactivated. Please contact support.", {
+        code: "DRIVER_DEACTIVATED",
+      });
+    }
+
     return res
       .status(200)
       .json(
