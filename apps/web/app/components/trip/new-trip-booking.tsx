@@ -1,12 +1,17 @@
 "use client";
 
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { parseAsString, useQueryStates } from "nuqs";
 import { ChevronDown, Loader2, Plus } from "lucide-react";
 import { format } from "date-fns";
 import { cn } from "@repo/ui/lib/utils";
 import { Button } from "~/components/ui/button";
-import { useGetOrigins, useCreateTripCheckout, useGetMe } from "@repo/api";
+import {
+  getApiErrorMessage,
+  useCreateTripCheckout,
+  useGetMe,
+  useGetOrigins,
+} from "@repo/api";
 import type { OriginDetails, PassengerInput } from "@shared/types";
 import {
   PassengerDrawer,
@@ -18,11 +23,15 @@ import {
   getUpcomingDateSlots,
   formatTripTime,
 } from "~/lib/trip";
+import { tripTitle } from "~/lib/trip-title";
 import NewTripBookingSkeleton from "./new-trip-booking-skeleton";
-import TripNotFound from "./trip-not-found";
 import SectionLabel from "./section-label";
 
-export default function NewTripBooking() {
+export default function NewTripBooking({
+  initialOrigins,
+}: {
+  initialOrigins: OriginDetails[];
+}) {
   const [selection, setSelection] = useQueryStates(
     {
       origin: parseAsString.withDefault(""),
@@ -36,7 +45,11 @@ export default function NewTripBooking() {
   const [drawerOpen, setDrawerOpen] = useState(false);
   const [editingId, setEditingId] = useState<string | null>(null);
 
-  const { data: origins = [], isPending: isOriginsPending } = useGetOrigins();
+  const {
+    data: origins = [],
+    isPending: isOriginsPending,
+    error: originsError,
+  } = useGetOrigins({ initialData: initialOrigins });
   const { data: user, isPending: isUserPending } = useGetMe();
   const createCheckout = useCreateTripCheckout();
 
@@ -62,11 +75,16 @@ export default function NewTripBooking() {
   const originTitle = selection.origin;
   const destinationTitle = selection.destination;
 
+  useEffect(() => {
+    document.title = tripTitle(originTitle);
+  }, [originTitle]);
+
   const dateSlots = getUpcomingDateSlots(3);
-  const effectiveDateKey =
-    (dateSlots.some((slot) => slot.dateKey === selection.date)
-      ? selection.date
-      : "") || dateSlots[0]?.dateKey || "";
+  const effectiveDateKey = dateSlots.some(
+    (slot) => slot.dateKey === selection.date,
+  )
+    ? selection.date
+    : "";
 
   const selectedOriginData: OriginDetails | undefined = origins.find(
     (origin: OriginDetails) => origin.title === originTitle,
@@ -115,6 +133,7 @@ export default function NewTripBooking() {
   const canConfirm =
     selectedOrigin !== "" &&
     selectedDestinationId !== "" &&
+    effectiveDateKey !== "" &&
     selectedTime !== "" &&
     passengers.length >= 1 &&
     !drawerOpen &&
@@ -166,10 +185,6 @@ export default function NewTripBooking() {
 
   if (isOriginsPending || isUserPending) {
     return <NewTripBookingSkeleton />;
-  }
-
-  if (originTitle !== "" ? !selectedOriginData : origins.length === 0) {
-    return <TripNotFound />;
   }
 
   return (
@@ -237,6 +252,11 @@ export default function NewTripBooking() {
           </select>
           <ChevronDown className="pointer-events-none absolute top-1/2 right-5 h-4 w-4 -translate-y-1/2 text-neutral-500" />
         </div>
+        {originsError && (
+          <p role="alert" className="mt-2 text-sm text-destructive">
+            {getApiErrorMessage(originsError, "Unable to load available trips.")}
+          </p>
+        )}
       </div>
 
       <div className="max-w-md">

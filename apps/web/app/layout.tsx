@@ -10,7 +10,7 @@ const onest = Onest({
 });
 
 export const metadata: Metadata = {
-  title: "Daily Express",
+  title: { template: "%s | Daily Express", default: "Daily Express" },
   description: "Book intercity trips",
 };
 
