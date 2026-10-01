@@ -1,15 +1,10 @@
 "use client";
 
-import { useEffect, useRef, useState } from "react";
-import Image from "next/image";
+import { useState } from "react";
 import { BadgeCheck } from "lucide-react";
 import {
-    confirmProfileUploadFn,
     getApiErrorMessage,
-    presignProfileUploadFn,
-    uploadToR2Fn,
     useGetDriver,
-    useQueryClient,
     useUpdateDriver,
 } from "@repo/api";
 import { DriverEditSchema, zodFieldErrors } from "@repo/types";
@@ -30,8 +25,8 @@ import { NIGERIAN_STATES } from "~/lib/driverData";
 import { formatPhoneDisplay, PHONE_PLACEHOLDER, toE164 } from "~/lib/phone";
 import { createDraftUpdater } from "~/lib/draftFields";
 import { KORA_SUPPORTED_COUNTRIES } from "@shared/constants";
-import type { Driver } from "@shared/types";
 import { DriverProfileUnavailable } from "./DriverProfileUnavailable";
+import { DriverPhotoRow } from "./DriverPhotoRow";
 
 import bankNames from "../../../bank-names.json";
 
@@ -76,49 +71,6 @@ function KycStatus({ status, kycType }: { status: "active" | "failed" | null; ky
 
 const DriverCard = () => {
     const { data, isPending, isError, error } = useGetDriver();
-    const queryClient = useQueryClient();
-
-    // --- Photo upload (presign → R2 → confirm) ---
-
-    const fileInputRef = useRef<HTMLInputElement>(null);
-    const [photoPreview, setPhotoPreview] = useState<string | null>(null);
-    const [isUploading, setIsUploading] = useState(false);
-    const photoSrc = photoPreview ?? data?.profile_pic ?? null;
-
-    useEffect(() => {
-        return () => {
-            if (photoPreview) URL.revokeObjectURL(photoPreview);
-        };
-    }, [photoPreview]);
-
-    const handlePhotoChange = async (event: React.ChangeEvent<HTMLInputElement>) => {
-        const file = event.target.files?.[0];
-        event.target.value = "";
-        if (!file) return;
-
-        setPhotoPreview(URL.createObjectURL(file));
-        setIsUploading(true);
-        try {
-            const { uploadUrl, key } = await presignProfileUploadFn(
-                file.type || "image/jpeg",
-                file.size,
-            );
-            await uploadToR2Fn(uploadUrl, file);
-            const { profile_pic } = await confirmProfileUploadFn(key);
-            queryClient.setQueryData<Driver | null>(["driver"], (current) =>
-                current ? { ...current, profile_pic } : current,
-            );
-            setPhotoPreview(null);
-        } catch {
-            setPhotoPreview(null);
-        } finally {
-            setIsUploading(false);
-        }
-    };
-
-    const handlePhotoDelete = () => {
-        setPhotoPreview(null);
-    };
 
     // --- Personal details ---
 
@@ -282,51 +234,11 @@ const DriverCard = () => {
 
 return (
         <div className="w-full min-w-0 max-w-3xl">
-            <Row
-                label="Photo"
-                required
-                description="This will be displayed on your driver profile."
-            >
-                {photoSrc ? (
-                    <Image
-                        src={photoSrc}
-                        alt={name}
-                        width={80}
-                        height={80}
-                        unoptimized={photoPreview !== null}
-                        className="h-20 w-20 shrink-0 rounded-full border border-border object-cover"
-                    />
-                ) : (
-                    <span className="flex h-20 w-20 shrink-0 items-center justify-center rounded-full bg-muted text-lg font-semibold text-muted-foreground">
-                        {initials}
-                    </span>
-                )}
-                <span className="ml-2 flex items-center gap-2">
-                    <button
-                        type="button"
-                        onClick={handlePhotoDelete}
-                        disabled={!photoSrc || isUploading}
-                        className={`cursor-pointer text-sm disabled:cursor-default disabled:opacity-40 ${
-                            photoSrc
-                                ? "text-destructive hover:text-destructive/80"
-                                : "text-muted-foreground hover:text-foreground"
-                        }`}
-                    >
-                        Delete
-                    </button>
-                    <EditLink onClick={() => fileInputRef.current?.click()}>
-                        {isUploading ? "Uploading…" : "Upload"}
-                    </EditLink>
-                </span>
-                <input
-                    ref={fileInputRef}
-                    type="file"
-                    accept="image/*"
-                    onChange={handlePhotoChange}
-                    disabled={isUploading}
-                    className="hidden"
-                />
-            </Row>
+            <DriverPhotoRow
+                profilePic={driver.profile_pic}
+                name={name}
+                initials={initials}
+            />
             <Row
                 label="Full name"
                 required

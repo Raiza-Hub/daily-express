@@ -33,12 +33,23 @@ function Row({
     );
 }
 
-function EditLink({ children = "Edit", onClick }: { children?: string; onClick?: () => void }) {
+function EditLink({
+    children = "Edit",
+    onClick,
+    ariaDisabled,
+}: {
+    children?: string;
+    onClick?: () => void;
+    ariaDisabled?: boolean;
+}) {
     return (
         <button
             type="button"
             onClick={onClick}
-            className="cursor-pointer text-sm font-semibold text-foreground underline underline-offset-2 hover:text-muted-foreground"
+            aria-disabled={ariaDisabled}
+            className={`cursor-pointer text-sm font-semibold text-foreground underline underline-offset-2 hover:text-muted-foreground ${
+                ariaDisabled ? "opacity-40" : ""
+            }`}
         >
             {children}
         </button>

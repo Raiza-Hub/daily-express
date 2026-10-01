@@ -242,13 +242,14 @@ function DriverSignupForm() {
                             identityVerified={identityVerified}
                             isVerifyingIdentity={verifyKyc.isPending}
                             onVerifyIdentity={handleVerifyIdentity}
+                            formError={formError}
                         />
                     </motion.div>
                 )}
             </AnimatePresence>
 
             <div className="flex flex-col gap-3 pt-2">
-                {formError && (
+                {formError && step !== 3 && (
                     <p role="alert" className="text-center text-sm text-destructive">
                         {formError}
                     </p>
