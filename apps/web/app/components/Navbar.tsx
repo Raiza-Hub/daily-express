@@ -1,12 +1,54 @@
 import Image from "next/image";
 import Link from "next/link";
+import { Suspense } from "react";
 import { cookies } from "next/headers";
+import { NavbarUser } from "~/components/NavbarUser";
+import { hasDriverProfile } from "~/lib/driver-session";
 
-export async function Navbar() {
+const driverCtaClassName =
+    "cursor-pointer rounded-full border border-neutral-300 px-5 py-2 text-sm font-semibold text-neutral-700 transition-colors hover:bg-neutral-50";
+const signInClassName =
+    "cursor-pointer rounded-full bg-neutral-900 px-5 py-2 text-sm font-semibold text-white transition-colors hover:bg-neutral-800";
+
+async function NavbarActions() {
     const cookieStore = await cookies();
     const hasSession = !!(
-        cookieStore.get("access_token") || cookieStore.get("refresh_token")
+        cookieStore.get("token") || cookieStore.get("refreshToken")
     );
+
+    let hasProfile = false;
+    if (hasSession) {
+        hasProfile = await hasDriverProfile();
+    }
+
+    const showDriverCta = !hasSession || !hasProfile;
+
+    return (
+        <div className="flex items-center gap-3">
+            {hasSession ? (
+                <>
+                    {showDriverCta && (
+                        <Link href="/driver/signup" className={driverCtaClassName}>
+                            Become a driver
+                        </Link>
+                    )}
+                    <NavbarUser />
+                </>
+            ) : (
+                <>
+                    <Link href="/driver/signup" className={driverCtaClassName}>
+                        Become a driver
+                    </Link>
+                    <Link href="/login" className={signInClassName}>
+                        Sign in
+                    </Link>
+                </>
+            )}
+        </div>
+    );
+}
+
+export function Navbar() {
     return (
         <nav className="sticky top-0 z-50">
             <div className="max-w-7xl mx-auto flex h-16 items-center px-6">
@@ -49,13 +91,9 @@ export async function Navbar() {
                 </ul>
 
                 <div className="flex items-center gap-3 ml-auto">
-                    {/* TODO: wire to driver app + sign-in routes */}
-                    <div className="cursor-pointer rounded-full border border-neutral-300 px-5 py-2 text-sm font-semibold text-neutral-700 transition-colors hover:bg-neutral-50">
-                        Become a driver
-                    </div>
-                    <div className="cursor-pointer rounded-full bg-neutral-900 px-5 py-2 text-sm font-semibold text-white transition-colors hover:bg-neutral-800">
-                        Sign in
-                    </div>
+                    <Suspense fallback={null}>
+                        <NavbarActions />
+                    </Suspense>
                 </div>
             </div>
         </nav>

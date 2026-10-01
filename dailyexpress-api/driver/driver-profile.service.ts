@@ -80,18 +80,28 @@ export class DriverProfileService {
     accountNumber: string;
     accountName: string;
   }> {
-    const resolved = await koraClient.resolveAccountNumber(
-      input.bankCode,
-      input.accountNumber,
-      input.currency,
-    );
+    try {
+      const resolved = await koraClient.resolveAccountNumber(
+        input.bankCode,
+        input.accountNumber,
+        input.currency,
+      );
 
-    return {
-      bankName: resolved.data.bank_name,
-      bankCode: resolved.data.bank_code,
-      accountNumber: resolved.data.account_number,
-      accountName: resolved.data.account_name,
-    };
+      return {
+        bankName: resolved.data.bank_name,
+        bankCode: resolved.data.bank_code,
+        accountNumber: resolved.data.account_number,
+        accountName: resolved.data.account_name,
+      };
+    } catch (error) {
+      throw createServiceError(
+        error instanceof Error && error.message
+          ? error.message
+          : "Could not verify this bank account. Check the details and try again.",
+        400,
+        "BANK_VERIFICATION_FAILED",
+      );
+    }
   }
 
   async verifyKycIdentity(
@@ -110,12 +120,21 @@ export class DriverProfileService {
       );
     }
 
-    const verified =
-      input.kycType === "bvn"
-        ? await koraIdentityClient.verifyBVN(input.kycId)
-        : await koraIdentityClient.verifyNIN(input.kycId);
-
-    return { reference: verified.reference };
+    try {
+      const verified =
+        input.kycType === "bvn"
+          ? await koraIdentityClient.verifyBVN(input.kycId)
+          : await koraIdentityClient.verifyNIN(input.kycId);
+      return { reference: verified.reference };
+    } catch (error) {
+      throw createServiceError(
+        error instanceof Error && error.message
+          ? error.message
+          : "Could not verify this identity document. Check the details and try again.",
+        400,
+        "KYC_VERIFICATION_FAILED",
+      );
+    }
   }
 
   async getProfile(userId: string): Promise<Driver | null> {

@@ -97,12 +97,7 @@ export class KoraClient {
         errorBody.message || response.statusText,
         "Payment provider request failed",
       );
-      const detailMessage = errorBody.data
-        ? ` (${Object.entries(errorBody.data)
-            .map(([field, err]) => `${field}: ${err?.message || "invalid"}`)
-            .join("; ")})`
-        : "";
-      const error = new Error(`${baseMessage}${detailMessage}`) as KoraRequestError;
+      const error = new Error(baseMessage) as KoraRequestError;
       error.koraErrorCode = errorBody.error_code || errorBody.error;
       error.koraHttpStatus = response.status;
       error.koraResponseData = errorBody;
@@ -163,12 +158,7 @@ export class KoraClient {
         errorBody.message || response.statusText,
         "Payment provider request failed",
       );
-      const detailMessage = errorBody.data
-        ? ` (${Object.entries(errorBody.data)
-            .map(([field, err]) => `${field}: ${err?.message || "invalid"}`)
-            .join("; ")})`
-        : "";
-      const error = new Error(`${baseMessage}${detailMessage}`) as KoraRequestError;
+      const error = new Error(baseMessage) as KoraRequestError;
       error.koraErrorCode = errorBody.error_code || errorBody.error;
       error.koraHttpStatus = response.status;
       error.koraResponseData = errorBody;
