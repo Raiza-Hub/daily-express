@@ -328,12 +328,3 @@ export interface DriverPayoutHistoryItem extends DriverPayout {
   recipientBankName?: string | null;
   recipientAccountLast4?: string | null;
 }
-
-export interface DriverInfoResponse {
-  firstName: string;
-  lastName: string;
-  phoneNumber: string;
-  country: string;
-  state: string;
-  profilePictureUrl: string | null;
-}

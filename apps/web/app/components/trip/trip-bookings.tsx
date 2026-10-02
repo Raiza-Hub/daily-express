@@ -3,48 +3,58 @@
 import { useMemo, useState } from "react";
 import { format, parse } from "date-fns";
 import { AnimatePresence, motion } from "framer-motion";
+import {
+  useGetUserBookingsInfinite,
+  useQueryClient,
+  type UserBookingWithTrip,
+} from "@repo/api";
 import { Select } from "~/components/ui/select";
 import { TrailCard } from "~/components/ui/trail-card";
 import { BookingDetailsDrawer } from "~/components/trip/booking-details-drawer";
 import { formatTripTime } from "~/lib/trip";
 import {
-  MOCK_BOOKINGS,
+  deriveTripBookingStatus,
+  getOriginImage,
   STATUS_LABELS,
-  type BookingStatus,
-  type TripBooking,
+  type TripBookingStatus,
 } from "~/lib/trip-bookings";
 
-const lampImage =
-  "https://motion-primitives.com/eb-27-lamp-edouard-wilfrid-buquet.jpg";
-
 export default function TripBookings() {
+  const { data, isPending, isError, refetch } = useGetUserBookingsInfinite();
+  const queryClient = useQueryClient();
+
+  const bookings = useMemo(
+    () => data?.pages.flatMap((page) => page.bookings) ?? [],
+    [data],
+  );
+
   const bookingYears = useMemo(
     () =>
-      [...new Set(MOCK_BOOKINGS.map((b) => Number(b.tripDate.slice(0, 4))))].sort(
+      [...new Set(bookings.map((b) => Number(b.tripDate.slice(0, 4))))].sort(
         (a, b) => a - b,
       ),
-    [],
+    [bookings],
   );
 
   const [selectedYear, setSelectedYear] = useState<number | "all">("all");
-  const [statusFilter, setStatusFilter] = useState<BookingStatus | "all">(
+  const [statusFilter, setStatusFilter] = useState<TripBookingStatus | "all">(
     "all",
   );
-  const [selectedBooking, setSelectedBooking] = useState<TripBooking | null>(
-    null,
-  );
+  const [selectedBooking, setSelectedBooking] =
+    useState<UserBookingWithTrip | null>(null);
 
   const visibleBookings = useMemo(
     () =>
-      MOCK_BOOKINGS.filter((booking) => {
+      bookings.filter((booking) => {
         const yearOk =
           selectedYear === "all" ||
           Number(booking.tripDate.slice(0, 4)) === selectedYear;
         const statusOk =
-          statusFilter === "all" || booking.status === statusFilter;
+          statusFilter === "all" ||
+          deriveTripBookingStatus(booking.refundStatus) === statusFilter;
         return yearOk && statusOk;
       }),
-    [selectedYear, statusFilter],
+    [bookings, selectedYear, statusFilter],
   );
 
   return (
@@ -76,7 +86,7 @@ export default function TripBookings() {
           <Select
             value={statusFilter}
             onChange={(event) =>
-              setStatusFilter(event.target.value as BookingStatus | "all")
+              setStatusFilter(event.target.value as TripBookingStatus | "all")
             }
             className="w-40"
             aria-label="Filter by status"
@@ -97,18 +107,23 @@ export default function TripBookings() {
             {visibleBookings.map((booking) => (
               <div key={booking.id} className="flex justify-center">
                 <TrailCard
-                  imageUrl={lampImage}
-                  origin={booking.origin}
+                  imageUrl={getOriginImage(booking.trip?.origin?.title)}
+                  origin={booking.trip?.origin?.title ?? "Unknown origin"}
                   originLabel="Origin"
-                  destination={booking.destination}
+                  destination={
+                    booking.trip?.destination?.title ?? "Unknown destination"
+                  }
                   destinationLabel="Destination"
                   date={format(
                     parse(booking.tripDate, "yyyy-MM-dd", new Date()),
                     "MMM d, yyyy",
                   )}
                   departureTime={formatTripTime(booking.departureTime)}
-                  fare={`₦${booking.price.toLocaleString("en-NG")}`}
-                  onClick={() => setSelectedBooking(booking)}
+                  fare={`₦${(booking.totalAmount + booking.totalFee).toLocaleString("en-NG")}`}
+                  onClick={() => {
+                    queryClient.invalidateQueries({ queryKey: ["userBookings"] });
+                    setSelectedBooking(booking);
+                  }}
                 />
               </div>
             ))}
@@ -121,11 +136,27 @@ export default function TripBookings() {
               exit={{ opacity: 0 }}
               className="py-12 text-center text-sm text-muted-foreground"
             >
-              No bookings found for the selected filters.
+              {isPending
+                ? "Loading your bookings…"
+                : isError
+                  ? "We couldn't load your bookings."
+                  : "No bookings found for the selected filters."}
             </motion.p>
           </AnimatePresence>
         )}
       </section>
+
+      {isError ? (
+        <div className="flex justify-center">
+          <button
+            type="button"
+            onClick={() => refetch()}
+            className="cursor-pointer rounded-full bg-primary px-6 py-2 text-sm font-semibold text-primary-foreground transition-colors hover:bg-primary/90"
+          >
+            Try again
+          </button>
+        </div>
+      ) : null}
 
       <BookingDetailsDrawer
         booking={selectedBooking}

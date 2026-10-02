@@ -1,10 +1,15 @@
 "use client";
 
 import { PencilLine, Trash2 } from "lucide-react";
-import type { TripPassenger } from "./passenger-drawer";
+import type { PassengerInput } from "@shared/types";
+
+export interface BookedPassenger
+  extends Pick<PassengerInput, "fullName" | "email" | "carriesLuggage"> {
+  id: string;
+}
 
 interface PassengerListItemProps {
-  passenger: TripPassenger;
+  passenger: BookedPassenger;
   onEdit?: (id: string) => void;
   onRemove?: (id: string) => void;
 }

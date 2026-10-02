@@ -6,7 +6,7 @@ import { motion } from "framer-motion";
 import { cn } from "@repo/ui/lib/utils";
 
 interface TrailCardProps extends React.HTMLAttributes<HTMLDivElement> {
-  imageUrl: string;
+  imageUrl?: string;
   origin: string;
   originLabel?: string;
   destination: string;
@@ -56,11 +56,18 @@ const TrailCard = React.forwardRef<HTMLDivElement, TrailCardProps>(
         )}
       >
         <div className="relative h-60 w-full">
-          <img
-            src={imageUrl}
-            alt={origin}
-            className="h-full w-full object-cover"
-          />
+          {imageUrl ? (
+            <img
+              src={imageUrl}
+              alt={origin}
+              className="h-full w-full object-cover"
+            />
+          ) : (
+            <div
+              role="presentation"
+              className="h-full w-full bg-gradient-to-br from-neutral-300 to-neutral-500 dark:from-neutral-800 dark:to-neutral-950"
+            />
+          )}
           <div className="absolute inset-0 bg-gradient-to-t from-black/70 via-black/30 to-transparent" />
           <div className="absolute bottom-0 left-0 flex w-full items-end justify-between p-4">
             <div className="text-white">
