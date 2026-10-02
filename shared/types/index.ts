@@ -308,8 +308,8 @@ export interface TripCheckout {
 }
 
 export type PayoutStatus =
-  | "processing"
-  | "success"
+  | "pending"
+  | "successful"
   | "failed";
 
 export interface DriverPayout {

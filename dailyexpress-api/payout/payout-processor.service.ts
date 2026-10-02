@@ -1,5 +1,5 @@
 import { db } from "../db/connection";
-import { and, eq, inArray } from "drizzle-orm";
+import { eq } from "drizzle-orm";
 import { driver, earning, payout, type PayoutRecord, type EarningRecord } from "../db/index";
 import { generateReference } from "../utils/payment";
 import { PayoutRepository, payoutRepository } from "./payout.repository";
@@ -54,9 +54,8 @@ export class PayoutProcessorService {
   ) {
     const reference = payoutRecord.reference;
 
-    // Prevents duplicate payout attempts: lock serializes creation and marks
-    // the payout as "processing" before the external API call so concurrent
-    // workers see the updated status and exit early.
+    // Prevents duplicate payout attempts: lock serializes creation and
+    // ensures only one caller proceeds with the external API call.
     const locked = await db.transaction(async (tx) => {
       const [lockedPayout] = await tx
         .select()
@@ -67,35 +66,10 @@ export class PayoutProcessorService {
       if (!lockedPayout) throw new Error("Payout not found");
 
       if (
-        lockedPayout.status === "success" ||
-        lockedPayout.status === "failed" ||
-        lockedPayout.status === "processing"
+        lockedPayout.status === "successful" ||
+        lockedPayout.status === "failed"
       ) {
         return { alreadyFinalized: true };
-      }
-
-      await tx
-        .update(payout)
-        .set({
-          status: "processing",
-          updatedAt: new Date(),
-        })
-        .where(eq(payout.id, payoutRecord.id));
-
-      if (payoutRecord.tripId) {
-        await tx
-          .update(earning)
-          .set({
-            status: "processing",
-            payoutId: payoutRecord.id,
-            updatedAt: new Date(),
-          })
-          .where(
-            and(
-              eq(earning.tripId, payoutRecord.tripId),
-              inArray(earning.status, ["available", "processing"]),
-            ),
-          );
       }
 
       return { alreadyFinalized: false };
@@ -149,7 +123,7 @@ export class PayoutProcessorService {
         );
         return;
       }
-      // "processing" / "unknown": leave payout processing and let the
+      // "processing" / "unknown": leave payout pending and let the
       // provider webhook confirm the final state.
       return;
     }

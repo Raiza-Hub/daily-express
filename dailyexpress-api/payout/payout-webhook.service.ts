@@ -30,7 +30,7 @@ export class PayoutWebhookService {
     const payoutRecord = await this.repo.findPayoutByReference(reference);
     if (!payoutRecord) return;
 
-    if (payoutRecord.status === "success" || payoutRecord.status === "failed") {
+    if (payoutRecord.status === "successful" || payoutRecord.status === "failed") {
       return;
     }
 

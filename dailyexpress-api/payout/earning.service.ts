@@ -20,24 +20,8 @@ export class EarningService {
       tripId: input.tripId,
       amount: input.amount,
       currency: input.currency,
-      status: "pending_trip_completion",
       updatedAt: new Date(),
     });
-  }
-
-  async completeTrip(
-    tx: PayoutTransaction,
-    input: { tripId: string; completedAt?: Date },
-  ) {
-    await this.repo.updateEarningsByTrip(
-      tx,
-      input.tripId,
-      "pending_trip_completion",
-      {
-        status: "available",
-        updatedAt: new Date(),
-      },
-    );
   }
 }
 

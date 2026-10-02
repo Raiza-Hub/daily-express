@@ -34,43 +34,32 @@ export class PayoutRepository {
         target: earning.tripId,
         set: {
           amount: sql`excluded.amount`,
-          status: values.status,
           updatedAt: new Date(),
         },
       });
   }
 
-  updateEarningStatus(
-    tx: PayoutTransaction,
-    id: string,
-    fields: Partial<typeof earning.$inferInsert>,
-  ) {
-    return tx
-      .update(earning)
-      .set(fields)
-      .where(eq(earning.id, id));
-  }
+  /**
+   * Find the earning for a trip that is eligible for payout.
+   * Returns null if no earning exists or if a non-failed payout already exists
+   * (meaning the trip is already paid or payment is in progress).
+   */
+  async findTripPayoutEarningByTripId(tripId: string) {
+    const earningRow = await db.query.earning.findFirst({
+      where: eq(earning.tripId, tripId),
+    });
+    if (!earningRow) return null;
 
-  updateEarningsByTrip(
-    tx: PayoutTransaction,
-    tripId: string,
-    currentStatus: "pending_trip_completion" | "available",
-    fields: Partial<typeof earning.$inferInsert>,
-  ) {
-    return tx
-      .update(earning)
-      .set(fields)
-      .where(
-        and(
-          eq(earning.tripId, tripId),
-          eq(earning.status, currentStatus),
-        ),
-      )
-      .returning({
-        id: earning.id,
-        driverId: earning.driverId,
-        amount: earning.amount,
-      });
+    // Check if an active (non-failed) payout already exists for this trip
+    const activePayout = await db.query.payout.findFirst({
+      where: and(
+        eq(payout.tripId, tripId),
+        inArray(payout.status, ["pending", "successful"]),
+      ),
+    });
+    if (activePayout) return null;
+
+    return earningRow;
   }
 
   findPayoutById(id: string) {
@@ -82,16 +71,6 @@ export class PayoutRepository {
   findPayoutByReference(reference: string) {
     return db.query.payout.findFirst({
       where: eq(payout.reference, reference),
-    });
-  }
-
-  findTripPayoutEarningByTripId(tripId: string) {
-    return db.query.earning.findFirst({
-      where: and(
-        eq(earning.tripId, tripId),
-        inArray(earning.status, ["available", "processing"]),
-      ),
-      orderBy: [desc(earning.createdAt), desc(earning.id)],
     });
   }
 

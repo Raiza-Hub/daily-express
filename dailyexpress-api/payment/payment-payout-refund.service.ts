@@ -250,8 +250,7 @@ export class PaymentPayoutRefundService {
 
       if (bookingRecord.tripId) {
         await tx
-          .update(earning)
-          .set({ status: "cancelled", updatedAt: new Date() })
+          .delete(earning)
           .where(eq(earning.tripId, bookingRecord.tripId));
       }
     });
