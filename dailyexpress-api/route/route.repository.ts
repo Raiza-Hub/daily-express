@@ -1,21 +1,22 @@
-import { and, asc, desc, eq, gte, inArray, lt, notInArray, sql, type SQL } from "drizzle-orm";
+import { and, asc, desc, eq, gte, inArray, lt, sql } from "drizzle-orm";
 import { db } from "../db/connection";
 import {
   booking,
-  driver,
   origin,
   destination,
   passenger,
+  payment,
+  refund,
   trip,
   users,
   type OriginRecord,
   type DestinationRecord,
   type TripRecord,
   type BookingRecord,
-  type DriverRecord,
   type PassengerRecord,
 } from "../db/index";
 import type { DbTransaction } from "../db/connection";
+
 import {
   getRouteServiceTimeZone,
   scheduledAtSql,
@@ -178,7 +179,7 @@ export class RouteRepository {
           gte(trip.date, dateKey),
           lt(trip.date, addDaysToDateKey(dateKey, 1)),
           eq(trip.departureTime, departureTime),
-          inArray(trip.status, ["pending", "confirmed", "awaiting_driver"]),
+          eq(trip.status, "awaiting_driver"),
         ),
       )
       .orderBy(
@@ -258,27 +259,6 @@ export class RouteRepository {
     return (await db.query.booking.findFirst({ where: eq(booking.id, id) })) ?? null;
   }
 
-  async findExistingActiveBooking(
-    tx: RouteTransaction,
-    tripId: string,
-    userId: string,
-  ) {
-    return (
-      (await tx.query.booking.findFirst({
-        where: and(
-          eq(booking.tripId, tripId),
-          eq(booking.userId, userId),
-          inArray(booking.status, ["pending", "confirmed"]),
-          notInArray(
-            booking.paymentStatus,
-            ["failed", "cancelled", "expired"],
-          ),
-        ),
-        orderBy: [desc(booking.createdAt)],
-      })) ?? null
-    );
-  }
-
   async insertBooking(
     tx: RouteTransaction,
     values: typeof booking.$inferInsert,
@@ -287,62 +267,10 @@ export class RouteRepository {
     return record;
   }
 
-  async findBookingByPaymentRef(
-    userId: string,
-    paymentReference: string,
-    normalizedLastName: string,
-  ): Promise<BookingRecord | null> {
-    const [row] = await db
-      .select({ booking })
-      .from(booking)
-      .innerJoin(users, eq(users.id, booking.userId))
-      .where(
-        and(
-          eq(booking.userId, userId),
-          eq(booking.paymentReference, paymentReference),
-          sql`lower(${users.lastName}) = ${normalizedLastName}`,
-          eq(booking.status, "confirmed"),
-        ),
-      )
-      .limit(1);
-    return row?.booking ?? null;
-  }
-
-  async updateBookingsByTrip(
-    tx: RouteTransaction,
-    tripId: string,
-    values: Partial<typeof booking.$inferInsert>,
-    extraConditions?: SQL[],
-  ) {
-    const conditions = [eq(booking.tripId, tripId)];
-    if (extraConditions) conditions.push(...extraConditions);
-
-    await tx.update(booking).set(values).where(and(...conditions));
-  }
-
-  async findDriverByUserId(userId: string): Promise<DriverRecord | null> {
-    return (await db.query.driver.findFirst({ where: eq(driver.userId, userId) })) ?? null;
-  }
-
   async findUserById(userId: string) {
     return (
       (await db.query.users.findFirst({ where: eq(users.id, userId) })) ?? null
     );
-  }
-
-  async findUsersByIds(userIds: string[]) {
-    if (userIds.length === 0) return [];
-    return db.query.users.findMany({
-      where: inArray(users.id, userIds),
-    });
-  }
-
-  async findBookingsByTripId(
-    tripId: string,
-  ): Promise<BookingRecord[]> {
-    return db.query.booking.findMany({
-      where: eq(booking.tripId, tripId),
-    });
   }
 
   async insertPassengers(
@@ -359,12 +287,5 @@ export class RouteRepository {
     return db.query.passenger.findMany({
       where: eq(passenger.bookingId, bookingId),
     });
-  }
-
-  async deletePassengersByBooking(
-    tx: RouteTransaction,
-    bookingId: string,
-  ): Promise<void> {
-    await tx.delete(passenger).where(eq(passenger.bookingId, bookingId));
   }
 }

@@ -1,10 +1,11 @@
 import { renderEmail, getEmailSubject } from "@repo/email";
-import { and, eq, inArray, sql } from "drizzle-orm";
+import { and, eq, sql } from "drizzle-orm";
 import { db, type DbTransaction } from "../db/connection";
 import {
   booking,
   origin,
   destination,
+  trip,
   TRIP_CAPACITY,
   type BookingRecord,
   type OriginRecord,
@@ -29,7 +30,7 @@ export class BookingFinalizerService {
       logger.warn("booking_finalizer.booking_not_found", { bookingId, reference });
       return;
     }
-    if (bookingRecord.paymentStatus === "successful" && bookingRecord.status === "confirmed") {
+    if (bookingRecord.status === "confirmed") {
       logger.info("booking_finalizer.already_finalized", { bookingId, reference });
       return;
     }
@@ -55,7 +56,6 @@ export class BookingFinalizerService {
           .update(booking)
           .set({
             status: "confirmed",
-            paymentStatus: "successful",
             paymentReference: reference,
             updatedAt: new Date(),
           })
@@ -165,6 +165,13 @@ export class BookingFinalizerService {
         .update(booking)
         .set({ tripId: fit.id, updatedAt: new Date() })
         .where(eq(booking.id, input.bookingId));
+      await tx
+        .update(trip)
+        .set({
+          bookedSeats: sql`${trip.bookedSeats} + ${input.passengerCount}`,
+          updatedAt: new Date(),
+        })
+        .where(eq(trip.id, fit.id));
       return fit.id;
     }
 
@@ -220,7 +227,7 @@ export class BookingFinalizerService {
     const tripBookings = await tx.query.booking.findMany({
       where: and(
         eq(booking.tripId, tripId),
-        inArray(booking.status, ["confirmed", "completed"]),
+        eq(booking.status, "confirmed"),
       ),
     });
 

@@ -1,4 +1,4 @@
-import { lte, sql } from "drizzle-orm";
+import { lte } from "drizzle-orm";
 import { relations } from "drizzle-orm";
 import {
   bigint,
@@ -20,12 +20,12 @@ import { driver } from "./driver-schema";
 export const statusEnum = pgEnum("status", ["inactive", "pending", "active"]);
 
 export const tripStatusEnum = pgEnum("trip_status", [
-  "pending",
-  "confirmed",
   "cancelled",
   "completed",
   "awaiting_driver",
 ]);
+
+export const bookingStatusEnum = pgEnum("booking_status", ["pending", "confirmed"]);
 
 export const origin = pgTable(
   "origin",
@@ -110,25 +110,20 @@ export const booking = pgTable(
     totalAmount: bigint("total_amount", { mode: "number" }).default(0).notNull(),
     totalFee: bigint("total_fee", { mode: "number" }).default(0).notNull(),
     currency: varchar("currency", { length: 8 }).default("NGN").notNull(),
-    status: tripStatusEnum("status").default("pending").notNull(),
-
+    status: bookingStatusEnum("status").default("pending").notNull(),
     paymentReference: varchar("payment_reference", { length: 128 }),
-    paymentStatus: varchar("payment_status", { length: 32 })
-      .default("initialized")
-      .notNull(),
     createdAt: timestamp("created_at", { mode: "date" }).defaultNow().notNull(),
     updatedAt: timestamp("updated_at", { mode: "date" }).defaultNow().notNull(),
   },
   (table) => [
-    uniqueIndex("booking_origin_destination_date_user_departure_active_idx")
+    uniqueIndex("booking_origin_destination_date_user_departure_idx")
       .on(
         table.originId,
         table.destinationId,
         table.tripDate,
         table.userId,
         table.departureTime,
-      )
-      .where(sql`${table.status} in ('pending', 'confirmed')`),
+      ),
   ],
 );
 
