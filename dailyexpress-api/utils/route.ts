@@ -1,14 +1,6 @@
 import { createServiceError } from "@shared/utils";
 
 const DATE_ONLY_REGEX = /^\d{4}-\d{2}-\d{2}$/;
-export const HIDDEN_BOOKING_PAYMENT_STATUSES = [
-  "failed",
-  "cancelled",
-  "expired",
-  "refund_pending",
-  "refunded",
-  "refund_failed",
-];
 
 export function parseDateKey(value: string): string {
   const trimmed = value.trim();

@@ -1,7 +1,7 @@
 import { createServiceError, sanitizeInput } from "@shared/utils";
 import { getConfig } from "../config/index";
 import { logger } from "../utils/logger";
-import { calculateTripChargeAmount, dedupeChannels, generateReference } from "../utils/payment";
+import { calculateTripChargeAmount, generateReference } from "../utils/payment";
 import { koraClient } from "./kora.client";
 import { PaymentRepository } from "./payment.repository";
 import type { PaymentRecord } from "../db/index";
@@ -48,7 +48,7 @@ export class PaymentInitService {
       currency: bookingFare.currency,
       productName: sanitizeInput(input.productName),
       customerEmail: authenticatedEmail.trim(),
-      status: "initialized",
+      status: "pending",
     });
 
     if (!created) {
@@ -86,7 +86,7 @@ export class PaymentInitService {
       channels,
     });
 
-    const [updated] = await this.repo.setPendingCheckout(
+    const [updated] = await this.repo.setCheckoutUrl(
       paymentRecord.id,
       data.checkout_url,
     );

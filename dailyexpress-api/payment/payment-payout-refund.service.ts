@@ -2,8 +2,9 @@ import { getEmailSubject, renderEmail } from "@repo/email";
 import { and, eq, gt, sql } from "drizzle-orm";
 import { getConfig } from "../config/index";
 import { db } from "../db/connection";
-import { booking, earning, payment, refund, trip, users } from "../db/index";
+import { booking, earning, payment, trip, users } from "../db/index";
 import { logger } from "../utils/logger";
+import { generateReference } from "../utils/payment";
 import { enqueueEmail, type EmailToSend } from "../mail/email-dispatcher.service";
 import { koraClient, KoraClient } from "./kora.client";
 import { PaymentRepository, paymentRepository } from "./payment.repository";
@@ -64,9 +65,8 @@ export class PaymentPayoutRefundService {
 
   async refundConfirmedBooking(
     paymentRecord: PaymentRecord,
-    existingRefundReference: string,
     reason = "Trip cancelled because driver deactivated their account",
-    emailReason?: "driver_deactivated" | "no_driver_found" | "admin_cancelled",
+    emailReason?: "driver_deactivated" | "no_driver_found",
   ): Promise<void> {
     if (paymentRecord.status !== "successful") return;
 
@@ -105,81 +105,47 @@ export class PaymentPayoutRefundService {
     }
     const refundAmount = bookingRecord.totalAmount;
 
-    let pendingRefund: RefundRecord | null = null;
+    const refundRow = await db.transaction(async (tx) => {
+      const [locked] = await tx
+        .select()
+        .from(payment)
+        .where(eq(payment.id, paymentRecord.id))
+        .for("update")
+        .limit(1);
 
-    if (existingRefundReference) {
-      pendingRefund = (await this.repo.findRefundByReference(existingRefundReference)) ?? null;
-    }
+      if (!locked || locked.status !== "successful") return null;
 
-    if (!pendingRefund) {
-      pendingRefund = await db.transaction(async (tx) => {
-        const [locked] = await tx
-          .select()
-          .from(payment)
-          .where(eq(payment.id, paymentRecord.id))
-          .for("update")
-          .limit(1);
+      const existing = await this.repo.findPendingRefundByPaymentId(tx, locked.id);
+      if (existing) return { refund: existing, created: false };
 
-        if (!locked || locked.status !== "successful") return null;
+      const reference = `REF-${generateReference()}`;
 
-        const existing = await tx.query.refund.findFirst({
-          where: and(
-            eq(refund.paymentId, locked.id),
-            eq(refund.status, "pending"),
-          ),
-        });
-        if (existing) return existing;
-
-        const [row] = await this.repo.insertRefund(tx, {
-          paymentId: paymentRecord.id,
-          bookingId: paymentRecord.bookingId,
-          reference: existingRefundReference,
-          amount: refundAmount,
-          currency: paymentRecord.currency,
-          status: "pending",
-        });
-        return row;
+      const [created] = await this.repo.insertRefund(tx, {
+        paymentId: locked.id,
+        reference,
+        amount: refundAmount,
+        currency: locked.currency,
+        status: "pending",
       });
-    }
+      if (!created) return null;
 
-    if (!pendingRefund) return;
+      await this.repo.pointPaymentAtRefund(tx, locked.id, created.id);
+      return { refund: created, created: true };
+    });
 
-    const resolvedRefund: RefundRecord = pendingRefund;
+    if (!refundRow) return;
+    const { refund: refundRecord, created } = refundRow;
 
-    if (paymentRecord.bookingId) {
-      const bookingId = paymentRecord.bookingId;
-      await db.transaction(async (tx) => {
-        const bookingRecord = await tx.query.booking.findFirst({
-          where: eq(booking.id, bookingId),
-        });
-        if (!bookingRecord) return;
-
-        await tx
-          .update(booking)
-          .set({ paymentStatus: "refund_pending", updatedAt: new Date() })
-          .where(eq(booking.id, bookingId));
-
-        if (bookingRecord.status === "confirmed" && bookingRecord.tripId) {
-          const passengerCount = await this.repo.countPassengersByBooking(
-            tx,
-            bookingRecord.id,
-          );
-          await tx
-            .update(trip)
-            .set({ bookedSeats: sql`GREATEST(${trip.bookedSeats} - ${passengerCount}, 0)` })
-            .where(
-              and(eq(trip.id, bookingRecord.tripId), gt(trip.bookedSeats, 0)),
-            );
-        }
-
-        if (bookingRecord.tripId) {
-          await tx
-            .update(earning)
-            .set({ status: "cancelled", updatedAt: new Date() })
-            .where(eq(earning.tripId, bookingRecord.tripId));
-        }
+    if (!created) {
+      const resolved = await this.reconcileExistingRefund(refundRecord);
+      if (resolved) return;
+      logger.info("payout_refund.awaiting_webhook", {
+        reference: refundRecord.reference,
       });
+      return;
     }
+
+    await this.releaseTripSeats(paymentRecord.bookingId);
 
     let accountNumber: string;
     let accountName: string;
@@ -200,12 +166,11 @@ export class PaymentPayoutRefundService {
       accountName = paymentRecord.payerAccountName;
     }
 
-    const payoutRef = `REF-${paymentRecord.reference}`;
     try {
       await this.kora.initiatePayout({
-        reference: payoutRef,
-        amount: refundAmount,
-        currency: paymentRecord.currency,
+        reference: refundRecord.reference,
+        amount: refundRecord.amount,
+        currency: refundRecord.currency,
         bankCode,
         accountNumber,
         accountName,
@@ -213,31 +178,37 @@ export class PaymentPayoutRefundService {
         narration: reason,
       });
     } catch (error) {
-      const found = await this.kora.findPayoutByReference(payoutRef);
+      const found = await this.kora.findPayoutByReference(refundRecord.reference);
 
       switch (found?.status) {
         case "success":
-          await this.finalizeRefund(paymentRecord.reference, "refunded");
+          await this.finalizeRefund(refundRecord.id, "successful");
+          return;
+        case "failed":
+          await this.finalizeRefund(refundRecord.id, "failed");
           return;
         case "pending":
         case "processing":
-        case "failed":
           logger.info("payout_refund.provider_owns_transfer", {
-            reference: paymentRecord.reference,
+            reference: refundRecord.reference,
             status: found.status,
           });
           return;
         default:
-          throw error;
+          logger.warn("payout_refund.initiate_failed_unresolved", {
+            reference: refundRecord.reference,
+            error: error instanceof Error ? error.message : String(error),
+          });
+          return;
       }
     }
 
     await db.transaction(async (tx) => {
       const email = await this.sendTripCancelledEmail(
         paymentRecord,
-        resolvedRefund.reference,
+        refundRecord.reference,
         emailReason,
-        refundAmount,
+        refundRecord.amount,
         tx,
       );
       if (email) {
@@ -245,60 +216,76 @@ export class PaymentPayoutRefundService {
       }
     });
   }
-
-  async finalizeRefund(
-    paymentReference: string,
-    status: "refunded" | "refund_failed",
-  ) {
-    const existingPayment = await this.repo.findPaymentByReference(
-      paymentReference,
-    );
-    if (!existingPayment) return;
-
+  private async reconcileExistingRefund(refundRecord: RefundRecord) {
+    const found = await this.kora.findPayoutByReference(refundRecord.reference);
+    if (found?.status === "success") {
+      await this.finalizeRefund(refundRecord.id, "successful");
+      return true;
+    }
+    if (found?.status === "failed") {
+      await this.finalizeRefund(refundRecord.id, "failed");
+      return true;
+    }
+    return false;
+  }
+  private async releaseTripSeats(bookingId: string) {
     await db.transaction(async (tx) => {
-      const [lockedPayment] = await tx
-        .select()
-        .from(payment)
-        .where(eq(payment.reference, paymentReference))
-        .for("update")
-        .limit(1);
-      if (!lockedPayment) return;
-
-      const pendingRefund = await tx.query.refund.findFirst({
-        where: and(
-          eq(refund.paymentId, lockedPayment.id),
-          eq(refund.status, "pending"),
-        ),
-        orderBy: (ref, { desc }) => [desc(ref.createdAt)],
+      const bookingRecord = await tx.query.booking.findFirst({
+        where: eq(booking.id, bookingId),
       });
-      if (!pendingRefund) {
-        logger.info("payout_refund.webhook_already_processed", {
-          paymentReference,
-        });
+      if (!bookingRecord) return;
+
+      if (bookingRecord.status === "confirmed" && bookingRecord.tripId) {
+        const passengerCount = await this.repo.countPassengersByBooking(
+          tx,
+          bookingRecord.id,
+        );
+        await tx
+          .update(trip)
+          .set({ bookedSeats: sql`GREATEST(${trip.bookedSeats} - ${passengerCount}, 0)` })
+          .where(
+            and(eq(trip.id, bookingRecord.tripId), gt(trip.bookedSeats, 0)),
+          );
+      }
+
+      if (bookingRecord.tripId) {
+        await tx
+          .update(earning)
+          .set({ status: "cancelled", updatedAt: new Date() })
+          .where(eq(earning.tripId, bookingRecord.tripId));
+      }
+    });
+  }
+  async finalizeRefund(
+    refundId: string,
+    status: "successful" | "failed",
+  ): Promise<void> {
+    await db.transaction(async (tx) => {
+      const settled = await this.repo.settleRefund(tx, refundId, status);
+      const [refundRecord] = settled;
+      if (!refundRecord) {
+        logger.info("payout_refund.webhook_already_processed", { refundId });
         return;
       }
 
-      await this.repo.updateRefundStatus(tx, pendingRefund.id, {
-        status: status === "refunded" ? "successful" : "failed",
-        completedAt: new Date(),
-      });
+      if (status !== "successful") return;
 
-      if (status === "refunded" && existingPayment.customerEmail) {
-        const email = await this.sendRefundSuccessEmail(
-          existingPayment,
-          pendingRefund.amount,
-          existingPayment.productName ?? "your trip",
-          tx,
-        );
-        if (email) {
-          await enqueueEmail(tx, email);
-        }
+      const [paymentRecord] = await tx
+        .select()
+        .from(payment)
+        .where(eq(payment.id, refundRecord.paymentId))
+        .limit(1);
+      if (!paymentRecord?.customerEmail) return;
+
+      const email = await this.sendRefundSuccessEmail(
+        paymentRecord,
+        refundRecord.amount,
+        paymentRecord.productName ?? "your trip",
+        tx,
+      );
+      if (email) {
+        await enqueueEmail(tx, email);
       }
-
-      await tx
-        .update(booking)
-        .set({ paymentStatus: status, updatedAt: new Date() })
-        .where(eq(booking.paymentReference, paymentReference));
     });
   }
 
@@ -354,7 +341,7 @@ export class PaymentPayoutRefundService {
   async sendTripCancelledEmail(
     paymentRecord: PaymentRecord,
     refundReference: string,
-    reason: "driver_deactivated" | "no_driver_found" | "admin_cancelled" | undefined,
+    reason: "driver_deactivated" | "no_driver_found" | undefined,
     refundAmount: number,
     tx: PaymentTransaction,
   ): Promise<EmailToSend | null> {

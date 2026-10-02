@@ -21,9 +21,8 @@ export interface WebhookJobData {
 export interface TripRefundJobData {
   bookingId: string;
   paymentReference: string;
-  refundReference: string;
   refundReason: string;
-  emailReason?: "driver_deactivated" | "no_driver_found" | "admin_cancelled";
+  emailReason?: "driver_deactivated" | "no_driver_found";
 }
 
 export interface EmailSendJobData {

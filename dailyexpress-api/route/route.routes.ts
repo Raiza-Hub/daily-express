@@ -45,12 +45,7 @@ router.get(
   authenticateVerifiedGatewayRequest,
   routeController.getUserBookings,
 );
-router.get(
-  "/user/bookings/search",
-  authenticateSession,
-  authenticateVerifiedGatewayRequest,
-  routeController.searchBookingByRef,
-);
+
 router.post(
   "/user/booking/checkout",
   authenticateSession,

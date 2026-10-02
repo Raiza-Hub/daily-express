@@ -2,15 +2,7 @@ import type { KoraCheckoutChannel } from "@shared/types";
 import type { DbTransaction } from "../db/connection";
 
 export type PaymentTransaction = DbTransaction;
-
-export type PaymentStatus =
-  | "initialized"
-  | "pending"
-  | "processing"
-  | "successful"
-  | "failed"
-  | "cancelled"
-  | "expired";
+export type { TransactionStatus } from "../db/payment-schema";
 
 export type KoraChannel = KoraCheckoutChannel;
 

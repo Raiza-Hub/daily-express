@@ -1,23 +1,5 @@
 import { randomInt } from "node:crypto";
-import type { KoraCheckoutChannel } from "@shared/types";
 import type { WebhookJobData } from "../workers/boss";
-
-type KoraChannel = KoraCheckoutChannel;
-
-export function dedupeChannels(channels?: KoraChannel[]) {
-  if (!channels?.length) {
-    return null;
-  }
-
-  const uniqueChannels: KoraChannel[] = [];
-  for (const channel of channels) {
-    if (!uniqueChannels.includes(channel)) {
-      uniqueChannels.push(channel);
-    }
-  }
-
-  return uniqueChannels;
-}
 
 export function generateReference(): string {
   const now = new Date();

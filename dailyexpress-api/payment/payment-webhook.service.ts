@@ -1,6 +1,5 @@
 import { and, eq } from "drizzle-orm";
 import { db } from "../db/connection";
-import { payment } from "../db/index";
 import { logger } from "../utils/logger";
 import { getPaymentReference } from "../utils/payment";
 import { bookingFinalizerService } from "../route/booking-finalizer.service";
@@ -25,24 +24,7 @@ export class PaymentWebhookService {
 
   async processWebhook(webhook: KoraWebhookPayload, signature?: string) {
     if (webhook.event.startsWith("transfer.")) {
-      if (webhook.data.reference?.startsWith("REF-")) {
-        const signatureValid = this.kora.verifyWebhookSignature(
-          webhook.data,
-          signature,
-        );
-
-        const actualRef = webhook.data.reference.slice(4);
-
-        if (signatureValid) {
-          const targetStatus = webhook.event === "transfer.success" ? "refunded" : "refund_failed";
-          await this.payoutRefundService.finalizeRefund(actualRef, targetStatus);
-        }
-      } else {
-        await payoutWebhookService.processWebhook({
-          signature,
-          event: webhook as KoraPayoutWebhookPayload,
-        });
-      }
+      await this.processTransferWebhook(webhook, signature);
       return;
     }
 
@@ -73,6 +55,45 @@ export class PaymentWebhookService {
     }
   }
 
+  private async processTransferWebhook(
+    webhook: KoraWebhookPayload,
+    signature?: string,
+  ) {
+    const reference = webhook.data.reference;
+    if (!reference) {
+      logger.warn("payment.transfer_webhook_missing_reference", {
+        event: webhook.event,
+      });
+      return;
+    }
+
+    const refundRecord = await this.repo.findRefundByReference(reference);
+    if (!refundRecord) {
+      await payoutWebhookService.processWebhook({
+        signature,
+        event: webhook as KoraPayoutWebhookPayload,
+      });
+      return;
+    }
+
+    const signatureValid = this.kora.verifyWebhookSignature(
+      webhook.data,
+      signature,
+    );
+    if (!signatureValid) {
+      logger.warn("payment.transfer_webhook_invalid_signature_ignored", {
+        event: webhook.event,
+        reference,
+      });
+      return;
+    }
+
+    await this.payoutRefundService.finalizeRefund(
+      refundRecord.id,
+      webhook.event === "transfer.success" ? "successful" : "failed",
+    );
+  }
+
   async processWebhookJob(job: WebhookJobData) {
     const reference = getPaymentReference(job);
     if (!reference) {
@@ -93,35 +114,35 @@ export class PaymentWebhookService {
   }
 
   private async processChargeSuccess(reference: string) {
-    const [claimed] = await this.repo.claimPayment(reference);
-    if (!claimed) {
-      logger.info("payment.webhook_already_claimed", { reference });
+    const settled = await db.transaction(async (tx) => {
+      const [claimed] = await this.repo.settlePayment(
+        tx,
+        reference,
+        "successful",
+      );
+      if (!claimed) return null;
+
+      await jobService.enqueuePayerInfoBackfill(tx, { reference });
+      return claimed;
+    });
+
+    if (!settled) {
+      logger.info("payment.webhook_already_terminal", { reference });
       return;
     }
 
-    await db.transaction(async (tx) => {
-      await tx.update(payment)
-        .set({
-          status: "successful",
-          updatedAt: new Date(),
-        })
-        .where(and(eq(payment.reference, reference), eq(payment.status, "processing")));
-
-      await jobService.enqueuePayerInfoBackfill(tx, { reference });
-    });
-
-    if (claimed.bookingId) {
-      await bookingFinalizerService.finalizeBooking(claimed.bookingId, reference);
+    if (settled.bookingId) {
+      await bookingFinalizerService.finalizeBooking(settled.bookingId, reference);
     }
   }
 
   private async processChargeFailure(reference: string) {
-    const [claimed] = await this.repo.claimPayment(reference);
-    if (!claimed) {
-      logger.info("payment.webhook_fail_already_claimed", { reference });
+    const [settled] = await db.transaction((tx) =>
+      this.repo.settlePayment(tx, reference, "failed"),
+    );
+    if (!settled) {
+      logger.info("payment.webhook_already_terminal", { reference });
       return;
     }
-
-    await this.repo.updateProcessingPayment(reference, "failed");
   }
 }

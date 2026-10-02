@@ -12,7 +12,7 @@ import {
 } from "@react-email/components";
 import { getEmailLogoSrc } from "../assets";
 
-export type CancellationReason = "driver_deactivated" | "no_driver_found" | "admin_cancelled";
+export type CancellationReason = "driver_deactivated" | "no_driver_found";
 
 export interface TripCancelledEmailProps {
   frontendUrl: string;
