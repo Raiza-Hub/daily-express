@@ -69,7 +69,7 @@ export const useDriverPayoutHistory = (params?: {
       query.state.data?.pages.some((page) =>
         page.payouts.some(
           (payout) =>
-            payout.status === "processing" || payout.status === "failed",
+            payout.status === "pending",
         ),
       )
         ? 15000

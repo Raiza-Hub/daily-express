@@ -11,19 +11,10 @@ import {
 import { driver } from "./driver-schema";
 import { trip } from "./route-schema";
 
-export const earningStatusEnum = pgEnum("earning_status", [
-  "pending_trip_completion",
-  "available",
-  "processing",
-  "paid",
-  "cancelled",
-]);
-
 export const payoutProviderEnum = pgEnum("payout_provider", ["kora"]);
 export const payoutStatusEnum = pgEnum("payout_status", [
   "pending",
-  "processing",
-  "success",
+  "successful",
   "failed",
 ]);
 
@@ -31,40 +22,40 @@ export const earning = pgTable(
   "earning",
   {
     id: uuid("id").defaultRandom().primaryKey(),
-    driverId: uuid("driver_id").references(() => driver.id, { onDelete: "restrict" }),
-    tripId: uuid("trip_id").references(() => trip.id, { onDelete: "restrict" }).notNull(),
+    driverId: uuid("driver_id").references(() => driver.id, {
+      onDelete: "restrict",
+    }),
+    tripId: uuid("trip_id")
+      .references(() => trip.id, { onDelete: "restrict" })
+      .notNull(),
     amount: bigint("amount", { mode: "number" }).notNull(),
     currency: varchar("currency", { length: 8 }).default("NGN").notNull(),
-    status: earningStatusEnum("status")
-      .default("pending_trip_completion")
-      .notNull(),
-    payoutId: uuid("payout_id"),
+    payoutId: uuid("payout_id").references(() => payout.id, {
+      onDelete: "restrict",
+    }),
     createdAt: timestamp("created_at", { mode: "date" }).defaultNow().notNull(),
     updatedAt: timestamp("updated_at", { mode: "date" }).defaultNow().notNull(),
   },
-  (table) => [
-    uniqueIndex("earning_trip_unique_idx").on(table.tripId),
-  ],
+  (table) => [uniqueIndex("earning_trip_unique_idx").on(table.tripId)],
 );
 
-export const payout = pgTable(
-  "payout",
-  {
-    id: uuid("id").defaultRandom().primaryKey(),
-    driverId: uuid("driver_id").references(() => driver.id, { onDelete: "restrict" }).notNull(),
-    tripId: uuid("trip_id").references(() => trip.id, { onDelete: "restrict" }),
-    recipientBankName: text("recipient_bank_name"),
-    recipientAccountLast4: varchar("recipient_account_last4", { length: 4 }),
-    reference: varchar("reference", { length: 128 }).notNull().unique(),
-    provider: payoutProviderEnum("provider").default("kora").notNull(),
-    amount: bigint("amount", { mode: "number" }).notNull(),
-    currency: varchar("currency", { length: 8 }).default("NGN").notNull(),
-    status: payoutStatusEnum("status").default("processing").notNull(),
-    driverEmail: varchar("driver_email", { length: 255 }),
-    createdAt: timestamp("created_at", { mode: "date" }).defaultNow().notNull(),
-    updatedAt: timestamp("updated_at", { mode: "date" }).defaultNow().notNull(),
-  },
-);
+export const payout = pgTable("payout", {
+  id: uuid("id").defaultRandom().primaryKey(),
+  driverId: uuid("driver_id")
+    .references(() => driver.id, { onDelete: "restrict" })
+    .notNull(),
+  tripId: uuid("trip_id").references(() => trip.id, { onDelete: "restrict" }),
+  recipientBankName: text("recipient_bank_name"),
+  recipientAccountLast4: varchar("recipient_account_last4", { length: 4 }),
+  reference: varchar("reference", { length: 128 }).notNull().unique(),
+  provider: payoutProviderEnum("provider").default("kora").notNull(),
+  amount: bigint("amount", { mode: "number" }).notNull(),
+  currency: varchar("currency", { length: 8 }).default("NGN").notNull(),
+  status: payoutStatusEnum("status").default("pending").notNull(),
+  driverEmail: varchar("driver_email", { length: 255 }),
+  createdAt: timestamp("created_at", { mode: "date" }).defaultNow().notNull(),
+  updatedAt: timestamp("updated_at", { mode: "date" }).defaultNow().notNull(),
+});
 
 export const payoutSchema = {
   earning,

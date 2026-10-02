@@ -44,12 +44,6 @@ export class PayoutService {
     return this.earningService.createEarning(tx, input);
   }
 
-  async markTripCompletedInTransaction(
-    tx: PayoutTransaction,
-    input: { tripId: string; completedAt?: Date },
-  ) {
-    return this.earningService.completeTrip(tx, input);
-  }
 
   async getHistory(
     user: JWTPayload,
@@ -86,7 +80,7 @@ export class PayoutService {
       amount: row.amount,
       currency: row.currency,
       tripId: row.tripId,
-      status: row.status === "pending" ? "processing" : row.status,
+      status: row.status,
       createdAt: row.createdAt,
       updatedAt: row.updatedAt,
       recipientBankName: row.recipientBankName,

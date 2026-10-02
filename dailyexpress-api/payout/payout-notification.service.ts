@@ -1,7 +1,7 @@
 import { renderEmail, getEmailSubject } from "@repo/email";
 import { db } from "../db/connection";
-import { and, eq } from "drizzle-orm";
-import { earning, payout, type PayoutRecord } from "../db/index";
+import { eq } from "drizzle-orm";
+import { payout, type PayoutRecord } from "../db/index";
 import { getConfig } from "../config/index";
 import { enqueueEmail } from "../mail/email-dispatcher.service";
 
@@ -38,7 +38,7 @@ export class PayoutNotificationService {
       if (!lockedPayout) return false;
 
       if (
-        lockedPayout.status === "success" ||
+        lockedPayout.status === "successful" ||
         lockedPayout.status === "failed"
       ) {
         return false;
@@ -51,22 +51,6 @@ export class PayoutNotificationService {
           updatedAt: new Date(),
         })
         .where(eq(payout.id, lockedPayout.id));
-
-      if (lockedPayout.tripId) {
-        await tx
-          .update(earning)
-          .set({
-            status: "available",
-            payoutId: lockedPayout.id,
-            updatedAt: new Date(),
-          })
-          .where(
-            and(
-              eq(earning.tripId, lockedPayout.tripId),
-              eq(earning.status, "processing"),
-            ),
-          );
-      }
 
       if (emailHtml && emailSubject && payoutRecord.driverEmail) {
         await enqueueEmail(tx, {

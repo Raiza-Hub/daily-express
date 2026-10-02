@@ -1,6 +1,6 @@
-import { and, eq, inArray } from "drizzle-orm";
+import { eq } from "drizzle-orm";
 import { db } from "../db/connection";
-import { earning, payout as payoutTable } from "../db/index";
+import { payout as payoutTable } from "../db/index";
 import { koraClient } from "../payment/kora.client";
 import type { KoraPayoutHistoryItem } from "../payment/payment.types";
 import type { PayoutRecord } from "../db/index";
@@ -41,7 +41,7 @@ export class PayoutSettlementService {
       return "processing";
     } catch (error) {
       // Lookup API itself failed: we cannot determine the transfer's state,
-      // so leave the payout processing and let the provider webhook resolve it.
+      // so leave the payout pending and let the provider webhook resolve it.
       return "unknown";
     }
   }
@@ -58,7 +58,7 @@ export class PayoutSettlementService {
         .limit(1);
       if (
         !lockedPayout ||
-        lockedPayout.status === "success" ||
+        lockedPayout.status === "successful" ||
         lockedPayout.status === "failed"
       ) {
         return;
@@ -67,26 +67,10 @@ export class PayoutSettlementService {
       await tx
         .update(payoutTable)
         .set({
-          status: "success",
+          status: "successful",
           updatedAt: new Date(),
         })
         .where(eq(payoutTable.id, lockedPayout.id));
-
-      if (payout.tripId) {
-        await tx
-          .update(earning)
-          .set({
-            status: "paid",
-            payoutId: payout.id,
-            updatedAt: new Date(),
-          })
-          .where(
-            and(
-              eq(earning.tripId, payout.tripId),
-              inArray(earning.status, ["available", "processing"]),
-            ),
-          );
-      }
     });
   }
 }
