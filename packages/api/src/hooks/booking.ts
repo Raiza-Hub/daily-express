@@ -21,6 +21,7 @@ export interface UserBookingWithTrip {
   status: string;
   paymentReference: string | null;
   paymentStatus: string;
+  refundStatus: string | null;
   totalAmount: number;
   totalFee: number;
   currency: string;
@@ -169,7 +170,6 @@ type TripBookingsResponse = Array<{
   currency: string;
   status: string;
   paymentReference: string | null;
-  paymentStatus: string;
   createdAt: string;
   updatedAt: string;
 }>;

@@ -1,7 +1,7 @@
-import { and, eq } from "drizzle-orm";
+import { eq } from "drizzle-orm";
 import { logger } from "../utils/logger";
 import { db } from "../db/connection";
-import { booking, payment, refund } from "../db/index";
+import { payment } from "../db/index";
 import { paymentRepository } from "../payment/payment.repository";
 import { paymentPayoutRefundService } from "../payment/payment-payout-refund.service";
 import { enqueueEmail } from "../mail/email-dispatcher.service";
@@ -21,13 +21,12 @@ export async function registerTripRefundWorker() {
       pollingIntervalSeconds: 2,
     },
     async ([job]) => {
-      const { bookingId, paymentReference, refundReference, refundReason, emailReason } = job.data;
+      const { bookingId, paymentReference, refundReason, emailReason } = job.data;
 
       logger.info("worker.trip_refund.started", {
         jobId: job.id,
         bookingId,
         paymentReference,
-        refundReference,
       });
 
       const paymentRecord = await paymentRepo.findPaymentByReference(paymentReference);
@@ -43,7 +42,6 @@ export async function registerTripRefundWorker() {
       try {
         await refundService.refundConfirmedBooking(
           paymentRecord,
-          refundReference,
           refundReason,
           emailReason,
         );
@@ -52,7 +50,6 @@ export async function registerTripRefundWorker() {
           jobId: job.id,
           bookingId,
           paymentReference,
-          refundReference,
         });
       } catch (error) {
         logger.error("worker.trip_refund.failed", {
@@ -69,13 +66,12 @@ export async function registerTripRefundWorker() {
   await boss.work<TripRefundJobData>(
     QUEUES.TRIP_REFUND_DLQ,
     async ([job]) => {
-      const { bookingId, paymentReference, refundReference, refundReason } = job.data;
+      const { bookingId, paymentReference, refundReason } = job.data;
 
       logger.error("worker.trip_refund.dlq", {
         jobId: job.id,
         bookingId,
         paymentReference,
-        refundReference,
       });
 
       await db.transaction(async (tx) => {
@@ -86,40 +82,28 @@ export async function registerTripRefundWorker() {
           .limit(1);
 
         const pendingRefund = paymentRecord
-          ? await tx.query.refund.findFirst({
-              where: and(
-                eq(refund.paymentId, paymentRecord.id),
-                eq(refund.status, "pending"),
-              ),
-              orderBy: (ref, { desc }) => [desc(ref.createdAt)],
-            })
+          ? await paymentRepo.findPendingRefundByPaymentId(tx, paymentRecord.id)
           : null;
         if (!pendingRefund) {
           logger.warn("worker.trip_refund.dlq.refund_not_found", {
             jobId: job.id,
             paymentReference,
-            refundReference,
           });
           return;
         }
-        const lockedRefund = pendingRefund;
 
-        if (lockedRefund.status === "pending") {
-          await paymentRepo.updateRefundStatus(tx, lockedRefund.id, {
-            status: "failed",
-            completedAt: new Date(),
+        const [failed] = await paymentRepo.settleRefund(tx, pendingRefund.id, "failed");
+        if (!failed) {
+          logger.info("worker.trip_refund.dlq.refund_already_terminal", {
+            jobId: job.id,
+            paymentReference,
+            refundId: pendingRefund.id,
           });
-        }
-
-        if (bookingId) {
-          await tx
-            .update(booking)
-            .set({ paymentStatus: "refund_failed", updatedAt: new Date() })
-            .where(eq(booking.id, bookingId));
+          return;
         }
 
         if (paymentRecord) {
-          const email = await paymentPayoutRefundService.sendRefundFailureEmail(paymentRecord, refundReason, lockedRefund.amount, tx);
+          const email = await paymentPayoutRefundService.sendRefundFailureEmail(paymentRecord, refundReason, failed.amount, tx);
           if (email) {
             await enqueueEmail(tx, email);
           }

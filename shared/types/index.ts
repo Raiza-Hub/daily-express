@@ -99,16 +99,6 @@ export interface Driver {
 export type BankVerificationStatus = "active" | "failed" | null;
 export type KycStatus = "active" | "failed" | null;
 
-export interface DriverPublicProfile {
-  id: string;
-  firstName: string;
-  lastName: string;
-  phone: string;
-  profile_pic?: string | null;
-  country: string;
-  state: string;
-}
-
 export interface UpdateProfileRequest {
   firstName?: string;
   lastName?: string;
@@ -127,13 +117,6 @@ export interface UpdateProfileRequest {
   kycType?: string;
   kycId?: string;
   kycConsent?: boolean;
-}
-
-export interface ServiceResponse<T = any> {
-  success: boolean;
-  data?: T;
-  error?: string;
-  statusCode?: number;
 }
 
 export interface ApiResponse<T = any> {
@@ -216,17 +199,9 @@ export interface Origin {
   updatedAt: string;
 }
 
-export type TripStatus = "pending" | "confirmed" | "cancelled" | "completed" | "awaiting_driver";
+export type TripStatus = "cancelled" | "completed" | "awaiting_driver";
 
-export interface CreateTrip {
-  originId: string;
-  destinationId: string;
-  date: string;
-  driverId?: string;
-  capacity?: number;
-  bookedSeats?: number;
-  status?: TripStatus;
-}
+export type BookingStatus = "pending" | "confirmed";
 
 export interface Trip {
   id: string;
@@ -242,21 +217,6 @@ export interface Trip {
   updatedAt: Date;
 }
 
-export interface DriverTripDetails extends Trip {
-  origin: Origin;
-  destination: Destination;
-  earnings: number;
-}
-
-export interface TripsSummary {
-  date: string;
-  totalEarnings: number;
-  totalTrips: number;
-  totalPassengers: number;
-  totalRoutes: number;
-  trips: DriverTripDetails[];
-}
-
 export interface Booking {
   id: string;
   originId: string;
@@ -269,9 +229,10 @@ export interface Booking {
   totalAmount: number;
   totalFee: number;
   currency: string;
-  status: TripStatus;
+  status: BookingStatus;
   paymentReference?: string | null;
-  paymentStatus?: string | null;
+  paymentStatus?: PaymentStatus;
+  refundStatus?: RefundStatus | null;
   createdAt: Date;
   updatedAt: Date;
 }
@@ -294,10 +255,6 @@ export interface PassengerInput {
   carriesLuggage: boolean;
 }
 
-export interface UserBookingDetails extends Booking {
-  trip: DriverTripDetails;
-}
-
 export interface CreateBooking {
   originId: string;
   destinationId: string;
@@ -306,32 +263,13 @@ export interface CreateBooking {
   passengers: PassengerInput[];
 }
 
-export interface updateBookingRequest {
-  tripId?: string;
-  userId?: string;
-  seatNumber?: number;
-  status?: "pending" | "confirmed" | "cancelled" | "completed";
-  paymentReference?: string;
-  paymentStatus?: string;
-}
+export type TransactionStatus = "pending" | "successful" | "failed";
 
-export type PaymentStatus =
-  | "initialized"
-  | "pending"
-  | "successful"
-  | "failed"
-  | "cancelled"
-  | "expired"
-  | "refund_pending"
-  | "refunded"
-  | "refund_failed";
+export type PaymentStatus = TransactionStatus;
 
-export const KORA_CHECKOUT_CHANNELS = [
-  "bank_transfer",
-  "card",
-  "pay_with_bank",
-  "mobile_money",
-] as const;
+export type RefundStatus = TransactionStatus;
+
+export const KORA_CHECKOUT_CHANNELS = ["bank_transfer"] as const;
 
 export type KoraCheckoutChannel = (typeof KORA_CHECKOUT_CHANNELS)[number];
 
@@ -346,6 +284,7 @@ export interface Payment {
   productDescription: string;
   customerEmail?: string | null;
   status: PaymentStatus;
+  refundId?: string | null;
   checkoutUrl?: string | null;
   redirectUrl: string;
   cancelUrl?: string | null;
@@ -368,13 +307,6 @@ export interface TripCheckout {
   checkoutUrl?: string | null;
 }
 
-export type EarningStatus =
-  | "pending_trip_completion"
-  | "available"
-  | "processing"
-  | "paid"
-  | "cancelled";
-
 export type PayoutStatus =
   | "processing"
   | "success"
@@ -395,18 +327,6 @@ export interface DriverPayout {
 export interface DriverPayoutHistoryItem extends DriverPayout {
   recipientBankName?: string | null;
   recipientAccountLast4?: string | null;
-}
-
-export interface ResolveBankAccountRequest {
-  bankCode: string;
-  accountNumber: string;
-  currency: string;
-}
-
-export interface ResolveBankAccountResponse {
-  accountName: string;
-  bankName: string;
-  bankCode: string;
 }
 
 export interface DriverInfoResponse {

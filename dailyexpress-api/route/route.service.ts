@@ -1,4 +1,4 @@
-import type { Booking, CreateBooking, JWTPayload, OriginDetails } from "@shared/types";
+import type { CreateBooking, JWTPayload, OriginDetails } from "@shared/types";
 import { BookingService } from "./booking.service";
 import { RouteRepository } from "./route.repository";
 import { TripService } from "./trip.service";
@@ -38,14 +38,6 @@ export class RouteService {
 
   async getUserBookings(userId: string, limit = 20, cursor?: string) {
     return this.booking.getUserBookings(userId, limit, cursor);
-  }
-
-  async searchBookingByRef(
-    userId: string,
-    paymentReference: string,
-    lastName: string,
-  ): Promise<Booking | null> {
-    return this.booking.searchBookingByRef(userId, paymentReference, lastName);
   }
 
   async getTripBookings(user: JWTPayload, tripId: string) {

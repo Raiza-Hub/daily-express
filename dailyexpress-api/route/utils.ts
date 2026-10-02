@@ -4,8 +4,6 @@ import { eq } from "drizzle-orm";
 import { db } from "../db/connection";
 import { driver } from "../db/index";
 
-export const ROUTE_SEARCH_SCORE_THRESHOLD = 0.15;
-export const VISIBLE_BOOKING_STATUSES = ["confirmed", "completed", "awaiting_driver"] as const;
 export const DEFAULT_PAGE_LIMIT = 20;
 export const MAX_PAGE_LIMIT = 50;
 

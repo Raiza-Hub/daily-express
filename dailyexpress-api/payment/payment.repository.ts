@@ -2,7 +2,7 @@ import { and, count, eq, gte, inArray, ne, sql } from "drizzle-orm";
 import { createServiceError } from "@shared/utils";
 import { db } from "../db/connection";
 import { booking, passenger, payment, refund, trip } from "../db/index";
-import type { PaymentStatus, PaymentTransaction } from "./payment.types";
+import type { PaymentTransaction, TransactionStatus } from "./payment.types";
 import { getRouteServiceTimeZone } from "../utils/db-datetime";
 
 export class PaymentRepository {
@@ -26,10 +26,10 @@ export class PaymentRepository {
       .returning();
   }
 
-  setPendingCheckout(id: string, checkoutUrl: string) {
+  setCheckoutUrl(id: string, checkoutUrl: string) {
     return db
       .update(payment)
-      .set({ status: "pending", checkoutUrl, updatedAt: new Date() })
+      .set({ checkoutUrl, updatedAt: new Date() })
       .where(eq(payment.id, id))
       .returning();
   }
@@ -87,27 +87,15 @@ export class PaymentRepository {
       .then((rows) => Number(rows[0]?.count ?? 0));
   }
 
-  claimPayment(reference: string) {
-    return db
-      .update(payment)
-      .set({ status: "processing", updatedAt: new Date() })
-      .where(
-        and(eq(payment.reference, reference), eq(payment.status, "pending")),
-      )
-      .returning();
-  }
-
-  updateProcessingPayment(
+  settlePayment(
+    tx: PaymentTransaction,
     reference: string,
-    status: PaymentStatus,
-    fields?: Partial<typeof payment.$inferInsert>,
+    status: TransactionStatus,
   ) {
-    return db
+    return tx
       .update(payment)
-      .set({ status, ...fields, updatedAt: new Date() })
-      .where(
-        and(eq(payment.reference, reference), eq(payment.status, "processing")),
-      )
+      .set({ status, updatedAt: new Date() })
+      .where(and(eq(payment.reference, reference), eq(payment.status, "pending")))
       .returning();
   }
 
@@ -131,28 +119,43 @@ export class PaymentRepository {
         ),
       );
   }
-
-  // ── Refund table methods ──
-
   insertRefund(tx: PaymentTransaction, values: typeof refund.$inferInsert) {
     return tx.insert(refund).values(values).returning();
   }
 
-  findRefundByReference(ref: string) {
+  findRefundByReference(reference: string) {
     return db.query.refund.findFirst({
-      where: eq(refund.reference, ref),
+      where: eq(refund.reference, reference),
     });
   }
 
-  updateRefundStatus(
+  findPendingRefundByPaymentId(tx: PaymentTransaction, paymentId: string) {
+    return tx.query.refund.findFirst({
+      where: and(eq(refund.paymentId, paymentId), eq(refund.status, "pending")),
+    });
+  }
+
+  pointPaymentAtRefund(
+    tx: PaymentTransaction,
+    paymentId: string,
+    refundId: string,
+  ) {
+    return tx
+      .update(payment)
+      .set({ refundId, updatedAt: new Date() })
+      .where(eq(payment.id, paymentId))
+      .returning();
+  }
+
+  settleRefund(
     tx: PaymentTransaction,
     id: string,
-    fields: Partial<typeof refund.$inferInsert>,
+    status: Exclude<TransactionStatus, "pending">,
   ) {
     return tx
       .update(refund)
-      .set({ ...fields, updatedAt: new Date() })
-      .where(eq(refund.id, id))
+      .set({ status, completedAt: new Date(), updatedAt: new Date() })
+      .where(and(eq(refund.id, id), eq(refund.status, "pending")))
       .returning();
   }
 }

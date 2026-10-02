@@ -82,49 +82,6 @@ export const getUserBookings: RequestHandler = asyncHandler(
   },
 );
 
-export const searchBookingByRef: RequestHandler = asyncHandler(
-  async (req: Request, res: Response) => {
-    const userId = getAuthenticatedUser(req)?.userId;
-    const { ref, lastName } = req.query;
-    const paymentReference = typeof ref === "string" ? ref : "";
-    const lastNameParam = typeof lastName === "string" ? lastName : "";
-    if (!userId) {
-      return sendErrorResponse(res, 401, "Please sign in again to continue.", {
-        code: "AUTHENTICATION_REQUIRED",
-      });
-    }
-    if (!paymentReference) {
-      return sendErrorResponse(res, 400, "Booking reference is required.", {
-        code: "MISSING_BOOKING_REFERENCE",
-      });
-    }
-    if (!lastNameParam) {
-      return sendErrorResponse(res, 400, "Last name is required.", {
-        code: "MISSING_LAST_NAME",
-      });
-    }
-
-    const booking = await timeAsync(
-      "route.search_booking_by_ref.service",
-      { userId, hasReference: Boolean(paymentReference) },
-      () =>
-        routeService.searchBookingByRef(
-          userId,
-          paymentReference,
-          lastNameParam,
-        ),
-    );
-    if (!booking) {
-      return sendErrorResponse(res, 404, "We could not find that booking.", {
-        code: "BOOKING_NOT_FOUND",
-      });
-    }
-    return res
-      .status(200)
-      .json(createSuccessResponse(booking, "Booking found successfully"));
-  },
-);
-
 export const getTripBookings: RequestHandler = asyncHandler(
   async (req: Request, res: Response) => {
     const user = getAuthenticatedUser(req);
