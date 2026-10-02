@@ -137,11 +137,6 @@ function BookingDetailsDrawer({
                       <PassengerListItem
                         key={passenger.id}
                         passenger={passenger}
-                        onRemove={() =>
-                          setPassengers((current) =>
-                            current.filter((item) => item.id !== passenger.id),
-                          )
-                        }
                       />
                     ))}
                   </ul>
