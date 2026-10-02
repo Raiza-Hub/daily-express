@@ -1,5 +1,4 @@
 import {
-  keepPreviousData,
   useMutation,
   useQuery,
   useQueryClient,
@@ -9,39 +8,32 @@ import { routeApi } from "../api";
 import type {
   Trip,
   ApiResponse,
-  DriverInfoResponse,
-  Origin,
   OriginDetails,
-  Destination,
 } from "@shared/types";
 import { handleApiError } from "../utils";
 
+export interface TripDriverSummary {
+  id: string;
+  firstName: string;
+  lastName: string;
+  phone: string;
+  profilePic: string | null;
+}
+
 export interface UserBookingWithTrip {
   id: string;
-  status: string;
-  paymentReference: string | null;
-  paymentStatus: string;
-  refundStatus: string | null;
+  tripId: string;
+  tripDate: string;
+  departureTime: string;
   totalAmount: number;
   totalFee: number;
-  currency: string;
-  createdAt: Date;
-  updatedAt: Date;
-  tripId: string;
-  driverStatus: string;
-  displayMessage: string | null;
-  driverInfo: DriverInfoResponse | null;
+  refundStatus: string | null;
   trip: {
-    id: string;
-    date: string;
-    status: string;
     bookedSeats: number;
     capacity: number;
-    availableSeats: number;
-    origin: Origin;
-    destination: Destination;
-    driver?: any;
-    earnings?: number;
+    origin: { title: string };
+    destination: { title: string };
+    driver: TripDriverSummary | null;
   } | null;
 }
 
@@ -134,12 +126,8 @@ export const useCompleteTrip = (options?: {
 
   return useMutation({
     mutationFn: completeTripFn,
-    onSuccess: async (data, variables) => {
+    onSuccess: async (data) => {
       await Promise.all([
-        queryClient.invalidateQueries({ queryKey: ["driverRoutes"] }),
-        queryClient.invalidateQueries({
-          queryKey: ["tripBookings", variables.id],
-        }),
         queryClient.invalidateQueries({
           queryKey: ["driver-payout-balance"],
         }),
@@ -156,48 +144,42 @@ export const useCompleteTrip = (options?: {
   });
 };
 
-type TripBookingsResponse = Array<{
+export interface TripPassenger {
   id: string;
-  originId: string;
-  destinationId: string;
-  tripDate: string;
-  departureTime: string;
-  luggageCount: number;
-  tripId: string | null;
-  userId: string;
-  totalAmount: number;
-  totalFee: number;
-  currency: string;
-  status: string;
-  paymentReference: string | null;
-  createdAt: string;
-  updatedAt: string;
-}>;
+  fullName: string;
+  email: string;
+  carriesLuggage: boolean;
+}
 
-export const getTripBookingsFn = async (
+interface TripPassengersManifest {
+  passengers: TripPassenger[];
+}
+
+export const getTripPassengersFn = async (
   tripId: string,
-): Promise<TripBookingsResponse> => {
+): Promise<TripPassengersManifest> => {
   try {
-    const response = await routeApi.get<ApiResponse<TripBookingsResponse>>(
-      `/driver/trip/${tripId}/bookings`,
+    const response = await routeApi.get<ApiResponse<TripPassengersManifest>>(
+      `/user/trip/${tripId}/passengers`,
     );
     if (!response.data.success || !response.data.data) {
-      throw new Error(response.data.error || "Failed to get trip bookings");
+      throw new Error(response.data.error || "Failed to get trip passengers");
     }
     return response.data.data;
   } catch (err) {
-    throw handleApiError(err, "Failed to get trip bookings") ;
+    throw handleApiError(err, "Failed to get trip passengers");
   }
 };
 
-export const useGetTripBookings = (
+export const useGetTripPassengers = (
   tripId: string,
   options?: { enabled?: boolean },
 ) => {
   return useQuery({
-    queryKey: ["tripBookings", tripId],
-    queryFn: () => getTripBookingsFn(tripId),
-    enabled: options?.enabled ?? !!tripId,
+    queryKey: ["tripPassengers", tripId],
+    queryFn: () => getTripPassengersFn(tripId),
+    enabled: (options?.enabled ?? true) && !!tripId,
+    staleTime: 0,
   });
 };
 

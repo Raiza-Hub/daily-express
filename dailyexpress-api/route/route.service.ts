@@ -40,8 +40,8 @@ export class RouteService {
     return this.booking.getUserBookings(userId, limit, cursor);
   }
 
-  async getTripBookings(user: JWTPayload, tripId: string) {
-    return this.booking.getTripBookings(user, tripId);
+  async getTripPassengers(userId: string, tripId: string) {
+    return this.booking.getTripPassengers(userId, tripId);
   }
 
 }

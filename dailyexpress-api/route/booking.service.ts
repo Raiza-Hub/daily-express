@@ -1,18 +1,11 @@
 import type { CreateBooking } from "@shared/types";
 import { createServiceError } from "@shared/utils";
-import { and, desc, eq, getTableColumns, lt, or, sql } from "drizzle-orm";
+import { and, desc, eq, lt, or } from "drizzle-orm";
 import { db } from "../db/connection";
-import { booking, driver, earning, origin, destination, payment, refund, trip } from "../db/index";
+import { booking, driver, origin, destination, payment, refund, trip } from "../db/index";
 import { logger } from "../utils/logger";
-import { scheduledAtSql } from "../utils/db-datetime";
 import { parseDateKey } from "../utils/route";
 import { RouteRepository } from "./route.repository";
-import {
-  normalizePageLimit,
-  decodeCursor,
-  encodeCursor,
-  isValidUserBookingsCursor,
-} from "./utils";
 
 export class BookingService {
   constructor(private repo: RouteRepository) {}
@@ -110,34 +103,26 @@ export class BookingService {
   }
 
   async getUserBookings(userId: string, limit = 20, cursor?: string) {
-    const parsedLimit = normalizePageLimit(limit);
-    const decodedCursor = decodeCursor(cursor, isValidUserBookingsCursor);
-    const visibleBookingConditions = and(
-      eq(booking.userId, userId),
-      eq(booking.status, "confirmed"),
-      eq(payment.status, "successful"),
-    );
-    const cursorCondition = decodedCursor
-      ? or(
-          lt(booking.tripDate, decodedCursor.tripDate),
-          and(
-            eq(booking.tripDate, decodedCursor.tripDate),
-            lt(booking.id, decodedCursor.id),
-          ),
-        )
-      : undefined;
+    const cap = Math.max(1, Math.min(50, Math.floor(limit || 20)));
+    const decoded = cursor ? this.decodeCursor(cursor) : null;
 
-    const baseQuery = db
+    const rows = await db
       .select({
-        booking: getTableColumns(booking),
-        trip: trip,
-        origin: origin,
-        destination: destination,
-        driver: driver,
-        earning: earning,
-        paymentStatus: payment.status,
+        id: booking.id,
+        tripId: booking.tripId,
+        tripDate: booking.tripDate,
+        departureTime: booking.departureTime,
+        totalAmount: booking.totalAmount,
+        totalFee: booking.totalFee,
         refundStatus: refund.status,
-        hasDeparted: sql<boolean>`${scheduledAtSql(trip.date, trip.departureTime)} <= now()`,
+        trip,
+        originTitle: origin.title,
+        destinationTitle: destination.title,
+        driverId: driver.id,
+        driverFirstName: driver.firstName,
+        driverLastName: driver.lastName,
+        driverPhone: driver.phone,
+        driverProfilePic: driver.profile_pic,
       })
       .from(booking)
       .innerJoin(payment, eq(payment.bookingId, booking.id))
@@ -146,55 +131,87 @@ export class BookingService {
       .leftJoin(origin, eq(origin.id, booking.originId))
       .leftJoin(destination, eq(destination.id, booking.destinationId))
       .leftJoin(driver, eq(driver.id, trip.driverId))
-      .leftJoin(earning, eq(earning.tripId, trip.id))
-      .where(cursorCondition ? and(visibleBookingConditions, cursorCondition) : visibleBookingConditions)
+      .where(
+        and(
+          eq(booking.userId, userId),
+          eq(booking.status, "confirmed"),
+          eq(payment.status, "successful"),
+          decoded
+            ? or(
+                lt(booking.tripDate, decoded.tripDate),
+                and(
+                  eq(booking.tripDate, decoded.tripDate),
+                  lt(booking.id, decoded.id),
+                ),
+              )
+            : undefined,
+        ),
+      )
       .orderBy(desc(booking.tripDate), desc(booking.id))
-      .limit(parsedLimit + 1);
+      .limit(cap + 1);
 
-    const rows = await baseQuery;
-
-    const hasMore = rows.length > parsedLimit;
-    const sliced = hasMore ? rows.slice(0, parsedLimit) : rows;
-    const last = sliced[sliced.length - 1];
-
-    const nextCursor = hasMore && last
-      ? encodeCursor({
-          tripDate: last.booking.tripDate,
-          id: last.booking.id,
-        })
-      : undefined;
+    const hasMore = rows.length > cap;
+    const page = hasMore ? rows.slice(0, cap) : rows;
+    const last = page.at(-1);
 
     return {
-      bookings: sliced.map((row) => ({
-        ...row.booking,
-        paymentStatus: row.paymentStatus,
-        refundStatus: row.refundStatus ?? null,
-        trip: row.trip
+      bookings: page.map((r) => ({
+        id: r.id,
+        tripId: r.tripId,
+        tripDate: r.tripDate,
+        departureTime: r.departureTime,
+        totalAmount: r.totalAmount,
+        totalFee: r.totalFee,
+        refundStatus: r.refundStatus ?? null,
+        trip: r.trip
           ? {
-              ...row.trip,
-              origin: row.origin,
-              destination: row.destination,
-              driver: row.driver,
-              earnings: row.earning?.amount ?? 0,
+              capacity: r.trip.capacity,
+              bookedSeats: r.trip.bookedSeats,
+              origin: { title: r.originTitle ?? "" },
+              destination: { title: r.destinationTitle ?? "" },
+              driver: r.driverId
+                ? {
+                    id: r.driverId,
+                    firstName: r.driverFirstName ?? "",
+                    lastName: r.driverLastName ?? "",
+                    phone: r.driverPhone ?? "",
+                    profilePic: r.driverProfilePic ?? null,
+                  }
+                : null,
             }
           : null,
-        hasDeparted: Boolean(row.hasDeparted),
       })),
-      nextCursor,
+      nextCursor:
+        hasMore && last
+          ? Buffer.from(
+              JSON.stringify({ tripDate: last.tripDate, id: last.id }),
+            ).toString("base64url")
+          : undefined,
     };
   }
 
-  async getTripBookings(user: any, tripId: string) {
-    const driverId = await (await import("./utils")).resolveDriverId(user);
-    const t = await this.repo.findTripWithOriginDestination(tripId);
-    if (!t) throw new Error("Trip not found");
-    if (t.trip.driverId !== driverId) throw new Error("Forbidden");
-    const bookings = await db
-      .select({ booking: getTableColumns(booking) })
-      .from(booking)
-      .where(eq(booking.tripId, tripId))
-      .orderBy(desc(booking.createdAt));
-    return bookings.map((b) => ({ ...b.booking }));
+  private decodeCursor(cursor: string): { tripDate: string; id: string } {
+    try {
+      const v = JSON.parse(Buffer.from(cursor, "base64url").toString("utf8"));
+      if (
+        v &&
+        typeof v === "object" &&
+        typeof v.tripDate === "string" &&
+        typeof v.id === "string"
+      ) {
+        return v;
+      }
+    } catch {}
+    throw createServiceError("Invalid cursor", 400, "INVALID_CURSOR");
+  }
+
+  async getTripPassengers(userId: string, tripId: string) {
+    const hasBooking = await this.repo.hasConfirmedBookingOnTrip(userId, tripId);
+    if (!hasBooking) {
+      throw createServiceError("Trip not found", 404, "TRIP_NOT_FOUND");
+    }
+    const passengers = await this.repo.findTripPassengersForTrip(tripId);
+    return { passengers };
   }
 }
 export const bookingService = new BookingService(new RouteRepository());

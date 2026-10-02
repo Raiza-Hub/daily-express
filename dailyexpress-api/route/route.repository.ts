@@ -288,4 +288,38 @@ export class RouteRepository {
       where: eq(passenger.bookingId, bookingId),
     });
   }
+
+  async hasConfirmedBookingOnTrip(
+    userId: string,
+    tripId: string,
+  ): Promise<boolean> {
+    const existing = await db.query.booking.findFirst({
+      where: and(
+        eq(booking.tripId, tripId),
+        eq(booking.userId, userId),
+        eq(booking.status, "confirmed"),
+      ),
+      columns: { id: true },
+    });
+    return Boolean(existing);
+  }
+
+  async findTripPassengersForTrip(tripId: string) {
+    const tripBookings = await db.query.booking.findMany({
+      where: and(eq(booking.tripId, tripId), eq(booking.status, "confirmed")),
+      columns: { id: true },
+    });
+    const bookingIds = tripBookings.map((tripBooking) => tripBooking.id);
+    if (bookingIds.length === 0) return [];
+    return db.query.passenger.findMany({
+      where: inArray(passenger.bookingId, bookingIds),
+      columns: {
+        id: true,
+        fullName: true,
+        email: true,
+        carriesLuggage: true,
+      },
+      orderBy: (fields, { asc }) => [asc(fields.createdAt)],
+    });
+  }
 }

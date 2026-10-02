@@ -82,7 +82,7 @@ export const getUserBookings: RequestHandler = asyncHandler(
   },
 );
 
-export const getTripBookings: RequestHandler = asyncHandler(
+export const getTripPassengers: RequestHandler = asyncHandler(
   async (req: Request, res: Response) => {
     const user = getAuthenticatedUser(req);
     const tripId = getParam(req.params.tripId);
@@ -96,14 +96,14 @@ export const getTripBookings: RequestHandler = asyncHandler(
         code: "MISSING_TRIP_ID",
       });
     }
-    const bookings = await timeAsync(
-      "route.trip_bookings.service",
+    const result = await timeAsync(
+      "route.trip_passengers.service",
       { userId: user.userId, tripId },
-      () => routeService.getTripBookings(user, tripId),
+      () => routeService.getTripPassengers(user.userId, tripId),
     );
     return res
       .status(200)
-      .json(createSuccessResponse(bookings, "Bookings fetched successfully"));
+      .json(createSuccessResponse(result, "Passengers fetched successfully"));
   },
 );
 

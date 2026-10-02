@@ -34,10 +34,10 @@ router.patch(
   routeController.completeTrip,
 );
 router.get(
-  "/driver/trip/:tripId/bookings",
+  "/user/trip/:tripId/passengers",
   authenticateSession,
   authenticateVerifiedGatewayRequest,
-  routeController.getTripBookings,
+  routeController.getTripPassengers,
 );
 router.get(
   "/user/bookings",

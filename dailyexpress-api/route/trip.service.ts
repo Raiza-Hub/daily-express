@@ -60,11 +60,6 @@ export class TripService {
         throw createServiceError("Trip not found", 404);
       }
 
-      await this.payoutService.markTripCompletedInTransaction(
-        tx,
-        { tripId, completedAt: new Date() },
-      );
-
       return { updatedTrip };
     });
 
