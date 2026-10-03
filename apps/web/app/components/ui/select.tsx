@@ -4,6 +4,7 @@ import * as React from "react";
 import { Check, ChevronDown } from "lucide-react";
 import { Select as SelectPrimitive } from "@base-ui/react/select";
 import { cn } from "@repo/ui/lib/utils";
+import { useDrawerPortalContainer } from "@repo/ui/Drawer";
 
 interface SelectItem {
     value: string;
@@ -27,8 +28,10 @@ interface SelectProps {
 }
 
 const SelectPopup = ({ items }: { items: SelectItem[] }) => {
+    const portalContainer = useDrawerPortalContainer();
+
     return (
-        <SelectPrimitive.Portal>
+        <SelectPrimitive.Portal container={portalContainer ?? undefined}>
             <SelectPrimitive.Positioner
                 sideOffset={4}
                 alignItemWithTrigger={false}
