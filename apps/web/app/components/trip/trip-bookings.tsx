@@ -66,38 +66,34 @@ export default function TripBookings() {
         <div className="flex items-center gap-3">
           <Select
             value={String(selectedYear)}
-            onChange={(event) =>
-              setSelectedYear(
-                event.target.value === "all"
-                  ? "all"
-                  : Number(event.target.value),
-              )
+            onChange={(value) =>
+              setSelectedYear(value === "all" ? "all" : Number(value))
             }
             className="w-28"
             aria-label="Filter by year"
-          >
-            <option value="all">All dates</option>
-            {bookingYears.map((year) => (
-              <option key={year} value={String(year)}>
-                {year}
-              </option>
-            ))}
-          </Select>
+            items={[
+              { value: "all", label: "All dates" },
+              ...bookingYears.map((year) => ({
+                value: String(year),
+                label: String(year),
+              })),
+            ]}
+          />
           <Select
             value={statusFilter}
-            onChange={(event) =>
-              setStatusFilter(event.target.value as TripBookingStatus | "all")
+            onChange={(value) =>
+              setStatusFilter(value as TripBookingStatus | "all")
             }
             className="w-40"
             aria-label="Filter by status"
-          >
-            <option value="all">All statuses</option>
-            {Object.entries(STATUS_LABELS).map(([value, label]) => (
-              <option key={value} value={value}>
-                {label}
-              </option>
-            ))}
-          </Select>
+            items={[
+              { value: "all", label: "All statuses" },
+              ...Object.entries(STATUS_LABELS).map(([value, label]) => ({
+                value,
+                label,
+              })),
+            ]}
+          />
         </div>
       </header>
 

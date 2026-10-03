@@ -233,13 +233,14 @@ const ProfileCard = () => {
                                 <Select
                                     id="edit-gender"
                                     value={draft.gender}
-                                    onChange={(event) =>
-                                        updateDraft("gender", event.target.value)
+                                    onChange={(value) =>
+                                        updateDraft("gender", value)
                                     }
-                                >
-                                    <option value="male">Male</option>
-                                    <option value="female">Female</option>
-                                </Select>
+                                    items={[
+                                        { value: "male", label: "Male" },
+                                        { value: "female", label: "Female" },
+                                    ]}
+                                />
                             </Field>
                             <Field
                                 label="Date of birth"

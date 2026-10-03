@@ -203,20 +203,19 @@ const BankKycStep = ({
                 id="bankName"
                 value={data.bankName}
                 invalid={Boolean(errors.bankName)}
-                onChange={(event) => {
-                    const bank = BANKS.find((option) => option.name === event.target.value);
-                    onChange({ bankName: event.target.value, bankCode: bank?.code ?? "" });
+                onChange={(value) => {
+                    const bank = BANKS.find((option) => option.name === value);
+                    onChange({ bankName: value, bankCode: bank?.code ?? "" });
                 }}
-            >
-                <option value="" disabled>
-                    Select bank
-                </option>
-                {BANKS.map((bank) => (
-                    <option key={bank.name} value={bank.name}>
-                        {bank.name}
-                    </option>
-                ))}
-            </Select>
+                placeholder="Select bank"
+                items={[
+                    { value: "", label: "Select bank", disabled: true },
+                    ...BANKS.map((bank) => ({
+                        value: bank.name,
+                        label: bank.name,
+                    })),
+                ]}
+            />
         </Field>
 
         <Field label="Account number" htmlFor="accountNumber" error={errors.accountNumber}>

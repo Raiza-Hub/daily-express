@@ -410,16 +410,14 @@ return (
                                 <Select
                                     id="edit-driver-country"
                                     value={addressDraft.country}
-                                    onChange={(event) =>
-                                        updateAddressDraft("country", event.target.value)
+                                    onChange={(value) =>
+                                        updateAddressDraft("country", value)
                                     }
-                                >
-                                    {KORA_SUPPORTED_COUNTRIES.map((country) => (
-                                        <option key={country} value={country}>
-                                            {country}
-                                        </option>
-                                    ))}
-                                </Select>
+                                    items={KORA_SUPPORTED_COUNTRIES.map((country) => ({
+                                        value: country,
+                                        label: country,
+                                    }))}
+                                />
                             </Field>
                             <Field
                                 label="Currency"
@@ -444,20 +442,19 @@ return (
                                 <Select
                                     id="edit-driver-state"
                                     value={addressDraft.state}
-                                    onChange={(event) => {
-                                        updateAddressDraft("state", event.target.value);
+                                    onChange={(value) => {
+                                        updateAddressDraft("state", value);
                                         updateAddressDraft("city", "");
                                     }}
-                                >
-                                    <option value="" disabled>
-                                        Select state
-                                    </option>
-                                    {NIGERIAN_STATES.map((state) => (
-                                        <option key={state.name} value={state.name}>
-                                            {state.name}
-                                        </option>
-                                    ))}
-                                </Select>
+                                    placeholder="Select state"
+                                    items={[
+                                        { value: "", label: "Select state", disabled: true },
+                                        ...NIGERIAN_STATES.map((state) => ({
+                                            value: state.name,
+                                            label: state.name,
+                                        })),
+                                    ]}
+                                />
                             </Field>
                             <Field
                                 label="City"
@@ -468,19 +465,24 @@ return (
                                     id="edit-driver-city"
                                     value={addressDraft.city}
                                     disabled={!addressDraft.state}
-                                    onChange={(event) =>
-                                        updateAddressDraft("city", event.target.value)
+                                    onChange={(value) =>
+                                        updateAddressDraft("city", value)
                                     }
-                                >
-                                    <option value="" disabled>
-                                        {addressDraft.state ? "Select city" : "Select a state first"}
-                                    </option>
-                                    {addressStateCities.map((city) => (
-                                        <option key={city} value={city}>
-                                            {city}
-                                        </option>
-                                    ))}
-                                </Select>
+                                    placeholder={
+                                        addressDraft.state ? "Select city" : "Select a state first"
+                                    }
+                                    items={[
+                                        {
+                                            value: "",
+                                            label: addressDraft.state ? "Select city" : "Select a state first",
+                                            disabled: true,
+                                        },
+                                        ...addressStateCities.map((city) => ({
+                                            value: city,
+                                            label: city,
+                                        })),
+                                    ]}
+                                />
                             </Field>
                         </div>
                         <Field
@@ -534,23 +536,22 @@ return (
                             <Select
                                 id="edit-driver-bankName"
                                 value={bankDraft.bankName}
-                                onChange={(event) => {
+                                onChange={(value) => {
                                     const bank = BANKS.find(
-                                        (option) => option.name === event.target.value,
+                                        (option) => option.name === value,
                                     );
-                                    updateBankDraft("bankName", event.target.value);
+                                    updateBankDraft("bankName", value);
                                     updateBankDraft("bankCode", bank?.code ?? "");
                                 }}
-                            >
-                                <option value="" disabled>
-                                    Select bank
-                                </option>
-                                {BANKS.map((bank) => (
-                                    <option key={bank.name} value={bank.name}>
-                                        {bank.name}
-                                    </option>
-                                ))}
-                            </Select>
+                                placeholder="Select bank"
+                                items={[
+                                    { value: "", label: "Select bank", disabled: true },
+                                    ...BANKS.map((bank) => ({
+                                        value: bank.name,
+                                        label: bank.name,
+                                    })),
+                                ]}
+                            />
                         </Field>
                         <Field label="Account number" htmlFor="edit-driver-accountNumber" error={bankErrors.accountNumber}>
                             <Input
