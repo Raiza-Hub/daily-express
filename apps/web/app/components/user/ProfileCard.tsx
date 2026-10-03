@@ -2,7 +2,7 @@
 
 import { useState } from "react";
 import { getApiErrorMessage, useGetMe, useUpdateProfile } from "@repo/api";
-import { ProfileEditSchema, zodFieldErrors } from "@repo/types";
+import { ProfileEditSchema, zodFieldErrors, MINIMUM_ACCOUNT_AGE } from "@repo/types";
 import { BadgeCheck } from "lucide-react";
 import Image from "next/image";
 import { Button } from "~/components/ui/button";
@@ -26,8 +26,29 @@ function VerifiedBadge() {
     return <BadgeCheck className="h-4 w-4 shrink-0 fill-blue-500 text-white" />;
 }
 
+const toDateKey = (date: Date) =>
+    `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, "0")}-${String(
+        date.getDate(),
+    ).padStart(2, "0")}`;
+
+const dateOfBirthBounds = () => {
+    const today = new Date();
+    return {
+        min: toDateKey(
+            new Date(
+                today.getFullYear() - MINIMUM_ACCOUNT_AGE,
+                today.getMonth(),
+                today.getDate(),
+            ),
+        ),
+        max: toDateKey(today),
+    };
+};
+
 const ProfileCard = () => {
     const { data: apiUser, isPending } = useGetMe();
+
+    const dobBounds = dateOfBirthBounds();
 
     const name =
         `${apiUser?.firstName ?? ""} ${apiUser?.lastName ?? ""}`.trim() || "Not set";
@@ -250,6 +271,8 @@ const ProfileCard = () => {
                                 <Input
                                     id="edit-dateOfBirth"
                                     type="date"
+                                    min={dobBounds.min}
+                                    max={dobBounds.max}
                                     value={draft.dateOfBirth}
                                     onChange={(event) =>
                                         updateDraft("dateOfBirth", event.target.value)
