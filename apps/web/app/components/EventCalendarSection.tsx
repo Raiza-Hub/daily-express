@@ -1,116 +1,75 @@
 "use client";
 
-import { addDays, setHours, startOfDay } from "date-fns";
-import { useMemo, useState } from "react";
+import { addDays, addHours, format, isValid, parseISO } from "date-fns";
+import { useRouter } from "next/navigation";
+import { useMemo } from "react";
+import { useGetDriverTrips } from "@repo/api";
 
 import {
   EventCalendar,
   type CalendarEvent,
-  type EventCalendarPassenger,
 } from "~/components/event-calendar";
+import { AgendaDaysToShow } from "~/components/event-calendar/constants";
 
-const passenger = (
-  id: string,
-  fullName: string,
-  phone: string,
-  carriesLuggage = false,
-): EventCalendarPassenger => ({ id, fullName, phone, carriesLuggage });
+function parseTripDateTime(dateStr: string, timeStr: string): Date {
+  const normalizedTime = timeStr.length === 5 ? `${timeStr}:00` : timeStr;
+  const isoString = `${dateStr}T${normalizedTime}`;
+  const parsed = new Date(isoString);
+  return Number.isNaN(parsed.getTime()) ? parseISO(dateStr) : parsed;
+}
 
-const buildSampleEvents = (): CalendarEvent[] => {
-  const today = startOfDay(new Date());
+export function EventCalendarSection({
+  from,
+  to,
+}: {
+  from?: string;
+  to?: string;
+}) {
+  const router = useRouter();
 
-  return [
-    {
-      id: "sample-1",
-      origin: "Federal University of Agriculture, Abeokuta.",
-      destination: "Professor Wole Soyinka Station Abeokuta",
-      start: setHours(addDays(today, 1), 9),
-      end: setHours(addDays(today, 1), 9.5),
-      status: "pending_payment",
-      price: 3000,
-      passengers: [
-        passenger("s1-p1", "Adaeze Okafor", "2348012345678"),
-        passenger("s1-p2", "Bola Adewale", "2348123456789"),
-        passenger("s1-p3", "Chika Obi", "2348234567890"),
-        passenger("s1-p4", "Damilola Fashola", "2348345678901"),
-      ],
-    },
-    {
-      id: "sample-2",
-      origin: "Federal University of Agriculture, Abeokuta.",
-      destination: "Lagos Central Business District",
-      start: setHours(addDays(today, 2), 11),
-      end: setHours(addDays(today, 2), 12),
-      status: "pending_payment",
-      price: 4500,
-      passengers: [
-        passenger("s2-p1", "Chinedu Nwosu", "2348023456789", true),
-        passenger("s2-p2", "Folake Adeyemi", "2348034567890"),
-        passenger("s2-p3", "Gideon Okoye", "2348456789012"),
-        passenger("s2-p4", "Halima Bello", "2348567890123"),
-      ],
-    },
-    {
-      id: "sample-3",
-      origin: "Professor Wole Soyinka Station Abeokuta",
-      destination: "Federal University of Agriculture, Abeokuta.",
-      start: setHours(addDays(today, 3), 8),
-      end: setHours(addDays(today, 3), 9),
-      status: "paid",
-      price: 2500,
-      passengers: [
-        passenger("s3-p1", "Ibrahim Musa", "2348045678901"),
-        passenger("s3-p2", "Ngozi Eze", "2348056789012", true),
-        passenger("s3-p3", "Segun Balogun", "2348067890123"),
-        passenger("s3-p4", "Toyin Adebayo", "2348678901234"),
-      ],
-    },
-    {
-      id: "sample-4",
-      origin: "Lagos Central Business District",
-      destination: "Federal University of Agriculture, Abeokuta.",
-      start: setHours(addDays(today, 6), 14),
-      end: setHours(addDays(today, 6), 15),
-      status: "paid",
-      price: 6000,
-      passengers: [
-        passenger("s4-p1", "Amaka Obi", "2348078901234", true),
-        passenger("s4-p2", "Tunde Bakare", "2348089012345"),
-        passenger("s4-p3", "Uche Nnamdi", "2348789012345"),
-        passenger("s4-p4", "Victoria Eze", "2348890123456"),
-      ],
-    },
-    {
-      id: "sample-5",
-      origin: "Federal University of Agriculture, Abeokuta.",
-      destination: "Professor Wole Soyinka Station Abeokuta",
-      start: setHours(addDays(today, 10), 10),
-      end: setHours(addDays(today, 10), 12),
-      status: "cancelled",
-      price: 5000,
-      passengers: [
-        passenger("s5-p1", "Hauwa Sani", "2348090123456"),
-        passenger("s5-p2", "Yemi Odugbesan", "2348901234567"),
-        passenger("s5-p3", "Zainab Abubakar", "2349012345678"),
-        passenger("s5-p4", "Chiamaka Obi", "2349123456789"),
-      ],
-    },
-  ];
-};
+  // The URL owns the visible window, so the view survives reload and sharing.
+  const currentDate = useMemo(() => {
+    const parsed = from ? parseISO(from) : new Date();
+    return isValid(parsed) ? parsed : new Date();
+  }, [from]);
 
-export function EventCalendarSection() {
-  const [events, setEvents] = useState<CalendarEvent[]>(() =>
-    buildSampleEvents(),
-  );
+  const rangeTo = useMemo(() => {
+    const parsed = to ? parseISO(to) : null;
+    if (parsed && isValid(parsed)) return parsed;
+    return addDays(currentDate, AgendaDaysToShow - 1);
+  }, [to, currentDate]);
 
-  const sortedEvents = useMemo(
-    () =>
-      [...events].sort((a, b) => a.start.getTime() - b.start.getTime()),
-    [events],
-  );
+  const { data: trips = [], isLoading, isError } = useGetDriverTrips({
+    from: format(currentDate, "yyyy-MM-dd"),
+    to: format(rangeTo, "yyyy-MM-dd"),
+  });
 
-  const handleEventDelete = (eventId: string) => {
-    setEvents((prev) => prev.filter((event) => event.id !== eventId));
+  const events: CalendarEvent[] = useMemo(() => {
+    return trips
+      .map((trip) => {
+        const start = parseTripDateTime(trip.date, trip.departureTime);
+        return {
+          id: trip.id,
+          origin: trip.origin,
+          destination: trip.destination,
+          start,
+          end: addHours(start, 1),
+          tripStatus: trip.tripStatus,
+          status: trip.status,
+          price: trip.price,
+        };
+      })
+      .sort((a, b) => a.start.getTime() - b.start.getTime());
+  }, [trips]);
+
+  const handleNavigate = (date: Date) => {
+    router.replace(
+      `/driver/calendar?from=${format(date, "yyyy-MM-dd")}&to=${format(
+        addDays(date, AgendaDaysToShow - 1),
+        "yyyy-MM-dd",
+      )}`,
+      { scroll: false },
+    );
   };
 
   return (
@@ -124,7 +83,18 @@ export function EventCalendarSection() {
         </p>
       </div>
 
-      <EventCalendar events={sortedEvents} onEventDelete={handleEventDelete} />
+      {isError ? (
+        <div className="rounded-lg border border-red-200 bg-red-50 p-6 text-sm text-red-700 dark:border-red-900 dark:bg-red-950 dark:text-red-300">
+          We couldn&apos;t load your trips. Please refresh to try again.
+        </div>
+      ) : (
+        <EventCalendar
+          currentDate={currentDate}
+          events={events}
+          isLoading={isLoading}
+          onNavigate={handleNavigate}
+        />
+      )}
     </div>
   );
 }

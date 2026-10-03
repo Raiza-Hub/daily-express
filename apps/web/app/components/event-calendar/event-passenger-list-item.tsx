@@ -16,7 +16,7 @@ function EventPassengerListItem({ passenger }: EventPassengerListItemProps) {
           {passenger.fullName}
         </p>
         <p className="truncate text-sm text-muted-foreground">
-          {formatPhoneDisplay(passenger.phone)}
+          {passenger.phone ? formatPhoneDisplay(passenger.phone) : "No phone"}
         </p>
       </div>
       {passenger.carriesLuggage && (

@@ -74,6 +74,13 @@ export class PayoutRepository {
     });
   }
 
+  async findLatestPayoutByTripId(tripId: string) {
+    return db.query.payout.findFirst({
+      where: eq(payout.tripId, tripId),
+      orderBy: (fields, { desc }) => [desc(fields.createdAt)],
+    });
+  }
+
   insertPayout(tx: PayoutTransaction, values: typeof payout.$inferInsert) {
     return tx
       .insert(payout)

@@ -2,12 +2,24 @@ import { redirect } from "next/navigation";
 import { EventCalendarSection } from "~/components/EventCalendarSection";
 import { getDriverProfile } from "~/lib/driver-session";
 
-export default async function DriverCalendarPage() {
+interface DriverCalendarPageProps {
+  searchParams: Promise<{ from?: string | string[]; to?: string | string[] }>;
+}
+
+function first(value: string | string[] | undefined): string | undefined {
+  return Array.isArray(value) ? value[0] : value;
+}
+
+export default async function DriverCalendarPage({
+  searchParams,
+}: DriverCalendarPageProps) {
   const driver = await getDriverProfile();
 
   if (!driver) {
     redirect("/driver/signup");
   }
 
-  return <EventCalendarSection />;
+  const { from, to } = await searchParams;
+
+  return <EventCalendarSection from={first(from)} to={first(to)} />;
 }

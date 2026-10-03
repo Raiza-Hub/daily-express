@@ -1,19 +1,21 @@
+import type { TripStatus } from "@shared/types";
+
 export interface CalendarEvent {
   id: string;
   origin: string;
   destination: string;
   start: Date;
   end: Date;
-  passengers?: EventCalendarPassenger[];
   status: EventStatus;
+  tripStatus: TripStatus;
   price: number;
 }
 
 export interface EventCalendarPassenger {
   id: string;
   fullName: string;
-  phone: string;
+  phone?: string;
   carriesLuggage?: boolean;
 }
 
-export type EventStatus = "paid" | "cancelled" | "upcoming" | "pending_payment";
+export type EventStatus = "pending" | "successful" | "cancelled";

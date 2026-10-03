@@ -40,10 +40,21 @@ export class RouteService {
     return this.booking.getUserBookings(userId, limit, cursor);
   }
 
-  async getTripPassengers(userId: string, tripId: string) {
-    return this.booking.getTripPassengers(userId, tripId);
+  async getTripPassengers(user: JWTPayload, tripId: string) {
+    return this.booking.getTripPassengers(user, tripId);
   }
 
+  async getDriverTrips(user: JWTPayload, from: string, to: string) {
+    return this.trip.getDriverTrips(user, from, to);
+  }
+
+  async cancelTrip(user: JWTPayload, tripId: string) {
+    return this.trip.cancelTrip(user, tripId);
+  }
+
+  async initiateTripPayout(user: JWTPayload, tripId: string) {
+    return this.trip.initiateTripPayout(user, tripId);
+  }
 }
 
 export const routeService = new RouteService();

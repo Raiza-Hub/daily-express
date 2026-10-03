@@ -99,7 +99,7 @@ export const getTripPassengers: RequestHandler = asyncHandler(
     const result = await timeAsync(
       "route.trip_passengers.service",
       { userId: user.userId, tripId },
-      () => routeService.getTripPassengers(user.userId, tripId),
+      () => routeService.getTripPassengers(user, tripId),
     );
     return res
       .status(200)
@@ -224,4 +224,78 @@ export const createCheckoutBooking: RequestHandler = asyncHandler(
   },
 );
 
+export const getDriverTrips: RequestHandler = asyncHandler(
+  async (req: Request, res: Response) => {
+    const user = getAuthenticatedUser(req);
+    if (!user) {
+      return sendErrorResponse(res, 401, "Please sign in again to continue.", {
+        code: "AUTHENTICATION_REQUIRED",
+      });
+    }
+    const from = parseDateOnly(req.query.from);
+    const to = parseDateOnly(req.query.to);
+    if (!from || !to || from > to) {
+      return sendErrorResponse(res, 400, "A valid date range is required.", {
+        code: "INVALID_DATE_RANGE",
+      });
+    }
+    const trips = await timeAsync(
+      "route.driver_trips.service",
+      { userId: user.userId, from, to },
+      () => routeService.getDriverTrips(user, from, to),
+    );
+    return res
+      .status(200)
+      .json(createSuccessResponse(trips, "Driver trips fetched successfully"));
+  },
+);
 
+export const cancelTrip: RequestHandler = asyncHandler(
+  async (req: Request, res: Response) => {
+    const user = getAuthenticatedUser(req);
+    if (!user) {
+      return sendErrorResponse(res, 401, "Please sign in again to continue.", {
+        code: "AUTHENTICATION_REQUIRED",
+      });
+    }
+    const tripId = getParam(req.params.id);
+    if (!tripId) {
+      return sendErrorResponse(res, 400, "Trip ID is required.", {
+        code: "MISSING_TRIP_ID",
+      });
+    }
+    const trip = await timeAsync(
+      "route.cancel_trip.service",
+      { userId: user.userId, tripId },
+      () => routeService.cancelTrip(user, tripId),
+    );
+    return res
+      .status(200)
+      .json(createSuccessResponse(trip, "Trip cancelled successfully"));
+  },
+);
+
+export const initiatePayout: RequestHandler = asyncHandler(
+  async (req: Request, res: Response) => {
+    const user = getAuthenticatedUser(req);
+    if (!user) {
+      return sendErrorResponse(res, 401, "Please sign in again to continue.", {
+        code: "AUTHENTICATION_REQUIRED",
+      });
+    }
+    const tripId = getParam(req.params.id);
+    if (!tripId) {
+      return sendErrorResponse(res, 400, "Trip ID is required.", {
+        code: "MISSING_TRIP_ID",
+      });
+    }
+    const trip = await timeAsync(
+      "route.initiate_payout.service",
+      { userId: user.userId, tripId },
+      () => routeService.initiateTripPayout(user, tripId),
+    );
+    return res
+      .status(200)
+      .json(createSuccessResponse(trip, "Payout initiated successfully"));
+  },
+);

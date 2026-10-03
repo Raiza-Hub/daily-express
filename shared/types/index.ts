@@ -201,6 +201,19 @@ export interface Origin {
 
 export type TripStatus = "cancelled" | "completed" | "awaiting_driver";
 
+export type DriverCalendarEventStatus = "pending" | "successful" | "cancelled";
+
+export interface DriverCalendarTrip {
+  id: string;
+  origin: string;
+  destination: string;
+  date: string;
+  departureTime: string;
+  price: number;
+  status: DriverCalendarEventStatus;
+  tripStatus: TripStatus;
+}
+
 export type BookingStatus = "pending" | "confirmed";
 
 export interface Trip {
