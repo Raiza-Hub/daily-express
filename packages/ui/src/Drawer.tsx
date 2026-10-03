@@ -5,6 +5,10 @@ import { Drawer as DrawerPrimitive } from "vaul"
 
 import { cn } from "@repo/ui/lib/utils"
 
+const DrawerPortalContainerContext = React.createContext<HTMLElement | null>(null)
+
+const useDrawerPortalContainer = () => React.useContext(DrawerPortalContainerContext)
+
 const Drawer = ({ ...props }: React.ComponentProps<typeof DrawerPrimitive.Root>) => (
     <DrawerPrimitive.Root data-slot="drawer" {...props} />
 )
@@ -43,29 +47,47 @@ DrawerOverlay.displayName = "DrawerOverlay"
 const DrawerContent = React.forwardRef<
     HTMLDivElement,
     React.ComponentPropsWithoutRef<"div">
->(({ className, children, ...props }, ref) => (
-    <DrawerPortal>
-        <DrawerOverlay />
-        <DrawerPrimitive.Content
-            ref={ref}
-            data-slot="drawer-content"
-            className={cn(
-                "group/drawer-content bg-background fixed z-50 flex h-auto flex-col",
-                "data-[vaul-drawer-direction=top]:inset-x-0 data-[vaul-drawer-direction=top]:top-0 data-[vaul-drawer-direction=top]:mb-24 data-[vaul-drawer-direction=top]:max-h-[95vh] data-[vaul-drawer-direction=top]:rounded-b-[var(--radius-lg)]",
-                "data-[vaul-drawer-direction=bottom]:inset-x-0 data-[vaul-drawer-direction=bottom]:bottom-0 data-[vaul-drawer-direction=bottom]:mt-24 data-[vaul-drawer-direction=bottom]:max-h-[95vh] data-[vaul-drawer-direction=bottom]:rounded-t-[var(--radius-lg)]",
-                "data-[vaul-drawer-direction=right]:inset-y-0 data-[vaul-drawer-direction=right]:right-0 data-[vaul-drawer-direction=right]:w-3/4 data-[vaul-drawer-direction=right]:max-w-sm",
-                "data-[vaul-drawer-direction=left]:inset-y-0 data-[vaul-drawer-direction=left]:left-0 data-[vaul-drawer-direction=left]:w-3/4 data-[vaul-drawer-direction=left]:max-w-sm",
-                className,
-            )}
-            {...props}
-        >
-            <div className="pt-4">
-                <div className="bg-muted mx-auto h-2 w-[100px] shrink-0 rounded-full group-data-[vaul-drawer-direction=bottom]/drawer-content:mt-0 group-data-[vaul-drawer-direction=right]/drawer-content:rotate-90 group-data-[vaul-drawer-direction=left]/drawer-content:rotate-90" />
-            </div>
-            {children}
-        </DrawerPrimitive.Content>
-    </DrawerPortal>
-))
+>(({ className, children, ...props }, ref) => {
+    const [portalContainer, setPortalContainer] = React.useState<HTMLElement | null>(null)
+
+    const setContentRef = React.useCallback(
+        (node: HTMLDivElement | null) => {
+            setPortalContainer(node)
+            if (typeof ref === "function") {
+                ref(node)
+            } else if (ref) {
+                ref.current = node
+            }
+        },
+        [ref],
+    )
+
+    return (
+        <DrawerPortal>
+            <DrawerOverlay />
+            <DrawerPrimitive.Content
+                ref={setContentRef}
+                data-slot="drawer-content"
+                className={cn(
+                    "group/drawer-content bg-background fixed z-50 flex h-auto flex-col",
+                    "data-[vaul-drawer-direction=top]:inset-x-0 data-[vaul-drawer-direction=top]:top-0 data-[vaul-drawer-direction=top]:mb-24 data-[vaul-drawer-direction=top]:max-h-[95vh] data-[vaul-drawer-direction=top]:rounded-b-[var(--radius-lg)]",
+                    "data-[vaul-drawer-direction=bottom]:inset-x-0 data-[vaul-drawer-direction=bottom]:bottom-0 data-[vaul-drawer-direction=bottom]:mt-24 data-[vaul-drawer-direction=bottom]:max-h-[95vh] data-[vaul-drawer-direction=bottom]:rounded-t-[var(--radius-lg)]",
+                    "data-[vaul-drawer-direction=right]:inset-y-0 data-[vaul-drawer-direction=right]:right-0 data-[vaul-drawer-direction=right]:w-3/4 data-[vaul-drawer-direction=right]:max-w-sm",
+                    "data-[vaul-drawer-direction=left]:inset-y-0 data-[vaul-drawer-direction=left]:left-0 data-[vaul-drawer-direction=left]:w-3/4 data-[vaul-drawer-direction=left]:max-w-sm",
+                    className,
+                )}
+                {...props}
+            >
+                <div className="pt-4">
+                    <div className="bg-muted mx-auto h-2 w-[100px] shrink-0 rounded-full group-data-[vaul-drawer-direction=bottom]/drawer-content:mt-0 group-data-[vaul-drawer-direction=right]/drawer-content:rotate-90 group-data-[vaul-drawer-direction=left]/drawer-content:rotate-90" />
+                </div>
+                <DrawerPortalContainerContext.Provider value={portalContainer}>
+                    {children}
+                </DrawerPortalContainerContext.Provider>
+            </DrawerPrimitive.Content>
+        </DrawerPortal>
+    )
+})
 DrawerContent.displayName = "DrawerContent"
 
 const DrawerHeader = ({ className, ...props }: React.ComponentProps<"div">) => (
@@ -120,4 +142,5 @@ export {
     DrawerFooter,
     DrawerTitle,
     DrawerDescription,
+    useDrawerPortalContainer,
 }
