@@ -34,6 +34,27 @@ router.patch(
   routeController.completeTrip,
 );
 router.get(
+  "/driver/trips",
+  authenticateSession,
+  authenticateVerifiedGatewayRequest,
+  driverActionLimiter,
+  routeController.getDriverTrips,
+);
+router.patch(
+  "/driver/trip/:id/cancel",
+  authenticateSession,
+  authenticateVerifiedGatewayRequest,
+  driverActionLimiter,
+  routeController.cancelTrip,
+);
+router.post(
+  "/driver/trip/:id/payout",
+  authenticateSession,
+  authenticateVerifiedGatewayRequest,
+  driverActionLimiter,
+  routeController.initiatePayout,
+);
+router.get(
   "/user/trip/:tripId/passengers",
   authenticateSession,
   authenticateVerifiedGatewayRequest,

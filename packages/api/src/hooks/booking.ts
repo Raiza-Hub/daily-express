@@ -9,6 +9,7 @@ import type {
   Trip,
   ApiResponse,
   OriginDetails,
+  DriverCalendarTrip,
 } from "@shared/types";
 import { handleApiError } from "../utils";
 
@@ -148,6 +149,7 @@ export interface TripPassenger {
   id: string;
   fullName: string;
   email: string;
+  phone?: string;
   carriesLuggage: boolean;
 }
 
@@ -180,6 +182,124 @@ export const useGetTripPassengers = (
     queryFn: () => getTripPassengersFn(tripId),
     enabled: (options?.enabled ?? true) && !!tripId,
     staleTime: 0,
+  });
+};
+
+export const getDriverTripsFn = async ({
+  from,
+  to,
+}: {
+  from: string;
+  to: string;
+}): Promise<DriverCalendarTrip[]> => {
+  try {
+    const response = await routeApi.get<ApiResponse<DriverCalendarTrip[]>>(
+      "/driver/trips",
+      { params: { from, to } },
+    );
+    if (!response.data.success || !response.data.data) {
+      throw new Error(response.data.error || "Failed to get driver trips");
+    }
+    return response.data.data;
+  } catch (err) {
+    throw handleApiError(err, "Failed to get driver trips");
+  }
+};
+
+export const useGetDriverTrips = ({
+  from,
+  to,
+}: {
+  from: string;
+  to: string;
+}) => {
+  return useQuery({
+    queryKey: ["driver-calendar-trips", from, to],
+    queryFn: () => getDriverTripsFn({ from, to }),
+  });
+};
+
+export const initiateTripPayoutFn = async ({
+  id,
+}: {
+  id: string;
+}): Promise<Trip> => {
+  try {
+    const response = await routeApi.post<ApiResponse<Trip>>(
+      `/driver/trip/${id}/payout`,
+    );
+    if (!response.data.success || !response.data.data) {
+      throw new Error(response.data.error || "Failed to initiate payout");
+    }
+    return response.data.data;
+  } catch (err) {
+    throw handleApiError(err, "Failed to initiate payout");
+  }
+};
+
+export const useInitiateTripPayout = (options?: {
+  onSuccess?: (data: Trip) => void;
+  onError?: (error: Error) => void;
+}) => {
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: initiateTripPayoutFn,
+    onSuccess: async (data) => {
+      await Promise.all([
+        queryClient.invalidateQueries({
+          queryKey: ["driver-calendar-trips"],
+        }),
+        queryClient.invalidateQueries({
+          queryKey: ["driver-payout-balance"],
+        }),
+        queryClient.invalidateQueries({
+          queryKey: ["driver-payout-history"],
+        }),
+        queryClient.invalidateQueries({
+          queryKey: ["driver-payout-summary"],
+        }),
+      ]);
+      options?.onSuccess?.(data);
+    },
+    onError: options?.onError,
+  });
+};
+
+export const cancelTripFn = async ({ id }: { id: string }): Promise<Trip> => {
+  try {
+    const response = await routeApi.patch<ApiResponse<Trip>>(
+      `/driver/trip/${id}/cancel`,
+    );
+    if (!response.data.success || !response.data.data) {
+      throw new Error(response.data.error || "Failed to cancel trip");
+    }
+    return response.data.data;
+  } catch (err) {
+    throw handleApiError(err, "Failed to cancel trip");
+  }
+};
+
+export const useCancelTrip = (options?: {
+  onSuccess?: (data: Trip) => void;
+  onError?: (error: Error) => void;
+}) => {
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: cancelTripFn,
+    onSuccess: async (data) => {
+      await Promise.all([
+        queryClient.invalidateQueries({
+          queryKey: ["driver-calendar-trips"],
+        }),
+        queryClient.invalidateQueries({
+          queryKey: ["tripPassengers", data.id],
+        }),
+      ]);
+      options?.onSuccess?.(data);
+    },
+    onError: options?.onError,
   });
 };
 

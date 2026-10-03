@@ -13,41 +13,26 @@ import { EventDrawer } from "~/components/event-calendar/event-drawer";
 import type { CalendarEvent } from "~/components/event-calendar/types";
 
 export interface EventCalendarProps {
+  currentDate: Date;
   events?: CalendarEvent[];
-  onEventDelete?: (eventId: string) => void;
+  isLoading?: boolean;
+  onNavigate: (date: Date) => void;
   className?: string;
 }
 
 export function EventCalendar({
+  currentDate,
   events = [],
-  onEventDelete,
+  isLoading = false,
+  onNavigate,
   className,
 }: EventCalendarProps) {
-  const [currentDate, setCurrentDate] = useState(new Date());
   const [isEventDrawerOpen, setIsEventDrawerOpen] = useState(false);
   const [selectedEvent, setSelectedEvent] = useState<CalendarEvent | null>(null);
-
-  const handlePrevious = () => {
-    setCurrentDate(subDays(currentDate, AgendaDaysToShow));
-  };
-
-  const handleNext = () => {
-    setCurrentDate(addDays(currentDate, AgendaDaysToShow));
-  };
-
-  const handleToday = () => {
-    setCurrentDate(new Date());
-  };
 
   const handleEventSelect = (event: CalendarEvent) => {
     setSelectedEvent(event);
     setIsEventDrawerOpen(true);
-  };
-
-  const handleEventDelete = (eventId: string) => {
-    onEventDelete?.(eventId);
-    setIsEventDrawerOpen(false);
-    setSelectedEvent(null);
   };
 
   // Show the month range for agenda view
@@ -57,6 +42,10 @@ export function EventCalendar({
     ? format(viewStart, "MMMM yyyy")
     : `${format(viewStart, "MMM")} - ${format(viewEnd, "MMM yyyy")}`;
 
+  const activeEvent = selectedEvent
+    ? events.find((e) => e.id === selectedEvent.id) ?? selectedEvent
+    : null;
+
   return (
     <div className="flex flex-col rounded-lg border">
       <div
@@ -65,7 +54,7 @@ export function EventCalendar({
           className,
         )}
       >
-        <Button onClick={handleToday} variant="outline">
+        <Button onClick={() => onNavigate(new Date())} variant="outline">
           <CalendarCheck aria-hidden="true" className="min-[480px]:hidden" size={16} />
           <span className="max-[479px]:sr-only">Today</span>
         </Button>
@@ -78,7 +67,7 @@ export function EventCalendar({
           <Button
             aria-label="Previous"
             className="size-9 p-0"
-            onClick={handlePrevious}
+            onClick={() => onNavigate(subDays(currentDate, AgendaDaysToShow))}
             size="sm"
             variant="secondary"
           >
@@ -87,7 +76,7 @@ export function EventCalendar({
           <Button
             aria-label="Next"
             className="size-9 p-0"
-            onClick={handleNext}
+            onClick={() => onNavigate(addDays(currentDate, AgendaDaysToShow))}
             size="sm"
             variant="secondary"
           >
@@ -100,18 +89,18 @@ export function EventCalendar({
         <AgendaView
           currentDate={currentDate}
           events={events}
+          isLoading={isLoading}
           onEventSelect={handleEventSelect}
         />
       </div>
 
       <EventDrawer
-        event={selectedEvent}
+        event={activeEvent}
         isOpen={isEventDrawerOpen}
         onClose={() => {
           setIsEventDrawerOpen(false);
           setSelectedEvent(null);
         }}
-        onDelete={handleEventDelete}
       />
     </div>
   );

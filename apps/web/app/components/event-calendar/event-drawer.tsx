@@ -1,7 +1,13 @@
 "use client";
 
 import { format } from "date-fns";
-import { BadgeCheck, Clock, XCircle, type LucideIcon } from "lucide-react";
+import { BadgeCheck, Clock, Loader2, XCircle, type LucideIcon } from "lucide-react";
+import {
+  useGetTripPassengers,
+  useInitiateTripPayout,
+  useCancelTrip,
+} from "@repo/api";
+import { toast } from "sonner";
 
 import {
   Drawer,
@@ -24,24 +30,22 @@ interface EventDrawerProps {
   event: CalendarEvent | null;
   isOpen: boolean;
   onClose: () => void;
-  onDelete: (eventId: string) => void;
 }
 
 const STATUS_OPTIONS: Record<
   EventStatus,
   { Icon?: LucideIcon; label: string; className: string }
 > = {
-  paid: { label: "Paid", className: "text-blue-600 dark:text-blue-400" },
+  pending: { Icon: Clock, label: "Pending", className: "text-amber-600 dark:text-amber-400" },
+  successful: { label: "Successful", className: "text-blue-600 dark:text-blue-400" },
   cancelled: { Icon: XCircle, label: "Cancelled", className: "text-red-600 dark:text-red-400" },
-  upcoming: { Icon: Clock, label: "Upcoming", className: "text-amber-600 dark:text-amber-400" },
-  pending_payment: { Icon: Clock, label: "Pending payment", className: "text-orange-600 dark:text-orange-400" },
 };
 
 function EventStatusBadge({ status }: { status: EventStatus }) {
   const { Icon, label, className } = STATUS_OPTIONS[status];
   return (
     <span className="flex items-center gap-1.5">
-      {status === "paid" ? (
+      {status === "successful" ? (
         <BadgeCheck aria-hidden className="h-5 w-5 shrink-0 fill-blue-500 text-white" />
       ) : (
         Icon && <Icon aria-hidden className={cn("h-4 w-4 shrink-0", className)} />
@@ -62,12 +66,40 @@ export function EventDrawer({
   event,
   isOpen,
   onClose,
-  onDelete,
 }: EventDrawerProps) {
+  const { data, isPending: isLoadingPassengers } = useGetTripPassengers(
+    event?.id ?? "",
+    { enabled: isOpen && !!event?.id },
+  );
+
+  const initiatePayout = useInitiateTripPayout({
+    onSuccess: () => {
+      toast.success("Payout initiated successfully!");
+    },
+    onError: (err) => {
+      toast.error(err.message || "Failed to initiate payout");
+    },
+  });
+
+  const cancelTrip = useCancelTrip({
+    onSuccess: () => {
+      toast.success("Trip cancelled and refunds initiated!");
+      onClose();
+    },
+    onError: (err) => {
+      toast.error(err.message || "Failed to cancel trip");
+    },
+  });
+
   if (!event) return null;
 
   const { dateLabel, timeLabel } = formatDateTime(event);
-  const passengers = event.passengers ?? [];
+  const passengers = data?.passengers ?? [];
+
+  const canWithdraw =
+    event.tripStatus === "completed" && event.status !== "successful";
+  const canCancel =
+    event.tripStatus !== "completed" && event.tripStatus !== "cancelled";
 
   return (
     <Drawer onOpenChange={(open) => !open && onClose()} open={isOpen}>
@@ -99,7 +131,12 @@ export function EventDrawer({
                 <p className="mb-3 text-base font-semibold text-foreground">
                   Passengers
                 </p>
-                {passengers.length > 0 ? (
+                {isLoadingPassengers ? (
+                  <div className="flex flex-col gap-3">
+                    <div className="h-14 animate-pulse rounded-xl border border-neutral-200 bg-neutral-100 dark:border-neutral-800 dark:bg-neutral-900" />
+                    <div className="h-14 animate-pulse rounded-xl border border-neutral-200 bg-neutral-100 dark:border-neutral-800 dark:bg-neutral-900" />
+                  </div>
+                ) : passengers.length > 0 ? (
                   <ul className="flex flex-col gap-3">
                     {passengers.map((passenger) => (
                       <EventPassengerListItem
@@ -110,7 +147,7 @@ export function EventDrawer({
                   </ul>
                 ) : (
                   <p className="text-sm text-muted-foreground">
-                    No passengers on this event.
+                    No passengers on this trip.
                   </p>
                 )}
               </div>
@@ -118,15 +155,33 @@ export function EventDrawer({
           </div>
 
           <DrawerFooter className="flex-row flex-nowrap items-center justify-center gap-2">
-            <Button className="flex-1 font-semibold text-sm" pill type="button">
+            <Button
+              className="flex-1 font-semibold text-sm gap-2"
+              disabled={!canWithdraw || initiatePayout.isPending}
+              onClick={() => initiatePayout.mutate({ id: event.id })}
+              pill
+              title={
+                canWithdraw
+                  ? undefined
+                  : "Complete this trip before you can withdraw"
+              }
+              type="button"
+            >
+              {initiatePayout.isPending && (
+                <Loader2 className="h-4 w-4 animate-spin" />
+              )}
               Withdraw
             </Button>
             <Button
-              className="flex-1 bg-red-600 font-semibold text-sm text-white hover:bg-red-500"
-              onClick={() => onDelete(event.id)}
+              className="flex-1 bg-red-600 font-semibold text-sm text-white hover:bg-red-500 disabled:opacity-50 gap-2"
+              disabled={!canCancel || cancelTrip.isPending}
+              onClick={() => cancelTrip.mutate({ id: event.id })}
               pill
               type="button"
             >
+              {cancelTrip.isPending && (
+                <Loader2 className="h-4 w-4 animate-spin" />
+              )}
               Cancel
             </Button>
           </DrawerFooter>

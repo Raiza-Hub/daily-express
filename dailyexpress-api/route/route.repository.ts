@@ -1,11 +1,14 @@
-import { and, asc, desc, eq, gte, inArray, lt, sql } from "drizzle-orm";
+import { and, asc, desc, eq, gte, inArray, lt, lte, sql } from "drizzle-orm";
 import { db } from "../db/connection";
 import {
   booking,
-  origin,
   destination,
+  driver,
+  earning,
+  origin,
   passenger,
   payment,
+  payout,
   refund,
   trip,
   users,
@@ -317,9 +320,47 @@ export class RouteRepository {
         id: true,
         fullName: true,
         email: true,
+        phone: true,
         carriesLuggage: true,
       },
       orderBy: (fields, { asc }) => [asc(fields.createdAt)],
     });
+  }
+
+  async isDriverForTrip(userId: string, tripId: string): Promise<boolean> {
+    const [existing] = await db
+      .select({ id: trip.id })
+      .from(trip)
+      .innerJoin(driver, eq(trip.driverId, driver.id))
+      .where(and(eq(trip.id, tripId), eq(driver.userId, userId)))
+      .limit(1);
+    return Boolean(existing);
+  }
+
+  async findDriverTrips(driverId: string, from: string, to: string) {
+    return db
+      .select({
+        id: trip.id,
+        origin: origin.title,
+        destination: destination.title,
+        date: trip.date,
+        departureTime: trip.departureTime,
+        price: sql<number>`COALESCE(${earning.amount}, 0)::float8`,
+        tripStatus: trip.status,
+        payoutStatus: payout.status,
+      })
+      .from(trip)
+      .innerJoin(origin, eq(trip.originId, origin.id))
+      .innerJoin(destination, eq(trip.destinationId, destination.id))
+      .leftJoin(earning, eq(earning.tripId, trip.id))
+      .leftJoin(payout, eq(payout.id, earning.payoutId))
+      .where(
+        and(
+          eq(trip.driverId, driverId),
+          gte(trip.date, from),
+          lte(trip.date, to),
+        ),
+      )
+      .orderBy(asc(trip.date), asc(trip.departureTime));
   }
 }

@@ -1,4 +1,4 @@
-import type { CreateBooking } from "@shared/types";
+import type { CreateBooking, JWTPayload } from "@shared/types";
 import { createServiceError } from "@shared/utils";
 import { and, desc, eq, lt, or } from "drizzle-orm";
 import { db } from "../db/connection";
@@ -205,11 +205,16 @@ export class BookingService {
     throw createServiceError("Invalid cursor", 400, "INVALID_CURSOR");
   }
 
-  async getTripPassengers(userId: string, tripId: string) {
-    const hasBooking = await this.repo.hasConfirmedBookingOnTrip(userId, tripId);
-    if (!hasBooking) {
+  async getTripPassengers(user: JWTPayload, tripId: string) {
+    const [isBooker, isDriver] = await Promise.all([
+      this.repo.hasConfirmedBookingOnTrip(user.userId, tripId),
+      this.repo.isDriverForTrip(user.userId, tripId),
+    ]);
+
+    if (!isBooker && !isDriver) {
       throw createServiceError("Trip not found", 404, "TRIP_NOT_FOUND");
     }
+
     const passengers = await this.repo.findTripPassengersForTrip(tripId);
     return { passengers };
   }
