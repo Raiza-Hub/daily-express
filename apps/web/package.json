@@ -11,6 +11,7 @@
     "check-types": "next typegen && tsc --noEmit"
   },
   "dependencies": {
+    "@base-ui/react": "^1.8.0",
     "@repo/api": "workspace:*",
     "@repo/types": "workspace:*",
     "@repo/ui": "workspace:*",

@@ -2,10 +2,11 @@
 
 import { useEffect, useMemo, useState } from "react";
 import { parseAsString, useQueryStates } from "nuqs";
-import { ChevronDown, Loader2, Plus } from "lucide-react";
+import { Loader2, Plus } from "lucide-react";
 import { format } from "date-fns";
 import { cn } from "@repo/ui/lib/utils";
 import { Button } from "~/components/ui/button";
+import { Select } from "~/components/ui/select";
 import {
   getApiErrorMessage,
   useCreateTripCheckout,
@@ -235,22 +236,22 @@ export default function NewTripBooking({
 
       <div className="max-w-md">
         <SectionLabel>Origin</SectionLabel>
-        <div className="relative mt-4">
-          <select
+        <div className="mt-4">
+          <Select
             value={originTitle}
-            onChange={(event) => handleOriginChange(event.target.value)}
-            className="h-12 w-full cursor-pointer appearance-none rounded-full border border-neutral-300 bg-background px-6 pr-12 text-sm text-foreground transition-colors hover:bg-neutral-50 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-neutral-400"
-          >
-            <option value="" disabled>
-              Choose an origin
-            </option>
-            {origins.map((origin: OriginDetails) => (
-              <option key={origin.id} value={origin.title}>
-                {origin.title}
-              </option>
-            ))}
-          </select>
-          <ChevronDown className="pointer-events-none absolute top-1/2 right-5 h-4 w-4 -translate-y-1/2 text-neutral-500" />
+            onChange={(value) => handleOriginChange(value)}
+            placeholder="Choose an origin"
+            aria-label="Origin"
+            className="h-12 rounded-full border-neutral-300 px-6 pr-12 hover:bg-neutral-50 focus-visible:outline-neutral-400"
+            iconClassName="right-5 text-neutral-500"
+            items={[
+              { value: "", label: "Choose an origin", disabled: true },
+              ...origins.map((origin: OriginDetails) => ({
+                value: origin.title,
+                label: origin.title,
+              })),
+            ]}
+          />
         </div>
         {originsError && (
           <p role="alert" className="mt-2 text-sm text-destructive">
@@ -261,22 +262,22 @@ export default function NewTripBooking({
 
       <div className="max-w-md">
         <SectionLabel>Destination</SectionLabel>
-        <div className="relative mt-4">
-          <select
+        <div className="mt-4">
+          <Select
             value={destinationTitle}
-            onChange={(event) => handleDestinationChange(event.target.value)}
-            className="h-12 w-full cursor-pointer appearance-none rounded-full border border-neutral-300 bg-background px-6 pr-12 text-sm text-foreground transition-colors hover:bg-neutral-50 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-neutral-400"
-          >
-            <option value="" disabled>
-              Choose a destination
-            </option>
-            {destinations.map((destination: { id: string; title: string }) => (
-              <option key={destination.id} value={destination.title}>
-                {destination.title}
-              </option>
-            ))}
-          </select>
-          <ChevronDown className="pointer-events-none absolute top-1/2 right-5 h-4 w-4 -translate-y-1/2 text-neutral-500" />
+            onChange={(value) => handleDestinationChange(value)}
+            placeholder="Choose a destination"
+            aria-label="Destination"
+            className="h-12 rounded-full border-neutral-300 px-6 pr-12 hover:bg-neutral-50 focus-visible:outline-neutral-400"
+            iconClassName="right-5 text-neutral-500"
+            items={[
+              { value: "", label: "Choose a destination", disabled: true },
+              ...destinations.map((destination: { id: string; title: string }) => ({
+                value: destination.title,
+                label: destination.title,
+              })),
+            ]}
+          />
         </div>
       </div>
 

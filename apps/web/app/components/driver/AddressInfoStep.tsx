@@ -25,19 +25,18 @@ const AddressInfoStep = ({ data, errors, onChange }: AddressInfoStepProps) => {
                     id="state"
                     value={data.state}
                     invalid={Boolean(errors.state)}
-                    onChange={(event) => {
-                        onChange({ state: event.target.value, city: "" });
+                    onChange={(value) => {
+                        onChange({ state: value, city: "" });
                     }}
-                >
-                    <option value="" disabled>
-                        Select state
-                    </option>
-                    {NIGERIAN_STATES.map((state) => (
-                        <option key={state.name} value={state.name}>
-                            {state.name}
-                        </option>
-                    ))}
-                </Select>
+                    placeholder="Select state"
+                    items={[
+                        { value: "", label: "Select state", disabled: true },
+                        ...NIGERIAN_STATES.map((state) => ({
+                            value: state.name,
+                            label: state.name,
+                        })),
+                    ]}
+                />
             </Field>
 
             {/* City */}
@@ -47,19 +46,24 @@ const AddressInfoStep = ({ data, errors, onChange }: AddressInfoStepProps) => {
                     value={data.city}
                     invalid={Boolean(errors.city)}
                     disabled={!data.state}
-                    onChange={(event) => {
-                        onChange({ city: event.target.value });
+                    onChange={(value) => {
+                        onChange({ city: value });
                     }}
-                >
-                    <option value="" disabled>
-                        {data.state ? "Select city" : "Select a state first"}
-                    </option>
-                    {selectedStateCities.map((city) => (
-                        <option key={city} value={city}>
-                            {city}
-                        </option>
-                    ))}
-                </Select>
+                    placeholder={
+                        data.state ? "Select city" : "Select a state first"
+                    }
+                    items={[
+                        {
+                            value: "",
+                            label: data.state ? "Select city" : "Select a state first",
+                            disabled: true,
+                        },
+                        ...selectedStateCities.map((city) => ({
+                            value: city,
+                            label: city,
+                        })),
+                    ]}
+                />
             </Field>
 
             {/* Home address */}
