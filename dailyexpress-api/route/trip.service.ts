@@ -1,14 +1,12 @@
 import type { JWTPayload } from "@shared/types";
 import { createServiceError } from "@shared/utils";
-import { and, eq } from "drizzle-orm";
 import { db } from "../db/connection";
-import { booking, payment } from "../db/index";
-import { jobService } from "../workers/job.service";
 import { logger } from "../utils/logger";
 import { RouteRepository } from "./route.repository";
 import { payoutService as sharedPayoutService } from "../payout/payout.service";
 import { payoutRepository } from "../payout/payout.repository";
 import { resolveDriverId } from "./utils";
+import { tripCancellationService } from "./trip-cancellation.service";
 
 export class TripService {
   private readonly payoutService = sharedPayoutService;
@@ -171,35 +169,11 @@ export class TripService {
         throw createServiceError("Completed trips cannot be cancelled", 400);
       }
 
-      const updatedTrip = await this.repo.updateTrip(tx, tripId, {
-        status: "cancelled",
-        updatedAt: new Date(),
+      const updatedTrip = await tripCancellationService.cancelInTransaction(tx, tripId, {
+        refundReason: "Trip cancelled by driver",
       });
       if (!updatedTrip) {
-        throw createServiceError("Trip not found", 404);
-      }
-
-      const confirmedBookings = await tx
-        .select({
-          bookingId: booking.id,
-          paymentReference: payment.reference,
-        })
-        .from(booking)
-        .innerJoin(payment, eq(payment.bookingId, booking.id))
-        .where(
-          and(
-            eq(booking.tripId, tripId),
-            eq(booking.status, "confirmed"),
-            eq(payment.status, "successful"),
-          ),
-        );
-
-      for (const b of confirmedBookings) {
-        await jobService.enqueueTripRefund(tx, {
-          bookingId: b.bookingId,
-          paymentReference: b.paymentReference,
-          refundReason: "Trip cancelled by driver",
-        });
+        throw createServiceError("Trip could not be cancelled", 409);
       }
 
       return { updatedTrip };
