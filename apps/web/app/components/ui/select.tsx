@@ -5,6 +5,7 @@ import { Check, ChevronDown } from "lucide-react";
 import { Select as SelectPrimitive } from "@base-ui/react/select";
 import { cn } from "@repo/ui/lib/utils";
 import { useDrawerPortalContainer } from "@repo/ui/Drawer";
+import { fieldControlStyles } from "./field-styles";
 
 interface SelectItem {
     value: string;
@@ -16,7 +17,6 @@ interface SelectProps {
     items: SelectItem[];
     value: string;
     onChange: (value: string) => void;
-    invalid?: boolean;
     disabled?: boolean;
     id?: string;
     name?: string;
@@ -64,7 +64,6 @@ const Select = React.forwardRef<HTMLButtonElement, SelectProps>(
         {
             className,
             iconClassName,
-            invalid = false,
             items,
             value,
             onChange,
@@ -92,8 +91,8 @@ const Select = React.forwardRef<HTMLButtonElement, SelectProps>(
                 id={id}
                 aria-label={ariaLabel}
                 className={cn(
-                    "relative flex h-10 w-full cursor-pointer items-center justify-between gap-2 rounded-md border bg-background px-3 pr-9 text-left text-sm text-foreground transition-colors focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ring data-[popup-open]:border-ring disabled:opacity-50",
-                    invalid ? "border-destructive" : "border-border",
+                    fieldControlStyles,
+                    "relative flex cursor-pointer items-center justify-between gap-2 pr-9 text-left data-[popup-open]:border-ring",
                     className,
                 )}
             >
@@ -114,4 +113,3 @@ const Select = React.forwardRef<HTMLButtonElement, SelectProps>(
 Select.displayName = "Select";
 
 export { Select };
-export type { SelectItem };
