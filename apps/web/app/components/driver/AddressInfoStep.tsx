@@ -5,26 +5,24 @@ import { Input } from "~/components/ui/input";
 import { Select } from "~/components/ui/select";
 import { NIGERIAN_STATES } from "~/lib/driverData";
 import { formatPhoneDisplay, PHONE_PLACEHOLDER } from "~/lib/phone";
-import type { DriverSignupData, DriverStepErrors } from "~/lib/driverSignup";
+import type { DriverSignupData } from "~/lib/driverSignup";
 
 interface AddressInfoStepProps {
     data: DriverSignupData;
-    errors: DriverStepErrors;
     onChange: (patch: Partial<DriverSignupData>) => void;
 }
 
-const AddressInfoStep = ({ data, errors, onChange }: AddressInfoStepProps) => {
+const AddressInfoStep = ({ data, onChange }: AddressInfoStepProps) => {
     const selectedStateCities =
         NIGERIAN_STATES.find((state) => state.name === data.state)?.cities ?? [];
 
     return (
         <div className="flex flex-col gap-6">
             {/* State */}
-            <Field label="State" htmlFor="state" error={errors.state}>
+            <Field label="State" name="state">
                 <Select
                     id="state"
                     value={data.state}
-                    invalid={Boolean(errors.state)}
                     onChange={(value) => {
                         onChange({ state: value, city: "" });
                     }}
@@ -40,11 +38,10 @@ const AddressInfoStep = ({ data, errors, onChange }: AddressInfoStepProps) => {
             </Field>
 
             {/* City */}
-            <Field label="City" htmlFor="city" error={errors.city}>
+            <Field label="City" name="city">
                 <Select
                     id="city"
                     value={data.city}
-                    invalid={Boolean(errors.city)}
                     disabled={!data.state}
                     onChange={(value) => {
                         onChange({ city: value });
@@ -67,30 +64,24 @@ const AddressInfoStep = ({ data, errors, onChange }: AddressInfoStepProps) => {
             </Field>
 
             {/* Home address */}
-            <Field label="Home address" htmlFor="address" error={errors.address}>
+            <Field label="Home address" name="address">
                 <Input
                     id="address"
                     value={data.address}
                     onChange={(event) => onChange({ address: event.target.value })}
-                    invalid={Boolean(errors.address)}
                     autoComplete="street-address"
                     placeholder="Street, area, landmark"
                 />
             </Field>
 
             {/* Phone number */}
-            <Field
-                label="Phone number"
-                htmlFor="phoneNumber"
-                error={errors.phoneNumber}
-            >
+            <Field label="Phone number" name="phoneNumber">
                 <Input
                     id="phoneNumber"
                     type="tel"
                     inputMode="numeric"
                     value={data.phoneNumber}
                     onChange={(event) => onChange({ phoneNumber: formatPhoneDisplay(event.target.value) })}
-                    invalid={Boolean(errors.phoneNumber)}
                     autoComplete="tel"
                     placeholder={PHONE_PLACEHOLDER}
                 />

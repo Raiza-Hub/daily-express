@@ -49,7 +49,10 @@ const PersonalInfoStep = ({ data, errors, onChange }: PersonalInfoStepProps) => 
     return (
         <div className="flex flex-col gap-6">
             {/* Profile photo */}
-            <Field label="Profile photo" htmlFor="profile-photo">
+            <div className="flex flex-col gap-2">
+                <span className="text-sm font-medium text-foreground">
+                    Profile photo
+                </span>
                 <div className="flex flex-col items-center gap-3">
                     <input
                         {...uploadActions.getInputProps({
@@ -92,43 +95,40 @@ const PersonalInfoStep = ({ data, errors, onChange }: PersonalInfoStepProps) => 
                         )}
                     </div>
                 </div>
-            </Field>
+            </div>
             {(errors.file || uploadState.errors[0]) && (
                 <p className="text-center text-sm text-destructive">{errors.file || uploadState.errors[0]}</p>
             )}
 
             {/* First name */}
-            <Field label="First name" htmlFor="firstName" error={errors.firstName}>
+            <Field label="First name" name="firstName">
                 <Input
                     id="firstName"
                     value={data.firstName}
                     onChange={(event) => onChange({ firstName: event.target.value })}
-                    invalid={Boolean(errors.firstName)}
                     autoComplete="given-name"
                     placeholder="Enter your first name"
                 />
             </Field>
 
             {/* Last name */}
-            <Field label="Last name" htmlFor="lastName" error={errors.lastName}>
+            <Field label="Last name" name="lastName">
                 <Input
                     id="lastName"
                     value={data.lastName}
                     onChange={(event) => onChange({ lastName: event.target.value })}
-                    invalid={Boolean(errors.lastName)}
                     autoComplete="family-name"
                     placeholder="Enter your last name"
                 />
             </Field>
 
             {/* Email */}
-            <Field label="Email" htmlFor="email" error={errors.email}>
+            <Field label="Email" name="email">
                 <Input
                     id="email"
                     type="email"
                     value={data.email}
                     onChange={(event) => onChange({ email: event.target.value })}
-                    invalid={Boolean(errors.email)}
                     autoComplete="email"
                     placeholder="you@example.com"
                 />

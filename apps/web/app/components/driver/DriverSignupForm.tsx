@@ -12,6 +12,7 @@ import {
     useVerifyKyc,
 } from "@repo/api";
 import { Loader2 } from "lucide-react";
+import { Form } from "@base-ui/react/form";
 import { Button } from "~/components/ui/button";
 import { AddressInfoStep } from "~/components/driver/AddressInfoStep";
 import { BankKycStep } from "~/components/driver/BankKycStep";
@@ -167,8 +168,7 @@ function DriverSignupForm() {
         });
     };
 
-    const handleSubmit = (event: React.FormEvent<HTMLFormElement>) => {
-        event.preventDefault();
+    const handleSubmit = () => {
         if (createDriver.isPending) return;
         fileRef.current = data.file;
         setFormError(undefined);
@@ -196,9 +196,9 @@ function DriverSignupForm() {
     const isPending = createDriver.isPending;
 
     return (
-        <form
-            onSubmit={handleSubmit}
-            noValidate
+        <Form
+            errors={errors}
+            onFormSubmit={handleSubmit}
             className="flex flex-col gap-6"
         >
             <AnimatePresence mode="wait" initial={false}>
@@ -221,7 +221,7 @@ function DriverSignupForm() {
                         exit={{ opacity: 0, x: -60 }}
                         transition={stepTransition}
                     >
-                        <AddressInfoStep data={data} errors={errors} onChange={patch} />
+                        <AddressInfoStep data={data} onChange={patch} />
                     </motion.div>
                 )}
                 {step === 3 && (
@@ -234,7 +234,6 @@ function DriverSignupForm() {
                     >
                         <BankKycStep
                             data={data}
-                            errors={errors}
                             onChange={patch}
                             bankVerified={bankVerified}
                             isVerifyingBank={verifyBank.isPending}
@@ -294,7 +293,7 @@ function DriverSignupForm() {
                     )}
                 </div>
             </div>
-        </form>
+        </Form>
     );
 }
 

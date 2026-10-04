@@ -2,13 +2,13 @@
 
 import { useState } from "react";
 import { getApiErrorMessage, useGetMe, useUpdateProfile } from "@repo/api";
-import { ProfileEditSchema, zodFieldErrors, MINIMUM_ACCOUNT_AGE } from "@repo/types";
+import { ProfileEditSchema, zodFieldErrors } from "@repo/types";
 import { BadgeCheck } from "lucide-react";
 import Image from "next/image";
+import { Form } from "@base-ui/react/form";
 import { Button } from "~/components/ui/button";
 import {
     Drawer,
-    DrawerClose,
     DrawerContent,
     DrawerDescription,
     DrawerFooter,
@@ -21,28 +21,31 @@ import { Select } from "~/components/ui/select";
 import { Row, EditLink, getInitials } from "./settings-shared";
 import { formatPhoneDisplay, PHONE_PLACEHOLDER, toE164 } from "~/lib/phone";
 import { createDraftUpdater } from "~/lib/draftFields";
+import { toDateKey } from "~/lib/trip";
 
 function VerifiedBadge() {
     return <BadgeCheck className="h-4 w-4 shrink-0 fill-blue-500 text-white" />;
 }
 
-const toDateKey = (date: Date) =>
-    `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, "0")}-${String(
-        date.getDate(),
-    ).padStart(2, "0")}`;
-
 const dateOfBirthBounds = () => {
     const today = new Date();
     return {
-        min: toDateKey(
-            new Date(
-                today.getFullYear() - MINIMUM_ACCOUNT_AGE,
-                today.getMonth(),
-                today.getDate(),
-            ),
-        ),
         max: toDateKey(today),
     };
+};
+
+const DATE_OF_BIRTH_UNKNOWN = new Date(0).getTime();
+
+const resolveEditableDateOfBirth = (
+    value: Date | string | null | undefined,
+    max: string,
+) => {
+    if (!value) return "";
+    const date = new Date(value);
+    if (Number.isNaN(date.getTime())) return "";
+    if (date.getTime() === DATE_OF_BIRTH_UNKNOWN) return "";
+    const key = toDateKey(date);
+    return key <= max ? key : "";
 };
 
 const ProfileCard = () => {
@@ -56,8 +59,12 @@ const ProfileCard = () => {
     const emailVerified = apiUser?.emailVerified ?? false;
     const phone = apiUser?.phone ?? null;
     const gender = apiUser?.gender ?? null;
-    const dateOfBirth = apiUser?.dateOfBirth ?? null;
     const profilePictureUrl = apiUser?.profilePictureUrl ?? null;
+
+    const editableDateOfBirth = resolveEditableDateOfBirth(
+        apiUser?.dateOfBirth,
+        dobBounds.max,
+    );
 
     const photoSrc = profilePictureUrl ?? null;
     const initials = getInitials(name);
@@ -72,8 +79,8 @@ const ProfileCard = () => {
         dateOfBirth: "",
     });
 
-    const displayDate = dateOfBirth
-        ? new Date(dateOfBirth).toLocaleDateString(undefined, {
+    const displayDate = editableDateOfBirth
+        ? new Date(`${editableDateOfBirth}T00:00:00`).toLocaleDateString(undefined, {
               year: "numeric",
               month: "long",
               day: "numeric",
@@ -99,9 +106,7 @@ const ProfileCard = () => {
             lastName: apiUser?.lastName ?? "",
             phoneNumber: formatPhoneDisplay(apiUser?.phone ?? ""),
             gender: apiUser?.gender ?? "",
-            dateOfBirth: dateOfBirth
-                ? new Date(dateOfBirth).toISOString().slice(0, 10)
-                : "",
+            dateOfBirth: editableDateOfBirth,
         });
         setIsEditOpen(true);
     };
@@ -169,7 +174,7 @@ const ProfileCard = () => {
                 <EditLink onClick={openEdit} />
             </Row>
             <Row
-                label="Contact email"
+                label="Email"
                 required
                 description="Where you'll receive booking updates."
             >
@@ -197,110 +202,119 @@ const ProfileCard = () => {
 
             <Drawer open={isEditOpen} onOpenChange={setIsEditOpen}>
                 <DrawerContent>
-                    <div className="mx-auto w-full max-w-lg">
-                    <DrawerHeader className="sm:text-left">
-                        <DrawerTitle>Update profile</DrawerTitle>
-                        <DrawerDescription>
-                            Edit your personal information.
-                        </DrawerDescription>
-                    </DrawerHeader>
-                    <div className="flex flex-col gap-4 px-4">
-                        <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
-                            <Field
-                                label="First name"
-                                htmlFor="edit-firstName"
-                                error={errors.firstName}
-                            >
-                                <Input
-                                    id="edit-firstName"
-                                    value={draft.firstName}
-                                    onChange={(event) =>
-                                        updateDraft("firstName", event.target.value)
-                                    }
-                                />
-                            </Field>
-                            <Field
-                                label="Last name"
-                                htmlFor="edit-lastName"
-                                error={errors.lastName}
-                            >
-                                <Input
-                                    id="edit-lastName"
-                                    value={draft.lastName}
-                                    onChange={(event) =>
-                                        updateDraft("lastName", event.target.value)
-                                    }
-                                />
-                            </Field>
+                    <Form
+                        errors={errors}
+                        onFormSubmit={handleSave}
+                        className="flex flex-1 flex-col"
+                    >
+                        <div className="mx-auto w-full max-w-lg">
+                            <DrawerHeader className="sm:text-left">
+                                <DrawerTitle>Update profile</DrawerTitle>
+                                <DrawerDescription>
+                                    Edit your personal information.
+                                </DrawerDescription>
+                            </DrawerHeader>
+                            <div className="flex flex-col gap-4 px-4">
+                                <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
+                                    <Field label="First name" name="firstName">
+                                        <Input
+                                            id="edit-firstName"
+                                            value={draft.firstName}
+                                            onChange={(event) =>
+                                                updateDraft(
+                                                    "firstName",
+                                                    event.target.value,
+                                                )
+                                            }
+                                        />
+                                    </Field>
+                                    <Field label="Last name" name="lastName">
+                                        <Input
+                                            id="edit-lastName"
+                                            value={draft.lastName}
+                                            onChange={(event) =>
+                                                updateDraft(
+                                                    "lastName",
+                                                    event.target.value,
+                                                )
+                                            }
+                                        />
+                                    </Field>
+                                </div>
+                                <Field label="Phone" name="phoneNumber">
+                                    <Input
+                                        id="edit-phone"
+                                        type="tel"
+                                        inputMode="numeric"
+                                        autoComplete="tel"
+                                        placeholder={PHONE_PLACEHOLDER}
+                                        value={draft.phoneNumber}
+                                        onChange={(event) =>
+                                            updateDraft(
+                                                "phoneNumber",
+                                                formatPhoneDisplay(
+                                                    event.target.value,
+                                                ),
+                                            )
+                                        }
+                                    />
+                                </Field>
+                                <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
+                                    <Field label="Gender" name="gender">
+                                        <Select
+                                            id="edit-gender"
+                                            value={draft.gender}
+                                            onChange={(value) =>
+                                                updateDraft("gender", value)
+                                            }
+                                            items={[
+                                                { value: "male", label: "Male" },
+                                                {
+                                                    value: "female",
+                                                    label: "Female",
+                                                },
+                                            ]}
+                                        />
+                                    </Field>
+                                    <Field
+                                        label="Date of birth"
+                                        name="dateOfBirth"
+                                    >
+                                        <Input
+                                            id="edit-dateOfBirth"
+                                            type="date"
+                                            max={dobBounds.max}
+                                            value={draft.dateOfBirth}
+                                            onChange={(event) =>
+                                                updateDraft(
+                                                    "dateOfBirth",
+                                                    event.target.value,
+                                                )
+                                            }
+                                        />
+                                    </Field>
+                                </div>
+                            </div>
                         </div>
-                        <Field label="Phone" htmlFor="edit-phone" error={errors.phoneNumber}>
-                            <Input
-                                id="edit-phone"
-                                type="tel"
-                                inputMode="numeric"
-                                autoComplete="tel"
-                                placeholder={PHONE_PLACEHOLDER}
-                                value={draft.phoneNumber}
-                                onChange={(event) =>
-                                    updateDraft(
-                                        "phoneNumber",
-                                        formatPhoneDisplay(event.target.value),
-                                    )
-                                }
-                            />
-                        </Field>
-                        <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
-                            <Field label="Gender" htmlFor="edit-gender" error={errors.gender}>
-                                <Select
-                                    id="edit-gender"
-                                    value={draft.gender}
-                                    onChange={(value) =>
-                                        updateDraft("gender", value)
-                                    }
-                                    items={[
-                                        { value: "male", label: "Male" },
-                                        { value: "female", label: "Female" },
-                                    ]}
-                                />
-                            </Field>
-                            <Field
-                                label="Date of birth"
-                                htmlFor="edit-dateOfBirth"
-                                error={errors.dateOfBirth}
+                        <DrawerFooter>
+                            {updateProfile.isError && (
+                                <p className="w-full text-center text-sm text-destructive">
+                                    {getApiErrorMessage(
+                                        updateProfile.error,
+                                        "Something went wrong. Please try again.",
+                                    )}
+                                </p>
+                            )}
+                            <Button
+                                type="submit"
+                                pill
+                                disabled={updateProfile.isPending}
+                                className="font-semibold text-sm"
                             >
-                                <Input
-                                    id="edit-dateOfBirth"
-                                    type="date"
-                                    min={dobBounds.min}
-                                    max={dobBounds.max}
-                                    value={draft.dateOfBirth}
-                                    onChange={(event) =>
-                                        updateDraft("dateOfBirth", event.target.value)
-                                    }
-                                />
-                            </Field>
-                        </div>
-                    </div>
-                    </div>
-                    <DrawerFooter>
-                        {updateProfile.isError && (
-                            <p className="w-full text-center text-sm text-destructive">
-                                {getApiErrorMessage(
-                                    updateProfile.error,
-                                    "Something went wrong. Please try again.",
-                                )}
-                            </p>
-                        )}
-                        <Button
-                            type="submit"
-                            onClick={handleSave}
-                            pill
-                            disabled={updateProfile.isPending}
-                            className="font-semibold text-sm"
-                        >
-                            Save changes
-                        </Button>
-                    </DrawerFooter>
+                                Save changes
+                            </Button>
+                        </DrawerFooter>
+                    </Form>
                 </DrawerContent>
             </Drawer>
         </div>

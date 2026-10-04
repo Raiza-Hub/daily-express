@@ -1,11 +1,13 @@
 "use client";
 
-import { CircleCheck, Check, Loader2 } from "lucide-react";
+import { CircleCheck, Loader2 } from "lucide-react";
 import { Button } from "~/components/ui/button";
+import { Checkbox } from "~/components/ui/checkbox";
 import { Field } from "~/components/ui/field";
 import { Input } from "~/components/ui/input";
+import { RadioGroup } from "~/components/ui/radio-group";
 import { Select } from "~/components/ui/select";
-import type { DriverSignupData, DriverStepErrors } from "~/lib/driverSignup";
+import type { DriverSignupData } from "~/lib/driverSignup";
 
 type BankOption = {
     name: string;
@@ -21,7 +23,6 @@ const KYC_TYPES = [
 
 interface BankKycStepProps {
     data: DriverSignupData;
-    errors: DriverStepErrors;
     onChange: (patch: Partial<DriverSignupData>) => void;
     bankVerified: boolean;
     isVerifyingBank: boolean;
@@ -49,7 +50,6 @@ const FormError = ({ message }: { message?: string }) =>
 
 interface IdentitySectionProps {
     data: DriverSignupData;
-    errors: DriverStepErrors;
     onChange: (patch: Partial<DriverSignupData>) => void;
     identityVerified: boolean;
     isVerifyingIdentity: boolean;
@@ -59,7 +59,6 @@ interface IdentitySectionProps {
 
 const IdentitySection = ({
     data,
-    errors,
     onChange,
     identityVerified,
     isVerifyingIdentity,
@@ -72,59 +71,25 @@ const IdentitySection = ({
         </span>
 
         {/* Identity type */}
-        <fieldset className="flex flex-col">
-            <legend className="mb-3 text-sm font-medium text-foreground">
-                Identity type
-            </legend>
-            <div className="flex flex-col gap-3" role="radiogroup">
-                {KYC_TYPES.map((option) => {
-                    const checked = data.kycType === option.value;
-                    return (
-                        <label
-                            key={option.value}
-                            className="flex cursor-pointer items-center gap-2 text-sm text-foreground"
-                        >
-                            <input
-                                type="radio"
-                                name="kycType"
-                                value={option.value}
-                                checked={checked}
-                                onChange={() =>
-                                    onChange({ kycType: option.value })
-                                }
-                                className="peer sr-only"
-                            />
-                            <span
-                                aria-hidden
-                                className={`flex h-4 w-4 shrink-0 items-center justify-center rounded-full border transition-colors duration-150 peer-focus-visible:outline-2 peer-focus-visible:outline-offset-2 peer-focus-visible:outline-ring ${
-                                    checked ? "border-primary" : "border-border"
-                                }`}
-                            >
-                                <span
-                                    className={`h-2 w-2 rounded-full transition-colors duration-150 ${
-                                        checked ? "bg-primary" : "bg-transparent"
-                                    }`}
-                                />
-                            </span>
-                            {option.label}
-                        </label>
-                    );
-                })}
-            </div>
-            {errors.kycType && (
-                <p className="mt-2 text-sm text-destructive">{errors.kycType}</p>
-            )}
-        </fieldset>
+        <RadioGroup
+            name="kycType"
+            legend="Identity type"
+            options={KYC_TYPES.map((option) => ({
+                value: option.value,
+                label: option.label,
+            }))}
+            value={data.kycType}
+            onValueChange={(value) => onChange({ kycType: value })}
+        />
 
         {/* KYC ID */}
-        <Field label="KYC ID number" htmlFor="kycId" error={errors.kycId}>
+        <Field label="KYC ID number" name="kycId">
             <Input
                 id="kycId"
                 inputMode="numeric"
                 maxLength={11}
                 value={data.kycId}
                 onChange={(event) => onChange({ kycId: event.target.value })}
-                invalid={Boolean(errors.kycId)}
                 placeholder={
                     data.kycType === "nin"
                         ? "11-digit NIN"
@@ -134,36 +99,13 @@ const IdentitySection = ({
         </Field>
 
         {/* Consent */}
-        <label
-            htmlFor="kycConsent"
-            className="flex cursor-pointer items-start gap-2 text-sm text-foreground"
+        <Checkbox
+            name="kycConsent"
+            checked={data.kycConsent}
+            onCheckedChange={(checked) => onChange({ kycConsent: checked })}
         >
-            <input
-                id="kycConsent"
-                type="checkbox"
-                checked={data.kycConsent}
-                onChange={(event) =>
-                    onChange({ kycConsent: event.target.checked })
-                }
-                className="peer sr-only"
-            />
-            <span
-                aria-hidden
-                className={`mt-0.5 flex h-4 w-4 shrink-0 items-center justify-center rounded-sm border transition-colors duration-150 peer-focus-visible:outline-2 peer-focus-visible:outline-offset-2 peer-focus-visible:outline-ring ${
-                    data.kycConsent ? "border-primary bg-primary" : "border-border"
-                }`}
-            >
-                {data.kycConsent && (
-                    <Check className="h-3 w-3 text-primary-foreground" aria-hidden />
-                )}
-            </span>
-            <span>
-                I consent to identity verification to use the driver platform.
-            </span>
-        </label>
-        {errors.kycConsent && (
-            <p className="text-sm text-destructive">{errors.kycConsent}</p>
-        )}
+            I consent to identity verification to use the driver platform.
+        </Checkbox>
 
         <FormError message={formError} />
 
@@ -186,7 +128,6 @@ const IdentitySection = ({
 
 const BankKycStep = ({
     data,
-    errors,
     onChange,
     bankVerified,
     isVerifyingBank,
@@ -198,11 +139,10 @@ const BankKycStep = ({
 }: BankKycStepProps) => (
     <div className="flex flex-col gap-6">
         {/* Bank details */}
-        <Field label="Bank" htmlFor="bankName" error={errors.bankName}>
+        <Field label="Bank" name="bankName">
             <Select
                 id="bankName"
                 value={data.bankName}
-                invalid={Boolean(errors.bankName)}
                 onChange={(value) => {
                     const bank = BANKS.find((option) => option.name === value);
                     onChange({ bankName: value, bankCode: bank?.code ?? "" });
@@ -218,7 +158,7 @@ const BankKycStep = ({
             />
         </Field>
 
-        <Field label="Account number" htmlFor="accountNumber" error={errors.accountNumber}>
+        <Field label="Account number" name="accountNumber">
             <Input
                 id="accountNumber"
                 inputMode="numeric"
@@ -227,16 +167,14 @@ const BankKycStep = ({
                 onChange={(event) =>
                     onChange({ accountNumber: event.target.value })
                 }
-                invalid={Boolean(errors.accountNumber)}
                 placeholder="0123456789"
             />
         </Field>
-        <Field label="Account name" htmlFor="accountName" error={errors.accountName}>
+        <Field label="Account name" name="accountName">
             <Input
                 id="accountName"
                 value={data.accountName}
                 onChange={(event) => onChange({ accountName: event.target.value })}
-                invalid={Boolean(errors.accountName)}
                 placeholder="Account holder name"
             />
         </Field>
@@ -261,7 +199,6 @@ const BankKycStep = ({
         {bankVerified && (
             <IdentitySection
                 data={data}
-                errors={errors}
                 onChange={onChange}
                 identityVerified={identityVerified}
                 isVerifyingIdentity={isVerifyingIdentity}

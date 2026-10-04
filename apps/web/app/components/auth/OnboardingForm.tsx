@@ -1,15 +1,18 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useState } from "react";
 import { format } from "date-fns";
 import { useRouter } from "next/navigation";
-import {
-    useCompleteOnboarding,
-    useGetMe,
-} from "@repo/api";
+import { Form } from "@base-ui/react/form";
+import { useCompleteOnboarding } from "@repo/api";
 import type { OnboardingInput } from "@shared/types";
 import { Button } from "~/components/ui/button";
 import { Calendar } from "~/components/ui/calendar";
+import { Field } from "~/components/ui/field";
+import { Input } from "~/components/ui/input";
+import { RadioGroup } from "~/components/ui/radio-group";
+import { fieldControlStyles } from "~/components/ui/field-styles";
+import { cn } from "@repo/ui/lib/utils";
 import {
     Drawer,
     DrawerContent,
@@ -25,11 +28,11 @@ const MINIMUM_ACCOUNT_AGE = 14;
 const GENDERS = ["male", "female"] as const;
 type Gender = (typeof GENDERS)[number];
 
-interface FieldErrors {
+type FieldErrors = {
     phone?: string;
     dateOfBirth?: string;
     gender?: string;
-}
+};
 
 function isUnder14(dateOfBirth: Date): boolean {
     const today = new Date();
@@ -43,9 +46,8 @@ function isUnder14(dateOfBirth: Date): boolean {
 
 function OnboardingForm() {
     const router = useRouter();
-    const { data: user } = useGetMe();
     const completeOnboarding = useCompleteOnboarding({
-        onSuccess: () => router.push("/"),
+        onSuccess: () => router.refresh(),
     });
     const [phone, setPhone] = useState("");
     const [dateOfBirth, setDateOfBirth] = useState<Date | undefined>(undefined);
@@ -53,12 +55,6 @@ function OnboardingForm() {
     const [errors, setErrors] = useState<FieldErrors>({});
     const [formError, setFormError] = useState<string | undefined>(undefined);
     const [isCalendarOpen, setIsCalendarOpen] = useState(false);
-
-    useEffect(() => {
-        if (user?.phone) {
-            router.replace("/");
-        }
-    }, [user?.phone, router]);
 
     const mapFieldError = makeFieldErrorMapper<keyof FieldErrors>(
         (name, message) =>
@@ -85,8 +81,7 @@ function OnboardingForm() {
         return nextErrors;
     };
 
-    const handleSubmit = (event: React.FormEvent<HTMLFormElement>) => {
-        event.preventDefault();
+    const handleSubmit = () => {
         if (completeOnboarding.isPending) return;
         const nextErrors = validate();
         setErrors(nextErrors);
@@ -117,16 +112,13 @@ function OnboardingForm() {
     };
 
     return (
-        <form onSubmit={handleSubmit} className="flex flex-col gap-6" noValidate>
-            {/* Phone number */}
-            <div className="flex flex-col gap-2">
-                <label
-                    htmlFor="phone"
-                    className="text-sm font-medium text-foreground"
-                >
-                    Phone number
-                </label>
-                <input
+        <Form
+            errors={errors}
+            onFormSubmit={handleSubmit}
+            className="flex flex-col gap-6"
+        >
+            <Field label="Phone number" name="phone">
+                <Input
                     id="phone"
                     type="tel"
                     inputMode="numeric"
@@ -135,85 +127,60 @@ function OnboardingForm() {
                     value={phone}
                     onChange={(event) => {
                         setPhone(formatPhoneDisplay(event.target.value));
-                        if (errors.phone) setErrors((current) => ({ ...current, phone: undefined }));
+                        if (errors.phone)
+                            setErrors((current) => ({
+                                ...current,
+                                phone: undefined,
+                            }));
                     }}
-                    className={`h-10 w-full rounded-md border bg-background px-3 text-sm text-foreground placeholder:text-muted-foreground focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ring ${
-                        errors.phone ? "border-destructive" : "border-border"
-                    }`}
                 />
-                {errors.phone && (
-                    <p className="text-sm text-destructive">{errors.phone}</p>
-                )}
-            </div>
+            </Field>
 
-            {/* Date of birth */}
-            <div className="flex flex-col gap-2">
-                <span className="text-sm font-medium text-foreground">
-                    Date of birth
-                </span>
-                <button
-                    type="button"
-                    onClick={() => setIsCalendarOpen(true)}
-                    className={`flex h-10 w-full cursor-pointer items-center justify-between rounded-md border bg-background px-3 text-sm focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ring ${
-                        errors.dateOfBirth ? "border-destructive" : "border-border"
-                    }`}
-                >
-                    <span className={dateOfBirth ? "text-foreground" : "text-muted-foreground"}>
-                        {dateOfBirth ? format(dateOfBirth, "d MMM yyyy") : "Not set"}
-                    </span>
-                    <CalendarIcon className="h-4 w-4 text-muted-foreground" />
-                </button>
-                {errors.dateOfBirth && (
-                    <p className="text-sm text-destructive">{errors.dateOfBirth}</p>
-                )}
-            </div>
-
-            {/* Gender */}
-            <fieldset className="flex flex-col">
-                <legend className="text-sm font-medium text-foreground mb-3">
-                    Gender
-                </legend>
-                <div className="flex flex-col gap-3" role="radiogroup">
-                    {GENDERS.map((option) => {
-                        const checked = gender === option;
-                        return (
-                            <label
-                                key={option}
-                                className="flex cursor-pointer items-center gap-2 text-sm text-foreground"
+            <Field label="Date of birth" name="dateOfBirth">
+                <Field.Control
+                    render={
+                        <button
+                            type="button"
+                            onClick={() => setIsCalendarOpen(true)}
+                            className={cn(
+                                fieldControlStyles,
+                                "flex cursor-pointer items-center justify-between pr-9 text-left",
+                            )}
+                        >
+                            <span
+                                className={
+                                    dateOfBirth
+                                        ? "text-foreground"
+                                        : "text-muted-foreground"
+                                }
                             >
-                                <input
-                                    type="radio"
-                                    name="gender"
-                                    value={option}
-                                    checked={checked}
-                                    onChange={() => {
-                                        setGender(option);
-                                        if (errors.gender)
-                                            setErrors((current) => ({ ...current, gender: undefined }));
-                                    }}
-                                    className="peer sr-only"
-                                />
-                                <span
-                                    aria-hidden
-                                    className={`flex h-4 w-4 shrink-0 items-center justify-center rounded-full border transition-colors duration-150 peer-focus-visible:outline-2 peer-focus-visible:outline-offset-2 peer-focus-visible:outline-ring ${
-                                        checked ? "border-primary" : "border-border"
-                                    }`}
-                                >
-                                    <span
-                                        className={`h-2 w-2 rounded-full transition-colors duration-150 ${
-                                            checked ? "bg-primary" : "bg-transparent"
-                                        }`}
-                                    />
-                                </span>
-                                {option === "male" ? "Male" : "Female"}
-                            </label>
-                        );
-                    })}
-                </div>
-                {errors.gender && (
-                    <p className="text-sm text-destructive mt-2">{errors.gender}</p>
-                )}
-            </fieldset>
+                                {dateOfBirth
+                                    ? format(dateOfBirth, "d MMM yyyy")
+                                    : "Not set"}
+                            </span>
+                            <CalendarIcon className="h-4 w-4 text-muted-foreground" />
+                        </button>
+                    }
+                />
+            </Field>
+
+            <RadioGroup
+                name="gender"
+                legend="Gender"
+                options={GENDERS.map((option) => ({
+                    value: option,
+                    label: option === "male" ? "Male" : "Female",
+                }))}
+                value={gender ?? ""}
+                onValueChange={(value) => {
+                    setGender(value === "" ? undefined : value);
+                    if (errors.gender)
+                        setErrors((current) => ({
+                            ...current,
+                            gender: undefined,
+                        }));
+                }}
+            />
 
             {formError && (
                 <p role="alert" className="text-center text-sm text-destructive">
@@ -227,12 +194,9 @@ function OnboardingForm() {
                 disabled={completeOnboarding.isPending}
             >
                 {completeOnboarding.isPending && (
-                        <Loader2
-                            className="h-4 w-4 animate-spin"
-                            aria-hidden
-                        />
-                    )}
-                    Continue
+                    <Loader2 className="h-4 w-4 animate-spin" aria-hidden />
+                )}
+                Continue
             </Button>
 
             <Drawer open={isCalendarOpen} onOpenChange={setIsCalendarOpen}>
@@ -248,14 +212,17 @@ function OnboardingForm() {
                             selected={dateOfBirth}
                             onSelect={(date) => {
                                 setDateOfBirth(date);
-                                setErrors((current) => ({ ...current, dateOfBirth: undefined }));
+                                setErrors((current) => ({
+                                    ...current,
+                                    dateOfBirth: undefined,
+                                }));
                                 setIsCalendarOpen(false);
                             }}
                         />
                     </div>
                 </DrawerContent>
             </Drawer>
-        </form>
+        </Form>
     );
 }
 

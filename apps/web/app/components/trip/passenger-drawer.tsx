@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useMemo, useState } from "react";
+import { Form } from "@base-ui/react/form";
 import {
   Drawer,
   DrawerContent,
@@ -10,6 +11,7 @@ import {
   DrawerDescription,
 } from "@repo/ui/Drawer";
 import { Button } from "~/components/ui/button";
+import { Checkbox } from "~/components/ui/checkbox";
 import { Field } from "~/components/ui/field";
 import { Input } from "~/components/ui/input";
 import {
@@ -157,89 +159,81 @@ function PassengerDrawer({
   return (
     <Drawer open={open} onOpenChange={onOpenChange}>
       <DrawerContent>
-        <div className="mx-auto w-full max-w-lg">
-          <DrawerHeader className="sm:text-left">
-            <DrawerTitle>
-              {isEditing ? "Edit passenger" : "Add passenger"}
-            </DrawerTitle>
-            <DrawerDescription>
-              Fill in this passenger&apos;s travel details.
-            </DrawerDescription>
-          </DrawerHeader>
-          <div className="flex flex-col gap-4 px-4">
-            <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
-              <Field label="First name" htmlFor="passenger-first-name" error={errors.firstName}>
-                <Input
-                  id="passenger-first-name"
-                  value={form.firstName}
-                  invalid={Boolean(errors.firstName)}
-                  placeholder="e.g. Ade"
-                  onChange={(event) => setField("firstName", event.target.value)}
-                />
-              </Field>
-              <Field label="Last name" htmlFor="passenger-last-name" error={errors.lastName}>
-                <Input
-                  id="passenger-last-name"
-                  value={form.lastName}
-                  invalid={Boolean(errors.lastName)}
-                  placeholder="e.g. Bello"
-                  onChange={(event) => setField("lastName", event.target.value)}
-                />
-              </Field>
-              <Field label="Email" htmlFor="passenger-email" error={errors.email}>
-                <Input
-                  id="passenger-email"
-                  type="email"
-                  value={form.email}
-                  invalid={Boolean(errors.email)}
-                  placeholder="ade.bello@example.com"
-                  onChange={(event) => setField("email", event.target.value)}
-                />
-              </Field>
-              <Field label="Phone number" htmlFor="passenger-phone" error={errors.phone}>
-                <Input
-                  id="passenger-phone"
-                  inputMode="numeric"
-                  value={form.phone}
-                  invalid={Boolean(errors.phone)}
-                  placeholder={PHONE_PLACEHOLDER}
-                  onChange={(event) =>
-                    setField("phone", formatPhoneDisplay(event.target.value))
-                  }
-                />
-              </Field>
-            </div>
+        <Form
+          errors={errors}
+          onFormSubmit={handleSave}
+          className="flex flex-1 flex-col"
+        >
+          <div className="mx-auto w-full max-w-lg">
+            <DrawerHeader className="text-left">
+              <DrawerTitle>
+                {isEditing ? "Edit passenger" : "Add passenger"}
+              </DrawerTitle>
+              <DrawerDescription>
+                Fill in this passenger&apos;s travel details.
+              </DrawerDescription>
+            </DrawerHeader>
+            <div className="flex flex-col gap-4 px-4">
+              <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
+                <Field label="First name" name="firstName">
+                  <Input
+                    id="passenger-first-name"
+                    value={form.firstName}
+                    placeholder="e.g. Ade"
+                    onChange={(event) => setField("firstName", event.target.value)}
+                  />
+                </Field>
+                <Field label="Last name" name="lastName">
+                  <Input
+                    id="passenger-last-name"
+                    value={form.lastName}
+                    placeholder="e.g. Bello"
+                    onChange={(event) => setField("lastName", event.target.value)}
+                  />
+                </Field>
+                <Field label="Email" name="email">
+                  <Input
+                    id="passenger-email"
+                    type="email"
+                    value={form.email}
+                    placeholder="ade.bello@example.com"
+                    onChange={(event) => setField("email", event.target.value)}
+                  />
+                </Field>
+                <Field label="Phone number" name="phone">
+                  <Input
+                    id="passenger-phone"
+                    inputMode="numeric"
+                    value={form.phone}
+                    placeholder={PHONE_PLACEHOLDER}
+                    onChange={(event) =>
+                      setField("phone", formatPhoneDisplay(event.target.value))
+                    }
+                  />
+                </Field>
+              </div>
 
-            <label
-              htmlFor="passenger-luggage"
-              className="flex cursor-pointer items-center gap-3 py-2 transition-colors"
-            >
-              <input
-                id="passenger-luggage"
-                type="checkbox"
+              <Checkbox
                 checked={form.carriesLuggage}
-                onChange={(event) =>
-                  setField("carriesLuggage", event.target.checked)
+                onCheckedChange={(checked) =>
+                  setField("carriesLuggage", checked)
                 }
-                className="h-4 w-4 rounded-md accent-neutral-900"
-              />
-              <span className="text-sm text-foreground">
+                className="py-2"
+              >
                 Bringing luggage along for this trip
-              </span>
-            </label>
+              </Checkbox>
+            </div>
           </div>
-        </div>
-        <DrawerFooter>
-          <Button
-            type="button"
-            onClick={handleSave}
-            pill
-            disabled={!formValid}
-            className="font-semibold text-sm"
-          >
-            {isEditing ? "Save changes" : "Add passenger"}
-          </Button>
-        </DrawerFooter>
+          <DrawerFooter>
+            <Button
+              type="submit"
+              pill
+              className="font-semibold text-sm"
+            >
+              {isEditing ? "Save changes" : "Add passenger"}
+            </Button>
+          </DrawerFooter>
+        </Form>
       </DrawerContent>
     </Drawer>
   );

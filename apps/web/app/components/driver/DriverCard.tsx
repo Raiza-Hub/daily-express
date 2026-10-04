@@ -2,6 +2,7 @@
 
 import { useState } from "react";
 import { BadgeCheck } from "lucide-react";
+import { Form } from "@base-ui/react/form";
 import {
     getApiErrorMessage,
     useGetDriver,
@@ -248,7 +249,7 @@ return (
                 <EditLink onClick={openPersonal} />
             </Row>
             <Row
-                label="Contact email"
+                label="Email"
                 required
                 description="Where you'll receive driver updates."
             >
@@ -305,297 +306,324 @@ return (
 
             <Drawer open={isPersonalOpen} onOpenChange={setIsPersonalOpen}>
                 <DrawerContent>
-                    <div className="mx-auto w-full max-w-lg">
-                    <DrawerHeader className="sm:text-left">
-                        <DrawerTitle>Update personal details</DrawerTitle>
-                        <DrawerDescription>
-                            Edit your name, email, and phone number.
-                        </DrawerDescription>
-                    </DrawerHeader>
-                    <div className="flex flex-col gap-4 px-4">
-                        <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
-                            <Field
-                                label="First name"
-                                htmlFor="edit-driver-firstName"
-                                error={personalErrors.firstName}
-                            >
-                                <Input
-                                    id="edit-driver-firstName"
-                                    value={personalDraft.firstName}
-                                    onChange={(event) =>
-                                        updatePersonalDraft("firstName", event.target.value)
-                                    }
-                                />
-                            </Field>
-                            <Field
-                                label="Last name"
-                                htmlFor="edit-driver-lastName"
-                                error={personalErrors.lastName}
-                            >
-                                <Input
-                                    id="edit-driver-lastName"
-                                    value={personalDraft.lastName}
-                                    onChange={(event) =>
-                                        updatePersonalDraft("lastName", event.target.value)
-                                    }
-                                />
-                            </Field>
+                    <Form
+                        errors={personalErrors}
+                        onFormSubmit={handleSavePersonal}
+                        className="flex flex-1 flex-col"
+                    >
+                        <div className="mx-auto w-full max-w-lg">
+                            <DrawerHeader className="sm:text-left">
+                                <DrawerTitle>Update personal details</DrawerTitle>
+                                <DrawerDescription>
+                                    Edit your name, email, and phone number.
+                                </DrawerDescription>
+                            </DrawerHeader>
+                            <div className="flex flex-col gap-4 px-4">
+                                <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
+                                    <Field label="First name" name="firstName">
+                                        <Input
+                                            id="edit-driver-firstName"
+                                            value={personalDraft.firstName}
+                                            onChange={(event) =>
+                                                updatePersonalDraft(
+                                                    "firstName",
+                                                    event.target.value,
+                                                )
+                                            }
+                                        />
+                                    </Field>
+                                    <Field label="Last name" name="lastName">
+                                        <Input
+                                            id="edit-driver-lastName"
+                                            value={personalDraft.lastName}
+                                            onChange={(event) =>
+                                                updatePersonalDraft(
+                                                    "lastName",
+                                                    event.target.value,
+                                                )
+                                            }
+                                        />
+                                    </Field>
+                                </div>
+                                <Field label="Email" name="email">
+                                    <Input
+                                        id="edit-driver-email"
+                                        type="email"
+                                        value={personalDraft.email}
+                                        onChange={(event) =>
+                                            updatePersonalDraft(
+                                                "email",
+                                                event.target.value,
+                                            )
+                                        }
+                                    />
+                                </Field>
+                                <Field label="Phone" name="phone">
+                                    <Input
+                                        id="edit-driver-phone"
+                                        type="tel"
+                                        inputMode="numeric"
+                                        autoComplete="tel"
+                                        placeholder={PHONE_PLACEHOLDER}
+                                        value={personalDraft.phone}
+                                        onChange={(event) =>
+                                            updatePersonalDraft(
+                                                "phone",
+                                                formatPhoneDisplay(
+                                                    event.target.value,
+                                                ),
+                                            )
+                                        }
+                                    />
+                                </Field>
+                            </div>
                         </div>
-                        <Field label="Email" htmlFor="edit-driver-email" error={personalErrors.email}>
-                            <Input
-                                id="edit-driver-email"
-                                type="email"
-                                value={personalDraft.email}
-                                onChange={(event) =>
-                                    updatePersonalDraft("email", event.target.value)
-                                }
-                            />
-                        </Field>
-                        <Field label="Phone" htmlFor="edit-driver-phone" error={personalErrors.phone}>
-                            <Input
-                                id="edit-driver-phone"
-                                type="tel"
-                                inputMode="numeric"
-                                autoComplete="tel"
-                                placeholder={PHONE_PLACEHOLDER}
-                                value={personalDraft.phone}
-                                onChange={(event) =>
-                                    updatePersonalDraft(
-                                        "phone",
-                                        formatPhoneDisplay(event.target.value),
-                                    )
-                                }
-                            />
-                        </Field>
-                    </div>
-                    </div>
-                    <DrawerFooter>
-                        {updateDriver.isError && (
-                            <p className="w-full text-center text-sm text-destructive">
-                                {getApiErrorMessage(
-                                    updateDriver.error,
-                                    "Something went wrong. Please try again.",
-                                )}
-                            </p>
-                        )}
-                        <Button
-                            type="button"
-                            pill
-                            onClick={handleSavePersonal}
-                            disabled={updateDriver.isPending}
-                            className="font-semibold text-sm"
-                        >
-                            Save changes
-                        </Button>
+                        <DrawerFooter>
+                            {updateDriver.isError && (
+                                <p className="w-full text-center text-sm text-destructive">
+                                    {getApiErrorMessage(
+                                        updateDriver.error,
+                                        "Something went wrong. Please try again.",
+                                    )}
+                                </p>
+                            )}
+                            <Button
+                                type="submit"
+                                pill
+                                disabled={updateDriver.isPending}
+                                className="font-semibold text-sm"
+                            >
+                                Save changes
+                            </Button>
                         </DrawerFooter>
+                    </Form>
                 </DrawerContent>
             </Drawer>
 
             <Drawer open={isAddressOpen} onOpenChange={setIsAddressOpen}>
                 <DrawerContent>
-                    <div className="mx-auto w-full max-w-lg">
-                    <DrawerHeader className="sm:text-left">
-                        <DrawerTitle>Update address</DrawerTitle>
-                        <DrawerDescription>
-                            Edit your residential and currency details.
-                        </DrawerDescription>
-                    </DrawerHeader>
-                    <div className="flex flex-col gap-4 px-4">
-                        <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
-                            <Field
-                                label="Country"
-                                htmlFor="edit-driver-country"
-                                error={addressErrors.country}
-                            >
-                                <Select
-                                    id="edit-driver-country"
-                                    value={addressDraft.country}
-                                    onChange={(value) =>
-                                        updateAddressDraft("country", value)
-                                    }
-                                    items={KORA_SUPPORTED_COUNTRIES.map((country) => ({
-                                        value: country,
-                                        label: country,
-                                    }))}
-                                />
-                            </Field>
-                            <Field
-                                label="Currency"
-                                htmlFor="edit-driver-currency"
-                                error={addressErrors.currency}
-                            >
-                                <Input
-                                    id="edit-driver-currency"
-                                    maxLength={3}
-                                    value={addressDraft.currency}
-                                    disabled
-                                    className="disabled:cursor-not-allowed disabled:bg-muted disabled:text-muted-foreground"
-                                />
-                            </Field>
+                    <Form
+                        errors={addressErrors}
+                        onFormSubmit={handleSaveAddress}
+                        className="flex flex-1 flex-col"
+                    >
+                        <div className="mx-auto w-full max-w-lg">
+                            <DrawerHeader className="sm:text-left">
+                                <DrawerTitle>Update address</DrawerTitle>
+                                <DrawerDescription>
+                                    Edit your residential and currency details.
+                                </DrawerDescription>
+                            </DrawerHeader>
+                            <div className="flex flex-col gap-4 px-4">
+                                <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
+                                    <Field label="Country" name="country">
+                                        <Select
+                                            id="edit-driver-country"
+                                            value={addressDraft.country}
+                                            onChange={(value) =>
+                                                updateAddressDraft("country", value)
+                                            }
+                                            items={KORA_SUPPORTED_COUNTRIES.map(
+                                                (country) => ({
+                                                    value: country,
+                                                    label: country,
+                                                }),
+                                            )}
+                                        />
+                                    </Field>
+                                    <Field label="Currency" name="currency">
+                                        <Input
+                                            id="edit-driver-currency"
+                                            maxLength={3}
+                                            value={addressDraft.currency}
+                                            disabled
+                                            className="disabled:cursor-not-allowed disabled:bg-muted disabled:text-muted-foreground"
+                                        />
+                                    </Field>
+                                </div>
+                                <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
+                                    <Field label="State" name="state">
+                                        <Select
+                                            id="edit-driver-state"
+                                            value={addressDraft.state}
+                                            onChange={(value) => {
+                                                updateAddressDraft("state", value);
+                                                updateAddressDraft("city", "");
+                                            }}
+                                            placeholder="Select state"
+                                            items={[
+                                                {
+                                                    value: "",
+                                                    label: "Select state",
+                                                    disabled: true,
+                                                },
+                                                ...NIGERIAN_STATES.map((state) => ({
+                                                    value: state.name,
+                                                    label: state.name,
+                                                })),
+                                            ]}
+                                        />
+                                    </Field>
+                                    <Field label="City" name="city">
+                                        <Select
+                                            id="edit-driver-city"
+                                            value={addressDraft.city}
+                                            disabled={!addressDraft.state}
+                                            onChange={(value) =>
+                                                updateAddressDraft("city", value)
+                                            }
+                                            placeholder={
+                                                addressDraft.state
+                                                    ? "Select city"
+                                                    : "Select a state first"
+                                            }
+                                            items={[
+                                                {
+                                                    value: "",
+                                                    label: addressDraft.state
+                                                        ? "Select city"
+                                                        : "Select a state first",
+                                                    disabled: true,
+                                                },
+                                                ...addressStateCities.map((city) => ({
+                                                    value: city,
+                                                    label: city,
+                                                })),
+                                            ]}
+                                        />
+                                    </Field>
+                                </div>
+                                <Field label="Home address" name="address">
+                                    <Input
+                                        id="edit-driver-address"
+                                        value={addressDraft.address}
+                                        onChange={(event) =>
+                                            updateAddressDraft(
+                                                "address",
+                                                event.target.value,
+                                            )
+                                        }
+                                    />
+                                </Field>
+                            </div>
                         </div>
-                        <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
-                            <Field
-                                label="State"
-                                htmlFor="edit-driver-state"
-                                error={addressErrors.state}
+                        <DrawerFooter>
+                            {updateDriver.isError && (
+                                <p className="w-full text-center text-sm text-destructive">
+                                    {getApiErrorMessage(
+                                        updateDriver.error,
+                                        "Something went wrong. Please try again.",
+                                    )}
+                                </p>
+                            )}
+                            <Button
+                                type="submit"
+                                pill
+                                disabled={updateDriver.isPending}
+                                className="font-semibold text-sm"
                             >
-                                <Select
-                                    id="edit-driver-state"
-                                    value={addressDraft.state}
-                                    onChange={(value) => {
-                                        updateAddressDraft("state", value);
-                                        updateAddressDraft("city", "");
-                                    }}
-                                    placeholder="Select state"
-                                    items={[
-                                        { value: "", label: "Select state", disabled: true },
-                                        ...NIGERIAN_STATES.map((state) => ({
-                                            value: state.name,
-                                            label: state.name,
-                                        })),
-                                    ]}
-                                />
-                            </Field>
-                            <Field
-                                label="City"
-                                htmlFor="edit-driver-city"
-                                error={addressErrors.city}
-                            >
-                                <Select
-                                    id="edit-driver-city"
-                                    value={addressDraft.city}
-                                    disabled={!addressDraft.state}
-                                    onChange={(value) =>
-                                        updateAddressDraft("city", value)
-                                    }
-                                    placeholder={
-                                        addressDraft.state ? "Select city" : "Select a state first"
-                                    }
-                                    items={[
-                                        {
-                                            value: "",
-                                            label: addressDraft.state ? "Select city" : "Select a state first",
-                                            disabled: true,
-                                        },
-                                        ...addressStateCities.map((city) => ({
-                                            value: city,
-                                            label: city,
-                                        })),
-                                    ]}
-                                />
-                            </Field>
-                        </div>
-                        <Field
-                            label="Home address"
-                            htmlFor="edit-driver-address"
-                            error={addressErrors.address}
-                        >
-                            <Input
-                                id="edit-driver-address"
-                                value={addressDraft.address}
-                                onChange={(event) =>
-                                    updateAddressDraft("address", event.target.value)
-                                }
-                            />
-                        </Field>
-                    </div>
-                    </div>
-                    <DrawerFooter>
-                        {updateDriver.isError && (
-                            <p className="w-full text-center text-sm text-destructive">
-                                {getApiErrorMessage(
-                                    updateDriver.error,
-                                    "Something went wrong. Please try again.",
-                                )}
-                            </p>
-                        )}
-                        <Button
-                            type="button"
-                            pill
-                            onClick={handleSaveAddress}
-                            disabled={updateDriver.isPending}
-                            className="font-semibold text-sm"
-                        >
-                            Save changes
-                        </Button>
+                                Save changes
+                            </Button>
                         </DrawerFooter>
+                    </Form>
                 </DrawerContent>
             </Drawer>
 
             <Drawer open={isBankOpen} onOpenChange={setIsBankOpen}>
                 <DrawerContent>
-                    <div className="mx-auto w-full max-w-lg">
-                    <DrawerHeader className="sm:text-left">
-                        <DrawerTitle>Update bank details</DrawerTitle>
-                        <DrawerDescription>
-                            Changing your bank re-verifies the account.
-                        </DrawerDescription>
-                    </DrawerHeader>
-                    <div className="flex flex-col gap-4 px-4">
-                        <Field label="Bank" htmlFor="edit-driver-bankName" error={bankErrors.bankName}>
-                            <Select
-                                id="edit-driver-bankName"
-                                value={bankDraft.bankName}
-                                onChange={(value) => {
-                                    const bank = BANKS.find(
-                                        (option) => option.name === value,
-                                    );
-                                    updateBankDraft("bankName", value);
-                                    updateBankDraft("bankCode", bank?.code ?? "");
-                                }}
-                                placeholder="Select bank"
-                                items={[
-                                    { value: "", label: "Select bank", disabled: true },
-                                    ...BANKS.map((bank) => ({
-                                        value: bank.name,
-                                        label: bank.name,
-                                    })),
-                                ]}
-                            />
-                        </Field>
-                        <Field label="Account number" htmlFor="edit-driver-accountNumber" error={bankErrors.accountNumber}>
-                            <Input
-                                id="edit-driver-accountNumber"
-                                inputMode="numeric"
-                                maxLength={10}
-                                value={bankDraft.accountNumber}
-                                onChange={(event) =>
-                                    updateBankDraft("accountNumber", event.target.value)
-                                }
-                                placeholder="0123456789"
-                            />
-                        </Field>
-                        <Field label="Account name" htmlFor="edit-driver-accountName" error={bankErrors.accountName}>
-                            <Input
-                                id="edit-driver-accountName"
-                                value={bankDraft.accountName}
-                                onChange={(event) =>
-                                    updateBankDraft("accountName", event.target.value)
-                                }
-                                placeholder="Account holder name"
-                            />
-                        </Field>
-                    </div>
-                    </div>
-                    <DrawerFooter>
-                        {updateDriver.isError && (
-                            <p className="w-full text-center text-sm text-destructive">
-                                {getApiErrorMessage(
-                                    updateDriver.error,
-                                    "Something went wrong. Please try again.",
-                                )}
-                            </p>
-                        )}
-                        <Button
-                            type="button"
-                            pill
-                            onClick={handleSaveBank}
-                            disabled={updateDriver.isPending}
-                            className="font-semibold text-sm"
-                        >
-                            Save changes
-                        </Button>
+                    <Form
+                        errors={bankErrors}
+                        onFormSubmit={handleSaveBank}
+                        className="flex flex-1 flex-col"
+                    >
+                        <div className="mx-auto w-full max-w-lg">
+                            <DrawerHeader className="sm:text-left">
+                                <DrawerTitle>Update bank details</DrawerTitle>
+                                <DrawerDescription>
+                                    Changing your bank re-verifies the account.
+                                </DrawerDescription>
+                            </DrawerHeader>
+                            <div className="flex flex-col gap-4 px-4">
+                                <Field label="Bank" name="bankName">
+                                    <Select
+                                        id="edit-driver-bankName"
+                                        value={bankDraft.bankName}
+                                        onChange={(value) => {
+                                            const bank = BANKS.find(
+                                                (option) => option.name === value,
+                                            );
+                                            updateBankDraft("bankName", value);
+                                            updateBankDraft(
+                                                "bankCode",
+                                                bank?.code ?? "",
+                                            );
+                                        }}
+                                        placeholder="Select bank"
+                                        items={[
+                                            {
+                                                value: "",
+                                                label: "Select bank",
+                                                disabled: true,
+                                            },
+                                            ...BANKS.map((bank) => ({
+                                                value: bank.name,
+                                                label: bank.name,
+                                            })),
+                                        ]}
+                                    />
+                                </Field>
+                                <Field
+                                    label="Account number"
+                                    name="accountNumber"
+                                >
+                                    <Input
+                                        id="edit-driver-accountNumber"
+                                        inputMode="numeric"
+                                        maxLength={10}
+                                        value={bankDraft.accountNumber}
+                                        onChange={(event) =>
+                                            updateBankDraft(
+                                                "accountNumber",
+                                                event.target.value,
+                                            )
+                                        }
+                                        placeholder="0123456789"
+                                    />
+                                </Field>
+                                <Field label="Account name" name="accountName">
+                                    <Input
+                                        id="edit-driver-accountName"
+                                        value={bankDraft.accountName}
+                                        onChange={(event) =>
+                                            updateBankDraft(
+                                                "accountName",
+                                                event.target.value,
+                                            )
+                                        }
+                                        placeholder="Account holder name"
+                                    />
+                                </Field>
+                            </div>
+                        </div>
+                        <DrawerFooter>
+                            {updateDriver.isError && (
+                                <p className="w-full text-center text-sm text-destructive">
+                                    {getApiErrorMessage(
+                                        updateDriver.error,
+                                        "Something went wrong. Please try again.",
+                                    )}
+                                </p>
+                            )}
+                            <Button
+                                type="submit"
+                                pill
+                                disabled={updateDriver.isPending}
+                                className="font-semibold text-sm"
+                            >
+                                Save changes
+                            </Button>
                         </DrawerFooter>
+                    </Form>
                 </DrawerContent>
             </Drawer>
         </div>
