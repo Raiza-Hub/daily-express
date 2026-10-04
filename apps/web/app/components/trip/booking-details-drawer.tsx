@@ -65,7 +65,7 @@ function BookingDetailsDrawer({
     <Drawer open={open} onOpenChange={onOpenChange}>
       <DrawerContent>
         <div className="mx-auto flex min-h-0 w-full max-w-lg flex-col">
-          <DrawerHeader className="sm:text-left">
+          <DrawerHeader className="text-left">
             <DrawerTitle>
               {originTitle} → {destinationTitle}
             </DrawerTitle>
