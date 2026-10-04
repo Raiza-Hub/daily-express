@@ -62,7 +62,7 @@ export default function TripBookings({
             <Select
               value={year === undefined ? "all" : String(year)}
               onChange={(value) => setFilter("year", value)}
-              className="w-full sm:w-28 font-semibold"
+              className="w-full sm:w-28 font-medium"
               aria-label="Filter by year"
               items={[
                 { value: "all", label: "All dates" },
@@ -77,7 +77,7 @@ export default function TripBookings({
             <Select
               value={status ?? "all"}
               onChange={(value) => setFilter("status", value)}
-              className="w-full sm:w-40 font-semibold"
+              className="w-full sm:w-40 font-medium"
               aria-label="Filter by status"
               items={[
                 { value: "all", label: "All statuses" },
