@@ -78,7 +78,7 @@ export class PaymentPayoutRefundService {
       logger.error("payout_refund.missing_payer_details", {
         reference: paymentRecord.reference,
       });
-      return;
+      throw new Error("Payer details are not available for the refund yet");
     }
 
     const bankCode = await this.getBankCode(paymentRecord.payerBankName);
@@ -87,7 +87,7 @@ export class PaymentPayoutRefundService {
         reference: paymentRecord.reference,
         bankName: paymentRecord.payerBankName,
       });
-      return;
+      throw new Error("Payer bank code could not be resolved for the refund");
     }
 
     if (!paymentRecord.bookingId) {
