@@ -1,6 +1,5 @@
 import { type TripPassenger } from "@repo/api";
 import { PassengerListItem } from "./passenger-list-item";
-import { maskEmail } from "~/lib/trip-bookings";
 
 function PassengerSkeletonRow() {
   return (
@@ -15,16 +14,18 @@ function PassengerSection({
   passengers,
   isPending,
   isError,
+  heading = "Passengers",
+  emptyLabel = "No passengers on this trip.",
 }: {
   passengers: TripPassenger[];
   isPending: boolean;
   isError: boolean;
+  heading?: string;
+  emptyLabel?: string;
 }) {
   return (
     <div>
-      <p className="mb-3 text-base font-semibold text-foreground">
-        Passengers
-      </p>
+      <p className="mb-3 text-base font-semibold text-foreground">{heading}</p>
       {isPending ? (
         <ul className="flex flex-col gap-3">
           <PassengerSkeletonRow />
@@ -37,16 +38,11 @@ function PassengerSection({
       ) : passengers.length > 0 ? (
         <ul className="flex flex-col gap-3">
           {passengers.map((passenger) => (
-            <PassengerListItem
-              key={passenger.id}
-              passenger={{ ...passenger, email: maskEmail(passenger.email) }}
-            />
+            <PassengerListItem key={passenger.id} passenger={passenger} />
           ))}
         </ul>
       ) : (
-        <p className="text-sm text-muted-foreground">
-          No passengers on this trip.
-        </p>
+        <p className="text-sm text-muted-foreground">{emptyLabel}</p>
       )}
     </div>
   );

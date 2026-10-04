@@ -8,8 +8,8 @@ export default function MainLayout({
 }>) {
     return (
         <>
-            <Navbar />
-            <div className="px-6 max-w-7xl mx-auto w-full flex-1">{children}</div>
+            {/* <Navbar /> */}
+            <div className="px-4 sm:px-6 max-w-7xl mx-auto w-full flex-1">{children}</div>
             <Footer />
         </>
     );
