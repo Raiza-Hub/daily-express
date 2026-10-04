@@ -6,7 +6,7 @@ export default function SettingsLayout({
     children: React.ReactNode;
 }>) {
     return (
-        <div className="grid gap-8 py-8 md:grid-cols-[224px_minmax(0,1fr)] md:gap-10">
+        <div className="flex flex-col gap-8 py-8 md:grid md:grid-cols-[224px_minmax(0,1fr)] md:gap-10">
             <SettingsNav />
             <div className="min-w-0">{children}</div>
         </div>
