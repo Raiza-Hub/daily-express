@@ -237,7 +237,7 @@ function OnboardingForm() {
 
             <Drawer open={isCalendarOpen} onOpenChange={setIsCalendarOpen}>
                 <DrawerContent>
-                    <DrawerHeader className="sm:text-center">
+                    <DrawerHeader className="text-center sm:text-center">
                         <DrawerTitle>Select date of birth</DrawerTitle>
                         <DrawerDescription>
                             Pick your year, month, and day of birth.

@@ -3,17 +3,19 @@
 import { format, parse } from "date-fns";
 import {
   Drawer,
-  DrawerClose,
   DrawerContent,
   DrawerDescription,
-  DrawerFooter,
   DrawerHeader,
   DrawerTitle,
 } from "@repo/ui/Drawer";
-import { useGetTripPassengers, type UserBookingWithTrip } from "@repo/api";
+import {
+  useGetBookingPassengers,
+  type UserBookingWithTrip,
+} from "@repo/api";
 import { BookingStatusBadge } from "./booking-status-badge";
 import { PassengerSection } from "./passenger-section";
 import { getInitials } from "../user/settings-shared";
+import { formatPhoneDisplay } from "~/lib/phone";
 import { formatTripTime } from "~/lib/trip";
 import {
   deriveTripBookingStatus,
@@ -32,11 +34,10 @@ function BookingDetailsDrawer({
   open,
   onOpenChange,
 }: BookingDetailsDrawerProps) {
-  const tripId = booking?.tripId ?? "";
-
-  const { data, isPending, isError } = useGetTripPassengers(tripId, {
-    enabled: open,
-  });
+  const { data, isPending, isError } = useGetBookingPassengers(
+    booking?.id ?? "",
+    { enabled: open },
+  );
 
   if (!booking) return null;
 
@@ -52,7 +53,9 @@ function BookingDetailsDrawer({
   const totalPaid = booking.totalAmount + booking.totalFee;
   const driver = trip?.driver ?? null;
   const remainingCopy =
-    driver || !trip ? null : remainingPassengerCopy(trip.capacity, trip.bookedSeats);
+    status === "confirmed" && trip
+      ? remainingPassengerCopy(trip.capacity, trip.bookedSeats)
+      : null;
   const driverName = driver
     ? `${driver.firstName} ${driver.lastName}`.trim()
     : "";
@@ -95,6 +98,8 @@ function BookingDetailsDrawer({
                 passengers={passengers}
                 isPending={isPending}
                 isError={isError}
+                heading="Your passengers"
+                emptyLabel="No passengers on this booking."
               />
 
               {driver ? (
@@ -117,7 +122,9 @@ function BookingDetailsDrawer({
                       {driverName}
                     </span>
                     <span className="flex items-center gap-2 text-sm font-medium text-muted-foreground">
-                      {driver.phone}
+                      {driver.phone
+                        ? formatPhoneDisplay(driver.phone)
+                        : "Not set"}
                     </span>
                   </div>
                   <span className="shrink-0 rounded-full bg-primary/10 px-3 py-1 text-xs font-semibold text-primary">
@@ -127,12 +134,6 @@ function BookingDetailsDrawer({
               ) : null}
             </div>
           </div>
-
-          <DrawerFooter>
-            <DrawerClose className="inline-flex h-11 w-full cursor-pointer items-center justify-center gap-2 rounded-full bg-primary px-8 font-semibold text-primary-foreground transition-colors duration-150 hover:bg-primary/90 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ring">
-              Close
-            </DrawerClose>
-          </DrawerFooter>
         </div>
       </DrawerContent>
     </Drawer>

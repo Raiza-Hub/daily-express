@@ -1,7 +1,6 @@
 "use client";
 
 import * as React from "react";
-import { motion } from "framer-motion";
 
 import { cn } from "@repo/ui/lib/utils";
 
@@ -36,7 +35,7 @@ const TrailCard = React.forwardRef<HTMLDivElement, TrailCardProps>(
     ref,
   ) => {
     return (
-      <motion.div
+      <div
         ref={ref}
         role="button"
         tabIndex={0}
@@ -51,11 +50,11 @@ const TrailCard = React.forwardRef<HTMLDivElement, TrailCardProps>(
           }
         }}
         className={cn(
-          "w-full max-w-sm cursor-pointer overflow-hidden rounded-2xl bg-neutral-50 text-card-foreground dark:bg-neutral-900",
+          "flex w-full flex-col cursor-pointer overflow-hidden rounded-2xl bg-neutral-50 text-card-foreground xl:max-w-sm dark:bg-neutral-900",
           className,
         )}
       >
-        <div className="relative h-60 w-full">
+        <div className="relative h-60 w-full shrink-0">
           {imageUrl ? (
             <img
               src={imageUrl}
@@ -76,27 +75,11 @@ const TrailCard = React.forwardRef<HTMLDivElement, TrailCardProps>(
               ) : null}
               <h3 className="text-xl font-bold">{origin}</h3>
             </div>
-            {/* The button will animate in on hover of the parent card */}
-            {/* <motion.div
-              initial={{ opacity: 0, x: 20 }}
-              whileHover={{ opacity: 1, x: 0 }}
-              animate={{ opacity: 0, x: 20 }}
-              transition={{ duration: 0.3, ease: "easeInOut" }}
-            >
-              <Button
-                variant="secondary"
-                onClick={onDirectionsClick}
-                aria-label={`Get directions to ${origin}`}
-              >
-                Directions
-                <ArrowRight className="ml-2 h-4 w-4" />
-              </Button>
-            </motion.div> */}
           </div>
         </div>
 
-        <div className="p-5">
-          <div className="">
+        <div className="flex flex-1 flex-col p-5">
+          <div className="grow">
             {destinationLabel ? (
               <p className="text-sm font-medium text-muted-foreground">{destinationLabel}</p>
             ) : null}
@@ -115,7 +98,7 @@ const TrailCard = React.forwardRef<HTMLDivElement, TrailCardProps>(
             <span className="text-lg font-bold text-foreground">{fare}</span>
           </div>
         </div>
-      </motion.div>
+      </div>
     );
   },
 );
