@@ -105,7 +105,7 @@ export function EventDrawer({
     <Drawer onOpenChange={(open) => !open && onClose()} open={isOpen}>
       <DrawerContent>
         <div className="mx-auto flex min-h-0 w-full max-w-lg flex-col">
-          <DrawerHeader className="sm:text-left">
+          <DrawerHeader className="text-left">
             <DrawerTitle>
               {event.origin} → {event.destination}
             </DrawerTitle>
