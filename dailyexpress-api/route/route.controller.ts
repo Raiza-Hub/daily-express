@@ -6,6 +6,26 @@ import { getAuthenticatedUser } from "../middleware/auth";
 import { timeAsync } from "../utils/timing";
 import { routeService } from "./route.service";
 const DATE_ONLY_REGEX = /^\d{4}-\d{2}-\d{2}$/;
+const YEAR_REGEX = /^\d{4}$/;
+const BOOKING_STATUS_FILTERS = [
+  "confirmed",
+  "refunded",
+  "refund_pending",
+  "refund_failed",
+] as const;
+
+function parseYear(value: unknown): number | undefined {
+  const raw = getParam(value as string | string[] | undefined);
+  if (!raw || !YEAR_REGEX.test(raw)) return undefined;
+  return Number(raw);
+}
+
+function parseBookingStatusFilter(
+  value: unknown,
+): (typeof BOOKING_STATUS_FILTERS)[number] | undefined {
+  const raw = getParam(value as string | string[] | undefined);
+  return BOOKING_STATUS_FILTERS.find((s) => s === raw);
+}
 
 function parseDateOnly(value: unknown): string | null {
   if (typeof value !== "string" || !DATE_ONLY_REGEX.test(value)) {
@@ -71,10 +91,12 @@ export const getUserBookings: RequestHandler = asyncHandler(
       : 20;
     const cursor =
       typeof req.query.cursor === "string" ? req.query.cursor : undefined;
+    const year = parseYear(req.query.year);
+    const status = parseBookingStatusFilter(req.query.status);
     const result = await timeAsync(
       "route.get_user_bookings.service",
-      { userId, limit, hasCursor: Boolean(cursor) },
-      () => routeService.getUserBookings(userId, limit, cursor),
+      { userId, limit, hasCursor: Boolean(cursor), year, status },
+      () => routeService.getUserBookings(userId, limit, cursor, { year, status }),
     );
     return res
       .status(200)
@@ -85,7 +107,7 @@ export const getUserBookings: RequestHandler = asyncHandler(
 export const getTripPassengers: RequestHandler = asyncHandler(
   async (req: Request, res: Response) => {
     const user = getAuthenticatedUser(req);
-    const tripId = getParam(req.params.tripId);
+    const tripId = getParam(req.params.id);
     if (!user) {
       return sendErrorResponse(res, 401, "Please sign in again to continue.", {
         code: "AUTHENTICATION_REQUIRED",
@@ -100,6 +122,31 @@ export const getTripPassengers: RequestHandler = asyncHandler(
       "route.trip_passengers.service",
       { userId: user.userId, tripId },
       () => routeService.getTripPassengers(user, tripId),
+    );
+    return res
+      .status(200)
+      .json(createSuccessResponse(result, "Passengers fetched successfully"));
+  },
+);
+
+export const getBookingPassengers: RequestHandler = asyncHandler(
+  async (req: Request, res: Response) => {
+    const user = getAuthenticatedUser(req);
+    const bookingId = getParam(req.params.id);
+    if (!user) {
+      return sendErrorResponse(res, 401, "Please sign in again to continue.", {
+        code: "AUTHENTICATION_REQUIRED",
+      });
+    }
+    if (!bookingId) {
+      return sendErrorResponse(res, 400, "Booking ID is required.", {
+        code: "MISSING_BOOKING_ID",
+      });
+    }
+    const result = await timeAsync(
+      "route.booking_passengers.service",
+      { userId: user.userId, bookingId },
+      () => routeService.getBookingPassengers(user, bookingId),
     );
     return res
       .status(200)

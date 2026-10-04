@@ -1,0 +1,22 @@
+-- Migration: Add 'cancelled' to the booking_status enum
+--
+-- getUserBookings selects inArray(booking.status, ["confirmed", "cancelled"])
+-- to surface cancelled bookings alongside confirmed ones. That literal
+-- fails at runtime with `invalid input value for enum booking_status:
+-- "cancelled"` until the enum carries the value, so the read path and the
+-- schema change have to ship together.
+--
+-- Nothing writes this value yet -- cancellation is currently recorded on
+-- trip.status -- so the addition is forward-looking. It is needed now only
+-- so the query parses.
+--
+-- Numbered 0041 with 0040 absent on this branch: 0040_trip_dispatch.sql
+-- carries an identical ADD VALUE IF NOT EXISTS for this same value, and
+-- numbering this 0040 would collide with it on merge. IF NOT EXISTS makes
+-- the two statements safe to apply in either order.
+--
+-- Apply via `railway connect Postgres` (autocommit per statement). A value
+-- added here cannot be used in the same transaction, which does not apply
+-- to this migration as written.
+
+ALTER TYPE "booking_status" ADD VALUE IF NOT EXISTS 'cancelled';

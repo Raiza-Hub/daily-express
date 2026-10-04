@@ -1,11 +1,43 @@
 import type { CreateBooking, JWTPayload } from "@shared/types";
 import { createServiceError } from "@shared/utils";
-import { and, desc, eq, lt, or } from "drizzle-orm";
+import {
+  and,
+  asc,
+  desc,
+  eq,
+  gte,
+  inArray,
+  isNull,
+  lt,
+  lte,
+  or,
+  sql,
+} from "drizzle-orm";
 import { db } from "../db/connection";
 import { booking, driver, origin, destination, payment, refund, trip } from "../db/index";
 import { logger } from "../utils/logger";
 import { parseDateKey } from "../utils/route";
 import { RouteRepository } from "./route.repository";
+
+export type BookingStatusFilter =
+  | "confirmed"
+  | "refunded"
+  | "refund_pending"
+  | "refund_failed";
+
+export interface BookingStatusFilters {
+  year?: number;
+  status?: BookingStatusFilter;
+}
+
+const REFUND_STATUS_BY_FILTER: Record<
+  Exclude<BookingStatusFilter, "confirmed">,
+  "successful" | "pending" | "failed"
+> = {
+  refunded: "successful",
+  refund_pending: "pending",
+  refund_failed: "failed",
+};
 
 export class BookingService {
   constructor(private repo: RouteRepository) {}
@@ -102,9 +134,31 @@ export class BookingService {
     };
   }
 
-  async getUserBookings(userId: string, limit = 20, cursor?: string) {
+  async getUserBookings(
+    userId: string,
+    limit = 20,
+    cursor?: string,
+    filters?: BookingStatusFilters,
+  ) {
     const cap = Math.max(1, Math.min(50, Math.floor(limit || 20)));
     const decoded = cursor ? this.decodeCursor(cursor) : null;
+    const { year, status } = filters ?? {};
+
+    const yearFilter = year
+      ? and(
+          gte(booking.tripDate, `${year}-01-01`),
+          lte(booking.tripDate, `${year}-12-31`),
+        )
+      : undefined;
+
+    const statusFilter =
+      status === undefined || status === "confirmed"
+        ? status === "confirmed"
+          ? isNull(refund.status)
+          : undefined
+        : status in REFUND_STATUS_BY_FILTER
+          ? eq(refund.status, REFUND_STATUS_BY_FILTER[status])
+          : undefined;
 
     const rows = await db
       .select({
@@ -114,6 +168,7 @@ export class BookingService {
         departureTime: booking.departureTime,
         totalAmount: booking.totalAmount,
         totalFee: booking.totalFee,
+        status: booking.status,
         refundStatus: refund.status,
         trip,
         originTitle: origin.title,
@@ -134,8 +189,10 @@ export class BookingService {
       .where(
         and(
           eq(booking.userId, userId),
-          eq(booking.status, "confirmed"),
+          inArray(booking.status, ["confirmed", "cancelled"]),
           eq(payment.status, "successful"),
+          yearFilter,
+          statusFilter,
           decoded
             ? or(
                 lt(booking.tripDate, decoded.tripDate),
@@ -154,7 +211,18 @@ export class BookingService {
     const page = hasMore ? rows.slice(0, cap) : rows;
     const last = page.at(-1);
 
+    const yearRows = await db
+      .select({ year: sql<number>`extract(year from ${booking.tripDate})::int` })
+      .from(booking)
+      .innerJoin(payment, eq(payment.bookingId, booking.id))
+      .where(
+        and(eq(booking.userId, userId), eq(payment.status, "successful")),
+      )
+      .groupBy(sql`extract(year from ${booking.tripDate})::int`)
+      .orderBy(asc(sql<number>`extract(year from ${booking.tripDate})::int`));
+
     return {
+      availableYears: yearRows.map((row) => row.year),
       bookings: page.map((r) => ({
         id: r.id,
         tripId: r.tripId,
@@ -162,6 +230,7 @@ export class BookingService {
         departureTime: r.departureTime,
         totalAmount: r.totalAmount,
         totalFee: r.totalFee,
+        status: r.status,
         refundStatus: r.refundStatus ?? null,
         trip: r.trip
           ? {
@@ -205,17 +274,28 @@ export class BookingService {
     throw createServiceError("Invalid cursor", 400, "INVALID_CURSOR");
   }
 
-  async getTripPassengers(user: JWTPayload, tripId: string) {
-    const [isBooker, isDriver] = await Promise.all([
-      this.repo.hasConfirmedBookingOnTrip(user.userId, tripId),
-      this.repo.isDriverForTrip(user.userId, tripId),
-    ]);
 
-    if (!isBooker && !isDriver) {
+  async getTripPassengers(user: JWTPayload, tripId: string) {
+    const isDriver = await this.repo.isDriverForTrip(user.userId, tripId);
+    if (!isDriver) {
       throw createServiceError("Trip not found", 404, "TRIP_NOT_FOUND");
     }
 
     const passengers = await this.repo.findTripPassengersForTrip(tripId);
+    return { passengers };
+  }
+
+
+  async getBookingPassengers(user: JWTPayload, bookingId: string) {
+    const isOwner = await this.repo.isBookingOwnedByUser(
+      bookingId,
+      user.userId,
+    );
+    if (!isOwner) {
+      throw createServiceError("Booking not found", 404, "BOOKING_NOT_FOUND");
+    }
+
+    const passengers = await this.repo.findBookingPassengers(bookingId);
     return { passengers };
   }
 }

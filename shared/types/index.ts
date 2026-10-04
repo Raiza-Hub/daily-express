@@ -214,7 +214,7 @@ export interface DriverCalendarTrip {
   tripStatus: TripStatus;
 }
 
-export type BookingStatus = "pending" | "confirmed";
+export type BookingStatus = "pending" | "confirmed" | "cancelled";
 
 export interface Trip {
   id: string;

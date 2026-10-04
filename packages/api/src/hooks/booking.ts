@@ -1,4 +1,5 @@
 import {
+  keepPreviousData,
   useMutation,
   useQuery,
   useQueryClient,
@@ -28,6 +29,7 @@ export interface UserBookingWithTrip {
   departureTime: string;
   totalAmount: number;
   totalFee: number;
+  status: "confirmed" | "cancelled";
   refundStatus: string | null;
   trip: {
     bookedSeats: number;
@@ -38,9 +40,15 @@ export interface UserBookingWithTrip {
   } | null;
 }
 
+interface BookingFilters {
+  year?: number;
+  status?: string;
+}
+
 interface UserBookingsPage {
   bookings: UserBookingWithTrip[];
   nextCursor: string | null;
+  availableYears: number[];
 }
 
 export const completeTripFn = async ({ id }: { id: string }): Promise<Trip> => {
@@ -80,6 +88,7 @@ export const useGetOrigins = (options?: { initialData?: OriginDetails[] }) => {
 export const getUserBookingsFn = async (
   cursor?: string | null,
   limit: number = 20,
+  filters?: BookingFilters,
 ): Promise<UserBookingsPage> => {
   try {
     const searchParams = new URLSearchParams({
@@ -87,6 +96,12 @@ export const getUserBookingsFn = async (
     });
     if (cursor) {
       searchParams.set("cursor", cursor);
+    }
+    if (filters?.year !== undefined) {
+      searchParams.set("year", String(filters.year));
+    }
+    if (filters?.status) {
+      searchParams.set("status", filters.status);
     }
 
     const response = await routeApi.get<ApiResponse<UserBookingsPage>>(
@@ -106,16 +121,21 @@ const USER_BOOKINGS_PAGE_SIZE = 20;
 export const useGetUserBookingsInfinite = (options?: {
   enabled?: boolean;
   limit?: number;
+  year?: number;
+  status?: string;
 }) => {
   const limit = options?.limit ?? USER_BOOKINGS_PAGE_SIZE;
+  const year = options?.year;
+  const status = options?.status;
 
   return useInfiniteQuery({
-    queryKey: ["userBookings", limit],
+    queryKey: ["userBookings", limit, year, status],
     queryFn: ({ pageParam }: { pageParam: string | null }) =>
-      getUserBookingsFn(pageParam, limit),
+      getUserBookingsFn(pageParam, limit, { year, status }),
     getNextPageParam: (lastPage) => lastPage.nextCursor,
     initialPageParam: null as string | null,
     enabled: options?.enabled ?? true,
+    placeholderData: keepPreviousData,
   });
 };
 
@@ -157,12 +177,13 @@ interface TripPassengersManifest {
   passengers: TripPassenger[];
 }
 
+
 export const getTripPassengersFn = async (
   tripId: string,
 ): Promise<TripPassengersManifest> => {
   try {
     const response = await routeApi.get<ApiResponse<TripPassengersManifest>>(
-      `/user/trip/${tripId}/passengers`,
+      `/driver/trip/${tripId}/passengers`,
     );
     if (!response.data.success || !response.data.data) {
       throw new Error(response.data.error || "Failed to get trip passengers");
@@ -181,6 +202,35 @@ export const useGetTripPassengers = (
     queryKey: ["tripPassengers", tripId],
     queryFn: () => getTripPassengersFn(tripId),
     enabled: (options?.enabled ?? true) && !!tripId,
+    staleTime: 0,
+  });
+};
+
+
+export const getBookingPassengersFn = async (
+  bookingId: string,
+): Promise<TripPassengersManifest> => {
+  try {
+    const response = await routeApi.get<ApiResponse<TripPassengersManifest>>(
+      `/user/booking/${bookingId}/passengers`,
+    );
+    if (!response.data.success || !response.data.data) {
+      throw new Error(response.data.error || "Failed to get booking passengers");
+    }
+    return response.data.data;
+  } catch (err) {
+    throw handleApiError(err, "Failed to get booking passengers");
+  }
+};
+
+export const useGetBookingPassengers = (
+  bookingId: string,
+  options?: { enabled?: boolean },
+) => {
+  return useQuery({
+    queryKey: ["bookingPassengers", bookingId],
+    queryFn: () => getBookingPassengersFn(bookingId),
+    enabled: (options?.enabled ?? true) && !!bookingId,
     staleTime: 0,
   });
 };
@@ -302,5 +352,4 @@ export const useCancelTrip = (options?: {
     onError: options?.onError,
   });
 };
-
 
