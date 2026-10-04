@@ -1,7 +1,15 @@
+import { redirect } from "next/navigation";
 import { AuthLogo } from "~/components/auth/AuthLogo";
 import OnboardingForm from "~/components/auth/OnboardingForm";
+import { getUserProfile } from "~/lib/user-session";
 
-const Page = () => {
+const Page = async () => {
+    const user = await getUserProfile();
+
+    if (user?.phone) {
+        redirect("/");
+    }
+
     return (
         <main className="flex flex-col items-center px-4 pt-10 pb-16">
             <div className="flex w-full max-w-sm flex-col space-y-6">
