@@ -1,0 +1,2 @@
+export const fieldControlStyles =
+    "h-10 w-full rounded-md border border-border bg-background px-3 text-sm text-foreground transition-colors placeholder:text-muted-foreground focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ring data-[invalid]:border-destructive disabled:opacity-50";
