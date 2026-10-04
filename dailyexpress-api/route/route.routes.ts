@@ -55,10 +55,16 @@ router.post(
   routeController.initiatePayout,
 );
 router.get(
-  "/user/trip/:tripId/passengers",
+  "/driver/trip/:id/passengers",
   authenticateSession,
   authenticateVerifiedGatewayRequest,
   routeController.getTripPassengers,
+);
+router.get(
+  "/user/booking/:id/passengers",
+  authenticateSession,
+  authenticateVerifiedGatewayRequest,
+  routeController.getBookingPassengers,
 );
 router.get(
   "/user/bookings",

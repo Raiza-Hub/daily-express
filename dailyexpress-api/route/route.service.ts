@@ -1,4 +1,5 @@
 import type { CreateBooking, JWTPayload, OriginDetails } from "@shared/types";
+import type { BookingStatusFilters } from "./booking.service";
 import { BookingService } from "./booking.service";
 import { RouteRepository } from "./route.repository";
 import { TripService } from "./trip.service";
@@ -36,12 +37,21 @@ export class RouteService {
     return this.booking.createCheckoutBooking(userId, input);
   }
 
-  async getUserBookings(userId: string, limit = 20, cursor?: string) {
-    return this.booking.getUserBookings(userId, limit, cursor);
+  async getUserBookings(
+    userId: string,
+    limit = 20,
+    cursor?: string,
+    filters?: BookingStatusFilters,
+  ) {
+    return this.booking.getUserBookings(userId, limit, cursor, filters);
   }
 
   async getTripPassengers(user: JWTPayload, tripId: string) {
     return this.booking.getTripPassengers(user, tripId);
+  }
+
+  async getBookingPassengers(user: JWTPayload, bookingId: string) {
+    return this.booking.getBookingPassengers(user, bookingId);
   }
 
   async getDriverTrips(user: JWTPayload, from: string, to: string) {
