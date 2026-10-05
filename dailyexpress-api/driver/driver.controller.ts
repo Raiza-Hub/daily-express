@@ -5,9 +5,12 @@ import { driverRepository } from "./driver.repository";
 import { r2ProfileService } from "./r2-profile.service";
 import { db } from "../db/connection";
 import { createSuccessResponse } from "@shared/utils";
-import { getAuthenticatedUser } from "../middleware/auth";
+import { getAuthenticatedUser, setAuthCookies } from "../middleware/auth";
+import { getConfig } from "../config/index";
 import { sendErrorResponse } from "../middleware/apiResponses";
 import { timeAsync } from "../utils/timing";
+
+const config = getConfig();
 
 export const getDriver: RequestHandler = asyncHandler(
   async (req: Request, res: Response) => {
@@ -60,6 +63,8 @@ export const createDriver: RequestHandler = asyncHandler(
     const driver = await timeAsync("driver.create.service", { userId }, () =>
       driverService.createDriver(userId, req.body),
     );
+
+    setAuthCookies(res, { ...gatewayUser, isDriver: true }, config);
 
     return res
       .status(201)
@@ -155,6 +160,8 @@ export const deactivateDriver: RequestHandler = asyncHandler(
     await timeAsync("driver.deactivate.service", { userId }, () =>
       driverService.deactivateDriver(userId),
     );
+
+    setAuthCookies(res, { ...gatewayUser, isDriver: false }, config);
 
     return res
       .status(200)
