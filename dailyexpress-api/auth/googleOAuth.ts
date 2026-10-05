@@ -7,6 +7,7 @@ import { db } from "../db/connection";
 import { type User } from "../db/index";
 import { getCookieDomain, setAuthCookies } from "../middleware/auth";
 import { authRepository } from "./auth.repository";
+import { driverRepository } from "../driver/driver.repository";
 import { logger, reportError } from "../utils/logger";
 import {
     GOOGLE_AUTH_FAILURE_REDIRECT_URL,
@@ -169,12 +170,15 @@ export async function completeGoogleOAuth(
     const profile = await verifyGoogleIdentity(tokenResponse, expectedNonce);
     const { user, isNewUser } = await upsertGoogleUser(profile);
 
+    const driverProfile = await driverRepository.findDriverByUserId(user.id);
+
     setAuthCookies(
       res,
       {
         userId: user.id,
         email: user.email,
         emailVerified: user.emailVerified,
+        isDriver: !!driverProfile && driverProfile.isActive !== false,
       },
       config,
     );
