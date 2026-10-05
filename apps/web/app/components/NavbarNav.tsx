@@ -48,6 +48,7 @@ import {
   type NavIconName,
   type NavLink,
 } from "~/components/navbar-links";
+import { useEffect, useLayoutEffect } from "react";
 
 const NAV_ICONS: Record<NavIconName, LucideIcon> = {
   car: Car,
@@ -137,13 +138,10 @@ function Avatar({
 
 type PillBounds = { x: number; y: number; width: number; height: number };
 
-/* `instant` marks the first non-null placement. The pill mounts with a zero-size
-   box, and by then `initial={false}` no longer applies, so without this the very
-   first placement would animate outward from the list's origin. */
 type PillState = { bounds: PillBounds | null; instant: boolean };
 
-function isLinkVisible(link: NavLink, showDriverLink: boolean): boolean {
-  return link.href !== DRIVER_CALENDAR_HREF || showDriverLink;
+function isLinkVisible(link: NavLink, isDriver: boolean): boolean {
+  return link.href !== DRIVER_CALENDAR_HREF || isDriver;
 }
 
 function isDesktopLinkActive(link: NavLink, pathname: string): boolean {
@@ -155,12 +153,12 @@ function isDesktopLinkActive(link: NavLink, pathname: string): boolean {
 
 function DesktopLinks({
   links,
-  showDriverLink,
+  isDriver,
   pathname,
   prefersReducedMotion,
 }: {
   links: readonly NavLink[];
-  showDriverLink: boolean;
+  isDriver: boolean;
   pathname: string;
   prefersReducedMotion: boolean | null;
 }) {
@@ -170,10 +168,8 @@ function DesktopLinks({
   const [pill, setPill] = React.useState<PillState | null>(null);
   const hasPlacedPill = React.useRef(false);
 
-  /* Keyed by linkKey, not href: "About Us" and "FAQ" deliberately share
-       /#faq, and matching on href would pick the wrong link for the pill. */
   const activeLink = links.find(
-    (link) => isDesktopLinkActive(link, pathname) && isLinkVisible(link, showDriverLink),
+    (link) => isDesktopLinkActive(link, pathname) && isLinkVisible(link, isDriver),
   );
   const highlightedKey = hoveredKey ?? (activeLink && linkKey(activeLink));
 
@@ -221,11 +217,11 @@ function DesktopLinks({
     [],
   );
 
-  React.useLayoutEffect(() => {
+  useLayoutEffect(() => {
     updatePillBounds();
   }, [updatePillBounds]);
 
-  React.useEffect(() => {
+  useEffect(() => {
     if (!highlightedKey) {
       return;
     }
@@ -280,19 +276,12 @@ function DesktopLinks({
           className="pointer-events-none absolute left-0 top-0 z-0 bg-accent"
         />
         {links.map((link) => {
-          const visible = isLinkVisible(link, showDriverLink);
+          const visible = isLinkVisible(link, isDriver);
           const active = visible && isDesktopLinkActive(link, pathname);
           const key = linkKey(link);
 
           return (
-            <li
-              key={key}
-              aria-hidden={visible ? undefined : true}
-              className={cn(
-                "relative z-10",
-                !visible && "invisible pointer-events-none",
-              )}
-            >
+            <li key={key} className="relative z-10">
               <Link
                 ref={(node) => setLinkRef(key, node)}
                 href={link.href}
@@ -423,15 +412,13 @@ function DrawerSections({
 }
 
 interface NavbarNavProps {
-  hasSession: boolean;
-  showDriverCta: boolean;
-  showDriverLink: boolean;
+    hasSession: boolean;
+    isDriver: boolean;
 }
 
 export function NavbarNav({
-  hasSession,
-  showDriverCta,
-  showDriverLink,
+    hasSession,
+    isDriver,
 }: NavbarNavProps) {
   const pathname = usePathname();
   const prefersReducedMotion = useReducedMotion();
@@ -446,7 +433,7 @@ export function NavbarNav({
 
   const desktopLinks = hasSession ? APP_NAV_LINKS : MARKETING_NAV_LINKS;
   const drawerAppLinks = desktopLinks.filter((link) =>
-    isLinkVisible(link, showDriverLink),
+    isLinkVisible(link, isDriver),
   );
   const close = () => setIsOpen(false);
 
@@ -458,24 +445,18 @@ export function NavbarNav({
     <>
       <DesktopLinks
         links={desktopLinks}
-        showDriverLink={showDriverLink}
+        isDriver={isDriver}
         pathname={pathname}
         prefersReducedMotion={prefersReducedMotion}
       />
 
       <div className="ml-auto flex items-center gap-3">
         <div className="hidden items-center gap-3 lg:flex">
-          <Link
-            href="/driver/signup"
-            aria-hidden={showDriverCta ? undefined : true}
-            tabIndex={showDriverCta ? undefined : -1}
-            className={cn(
-              driverCtaClassName,
-              !showDriverCta && "invisible pointer-events-none",
-            )}
-          >
-            Become a driver
-          </Link>
+          {!isDriver ? (
+            <Link href="/driver/signup" className={driverCtaClassName}>
+              Become a driver
+            </Link>
+          ) : null}
 
           {hasSession ? (
             <span title={name} className="flex items-center">
@@ -548,7 +529,7 @@ export function NavbarNav({
             />
 
             <div className="flex flex-col gap-3 px-4 py-4">
-              {showDriverCta ? (
+              {!isDriver ? (
                 <Link href="/driver/signup" className={driverCtaClassName}>
                   Become a driver
                 </Link>
