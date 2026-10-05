@@ -59,6 +59,7 @@ export const deleteAccount: RequestHandler = asyncHandler(
     }
 
     await authService.deleteUser(userId);
+    clearAuthCookies(res);
 
     return res
       .status(200)
