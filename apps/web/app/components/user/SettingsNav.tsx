@@ -2,18 +2,20 @@
 
 import { useEffect, useState } from "react";
 import Link from "next/link";
-import { usePathname, useRouter } from "next/navigation";
+import { usePathname } from "next/navigation";
 import {
-    motion,
+    LazyMotion,
+    domAnimation,
+    m,
     useMotionValueEvent,
     useReducedMotion,
     useScroll,
     type Transition,
 } from "framer-motion";
-import { useLogout } from "@repo/api";
 import { Drama, LogOut, Settings, TriangleAlert, UserRound } from "lucide-react";
 import { cn } from "@repo/ui/lib/utils";
 import { Button } from "~/components/ui/button";
+import { useSignOut } from "~/lib/use-sign-out";
 
 const NAV_LINKS = [
     { href: "/settings/profile", label: "Profile", icon: UserRound },
@@ -21,8 +23,7 @@ const NAV_LINKS = [
     { href: "/settings/danger", label: "Danger zone", icon: TriangleAlert, danger: true },
 ] as const;
 
-const HIDE_AFTER_PX = 150;
-const navTransition: Transition = { duration: 0.25, ease: "easeOut" };
+const navTransition: Transition = { duration: 0.3, ease: "easeInOut" };
 
 const linkClassName = (active: boolean, isDanger: boolean) =>
     cn(
@@ -38,8 +39,7 @@ const linkClassName = (active: boolean, isDanger: boolean) =>
 
 const SettingsNav = () => {
     const pathname = usePathname();
-    const router = useRouter();
-    const logout = useLogout();
+    const signOut = useSignOut();
 
     const prefersReducedMotion = useReducedMotion();
     const { scrollY } = useScroll();
@@ -48,7 +48,7 @@ const SettingsNav = () => {
 
     useMotionValueEvent(scrollY, "change", (current) => {
         const previous = scrollY.getPrevious() ?? 0;
-        setIsHidden(current > previous && current > HIDE_AFTER_PX);
+        setIsHidden(current > previous && current > 0);
     });
 
     useEffect(() => {
@@ -59,71 +59,68 @@ const SettingsNav = () => {
         return () => query.removeEventListener("change", sync);
     }, []);
 
-    const handleSignOut = () => {
-        logout.mutate(undefined, {
-            onSuccess: () => {
-                router.push("/");
-            },
-        });
-    };
+    const shouldHide = !isDesktop && !prefersReducedMotion && isHidden;
 
     return (
-        <motion.nav
-            aria-label="Settings"
-            onFocusCapture={() => setIsHidden(false)}
-            animate={{
-                y: !isDesktop && !prefersReducedMotion && isHidden ? "-100%" : 0,
-            }}
-            transition={navTransition}
-            className="sticky top-0 z-40 -mx-4 min-w-0 border-b border-border bg-background px-4 pt-3 sm:-mx-6 sm:px-6 md:static md:z-auto md:mx-0 md:border-b-0 md:bg-transparent md:px-0"
-        >
-            <div className="flex items-center gap-2 pb-2 md:px-3 md:pb-3">
-                <Settings aria-hidden="true" className="h-4 w-4 shrink-0" />
-                <p className="text-base font-semibold">Settings</p>
-            </div>
-
-            <div
-                role="group"
-                aria-label="Settings sections"
-                tabIndex={0}
-                className="-mx-4 flex snap-x snap-mandatory gap-1 overflow-x-auto px-4 pb-2 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden sm:-mx-6 sm:px-6 md:mx-0 md:flex-col md:snap-none md:overflow-visible md:px-0 md:pb-0"
+        <LazyMotion features={domAnimation} strict>
+            <m.nav
+                aria-label="Settings"
+                onFocusCapture={() => setIsHidden(false)}
+                animate={{
+                    y: shouldHide ? "-100%" : 0,
+                    opacity: shouldHide ? 0 : 1,
+                }}
+                transition={navTransition}
+                className="sticky top-16 z-40 -mx-4 min-w-0 border-b border-border bg-background px-4 pt-3 sm:-mx-6 sm:px-6 md:static md:z-auto md:mx-0 md:border-b-0 md:bg-transparent md:px-0"
             >
-                {NAV_LINKS.map(({ href, label, icon: Icon, ...rest }) => {
-                    const active = pathname === href;
-                    const isDanger = "danger" in rest && rest.danger === true;
-                    return (
-                        <Link
-                            key={href}
-                            href={href}
-                            aria-current={active ? "page" : undefined}
-                            className={linkClassName(active, isDanger)}
+                <div className="flex items-center gap-2 pb-2 md:px-3 md:pb-3">
+                    <Settings aria-hidden="true" className="h-4 w-4 shrink-0" />
+                    <p className="text-base font-semibold">Settings</p>
+                </div>
+
+                <div
+                    role="group"
+                    aria-label="Settings sections"
+                    tabIndex={0}
+                    className="-mx-4 flex snap-x snap-mandatory gap-1 overflow-x-auto px-4 pb-2 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden sm:-mx-6 sm:px-6 md:mx-0 md:flex-col md:snap-none md:overflow-visible md:px-0 md:pb-0"
+                >
+                    {NAV_LINKS.map(({ href, label, icon: Icon, ...rest }) => {
+                        const active = pathname === href;
+                        const isDanger = "danger" in rest && rest.danger === true;
+                        return (
+                            <Link
+                                key={href}
+                                href={href}
+                                aria-current={active ? "page" : undefined}
+                                className={linkClassName(active, isDanger)}
+                            >
+                                <Icon
+                                    aria-hidden="true"
+                                    className="hidden h-4 w-4 shrink-0 md:block"
+                                />
+                                {label}
+                            </Link>
+                        );
+                    })}
+
+                    <div className="ml-2 shrink-0 snap-start border-l border-border pl-2 md:ml-0 md:mt-5 md:border-l-0 md:pl-0">
+                        <Button
+                            type="button"
+                            pill
+                            onClick={signOut.signOut}
+                            className="h-8 bg-red-600 px-3 py-1 text-xs font-semibold text-white hover:bg-red-700 md:h-10 md:px-4 md:py-2 md:text-sm"
+                            disabled={signOut.isPending}
                         >
-                            <Icon
+                            <LogOut
                                 aria-hidden="true"
                                 className="hidden h-4 w-4 shrink-0 md:block"
                             />
-                            {label}
-                        </Link>
-                    );
-                })}
-
-                <div className="ml-2 shrink-0 snap-start border-l border-border pl-2 md:ml-0 md:mt-5 md:border-l-0 md:pl-0">
-                    <Button
-                        type="button"
-                        pill
-                        onClick={handleSignOut}
-                        className="h-8 bg-red-600 px-3 py-1 text-xs font-semibold text-white hover:bg-red-700 md:h-10 md:px-4 md:py-2 md:text-sm"
-                        disabled={logout.isPending}
-                    >
-                        <LogOut
-                            aria-hidden="true"
-                            className="hidden h-4 w-4 shrink-0 md:block"
-                        />
-                        Sign out
-                    </Button>
+                            Sign out
+                        </Button>
+                    </div>
                 </div>
-            </div>
-        </motion.nav>
+            </m.nav>
+        </LazyMotion>
     );
 };
 

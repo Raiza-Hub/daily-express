@@ -2,9 +2,6 @@ import { addHours, isAfter, isBefore, isSameDay, startOfDay, endOfDay } from "da
 
 import type { CalendarEvent } from "~/components/event-calendar/types";
 
-/**
- * Get all events for a day (for agenda view)
- */
 export function getAgendaEventsForDay(
   events: CalendarEvent[],
   day: Date,
@@ -23,9 +20,6 @@ export function getAgendaEventsForDay(
     .sort((a, b) => a.start.getTime() - b.start.getTime());
 }
 
-/**
- * Add hours to a date
- */
 export function addHoursToDate(date: Date, hours: number): Date {
   return addHours(date, hours);
 }

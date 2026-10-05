@@ -2,7 +2,13 @@
 
 import { useRef, useState } from "react";
 import { useRouter } from "next/navigation";
-import { AnimatePresence, motion, type Transition } from "framer-motion";
+import {
+    AnimatePresence,
+    LazyMotion,
+    domAnimation,
+    m,
+    type Transition,
+} from "framer-motion";
 import {
     confirmProfileUploadFn,
     presignProfileUploadFn,
@@ -201,51 +207,57 @@ function DriverSignupForm() {
             onFormSubmit={handleSubmit}
             className="flex flex-col gap-6"
         >
-            <AnimatePresence mode="wait" initial={false}>
-                {step === 1 && (
-                    <motion.div
-                        key="personal"
-                        initial={{ opacity: 0, x: 60 }}
-                        animate={{ opacity: 1, x: 0 }}
-                        exit={{ opacity: 0, x: -60 }}
-                        transition={stepTransition}
-                    >
-                        <PersonalInfoStep data={data} errors={errors} onChange={patch} />
-                    </motion.div>
-                )}
-                {step === 2 && (
-                    <motion.div
-                        key="address"
-                        initial={{ opacity: 0, x: 60 }}
-                        animate={{ opacity: 1, x: 0 }}
-                        exit={{ opacity: 0, x: -60 }}
-                        transition={stepTransition}
-                    >
-                        <AddressInfoStep data={data} onChange={patch} />
-                    </motion.div>
-                )}
-                {step === 3 && (
-                    <motion.div
-                        key="bank"
-                        initial={{ opacity: 0, x: 60 }}
-                        animate={{ opacity: 1, x: 0 }}
-                        exit={{ opacity: 0, x: -60 }}
-                        transition={stepTransition}
-                    >
-                        <BankKycStep
-                            data={data}
-                            onChange={patch}
-                            bankVerified={bankVerified}
-                            isVerifyingBank={verifyBank.isPending}
-                            onVerifyBank={handleVerifyBank}
-                            identityVerified={identityVerified}
-                            isVerifyingIdentity={verifyKyc.isPending}
-                            onVerifyIdentity={handleVerifyIdentity}
-                            formError={formError}
-                        />
-                    </motion.div>
-                )}
-            </AnimatePresence>
+            <LazyMotion features={domAnimation} strict>
+                <AnimatePresence mode="wait" initial={false}>
+                    {step === 1 && (
+                        <m.div
+                            key="personal"
+                            initial={{ opacity: 0, x: 60 }}
+                            animate={{ opacity: 1, x: 0 }}
+                            exit={{ opacity: 0, x: -60 }}
+                            transition={stepTransition}
+                        >
+                            <PersonalInfoStep
+                                data={data}
+                                errors={errors}
+                                onChange={patch}
+                            />
+                        </m.div>
+                    )}
+                    {step === 2 && (
+                        <m.div
+                            key="address"
+                            initial={{ opacity: 0, x: 60 }}
+                            animate={{ opacity: 1, x: 0 }}
+                            exit={{ opacity: 0, x: -60 }}
+                            transition={stepTransition}
+                        >
+                            <AddressInfoStep data={data} onChange={patch} />
+                        </m.div>
+                    )}
+                    {step === 3 && (
+                        <m.div
+                            key="bank"
+                            initial={{ opacity: 0, x: 60 }}
+                            animate={{ opacity: 1, x: 0 }}
+                            exit={{ opacity: 0, x: -60 }}
+                            transition={stepTransition}
+                        >
+                            <BankKycStep
+                                data={data}
+                                onChange={patch}
+                                bankVerified={bankVerified}
+                                isVerifyingBank={verifyBank.isPending}
+                                onVerifyBank={handleVerifyBank}
+                                identityVerified={identityVerified}
+                                isVerifyingIdentity={verifyKyc.isPending}
+                                onVerifyIdentity={handleVerifyIdentity}
+                                formError={formError}
+                            />
+                        </m.div>
+                    )}
+                </AnimatePresence>
+            </LazyMotion>
 
             <div className="flex flex-col gap-3 pt-2">
                 {formError && step !== 3 && (
