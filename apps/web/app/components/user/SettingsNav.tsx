@@ -75,7 +75,7 @@ const SettingsNav = () => {
                 y: !isDesktop && !prefersReducedMotion && isHidden ? "-100%" : 0,
             }}
             transition={navTransition}
-            className="sticky top-0 z-40 -mx-4 min-w-0 border-b border-border bg-background px-4 pt-3 sm:-mx-6 sm:px-6 md:static md:z-auto md:mx-0 md:border-b-0 md:bg-transparent md:px-0"
+            className="sticky top-16 z-40 -mx-4 min-w-0 border-b border-border bg-background px-4 pt-3 sm:-mx-6 sm:px-6 md:static md:z-auto md:mx-0 md:border-b-0 md:bg-transparent md:px-0"
         >
             <div className="flex items-center gap-2 pb-2 md:px-3 md:pb-3">
                 <Settings aria-hidden="true" className="h-4 w-4 shrink-0" />
