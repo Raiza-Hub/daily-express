@@ -67,6 +67,7 @@ export function setAuthCookies(
     userId: payload.userId,
     email: payload.email,
     emailVerified: payload.emailVerified,
+    isDriver: payload.isDriver ?? false,
   };
 
   const tokenSignOptions: SignOptions = {

@@ -131,6 +131,7 @@ export interface JWTPayload {
   userId: string;
   email: string;
   emailVerified: boolean;
+  isDriver?: boolean;
   iat?: number;
   exp?: number;
 }
