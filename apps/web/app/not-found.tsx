@@ -3,20 +3,20 @@ import Link from "next/link";
 
 export default function NotFound() {
   return (
-    <div className="mx-auto flex min-h-dvh w-full max-w-md flex-col items-center justify-center gap-5 px-6 py-12 text-center">
+    <div className="mx-auto flex w-full max-w-md flex-col items-center justify-center gap-5 px-6 text-center">
       <Image
-        src="/not-found.webp"
+        src="/not-found-duck3.jpg"
         alt=""
         width={480}
-        height={360}
+        height={404}
         className="h-auto w-80 sm:w-96"
       />
       <h2 className="text-xl font-semibold text-neutral-900 dark:text-neutral-50">
-        We couldn&apos;t find that page
+        Sorry, we couldn&apos;t find that page
       </h2>
       <p className="max-w-sm text-sm text-neutral-500 dark:text-neutral-400">
-        The link may be broken, or the trip you&apos;re looking for is no longer
-        available. Check the address or head back to the homepage.
+        The link may be broken, or the page may have moved. Check the address
+        or head back to the homepage.
       </p>
       <Link
         href="/"
