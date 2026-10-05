@@ -8,13 +8,11 @@ function parseGatewayUser(req: Request): JWTPayload | null {
   if (
     requestUser &&
     typeof requestUser.userId === "string" &&
-    typeof requestUser.email === "string" &&
-    typeof requestUser.emailVerified === "boolean"
+    typeof requestUser.email === "string"
   ) {
     return {
       userId: requestUser.userId,
       email: requestUser.email,
-      emailVerified: requestUser.emailVerified,
       isDriver: requestUser.isDriver === true,
     };
   }
@@ -33,36 +31,6 @@ export function authenticateGatewayRequest(
     sendErrorResponse(res, 401, "Please sign in again to continue.", {
       code: "AUTHENTICATION_REQUIRED",
     });
-    return;
-  }
-
-  req.user = gatewayUser;
-  next();
-}
-
-export function authenticateVerifiedGatewayRequest(
-  req: Request,
-  res: Response,
-  next: NextFunction,
-): void {
-  const gatewayUser = parseGatewayUser(req);
-
-  if (!gatewayUser) {
-    sendErrorResponse(res, 401, "Please sign in again to continue.", {
-      code: "AUTHENTICATION_REQUIRED",
-    });
-    return;
-  }
-
-  if (!gatewayUser.emailVerified) {
-    sendErrorResponse(
-      res,
-      403,
-      "Please verify your email address before continuing.",
-      {
-        code: "EMAIL_NOT_VERIFIED",
-      },
-    );
     return;
   }
 

@@ -1,5 +1,5 @@
 import { Router } from "express";
-import { authenticateVerifiedGatewayRequest } from "../middleware/gatewayAuth";
+import { authenticateGatewayRequest } from "../middleware/gatewayAuth";
 import { createTokenBucketLimiter } from "../middleware/tokenBucket";
 import { getConfig } from "../config/index";
 import * as routeController from "./route.controller";
@@ -29,54 +29,54 @@ router.get("/origins", routeController.getOrigins);
 router.patch(
   "/driver/trip/:id/complete",
   authenticateSession,
-  authenticateVerifiedGatewayRequest,
+  authenticateGatewayRequest,
   driverActionLimiter,
   routeController.completeTrip,
 );
 router.get(
   "/driver/trips",
   authenticateSession,
-  authenticateVerifiedGatewayRequest,
+  authenticateGatewayRequest,
   driverActionLimiter,
   routeController.getDriverTrips,
 );
 router.patch(
   "/driver/trip/:id/cancel",
   authenticateSession,
-  authenticateVerifiedGatewayRequest,
+  authenticateGatewayRequest,
   driverActionLimiter,
   routeController.cancelTrip,
 );
 router.post(
   "/driver/trip/:id/payout",
   authenticateSession,
-  authenticateVerifiedGatewayRequest,
+  authenticateGatewayRequest,
   driverActionLimiter,
   routeController.initiatePayout,
 );
 router.get(
   "/driver/trip/:id/passengers",
   authenticateSession,
-  authenticateVerifiedGatewayRequest,
+  authenticateGatewayRequest,
   routeController.getTripPassengers,
 );
 router.get(
   "/user/booking/:id/passengers",
   authenticateSession,
-  authenticateVerifiedGatewayRequest,
+  authenticateGatewayRequest,
   routeController.getBookingPassengers,
 );
 router.get(
   "/user/bookings",
   authenticateSession,
-  authenticateVerifiedGatewayRequest,
+  authenticateGatewayRequest,
   routeController.getUserBookings,
 );
 
 router.post(
   "/user/booking/checkout",
   authenticateSession,
-  authenticateVerifiedGatewayRequest,
+  authenticateGatewayRequest,
   bookingLimiter,
   routeController.createCheckoutBooking,
 );

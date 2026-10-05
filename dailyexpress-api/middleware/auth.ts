@@ -20,8 +20,7 @@ function isJwtPayload(
   return (
     typeof payload !== "string" &&
     typeof payload.userId === "string" &&
-    typeof payload.email === "string" &&
-    typeof payload.emailVerified === "boolean"
+    typeof payload.email === "string"
   );
 }
 
@@ -65,7 +64,6 @@ export function setAuthCookies(
   const accessPayload = {
     userId: payload.userId,
     email: payload.email,
-    emailVerified: payload.emailVerified,
     isDriver: payload.isDriver ?? false,
   };
 
@@ -200,8 +198,7 @@ export function getAuthenticatedUser(req: Request): JWTPayload | null {
   if (
     !user ||
     typeof user.userId !== "string" ||
-    typeof user.email !== "string" ||
-    typeof user.emailVerified !== "boolean"
+    typeof user.email !== "string"
   ) {
     return null;
   }
@@ -209,7 +206,6 @@ export function getAuthenticatedUser(req: Request): JWTPayload | null {
   return {
     userId: user.userId,
     email: user.email,
-    emailVerified: user.emailVerified,
     isDriver: user.isDriver === true,
   };
 }
