@@ -6,7 +6,6 @@ import jwt, {
 } from "jsonwebtoken";
 import { getConfig } from "../config/index";
 import type { JWTPayload } from "@shared/types";
-import { createServiceError } from "@shared/utils";
 import { logger } from "../utils/logger";
 import { sendErrorResponse } from "./apiResponses";
 
@@ -45,7 +44,7 @@ export function clearAuthCookies(
   res.clearCookie("refreshToken", clearCookieOptions);
 }
 
-export function setAuthenticatedUser(req: Request, payload: JWTPayload): void {
+function setAuthenticatedUser(req: Request, payload: JWTPayload): void {
   req.user = payload;
 }
 
@@ -214,23 +213,3 @@ export function getAuthenticatedUser(req: Request): JWTPayload | null {
   };
 }
 
-export function requireAuthenticatedUser(req: Request): JWTPayload {
-  const user = getAuthenticatedUser(req);
-  if (!user) {
-    throw createServiceError("User not authenticated", 401);
-  }
-
-  return user;
-}
-
-export function requireVerifiedAuthenticatedUser(req: Request): JWTPayload {
-  const user = requireAuthenticatedUser(req);
-  if (!user.emailVerified) {
-    throw createServiceError(
-      "Email not verified, Please Verify Your Account",
-      401,
-    );
-  }
-
-  return user;
-}
