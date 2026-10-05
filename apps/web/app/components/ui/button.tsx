@@ -7,6 +7,7 @@ const buttonVariants = {
     default: "bg-primary text-primary-foreground hover:bg-primary/90",
     secondary: "bg-zinc-100 text-zinc-900 hover:bg-zinc-200",
     outline: "border border-border bg-background text-foreground hover:bg-accent",
+    ghost: "bg-transparent text-foreground hover:bg-accent",
 };
 
 const buttonSizes = {
