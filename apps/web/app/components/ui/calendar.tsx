@@ -11,7 +11,13 @@ import {
 } from "date-fns";
 import { Button } from "~/components/ui/button";
 import { ScrollArea } from "~/components/ui/scroll-area";
-import { motion, AnimatePresence, type Transition } from "framer-motion";
+import {
+    m,
+    AnimatePresence,
+    LazyMotion,
+    domAnimation,
+    type Transition,
+} from "framer-motion";
 
 interface CalendarProps {
     selected?: Date;
@@ -90,128 +96,130 @@ function Calendar({ selected, onSelect }: CalendarProps) {
                 </div>
             </div>
 
-            <motion.div
-                initial={false}
-                animate={{ height: bodyHeight ?? "auto" }}
-                transition={stepTransition}
-                className="overflow-hidden"
-            >
-                <AnimatePresence mode="wait">
-                    {step === "year" && (
-                        <motion.div
-                            key="year"
-                            ref={measureStep}
-                            initial={{ opacity: 0, y: 20 }}
-                            animate={{ opacity: 1, y: 0 }}
-                            exit={{ opacity: 0, y: -20 }}
-                            transition={stepTransition}
-                            className="h-80"
-                        >
-                            <ScrollArea className="h-full">
-                                <div className="grid grid-cols-3 gap-2">
-                                    {yearRange.map((year) => (
-                                        <Button
-                                            key={year.getFullYear()}
-                                            variant={
-                                                year.getFullYear() === selectedYear
-                                                    ? "default"
-                                                    : "outline"
-                                            }
-                                            size="sm"
-                                            className="h-12"
-                                            onClick={() => {
-                                                setSelectedYear(year.getFullYear());
-                                                setStep("month");
-                                            }}
-                                        >
-                                            {year.getFullYear()}
-                                        </Button>
-                                    ))}
-                                </div>
-                            </ScrollArea>
-                        </motion.div>
-                    )}
-
-                    {step === "month" && (
-                        <motion.div
-                            key="month"
-                            ref={measureStep}
-                            initial={{ opacity: 0, y: 20 }}
-                            animate={{ opacity: 1, y: 0 }}
-                            exit={{ opacity: 0, y: -20 }}
-                            transition={stepTransition}
-                            className="grid grid-cols-3 gap-2"
-                        >
-                            {eachMonthOfInterval({
-                                start: startOfYear(new Date(selectedYear, 0, 1)),
-                                end: endOfYear(new Date(selectedYear, 11, 31)),
-                            }).map((month) => (
-                                <Button
-                                    key={month.toISOString()}
-                                    variant={
-                                        month.getMonth() === selectedMonth
-                                            ? "default"
-                                            : "outline"
-                                    }
-                                    size="sm"
-                                    className="h-12 flex flex-col"
-                                    onClick={() => {
-                                        setSelectedMonth(month.getMonth());
-                                        setStep("day");
-                                    }}
-                                >
-                                    <span className="text-sm font-medium">
-                                        {format(month, "MMM")}
-                                    </span>
-                                    <span className="text-xs text-muted-foreground">
-                                        {selectedYear}
-                                    </span>
-                                </Button>
-                            ))}
-                        </motion.div>
-                    )}
-
-                    {step === "day" && (
-                        <motion.div
-                            key={`day-${selectedYear}-${selectedMonth}`}
-                            ref={measureStep}
-                            initial={{ opacity: 0, y: 20 }}
-                            animate={{ opacity: 1, y: 0 }}
-                            exit={{ opacity: 0, y: -20 }}
-                            transition={stepTransition}
-                        >
-                            <div className="rounded-lg bg-card p-3">
-                                <div className="grid grid-cols-7 gap-1 text-center text-xs font-medium text-muted-foreground mb-2">
-                                    {WEEKDAYS.map((day) => (
-                                        <span key={day} className="py-1">
-                                            {day}
-                                        </span>
-                                    ))}
-                                </div>
-                                <div className="grid grid-cols-7 gap-1">
-                                    {dayCells.map((day, index) =>
-                                        day === null ? (
-                                            <span key={`blank-${index}`} />
-                                        ) : (
+            <LazyMotion features={domAnimation} strict>
+                <m.div
+                    initial={false}
+                    animate={{ height: bodyHeight ?? "auto" }}
+                    transition={stepTransition}
+                    className="overflow-hidden"
+                >
+                    <AnimatePresence mode="wait">
+                        {step === "year" && (
+                            <m.div
+                                key="year"
+                                ref={measureStep}
+                                initial={{ opacity: 0, y: 20 }}
+                                animate={{ opacity: 1, y: 0 }}
+                                exit={{ opacity: 0, y: -20 }}
+                                transition={stepTransition}
+                                className="h-80"
+                            >
+                                <ScrollArea className="h-full">
+                                    <div className="grid grid-cols-3 gap-2">
+                                        {yearRange.map((year) => (
                                             <Button
-                                                key={`day-${day}`}
-                                                variant={isSelectedDay(day) ? "default" : "outline"}
+                                                key={year.getFullYear()}
+                                                variant={
+                                                    year.getFullYear() === selectedYear
+                                                        ? "default"
+                                                        : "outline"
+                                                }
                                                 size="sm"
-                                                className="h-12 w-full"
+                                                className="h-12"
                                                 onClick={() => {
-                                                    selectDate(new Date(selectedYear, selectedMonth, day));
+                                                    setSelectedYear(year.getFullYear());
+                                                    setStep("month");
                                                 }}
                                             >
-                                                {day}
+                                                {year.getFullYear()}
                                             </Button>
-                                        ),
-                                    )}
+                                        ))}
+                                    </div>
+                                </ScrollArea>
+                            </m.div>
+                        )}
+
+                        {step === "month" && (
+                            <m.div
+                                key="month"
+                                ref={measureStep}
+                                initial={{ opacity: 0, y: 20 }}
+                                animate={{ opacity: 1, y: 0 }}
+                                exit={{ opacity: 0, y: -20 }}
+                                transition={stepTransition}
+                                className="grid grid-cols-3 gap-2"
+                            >
+                                {eachMonthOfInterval({
+                                    start: startOfYear(new Date(selectedYear, 0, 1)),
+                                    end: endOfYear(new Date(selectedYear, 11, 31)),
+                                }).map((month) => (
+                                    <Button
+                                        key={month.toISOString()}
+                                        variant={
+                                            month.getMonth() === selectedMonth
+                                                ? "default"
+                                                : "outline"
+                                        }
+                                        size="sm"
+                                        className="h-12 flex flex-col"
+                                        onClick={() => {
+                                            setSelectedMonth(month.getMonth());
+                                            setStep("day");
+                                        }}
+                                    >
+                                        <span className="text-sm font-medium">
+                                            {format(month, "MMM")}
+                                        </span>
+                                        <span className="text-xs text-muted-foreground">
+                                            {selectedYear}
+                                        </span>
+                                    </Button>
+                                ))}
+                            </m.div>
+                        )}
+
+                        {step === "day" && (
+                            <m.div
+                                key={`day-${selectedYear}-${selectedMonth}`}
+                                ref={measureStep}
+                                initial={{ opacity: 0, y: 20 }}
+                                animate={{ opacity: 1, y: 0 }}
+                                exit={{ opacity: 0, y: -20 }}
+                                transition={stepTransition}
+                            >
+                                <div className="rounded-lg bg-card p-3">
+                                    <div className="grid grid-cols-7 gap-1 text-center text-xs font-medium text-muted-foreground mb-2">
+                                        {WEEKDAYS.map((day) => (
+                                            <span key={day} className="py-1">
+                                                {day}
+                                            </span>
+                                        ))}
+                                    </div>
+                                    <div className="grid grid-cols-7 gap-1">
+                                        {dayCells.map((day, index) =>
+                                            day === null ? (
+                                                <span key={`blank-${index}`} />
+                                            ) : (
+                                                <Button
+                                                    key={`day-${day}`}
+                                                    variant={isSelectedDay(day) ? "default" : "outline"}
+                                                    size="sm"
+                                                    className="h-12 w-full"
+                                                    onClick={() => {
+                                                        selectDate(new Date(selectedYear, selectedMonth, day));
+                                                    }}
+                                                >
+                                                    {day}
+                                                </Button>
+                                            ),
+                                        )}
+                                    </div>
                                 </div>
-                            </div>
-                        </motion.div>
-                    )}
-                </AnimatePresence>
-            </motion.div>
+                            </m.div>
+                        )}
+                    </AnimatePresence>
+                </m.div>
+            </LazyMotion>
         </div>
     );
 }
