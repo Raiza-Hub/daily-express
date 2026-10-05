@@ -1,7 +1,7 @@
 import { Router } from "express";
 import * as authcontroller from "./auth.controller";
 import {
-  authenticateVerifiedGatewayRequest,
+  authenticateGatewayRequest,
 } from "../middleware/gatewayAuth";
 import { validateRequest } from "../middleware/requestValidation";
 import { completeOnboardingSchema, updateProfileSchema } from "./validation";
@@ -22,28 +22,28 @@ router.get(
 router.get(
   "/logout",
   authenticateSession,
-  authenticateVerifiedGatewayRequest,
+  authenticateGatewayRequest,
   authcontroller.logout,
 );
 
 router.get(
   "/profile",
   authenticateSession,
-  authenticateVerifiedGatewayRequest,
+  authenticateGatewayRequest,
   authcontroller.getProfile,
 );
 
 router.delete(
   "/delete-account",
   authenticateSession,
-  authenticateVerifiedGatewayRequest,
+  authenticateGatewayRequest,
   authcontroller.deleteAccount,
 );
 
 router.put(
   "/update-profile",
   authenticateSession,
-  authenticateVerifiedGatewayRequest,
+  authenticateGatewayRequest,
   validateRequest(updateProfileSchema),
   authcontroller.updateProfile,
 );
@@ -51,7 +51,7 @@ router.put(
 router.patch(
   "/profile/complete",
   authenticateSession,
-  authenticateVerifiedGatewayRequest,
+  authenticateGatewayRequest,
   validateRequest(completeOnboardingSchema),
   authcontroller.completeOnboarding,
 );

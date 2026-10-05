@@ -177,7 +177,6 @@ export async function completeGoogleOAuth(
       {
         userId: user.id,
         email: user.email,
-        emailVerified: user.emailVerified,
         isDriver: !!driverProfile && driverProfile.isActive !== false,
       },
       config,

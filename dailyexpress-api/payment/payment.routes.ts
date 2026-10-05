@@ -4,7 +4,7 @@ import {
   handleKoraWebhook,
   getPaymentReturn,
 } from "./payment.controller";
-import { authenticateVerifiedGatewayRequest } from "../middleware/gatewayAuth";
+import { authenticateGatewayRequest } from "../middleware/gatewayAuth";
 import { validateRequest } from "../middleware/requestValidation";
 import { initializePaymentSchema } from "./validation";
 import { authenticateSession } from "../middleware/auth";
@@ -21,7 +21,7 @@ router.post("/webhooks/kora", handleKoraWebhook);
 router.post(
   "/initialize",
   authenticateSession,
-  authenticateVerifiedGatewayRequest,
+  authenticateGatewayRequest,
   validateRequest(initializePaymentSchema),
   initializePayment,
 );

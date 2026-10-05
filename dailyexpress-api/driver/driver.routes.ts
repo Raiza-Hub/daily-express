@@ -1,6 +1,6 @@
 import { Router } from "express";
 import * as driverController from "./driver.controller";
-import { authenticateVerifiedGatewayRequest } from "../middleware/gatewayAuth";
+import { authenticateGatewayRequest } from "../middleware/gatewayAuth";
 import { requireActiveDriver } from "../middleware/requireActiveDriver";
 import { createTokenBucketLimiter } from "../middleware/tokenBucket";
 import { getConfig } from "../config/index";
@@ -28,14 +28,14 @@ const router: Router = Router();
 router.get(
   "/profile",
   authenticateSession,
-  authenticateVerifiedGatewayRequest,
+  authenticateGatewayRequest,
   driverController.getDriver,
 );
 
 router.post(
   "/profile/presign",
   authenticateSession,
-  authenticateVerifiedGatewayRequest,
+  authenticateGatewayRequest,
   requireActiveDriver,
   driverActionLimiter,
   driverController.presignProfileUpload,
@@ -44,7 +44,7 @@ router.post(
 router.post(
   "/profile/confirm",
   authenticateSession,
-  authenticateVerifiedGatewayRequest,
+  authenticateGatewayRequest,
   requireActiveDriver,
   driverActionLimiter,
   driverController.confirmProfileUpload,
@@ -53,7 +53,7 @@ router.post(
 router.post(
   "/create",
   authenticateSession,
-  authenticateVerifiedGatewayRequest,
+  authenticateGatewayRequest,
   driverActionLimiter,
   validateRequest(createDriverSchema),
   driverController.createDriver,
@@ -62,7 +62,7 @@ router.post(
 router.post(
   "/verify/bank",
   authenticateSession,
-  authenticateVerifiedGatewayRequest,
+  authenticateGatewayRequest,
   driverActionLimiter,
   validateRequest(verifyBankSchema),
   driverController.verifyBank,
@@ -71,7 +71,7 @@ router.post(
 router.post(
   "/verify/kyc",
   authenticateSession,
-  authenticateVerifiedGatewayRequest,
+  authenticateGatewayRequest,
   driverActionLimiter,
   validateRequest(verifyKycSchema),
   driverController.verifyKyc,
@@ -80,7 +80,7 @@ router.post(
 router.put(
   "/update",
   authenticateSession,
-  authenticateVerifiedGatewayRequest,
+  authenticateGatewayRequest,
   requireActiveDriver,
   driverActionLimiter,
   validateRequest(updateDriverSchema),
@@ -90,7 +90,7 @@ router.put(
 router.delete(
   "/deactivate",
   authenticateSession,
-  authenticateVerifiedGatewayRequest,
+  authenticateGatewayRequest,
   requireActiveDriver,
   driverActionLimiter,
   driverController.deactivateDriver,

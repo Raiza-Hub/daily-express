@@ -69,7 +69,6 @@ export const createDriver: RequestHandler = asyncHandler(
       {
         userId: gatewayUser.userId,
         email: gatewayUser.email,
-        emailVerified: gatewayUser.emailVerified,
         isDriver: true,
       },
       config,
@@ -175,7 +174,6 @@ export const deactivateDriver: RequestHandler = asyncHandler(
       {
         userId: gatewayUser.userId,
         email: gatewayUser.email,
-        emailVerified: gatewayUser.emailVerified,
         isDriver: false,
       },
       config,

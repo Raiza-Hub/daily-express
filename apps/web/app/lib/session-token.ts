@@ -9,7 +9,6 @@ export const JWT_VERIFY_OPTIONS = {
 export interface SessionClaims {
   userId: string;
   email: string;
-  emailVerified: boolean;
   isDriver: boolean;
 }
 
@@ -24,20 +23,13 @@ function toClaims(payload: unknown): SessionClaims | null {
     return null;
   }
 
-  const { userId, email, emailVerified, isDriver } = payload as Record<
-    string,
-    unknown
-  >;
+  const { userId, email, isDriver } = payload as Record<string, unknown>;
 
-  if (
-    typeof userId !== "string" ||
-    typeof email !== "string" ||
-    typeof emailVerified !== "boolean"
-  ) {
+  if (typeof userId !== "string" || typeof email !== "string") {
     return null;
   }
 
-  return { userId, email, emailVerified, isDriver: isDriver === true };
+  return { userId, email, isDriver: isDriver === true };
 }
 
 async function verify(
