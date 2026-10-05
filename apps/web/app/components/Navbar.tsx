@@ -1,62 +1,33 @@
 import Image from "next/image";
 import Link from "next/link";
-import { Suspense } from "react";
 import { cookies } from "next/headers";
 import { NavbarNav } from "~/components/NavbarNav";
-import { getDriverProfileState, type DriverProfileState } from "~/lib/driver-session";
-
-interface NavbarView {
-    hasSession: boolean;
-    showDriverCta: boolean;
-    showDriverLink: boolean;
-}
-
-type NavbarDriverState = DriverProfileState | "unknown";
-
-function navView(hasSession: boolean, driver: NavbarDriverState): NavbarView {
-    return {
-        hasSession,
-        showDriverCta: !hasSession || driver === "none",
-        showDriverLink: hasSession && driver === "active",
-    };
-}
-
-async function NavbarSession() {
-    const driver = await getDriverProfileState().catch(() => "unknown" as const);
-
-    return <NavbarNav {...navView(true, driver)} />;
-}
+import { readSession } from "~/lib/session-token";
 
 export async function Navbar() {
-    const cookieStore = await cookies();
-    const hasSession = !!(
-        cookieStore.get("token") || cookieStore.get("refreshToken")
-    );
+  const cookieStore = await cookies();
+  const session = await readSession(
+    cookieStore.get("token")?.value,
+    cookieStore.get("refreshToken")?.value,
+  );
+  const hasSession = session !== null;
 
-    return (
-        <nav className="sticky top-0 z-50 bg-background">
-            <div className="mx-auto flex h-16 max-w-7xl items-center px-4 sm:px-6">
-                <Link href="/">
-                    <Image
-                        src="/logo.png"
-                        width={120}
-                        height={40}
-                        alt="Daily Express"
-                        className="h-10 w-auto object-contain"
-                        priority
-                    />
-                </Link>
+  return (
+    <nav className="sticky top-0 z-50 bg-background">
+      <div className="mx-auto flex h-16 max-w-7xl items-center px-4 sm:px-6">
+        <Link href="/">
+          <Image
+            src="/logo.png"
+            width={120}
+            height={40}
+            alt="Daily Express"
+            className="h-10 w-auto object-contain"
+            priority
+          />
+        </Link>
 
-                {hasSession ? (
-                    <Suspense
-                        fallback={<NavbarNav {...navView(true, "unknown")} />}
-                    >
-                        <NavbarSession />
-                    </Suspense>
-                ) : (
-                    <NavbarNav {...navView(false, "none")} />
-                )}
-            </div>
-        </nav>
-    );
+        <NavbarNav hasSession={hasSession} isDriver={session?.isDriver === true} />
+      </div>
+    </nav>
+  );
 }

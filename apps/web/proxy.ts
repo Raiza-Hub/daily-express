@@ -1,12 +1,6 @@
-import { jwtVerify } from "jose";
 import { NextResponse } from "next/server";
 import type { NextProxy, NextRequest } from "next/server";
-
-const JWT_VERIFY_OPTIONS = {
-  issuer: "dailyexpress-api",
-  audience: "dailyexpress-app",
-  algorithms: ["HS256"],
-};
+import { readSession } from "~/lib/session-token";
 
 const PROTECTED_PREFIXES = [
   "/trip/bookings",
@@ -26,34 +20,12 @@ function matchesPrefix(pathname: string, prefixes: readonly string[]): boolean {
 }
 
 async function hasValidSession(request: NextRequest): Promise<boolean> {
-  const accessToken = request.cookies.get("token")?.value;
-  const refreshToken = request.cookies.get("refreshToken")?.value;
+  const session = await readSession(
+    request.cookies.get("token")?.value,
+    request.cookies.get("refreshToken")?.value,
+  );
 
-  if (accessToken) {
-    const secret = process.env.JWT_SECRET;
-    if (secret) {
-      try {
-        await jwtVerify(accessToken, new TextEncoder().encode(secret), JWT_VERIFY_OPTIONS);
-        return true;
-      } catch {
-        // fall through to refresh token check
-      }
-    }
-  }
-
-  if (refreshToken) {
-    const secret = process.env.JWT_REFRESH_SECRET;
-    if (secret) {
-      try {
-        await jwtVerify(refreshToken, new TextEncoder().encode(secret), JWT_VERIFY_OPTIONS);
-        return true;
-      } catch {
-        // invalid refresh token
-      }
-    }
-  }
-
-  return false;
+  return session !== null;
 }
 
 export const proxy: NextProxy = async (request) => {
