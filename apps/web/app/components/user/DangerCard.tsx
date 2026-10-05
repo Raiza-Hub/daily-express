@@ -35,10 +35,10 @@ const DANGER_ACTIONS = {
 
 const dangerButtonStyles = "bg-red-600 font-semibold text-sm text-white hover:bg-red-700";
 
-const DangerCard = () => {
+const DangerCard = ({ canDeactivate }: { canDeactivate: boolean }) => {
     const router = useRouter();
     const { data: user } = useGetMe();
-    const { data: driver, isPending: isDriverPending } = useGetDriver();
+    const { data: driver } = useGetDriver();
     const deleteAccount = useDeleteAccount();
     const deactivateDriver = useDeactivateDriver();
 
@@ -105,7 +105,7 @@ const DangerCard = () => {
                 </Button>
             </section>
 
-            {isDriverPending || driver ? (
+            {canDeactivate ? (
                 <section className="flex flex-col items-start gap-4 border-t border-border py-6">
                     <div>
                         <h2 className="text-lg font-semibold text-foreground">

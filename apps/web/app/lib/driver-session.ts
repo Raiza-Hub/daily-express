@@ -5,14 +5,9 @@ import type { ApiResponse, Driver } from "@shared/types";
 const DAILYEXPRESS_API_URL =
     process.env.NEXT_PUBLIC_DAILYEXPRESS_API_URL || "http://localhost:8000";
 
-export type DriverProfileState = "active" | "none" | "unknown";
+export type DriverProfileState = "active" | "none" | "deactivated";
 
-interface DriverProfileResult {
-    state: DriverProfileState;
-    driver: Driver | null;
-}
-
-const loadDriverProfile = cache(async (): Promise<DriverProfileResult> => {
+export const getDriverProfileState = cache(async (): Promise<DriverProfileState> => {
     const cookieStore = await cookies();
     const token = cookieStore.get("token")?.value;
     const refreshToken = cookieStore.get("refreshToken")?.value;
@@ -30,24 +25,20 @@ const loadDriverProfile = cache(async (): Promise<DriverProfileResult> => {
     );
 
     if (!response.ok) {
+        if (response.status === 403) {
+            const payload = (await response.json().catch(() => null)) as
+                | { code?: string }
+                | null;
+
+            if (payload?.code === "DRIVER_DEACTIVATED") {
+                return "deactivated";
+            }
+        }
+
         throw new Error(`Failed to load driver profile (${response.status})`);
     }
 
     const payload = (await response.json()) as ApiResponse<Driver | null>;
 
-    return payload.data
-        ? { state: "active", driver: payload.data }
-        : { state: "none", driver: null };
+    return payload.data ? "active" : "none";
 });
-
-export async function getDriverProfile(): Promise<Driver | null> {
-    return (await loadDriverProfile()).driver;
-}
-
-export async function getDriverProfileState(): Promise<DriverProfileState> {
-    try {
-        return (await loadDriverProfile()).state;
-    } catch {
-        return "unknown";
-    }
-}

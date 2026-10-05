@@ -1,12 +1,16 @@
 import { redirect } from "next/navigation";
 import { AuthLogo } from "~/components/auth/AuthLogo";
 import { DriverSignupForm } from "~/components/driver/DriverSignupForm";
-import { getDriverProfile } from "~/lib/driver-session";
+import { getDriverProfileState } from "~/lib/driver-session";
 
 const DriverSignupPage = async () => {
-    const driver = await getDriverProfile();
+    const state = await getDriverProfileState();
 
-    if (driver) {
+    if (state === "deactivated") {
+        redirect("/driver/deactivated");
+    }
+
+    if (state === "active") {
         redirect("/settings/driver");
     }
 

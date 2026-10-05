@@ -11,7 +11,9 @@ interface NavbarView {
     showDriverLink: boolean;
 }
 
-function navView(hasSession: boolean, driver: DriverProfileState): NavbarView {
+type NavbarDriverState = DriverProfileState | "unknown";
+
+function navView(hasSession: boolean, driver: NavbarDriverState): NavbarView {
     return {
         hasSession,
         showDriverCta: !hasSession || driver === "none",
@@ -20,7 +22,9 @@ function navView(hasSession: boolean, driver: DriverProfileState): NavbarView {
 }
 
 async function NavbarSession() {
-    return <NavbarNav {...navView(true, await getDriverProfileState())} />;
+    const driver = await getDriverProfileState().catch(() => "unknown" as const);
+
+    return <NavbarNav {...navView(true, driver)} />;
 }
 
 export async function Navbar() {
