@@ -1,6 +1,6 @@
 import { redirect } from "next/navigation";
 import { EventCalendarSection } from "~/components/EventCalendarSection";
-import { getDriverProfile } from "~/lib/driver-session";
+import { getDriverProfileState } from "~/lib/driver-session";
 
 interface DriverCalendarPageProps {
   searchParams: Promise<{ from?: string | string[]; to?: string | string[] }>;
@@ -13,9 +13,13 @@ function first(value: string | string[] | undefined): string | undefined {
 export default async function DriverCalendarPage({
   searchParams,
 }: DriverCalendarPageProps) {
-  const driver = await getDriverProfile();
+  const state = await getDriverProfileState();
 
-  if (!driver) {
+  if (state === "deactivated") {
+    redirect("/driver/deactivated");
+  }
+
+  if (state !== "active") {
     redirect("/driver/signup");
   }
 

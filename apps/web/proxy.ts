@@ -11,6 +11,7 @@ const JWT_VERIFY_OPTIONS = {
 const PROTECTED_PREFIXES = [
   "/trip/bookings",
   "/driver/calendar",
+  "/driver/deactivated",
   "/driver/signup",
   "/settings",
   "/onboarding",
