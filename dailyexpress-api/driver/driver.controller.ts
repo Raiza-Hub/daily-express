@@ -64,7 +64,16 @@ export const createDriver: RequestHandler = asyncHandler(
       driverService.createDriver(userId, req.body),
     );
 
-    setAuthCookies(res, { ...gatewayUser, isDriver: true }, config);
+    setAuthCookies(
+      res,
+      {
+        userId: gatewayUser.userId,
+        email: gatewayUser.email,
+        emailVerified: gatewayUser.emailVerified,
+        isDriver: true,
+      },
+      config,
+    );
 
     return res
       .status(201)
@@ -161,7 +170,16 @@ export const deactivateDriver: RequestHandler = asyncHandler(
       driverService.deactivateDriver(userId),
     );
 
-    setAuthCookies(res, { ...gatewayUser, isDriver: false }, config);
+    setAuthCookies(
+      res,
+      {
+        userId: gatewayUser.userId,
+        email: gatewayUser.email,
+        emailVerified: gatewayUser.emailVerified,
+        isDriver: false,
+      },
+      config,
+    );
 
     return res
       .status(200)
