@@ -210,6 +210,7 @@ export function getAuthenticatedUser(req: Request): JWTPayload | null {
     userId: user.userId,
     email: user.email,
     emailVerified: user.emailVerified,
+    isDriver: user.isDriver === true,
   };
 }
 

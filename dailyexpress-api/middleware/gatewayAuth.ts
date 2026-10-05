@@ -15,6 +15,7 @@ function parseGatewayUser(req: Request): JWTPayload | null {
       userId: requestUser.userId,
       email: requestUser.email,
       emailVerified: requestUser.emailVerified,
+      isDriver: requestUser.isDriver === true,
     };
   }
 
