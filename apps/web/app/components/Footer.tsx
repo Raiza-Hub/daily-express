@@ -27,7 +27,7 @@ export function Footer() {
                             href="mailto:help@beckon.taxi"
                             className="text-sm text-neutral-500 hover:text-neutral-800 transition-colors"
                         >
-                            help@beckon.taxi
+                            Support
                         </a>
                     </li>
                 </ul>
