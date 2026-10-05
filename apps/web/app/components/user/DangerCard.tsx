@@ -65,13 +65,27 @@ const DangerCard = () => {
         setConfirmInput("");
     };
 
+    // The session ends with the account, so land on a public route before
+    // refreshing to keep `proxy.ts` from redirecting back to /login.
+    const handleDelete = () => {
+        closeDrawer();
+        router.replace("/");
+        router.refresh();
+    };
+
+    // Deactivation keeps the session, so only the server-rendered navbar and
+    // the driver profile need to be re-read.
+    const handleDeactivate = () => {
+        closeDrawer();
+        router.refresh();
+    };
+
     const handleConfirm = () => {
         if (!confirmed || mutation.isPending) return;
-        const onSuccess = () => router.push("/");
         if (isDelete) {
-            deleteAccount.mutate(undefined, { onSuccess });
+            deleteAccount.mutate(undefined, { onSuccess: handleDelete });
         } else {
-            deactivateDriver.mutate(undefined, { onSuccess });
+            deactivateDriver.mutate(undefined, { onSuccess: handleDeactivate });
         }
     };
 
