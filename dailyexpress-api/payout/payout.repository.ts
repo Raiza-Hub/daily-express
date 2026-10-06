@@ -4,7 +4,6 @@ import {
   driver,
   earning,
   payout,
-  trip,
 } from "../db/index";
 import type { DbTransaction } from "../db/connection";
 
@@ -29,13 +28,15 @@ export class PayoutRepository {
   }
 
   async findTripPayoutEarningByTripId(tripId: string) {
-    const [earningRow] = await db
-      .select({ earning: earning })
-      .from(earning)
-      .innerJoin(trip, eq(earning.tripId, trip.id))
-      .where(and(eq(earning.tripId, tripId), eq(trip.status, "completed")))
-      .limit(1);
-    if (!earningRow) return null;
+    const row = await db.query.earning.findFirst({
+      where: eq(earning.tripId, tripId),
+      with: { trip: { columns: { driverId: true, status: true } } },
+    });
+
+    // earning_trip_unique_idx ⇒ at most one earning per trip; PK lookup on
+    // trip, so no fan-out. The 'completed' filter moves here because drizzle's
+    // relational `where` cannot reference a joined table's columns.
+    if (!row || row.trip?.status !== "completed") return null;
 
     // Check if an active (non-failed) payout already exists for this trip
     const activePayout = await db.query.payout.findFirst({
@@ -46,7 +47,7 @@ export class PayoutRepository {
     });
     if (activePayout) return null;
 
-    return earningRow.earning;
+    return { earning: row, driverId: row.trip.driverId };
   }
 
   findPayoutByReference(reference: string) {

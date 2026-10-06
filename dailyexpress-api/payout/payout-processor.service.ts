@@ -26,12 +26,10 @@ export class PayoutProcessorService {
   ) {}
 
   async processTripPayout(tripId: string) {
-    const payoutEarning = await this.repo.findTripPayoutEarningByTripId(
-      tripId,
-    );
-    if (!payoutEarning) return;
+    const candidate = await this.repo.findTripPayoutEarningByTripId(tripId);
+    if (!candidate) return;
 
-    const tripDriver = payoutEarning.driverId;
+    const { earning: payoutEarning, driverId: tripDriver } = candidate;
     if (!tripDriver) return;
 
     const payoutDriver = await this.getActivePayoutDriver(tripDriver);
@@ -39,6 +37,7 @@ export class PayoutProcessorService {
 
     const payoutRecord = await this.createTripPayout(
       tripId,
+      tripDriver,
       payoutEarning,
       payoutDriver,
     );
@@ -131,12 +130,13 @@ export class PayoutProcessorService {
 
   private async createTripPayout(
     tripId: string,
+    driverId: string,
     payoutEarning: EarningRecord,
     payoutDriver: ActivePayoutDriver,
   ): Promise<PayoutRecord | null> {
     return db.transaction(async (tx) => {
       const [createdPayout] = await this.repo.insertPayout(tx, {
-        driverId: payoutEarning.driverId!,
+        driverId,
         driverEmail: payoutDriver.email,
         recipientBankName: payoutDriver.bankName,
         recipientAccountLast4: payoutDriver.accountNumber.slice(-4),

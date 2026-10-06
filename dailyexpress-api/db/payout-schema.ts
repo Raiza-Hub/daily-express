@@ -1,3 +1,4 @@
+import { relations } from "drizzle-orm";
 import {
   bigint,
   pgEnum,
@@ -22,9 +23,9 @@ export const earning = pgTable(
   "earning",
   {
     id: uuid("id").defaultRandom().primaryKey(),
-    driverId: uuid("driver_id").references(() => driver.id, {
-      onDelete: "restrict",
-    }),
+    // No driver_id: the driver is derived from trip.driverId, which dispatch
+    // assigns write-once before the trip completes. Keeping a copy here meant
+    // every write path had to remember to populate it.
     tripId: uuid("trip_id")
       .references(() => trip.id, { onDelete: "restrict" })
       .notNull(),
@@ -57,9 +58,17 @@ export const payout = pgTable("payout", {
   updatedAt: timestamp("updated_at", { mode: "date" }).defaultNow().notNull(),
 });
 
+export const earningRelations = relations(earning, ({ one }) => ({
+  trip: one(trip, {
+    fields: [earning.tripId],
+    references: [trip.id],
+  }),
+}));
+
 export const payoutSchema = {
   earning,
   payout,
+  earningRelations,
 };
 
 export type Earning = typeof earning.$inferSelect;
