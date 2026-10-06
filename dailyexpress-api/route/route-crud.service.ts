@@ -1,5 +1,5 @@
 import { createServiceError } from "@shared/utils";
-import { db, type DbTransaction } from "../db/connection";
+import { db } from "../db/connection";
 import { origin, destination, type OriginRecord, type DestinationRecord } from "../db/index";
 import { RouteRepository } from "./route.repository";
 

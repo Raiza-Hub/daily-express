@@ -28,7 +28,6 @@ export const tripStatusEnum = pgEnum("trip_status", [
 export const bookingStatusEnum = pgEnum("booking_status", [
   "pending",
   "confirmed",
-  "cancelled",
 ]);
 
 export const origin = pgTable(

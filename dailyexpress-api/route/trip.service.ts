@@ -182,5 +182,3 @@ export class TripService {
     return result.updatedTrip;
   }
 }
-
-export const tripService = new TripService(new RouteRepository());

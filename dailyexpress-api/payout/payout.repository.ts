@@ -4,24 +4,13 @@ import {
   driver,
   earning,
   payout,
+  trip,
 } from "../db/index";
 import type { DbTransaction } from "../db/connection";
 
 type PayoutTransaction = DbTransaction;
 
 export class PayoutRepository {
-
-  findEarningById(id: string) {
-    return db.query.earning.findFirst({
-      where: eq(earning.id, id),
-    });
-  }
-
-  findEarningsByTripId(tripId: string) {
-    return db.query.earning.findMany({
-      where: eq(earning.tripId, tripId),
-    });
-  }
 
   insertEarning(
     tx: PayoutTransaction,
@@ -39,15 +28,13 @@ export class PayoutRepository {
       });
   }
 
-  /**
-   * Find the earning for a trip that is eligible for payout.
-   * Returns null if no earning exists or if a non-failed payout already exists
-   * (meaning the trip is already paid or payment is in progress).
-   */
   async findTripPayoutEarningByTripId(tripId: string) {
-    const earningRow = await db.query.earning.findFirst({
-      where: eq(earning.tripId, tripId),
-    });
+    const [earningRow] = await db
+      .select({ earning: earning })
+      .from(earning)
+      .innerJoin(trip, eq(earning.tripId, trip.id))
+      .where(and(eq(earning.tripId, tripId), eq(trip.status, "completed")))
+      .limit(1);
     if (!earningRow) return null;
 
     // Check if an active (non-failed) payout already exists for this trip
@@ -59,13 +46,7 @@ export class PayoutRepository {
     });
     if (activePayout) return null;
 
-    return earningRow;
-  }
-
-  findPayoutById(id: string) {
-    return db.query.payout.findFirst({
-      where: eq(payout.id, id),
-    });
+    return earningRow.earning;
   }
 
   findPayoutByReference(reference: string) {
@@ -91,18 +72,6 @@ export class PayoutRepository {
       })
       .returning();
   }
-
-  updatePayout(
-    tx: PayoutTransaction,
-    id: string,
-    fields: Partial<typeof payout.$inferInsert>,
-  ) {
-    return tx
-      .update(payout)
-      .set({ ...fields, updatedAt: new Date() })
-      .where(eq(payout.id, id));
-  }
-
 
   findDriverById(driverId: string) {
     return db.query.driver.findFirst({

@@ -214,8 +214,6 @@ export interface DriverCalendarTrip {
   tripStatus: TripStatus;
 }
 
-export type BookingStatus = "pending" | "confirmed" | "cancelled";
-
 export interface Trip {
   id: string;
   originId: string;
@@ -226,26 +224,6 @@ export interface Trip {
   capacity: number;
   bookedSeats: number;
   status: TripStatus;
-  createdAt: Date;
-  updatedAt: Date;
-}
-
-export interface Booking {
-  id: string;
-  originId: string;
-  destinationId: string;
-  tripId: string | null;
-  tripDate: string;
-  userId: string;
-  departureTime: string;
-  luggageCount: number;
-  totalAmount: number;
-  totalFee: number;
-  currency: string;
-  status: BookingStatus;
-  paymentReference?: string | null;
-  paymentStatus?: PaymentStatus;
-  refundStatus?: RefundStatus | null;
   createdAt: Date;
   updatedAt: Date;
 }

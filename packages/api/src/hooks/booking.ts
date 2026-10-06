@@ -29,7 +29,6 @@ export interface UserBookingWithTrip {
   departureTime: string;
   totalAmount: number;
   totalFee: number;
-  status: "confirmed" | "cancelled";
   refundStatus: string | null;
   trip: {
     bookedSeats: number;

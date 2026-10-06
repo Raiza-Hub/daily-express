@@ -3,10 +3,6 @@ import type { Request, Response, NextFunction } from "express";
 import { sendErrorResponse } from "./apiResponses";
 import { loadConfig } from "../config";
 
-export interface AdminUser {
-  email: string;
-}
-
 export function requireAdminApiKey(
   req: Request,
   res: Response,

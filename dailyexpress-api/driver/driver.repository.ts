@@ -1,6 +1,6 @@
-import { and, eq, inArray, ne, notInArray } from "drizzle-orm";
+import { and, eq, inArray, ne } from "drizzle-orm";
 import { db } from "../db/connection";
-import { driver, trip, type DriverRecord } from "../db/index";
+import { driver, type DriverRecord } from "../db/index";
 import type { DbTransaction } from "../db/connection";
 
 type DriverTransaction = DbTransaction;
@@ -37,17 +37,6 @@ export class DriverRepository {
       .where(eq(driver.userId, userId))
       .returning();
     return record;
-  }
-
-  async findNonCompletedTripByDriverId(driverId: string) {
-    const result = await db.query.trip.findFirst({
-      where: and(
-        eq(trip.driverId, driverId),
-        notInArray(trip.status, ["cancelled", "completed"]),
-      ),
-      columns: { id: true },
-    });
-    return result ?? null;
   }
 
   async deactivateDriver(

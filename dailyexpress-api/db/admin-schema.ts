@@ -14,4 +14,3 @@ export const adminSchema = {
 };
 
 export type AdminAuditLog = typeof adminAuditLog.$inferSelect;
-export type AdminAuditLogRecord = AdminAuditLog;

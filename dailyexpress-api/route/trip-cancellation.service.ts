@@ -1,6 +1,6 @@
 import { and, eq } from "drizzle-orm";
 import { db, type DbTransaction } from "../db/connection";
-import { booking, earning, payment, trip, type TripRecord } from "../db/index";
+import { booking, payment, trip, type TripRecord } from "../db/index";
 import { jobService } from "../workers/job.service";
 
 type CancellationTransaction = DbTransaction;
@@ -55,13 +55,6 @@ export class TripCancellationService {
           eq(payment.status, "successful"),
         ),
       );
-
-    await tx
-      .update(booking)
-      .set({ status: "cancelled", updatedAt: new Date() })
-      .where(and(eq(booking.tripId, tripId), eq(booking.status, "confirmed")));
-
-    await tx.delete(earning).where(eq(earning.tripId, tripId));
 
     for (const confirmedBooking of confirmedBookings) {
       await jobService.enqueueTripRefund(tx, {

@@ -1,4 +1,4 @@
-import { getConfig, type EnvConfig } from "../config/index";
+import { type EnvConfig } from "../config/index";
 import { db } from "../db/connection";
 import { users } from "../db/index";
 import { createServiceError } from "@shared/utils";

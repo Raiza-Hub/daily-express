@@ -8,7 +8,6 @@ import type { PaymentRecord } from "../db/index";
 import type {
     InitializePaymentInput,
     KoraChannel,
-    KoraInitializeResponse,
 } from "./payment.types";
 
 export class PaymentInitService {

@@ -6,7 +6,6 @@ import {
   desc,
   eq,
   gte,
-  inArray,
   isNull,
   lt,
   lte,
@@ -168,7 +167,6 @@ export class BookingService {
         departureTime: booking.departureTime,
         totalAmount: booking.totalAmount,
         totalFee: booking.totalFee,
-        status: booking.status,
         refundStatus: refund.status,
         trip,
         originTitle: origin.title,
@@ -189,7 +187,7 @@ export class BookingService {
       .where(
         and(
           eq(booking.userId, userId),
-          inArray(booking.status, ["confirmed", "cancelled"]),
+          eq(booking.status, "confirmed"),
           eq(payment.status, "successful"),
           yearFilter,
           statusFilter,
@@ -230,7 +228,6 @@ export class BookingService {
         departureTime: r.departureTime,
         totalAmount: r.totalAmount,
         totalFee: r.totalFee,
-        status: r.status,
         refundStatus: r.refundStatus ?? null,
         trip: r.trip
           ? {
@@ -299,4 +296,3 @@ export class BookingService {
     return { passengers };
   }
 }
-export const bookingService = new BookingService(new RouteRepository());

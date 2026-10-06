@@ -6,7 +6,7 @@ import { createServiceError, sanitizeInput } from "@shared/utils";
 import { koraClient } from "../payment/kora.client";
 import { koraIdentityClient } from "../kyc/kora-identity.client";
 import { timeAsync } from "../utils/timing";
-import { DriverRepository, driverRepository } from "./driver.repository";
+import { DriverRepository } from "./driver.repository";
 
 export class DriverProfileService {
   constructor(private repo: DriverRepository) {}
@@ -322,5 +322,3 @@ export class DriverProfileService {
 function hashKycId(kycId: string): string {
   return createHash("sha256").update(kycId).digest("hex");
 }
-
-export const driverProfileService = new DriverProfileService(driverRepository);
