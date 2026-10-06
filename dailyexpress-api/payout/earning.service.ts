@@ -10,13 +10,11 @@ export class EarningService {
     tx: PayoutTransaction,
     input: {
       tripId: string;
-      driverId: string | null;
       amount: number;
       currency: string;
     },
   ) {
     await this.repo.insertEarning(tx, {
-      driverId: input.driverId ?? null,
       tripId: input.tripId,
       amount: input.amount,
       currency: input.currency,

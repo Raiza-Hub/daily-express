@@ -243,7 +243,6 @@ export class BookingFinalizerService {
 
     await earningService.createEarning(tx, {
       tripId,
-      driverId: null,
       amount,
       currency: "NGN",
     });
