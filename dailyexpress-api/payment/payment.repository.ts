@@ -1,4 +1,4 @@
-import { and, count, eq, gte, inArray, ne, sql } from "drizzle-orm";
+import { and, count, eq, gte, ne, sql } from "drizzle-orm";
 import { createServiceError } from "@shared/utils";
 import { db } from "../db/connection";
 import { booking, passenger, payment, refund, trip } from "../db/index";
@@ -38,13 +38,6 @@ export class PaymentRepository {
     return db.delete(payment).where(eq(payment.id, id));
   }
 
-  findPaymentsByBookingIds(bookingIds: string[]) {
-    if (bookingIds.length === 0) return Promise.resolve([]);
-    return db.query.payment.findMany({
-      where: inArray(payment.bookingId, bookingIds),
-    });
-  }
-
   async findBookingFareByBookingId(bookingId: string, userId: string) {
     const bookingRecord = await db.query.booking.findFirst({
       where: eq(booking.id, bookingId),
@@ -77,14 +70,6 @@ export class PaymentRepository {
       luggageFee: bookingRecord.origin?.luggageFee ?? 0,
       currency: bookingRecord.currency.toUpperCase(),
     };
-  }
-
-  countPassengersByBooking(tx: PaymentTransaction, bookingId: string) {
-    return tx
-      .select({ count: count() })
-      .from(passenger)
-      .where(eq(passenger.bookingId, bookingId))
-      .then((rows) => Number(rows[0]?.count ?? 0));
   }
 
   settlePayment(

@@ -7,18 +7,14 @@ import type {
 import { db } from "../db/connection";
 import { driver, payout } from "../db/index";
 import { PayoutRepository } from "./payout.repository";
-import { EarningService } from "./earning.service";
 import { PayoutSettlementService } from "./payout-settlement.service";
 import { PayoutProcessorService } from "./payout-processor.service";
 import { PayoutWebhookService } from "./payout-webhook.service";
 import { PayoutNotificationService } from "./payout-notification.service";
 import type { KoraPayoutWebhookPayload } from "../payment/payment.types";
 
-type PayoutTransaction = Parameters<Parameters<typeof db.transaction>[0]>[0];
-
 export class PayoutService {
   private readonly repo = new PayoutRepository();
-  private readonly earningService = new EarningService(this.repo);
   private readonly settlementService = new PayoutSettlementService();
   private readonly notificationService = new PayoutNotificationService();
   private readonly processorService = new PayoutProcessorService(
@@ -31,19 +27,6 @@ export class PayoutService {
     this.settlementService,
     this.notificationService,
   );
-
-  async createEarningForConfirmedBookingInTransaction(
-    tx: PayoutTransaction,
-    input: {
-      tripId: string;
-      driverId: string | null;
-      amount: number;
-      currency: string;
-    },
-  ) {
-    return this.earningService.createEarning(tx, input);
-  }
-
 
   async getHistory(
     user: JWTPayload,

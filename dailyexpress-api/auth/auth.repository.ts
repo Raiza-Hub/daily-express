@@ -15,10 +15,6 @@ export class AuthRepository {
     return (await db.query.users.findFirst({ where: eq(users.id, id) })) ?? null;
   }
 
-  async findUserByPhone(phone: string): Promise<UserRecord | null> {
-    return (await db.query.users.findFirst({ where: eq(users.phone, phone) })) ?? null;
-  }
-
   async insertUser(
     tx: AuthTransaction,
     data: typeof users.$inferInsert,

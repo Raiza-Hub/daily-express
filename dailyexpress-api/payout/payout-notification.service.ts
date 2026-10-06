@@ -27,7 +27,7 @@ export class PayoutNotificationService {
       emailSubject = getEmailSubject("PayoutFailedEmail", propsJson);
     }
 
-    const shouldNotify = await db.transaction(async (tx): Promise<boolean> => {
+    await db.transaction(async (tx) => {
       const [lockedPayout] = await tx
         .select()
         .from(payout)
@@ -35,13 +35,13 @@ export class PayoutNotificationService {
         .for("update")
         .limit(1);
 
-      if (!lockedPayout) return false;
+      if (!lockedPayout) return;
 
       if (
         lockedPayout.status === "successful" ||
         lockedPayout.status === "failed"
       ) {
-        return false;
+        return;
       }
 
       await tx
@@ -60,8 +60,6 @@ export class PayoutNotificationService {
           html: emailHtml,
         });
       }
-
-      return true;
     });
   }
 }

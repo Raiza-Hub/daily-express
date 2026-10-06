@@ -7,9 +7,7 @@ import {
   earning,
   origin,
   passenger,
-  payment,
   payout,
-  refund,
   trip,
   users,
   type OriginRecord,
@@ -322,7 +320,7 @@ export class RouteRepository {
     const tripBookings = await db.query.booking.findMany({
       where: and(
         eq(booking.tripId, tripId),
-        inArray(booking.status, ["confirmed", "cancelled"]),
+        eq(booking.status, "confirmed"),
       ),
       columns: { id: true },
     });

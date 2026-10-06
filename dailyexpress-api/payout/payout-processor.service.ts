@@ -2,9 +2,9 @@ import { db } from "../db/connection";
 import { eq } from "drizzle-orm";
 import { driver, earning, payout, type PayoutRecord, type EarningRecord } from "../db/index";
 import { generateReference } from "../utils/payment";
-import { PayoutRepository, payoutRepository } from "./payout.repository";
-import { PayoutSettlementService, payoutSettlementService } from "./payout-settlement.service";
-import { PayoutNotificationService, payoutNotificationService } from "./payout-notification.service";
+import { PayoutRepository } from "./payout.repository";
+import { PayoutSettlementService } from "./payout-settlement.service";
+import { PayoutNotificationService } from "./payout-notification.service";
 import { koraClient, isKoraRequestError } from "../payment/kora.client";
 import { KORA_ERROR_CODES } from "../utils/payout";
 
@@ -184,9 +184,3 @@ export class PayoutProcessorService {
     return generateReference();
   }
 }
-
-export const payoutProcessorService = new PayoutProcessorService(
-  payoutRepository,
-  payoutSettlementService,
-  payoutNotificationService,
-);

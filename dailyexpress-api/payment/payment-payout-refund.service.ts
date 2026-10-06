@@ -1,14 +1,14 @@
 import { getEmailSubject, renderEmail } from "@repo/email";
-import { and, eq, gt, sql } from "drizzle-orm";
+import { eq } from "drizzle-orm";
 import { getConfig } from "../config/index";
 import { db } from "../db/connection";
-import { booking, earning, payment, trip, users } from "../db/index";
+import { booking, payment, users } from "../db/index";
 import { logger } from "../utils/logger";
 import { generateReference } from "../utils/payment";
 import { enqueueEmail, type EmailToSend } from "../mail/email-dispatcher.service";
 import { koraClient, KoraClient } from "./kora.client";
 import { PaymentRepository, paymentRepository } from "./payment.repository";
-import type { PaymentRecord, BookingRecord, RefundRecord } from "../db/index";
+import type { PaymentRecord, RefundRecord } from "../db/index";
 import type { KoraBank, PaymentTransaction } from "./payment.types";
 import bankNames from "./bank-name.json";
 
@@ -145,8 +145,6 @@ export class PaymentPayoutRefundService {
       return;
     }
 
-    await this.releaseTripSeats(paymentRecord.bookingId);
-
     let accountNumber: string;
     let accountName: string;
     try {
@@ -227,33 +225,6 @@ export class PaymentPayoutRefundService {
       return true;
     }
     return false;
-  }
-  private async releaseTripSeats(bookingId: string) {
-    await db.transaction(async (tx) => {
-      const bookingRecord = await tx.query.booking.findFirst({
-        where: eq(booking.id, bookingId),
-      });
-      if (!bookingRecord) return;
-
-      if (bookingRecord.status === "confirmed" && bookingRecord.tripId) {
-        const passengerCount = await this.repo.countPassengersByBooking(
-          tx,
-          bookingRecord.id,
-        );
-        await tx
-          .update(trip)
-          .set({ bookedSeats: sql`GREATEST(${trip.bookedSeats} - ${passengerCount}, 0)` })
-          .where(
-            and(eq(trip.id, bookingRecord.tripId), gt(trip.bookedSeats, 0)),
-          );
-      }
-
-      if (bookingRecord.tripId) {
-        await tx
-          .delete(earning)
-          .where(eq(earning.tripId, bookingRecord.tripId));
-      }
-    });
   }
   async finalizeRefund(
     refundId: string,
