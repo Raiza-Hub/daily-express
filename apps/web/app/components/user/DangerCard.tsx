@@ -135,17 +135,12 @@ const DangerCard = ({ canDeactivate }: { canDeactivate: boolean }) => {
                         </DrawerHeader>
 
                         <div className="flex flex-col gap-4 px-4 pb-4">
-                            <div className="flex flex-col gap-1.5">
-                                <label
-                                    htmlFor="danger-confirm-email"
-                                    className="text-sm font-medium text-foreground"
-                                >
-                                    Type your email to confirm
-                                </label>
-                                <p className="select-all break-all font-mono text-sm text-muted-foreground">
-                                    {targetEmail}
-                                </p>
-                            </div>
+                            <label
+                                htmlFor="danger-confirm-email"
+                                className="text-sm font-medium text-foreground"
+                            >
+                                Type your email to confirm
+                            </label>
 
                             <Input
                                 id="danger-confirm-email"
