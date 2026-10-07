@@ -1,8 +1,6 @@
 import Image from "next/image";
 import { Mail } from "lucide-react";
 import { redirect } from "next/navigation";
-import { cn } from "@repo/ui/lib/utils";
-import { buttonSizes, buttonVariants } from "~/components/ui/button";
 import { getDriverProfileState } from "~/lib/driver-session";
 
 export default async function DriverDeactivatedPage() {
@@ -29,7 +27,7 @@ export default async function DriverDeactivatedPage() {
             </p>
             <a
                 href="mailto:help@beckon.taxi?subject=Driver%20account%20reactivation"
-                className={cn(buttonVariants.default, buttonSizes.default, "rounded-full")}
+                className="inline-flex items-center justify-center gap-2 rounded-full bg-neutral-900 px-6 py-3 text-sm font-semibold text-white transition-colors hover:bg-neutral-800 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ring"
             >
                 <Mail aria-hidden="true" className="h-4 w-4" />
                 Email support
