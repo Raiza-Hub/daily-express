@@ -130,6 +130,7 @@ export function formatOfferAmount(amount: number, currency: string): string {
 export function buildOfferPrompt(input: {
   originTitle: string;
   destinationTitle: string;
+  meetingPoint: string;
   tripDate: string;
   departureTime: string;
   amount: number;
@@ -145,6 +146,7 @@ export function buildOfferPrompt(input: {
     "You have a Daily Express trip offer.",
     `${route}.`,
     `${when}.`,
+    `Pickup is at ${input.meetingPoint}.`,
     `The trip currently pays ${pay}.`,
     "More passengers can still join.",
     "Press 1 to accept.",

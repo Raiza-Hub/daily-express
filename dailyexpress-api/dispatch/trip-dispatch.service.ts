@@ -52,6 +52,7 @@ type AttemptToDial = {
 type OfferDetails = {
   originTitle: string;
   destinationTitle: string;
+  meetingPoint: string;
   tripDate: string;
   departureTime: string;
   bookedSeats: number;
@@ -725,6 +726,7 @@ export class TripDispatchService {
       .select({
         originTitle: origin.title,
         destinationTitle: destination.title,
+        meetingPoint: origin.meetingPoint,
         tripDate: trip.date,
         departureTime: trip.departureTime,
         bookedSeats: trip.bookedSeats,
@@ -742,6 +744,7 @@ export class TripDispatchService {
     return {
       originTitle: row?.originTitle ?? "the origin",
       destinationTitle: row?.destinationTitle ?? "the destination",
+      meetingPoint: row?.meetingPoint ?? "the meeting point",
       tripDate: row?.tripDate ?? lockedTrip.date,
       departureTime: row?.departureTime ?? lockedTrip.departureTime,
       bookedSeats: row?.bookedSeats ?? lockedTrip.bookedSeats,
@@ -881,6 +884,7 @@ export class TripDispatchService {
     const prompt = buildOfferPrompt({
       originTitle: offer.originTitle,
       destinationTitle: offer.destinationTitle,
+      meetingPoint: offer.meetingPoint,
       tripDate: offer.tripDate,
       departureTime: offer.departureTime,
       amount: offer.amount,
