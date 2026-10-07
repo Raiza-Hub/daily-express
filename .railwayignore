@@ -34,8 +34,6 @@ apps/**
 !apps/
 !apps/web/
 !apps/web/package.json
-!apps/drivers/
-!apps/drivers/package.json
 !apps/docs/
 !apps/docs/package.json
 

@@ -29,7 +29,7 @@ const envSchema = z.object({
   CORS_ORIGINS: z
     .string()
     .default(
-      "http://localhost:3000,http://localhost:3001,https://dailyexpress.app,https://driver.dailyexpress.app",
+      "http://localhost:3000,https://dailyexpress.app",
     ),
   TRUST_PROXY_HOPS: z.coerce.number().int().nonnegative().default(0),
   ENABLE_PROXY_IP_DEBUG: z
@@ -90,13 +90,6 @@ const envSchema = z.object({
 
   // Auth
   COOKIE_DOMAIN: optionalString(),
-  DRIVER_APP_URL: z
-    .url()
-    .default(
-      process.env.NODE_ENV === "production"
-        ? "https://driver.dailyexpress.app"
-        : "http://localhost:3001",
-    ),
 
   // Payment
   PAYMENT_PUBLIC_BASE_URL: optionalUrl(),

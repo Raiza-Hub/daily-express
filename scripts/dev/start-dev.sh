@@ -8,7 +8,7 @@ STOPPING=false
 if [ "${1:-}" = "--help" ] || [ "${1:-}" = "-h" ]; then
   echo "Usage: bun run dev:full"
   echo ""
-  echo "Starts Postgres in Docker, then runs dailyexpress-api, apps/web, and apps/drivers locally."
+  echo "Starts Postgres in Docker, then runs dailyexpress-api and apps/web locally."
   exit 0
 fi
 
@@ -86,7 +86,6 @@ start_service "dailyexpress-api" "$PROJECT_ROOT/dailyexpress-api" bun run dev
 
 echo "[3/3] Starting frontend apps..."
 start_service "web frontend" "$PROJECT_ROOT/apps/web" bun run dev
-start_service "driver frontend" "$PROJECT_ROOT/apps/drivers" bun run dev
 
 DOCS_AVAILABLE=false
 if [ -d "$PROJECT_ROOT/apps/docs" ]; then
@@ -101,7 +100,6 @@ echo "=========================================="
 echo ""
 echo "URLs:"
 echo "  Web Frontend:     http://localhost:3000"
-echo "  Driver App:      http://localhost:3001"
 if [ "$DOCS_AVAILABLE" = true ]; then
   echo "  Docs:            http://localhost:3012"
 else

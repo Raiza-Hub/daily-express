@@ -3,7 +3,6 @@ import { getConfig } from "../config/index";
 const config = getConfig();
 
 export const FRONTEND_URL = config.FRONTEND_URL;
-export const DRIVER_APP_URL = config.DRIVER_APP_URL;
 export const GOOGLE_AUTH_FAILURE_REDIRECT_URL = `${FRONTEND_URL}/login?error=google_auth_failed`;
 
 export function resolveFrontendRedirect(redirect?: string) {
@@ -11,10 +10,7 @@ export function resolveFrontendRedirect(redirect?: string) {
     return FRONTEND_URL;
   }
 
-  const allowedOrigins = new Set([
-    new URL(FRONTEND_URL).origin,
-    new URL(DRIVER_APP_URL).origin,
-  ]);
+  const allowedOrigins = new Set([new URL(FRONTEND_URL).origin]);
 
   try {
     const url = new URL(redirect);

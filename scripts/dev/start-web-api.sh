@@ -8,7 +8,7 @@ STOPPING=false
 if [ "${1:-}" = "--help" ] || [ "${1:-}" = "-h" ]; then
   echo "Usage: bun run dev:web-api"
   echo ""
-  echo "Starts only Postgres in Docker, then runs dailyexpress-api, apps/web, and apps/drivers locally."
+  echo "Starts only Postgres in Docker, then runs dailyexpress-api and apps/web locally."
   exit 0
 fi
 
@@ -83,12 +83,10 @@ start_database
 
 start_service "dailyexpress-api" "$PROJECT_ROOT/dailyexpress-api" bun run dev
 start_service "web frontend" "$PROJECT_ROOT/apps/web" bun run dev
-start_service "driver frontend" "$PROJECT_ROOT/apps/drivers" bun run dev
 
 echo ""
 echo "URLs:"
 echo "  Web Frontend:     http://localhost:3000"
-echo "  Driver Frontend:  http://localhost:3001"
 echo "  DailyExpress API: http://localhost:8000"
 echo "  Postgres:         localhost:5432"
 echo ""

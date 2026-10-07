@@ -7,7 +7,6 @@ FROM base AS install
 
 COPY package.json bun.lock ./
 COPY apps/web/package.json apps/web/package.json
-COPY apps/drivers/package.json apps/drivers/package.json
 COPY email/package.json email/package.json
 COPY packages/api/package.json packages/api/package.json
 COPY packages/eslint-config/package.json packages/eslint-config/package.json
