@@ -1,5 +1,6 @@
 import { adminSchema } from "./admin-schema";
 import { authSchema } from "./auth-schema";
+import { dispatchSchema } from "./dispatch-schema";
 import { driverSchema } from "./driver-schema";
 import { passengerSchema } from "./passenger-schema";
 import { paymentSchema } from "./payment-schema";
@@ -9,6 +10,7 @@ import { routeSchema } from "./route-schema";
 export const schema = {
   ...adminSchema,
   ...authSchema,
+  ...dispatchSchema,
   ...driverSchema,
   ...passengerSchema,
   ...paymentSchema,
@@ -18,6 +20,7 @@ export const schema = {
 
 export * from "./admin-schema";
 export * from "./auth-schema";
+export * from "./dispatch-schema";
 export * from "./driver-schema";
 export * from "./passenger-schema";
 export * from "./payment-schema";
@@ -27,6 +30,7 @@ export * from "./route-schema";
 export type { PaymentRecord, RefundRecord } from "./payment-schema";
 export type { BookingRecord, TripRecord, OriginRecord, DestinationRecord } from "./route-schema";
 export type { EarningRecord, PayoutRecord } from "./payout-schema";
+export type { TripDispatchRecord, DriverDispatchAttemptRecord } from "./dispatch-schema";
 export type { PassengerRecord } from "./passenger-schema";
 export type { DriverRecord } from "./driver-schema";
 export type { UserRecord, UserProviderRecord } from "./auth-schema";

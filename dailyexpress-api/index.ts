@@ -7,6 +7,7 @@ import { Redis } from "@upstash/redis";
 import { loadConfig, getConfig } from "./config/index";
 import { errorHandler, notFoundHandler } from "./middleware/errorHandler";
 import authRoutes from "./auth/auth.routes";
+import dispatchRoutes from "./dispatch/dispatch.routes";
 import driverRoutes from "./driver/driver.routes";
 import routeRoutes from "./route/route.routes";
 import adminRoutes from "./admin/admin.routes";
@@ -159,6 +160,7 @@ async function createApp(): Promise<Express> {
 
   // Mount routes
   app.use("/api/v1/auth", authRoutes);
+  app.use("/api/v1/dispatch", dispatchRoutes);
   app.use("/api/v1/driver", driverRoutes);
   app.use("/api/v1/admin", adminRoutes);
   app.use("/api/v1/route", routeRoutes);

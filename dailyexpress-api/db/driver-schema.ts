@@ -43,7 +43,6 @@ export const driver = pgTable("driver", {
   kycType: text("kyc_type"),
   kycId: text("kyc_id"),
   kycVerificationReference: text("kyc_verification_reference"),
-  lastAssignedAt: timestamp("last_assigned_at", { mode: "date" }),
   isActive: boolean("is_active").default(true).notNull(),
   deletedAt: timestamp("deleted_at", { mode: "date" }),
   createdAt: timestamp("created_at", { mode: "date" }).defaultNow().notNull(),

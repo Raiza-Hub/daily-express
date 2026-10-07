@@ -3,6 +3,7 @@ import {
   QUEUES,
   type EmailSendJobData,
   type PayerInfoJobData,
+  type TripDispatchJobData,
   type TripRefundJobData,
 } from "./boss";
 
@@ -82,6 +83,16 @@ export class JobService {
   ) {
     await this.enqueue(tx, QUEUES.PAYER_INFO, payload, {
       singletonKey: payload.reference,
+    });
+  }
+
+  async enqueueTripDispatch(
+    tx: JobExecutor,
+    payload: TripDispatchJobData,
+    options?: { startAfter?: Date },
+  ) {
+    await this.enqueue(tx, QUEUES.TRIP_DISPATCH, payload, {
+      startAfter: options?.startAfter,
     });
   }
 }

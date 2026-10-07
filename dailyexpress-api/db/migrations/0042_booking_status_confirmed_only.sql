@@ -12,10 +12,12 @@
 --
 -- Normalise existing rows first: any 'cancelled' booking becomes 'confirmed'.
 --
--- ORDERING: this MUST be applied after 0040_trip_dispatch.sql and
--- 0041_booking_status_cancelled.sql. Both contain
+-- ORDERING: this MUST be applied after 0041_booking_status_cancelled.sql,
+-- which adds 'cancelled' via
 --   ALTER TYPE "booking_status" ADD VALUE IF NOT EXISTS 'cancelled';
--- If either is applied after this type-swap it will re-add the value.
+-- If 0041 is applied after this type-swap it will re-add the value.
+-- 0040_trip_dispatch.sql is unrelated here: it no longer touches
+-- booking_status.
 --
 -- Postgres cannot DROP VALUE from an enum (see notes on 0014/0015), so the
 -- type is swapped: create the 2-value type, cast the column through text,

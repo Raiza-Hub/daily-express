@@ -10,6 +10,9 @@ export const QUEUES = {
 
   PAYER_INFO: "payment.payer-info",
   PAYER_INFO_DLQ: "payment.payer-info.dlq",
+
+  TRIP_DISPATCH: "trip.dispatch",
+  TRIP_DISPATCH_DLQ: "trip.dispatch.dlq",
 } as const;
 
 export interface WebhookJobData {
@@ -34,6 +37,12 @@ export interface EmailSendJobData {
 
 export interface PayerInfoJobData {
   reference: string;
+}
+
+export interface TripDispatchJobData {
+  action: "advance" | "retry" | "guard";
+  tripId: string;
+  attemptId?: string;
 }
 
 let boss: PgBoss | null = null;
@@ -78,6 +87,8 @@ async function createQueues(instance: PgBoss) {
 
   await instance.createQueue(QUEUES.PAYER_INFO_DLQ, { retryLimit: 0 });
 
+  await instance.createQueue(QUEUES.TRIP_DISPATCH_DLQ, { retryLimit: 0 });
+
   // Create primary queues
   await instance.createQueue(QUEUES.TRIP_REFUND, {
     retryLimit: 3,
@@ -104,6 +115,15 @@ async function createQueues(instance: PgBoss) {
     retryDelayMax: 300,
     deleteAfterSeconds: 86400,
     deadLetter: QUEUES.PAYER_INFO_DLQ,
+  });
+
+  await instance.createQueue(QUEUES.TRIP_DISPATCH, {
+    retryLimit: 3,
+    retryDelay: 30,
+    retryBackoff: true,
+    retryDelayMax: 300,
+    deleteAfterSeconds: 86400,
+    deadLetter: QUEUES.TRIP_DISPATCH_DLQ,
   });
 
   logger.info("pg_boss.queues_created");
