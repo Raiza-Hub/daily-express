@@ -25,11 +25,11 @@ type RouteTransaction = DbTransaction;
 export class BookingFinalizerService {
   constructor(private repo: RouteRepository) {}
 
-  async finalizeBooking(bookingId: string, reference: string) {
+  async finalizeBooking(tx: RouteTransaction, bookingId: string, reference: string) {
     const bookingRecord = await this.repo.findBookingById(bookingId);
     if (!bookingRecord) {
       logger.warn("booking_finalizer.booking_not_found", { bookingId, reference });
-      return;
+      throw new Error(`booking ${bookingId} not found`);
     }
     if (bookingRecord.status === "confirmed") {
       logger.info("booking_finalizer.already_finalized", { bookingId, reference });
@@ -48,62 +48,50 @@ export class BookingFinalizerService {
         originId: bookingRecord.originId,
         destinationId: bookingRecord.destinationId,
       });
-      return;
+      throw new Error(`origin or destination missing for booking ${bookingId}`);
     }
 
-    const finalized = await db.transaction<{ tripId: string } | null>(
-      async (tx) => {
-        const [updatedBooking] = await tx
-          .update(booking)
-          .set({
-            status: "confirmed",
-            paymentReference: reference,
-            updatedAt: new Date(),
-          })
-          .where(and(eq(booking.id, bookingId), eq(booking.status, "pending")))
-          .returning();
+    const [updatedBooking] = await tx
+      .update(booking)
+      .set({
+        status: "confirmed",
+        paymentReference: reference,
+        updatedAt: new Date(),
+      })
+      .where(and(eq(booking.id, bookingId), eq(booking.status, "pending")))
+      .returning();
 
-        if (!updatedBooking) {
-          logger.info("booking_finalizer.booking_not_pending", { bookingId, reference });
-          return null;
-        }
-
-        const passengers = await this.repo.findPassengersByBooking(bookingId);
-        if (passengers.length === 0) {
-          logger.warn("booking_finalizer.no_passengers", { bookingId, reference });
-          return null;
-        }
-
-        const dateKey = updatedBooking.tripDate;
-
-        const tripId = await this.assignBookingToTrip(tx, {
-          bookingId,
-          originId: originRecord.id,
-          destinationId: destinationRecord.id,
-          dateKey,
-          departureTime: updatedBooking.departureTime,
-          passengerCount: passengers.length,
-        });
-
-        if (!tripId) return null;
-
-        await this.addToTripEarning(tx, tripId, updatedBooking.totalAmount);
-
-        await this.dispatchConfirmationEmails(tx, updatedBooking, originRecord, destinationRecord, passengers);
-
-        await tripDispatchService.trackTripAfterBooking(tx, tripId);
-
-        return { tripId };
-      },
-    );
-
-    if (finalized) {
-      logger.info("booking_finalizer.completed", {
-        bookingId,
-        reference,
-        tripId: finalized.tripId,
-      });
+    if (!updatedBooking) {
+      logger.info("booking_finalizer.booking_not_pending", { bookingId, reference });
+      throw new Error(`booking ${bookingId} not pending`);
     }
+
+    const passengers = await this.repo.findPassengersByBooking(bookingId);
+    if (passengers.length === 0) {
+      logger.warn("booking_finalizer.no_passengers", { bookingId, reference });
+      throw new Error(`booking ${bookingId} has no passengers`);
+    }
+
+    const tripId = await this.assignBookingToTrip(tx, {
+      bookingId,
+      originId: originRecord.id,
+      destinationId: destinationRecord.id,
+      dateKey: updatedBooking.tripDate,
+      departureTime: updatedBooking.departureTime,
+      passengerCount: passengers.length,
+    });
+
+    await this.addToTripEarning(tx, tripId, updatedBooking.totalAmount);
+
+    await this.dispatchConfirmationEmails(tx, updatedBooking, originRecord, destinationRecord, passengers);
+
+    await tripDispatchService.trackTripAfterBooking(tx, tripId);
+
+    logger.info("booking_finalizer.completed", {
+      bookingId,
+      reference,
+      tripId,
+    });
   }
 
   private async dispatchConfirmationEmails(
@@ -150,7 +138,7 @@ export class BookingFinalizerService {
       departureTime: string;
       passengerCount: number;
     },
-  ): Promise<string | null> {
+  ): Promise<string> {
     const slotKey = `${input.originId}::${input.destinationId}::${input.dateKey}::${input.departureTime}`;
     await tx.execute(sql`select pg_advisory_xact_lock(hashtextextended(${slotKey}, 0))`);
 

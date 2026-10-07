@@ -1,4 +1,3 @@
-import { and, eq } from "drizzle-orm";
 import { db } from "../db/connection";
 import { logger } from "../utils/logger";
 import { getPaymentReference } from "../utils/payment";
@@ -114,26 +113,23 @@ export class PaymentWebhookService {
   }
 
   private async processChargeSuccess(reference: string) {
-    const settled = await db.transaction(async (tx) => {
-      const [claimed] = await this.repo.settlePayment(
+    await db.transaction(async (tx) => {
+      const [settled] = await this.repo.settlePayment(
         tx,
         reference,
         "successful",
       );
-      if (!claimed) return null;
+      if (!settled) {
+        logger.info("payment.webhook_already_terminal", { reference });
+        return;
+      }
 
       await jobService.enqueuePayerInfoBackfill(tx, { reference });
-      return claimed;
+
+      if (settled.bookingId) {
+        await bookingFinalizerService.finalizeBooking(tx, settled.bookingId, reference);
+      }
     });
-
-    if (!settled) {
-      logger.info("payment.webhook_already_terminal", { reference });
-      return;
-    }
-
-    if (settled.bookingId) {
-      await bookingFinalizerService.finalizeBooking(settled.bookingId, reference);
-    }
   }
 
   private async processChargeFailure(reference: string) {
