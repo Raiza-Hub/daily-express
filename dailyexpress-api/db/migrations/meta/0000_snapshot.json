@@ -1,5 +1,5 @@
 {
-  "id": "4385b9c1-a7ad-487b-9bf3-54bbba6d1660",
+  "id": "d9a753a0-915b-43bd-b520-03455997216d",
   "prevId": "00000000-0000-0000-0000-000000000000",
   "version": "7",
   "dialect": "postgresql",
@@ -47,212 +47,10 @@
           "default": "now()"
         }
       },
-      "indexes": {
-        "admin_audit_log_created_at_idx": {
-          "name": "admin_audit_log_created_at_idx",
-          "columns": [
-            {
-              "expression": "created_at",
-              "isExpression": false,
-              "asc": true,
-              "nulls": "last"
-            }
-          ],
-          "isUnique": false,
-          "concurrently": false,
-          "method": "btree",
-          "with": {}
-        },
-        "admin_audit_log_admin_email_idx": {
-          "name": "admin_audit_log_admin_email_idx",
-          "columns": [
-            {
-              "expression": "admin_email",
-              "isExpression": false,
-              "asc": true,
-              "nulls": "last"
-            }
-          ],
-          "isUnique": false,
-          "concurrently": false,
-          "method": "btree",
-          "with": {}
-        }
-      },
-      "foreignKeys": {},
-      "compositePrimaryKeys": {},
-      "uniqueConstraints": {},
-      "policies": {},
-      "checkConstraints": {},
-      "isRLSEnabled": false
-    },
-    "public.otp": {
-      "name": "otp",
-      "schema": "",
-      "columns": {
-        "id": {
-          "name": "id",
-          "type": "uuid",
-          "primaryKey": true,
-          "notNull": true,
-          "default": "gen_random_uuid()"
-        },
-        "email": {
-          "name": "email",
-          "type": "text",
-          "primaryKey": false,
-          "notNull": true
-        },
-        "otp": {
-          "name": "otp",
-          "type": "text",
-          "primaryKey": false,
-          "notNull": true
-        },
-        "expires_at": {
-          "name": "expires_at",
-          "type": "timestamp",
-          "primaryKey": false,
-          "notNull": true
-        },
-        "created_at": {
-          "name": "created_at",
-          "type": "timestamp",
-          "primaryKey": false,
-          "notNull": true,
-          "default": "now()"
-        },
-        "updated_at": {
-          "name": "updated_at",
-          "type": "timestamp",
-          "primaryKey": false,
-          "notNull": true,
-          "default": "now()"
-        }
-      },
       "indexes": {},
       "foreignKeys": {},
       "compositePrimaryKeys": {},
-      "uniqueConstraints": {
-        "otp_email_unique": {
-          "name": "otp_email_unique",
-          "nullsNotDistinct": false,
-          "columns": [
-            "email"
-          ]
-        }
-      },
-      "policies": {},
-      "checkConstraints": {},
-      "isRLSEnabled": false
-    },
-    "public.password_reset_tokens": {
-      "name": "password_reset_tokens",
-      "schema": "",
-      "columns": {
-        "id": {
-          "name": "id",
-          "type": "uuid",
-          "primaryKey": true,
-          "notNull": true,
-          "default": "gen_random_uuid()"
-        },
-        "user_id": {
-          "name": "user_id",
-          "type": "uuid",
-          "primaryKey": false,
-          "notNull": true
-        },
-        "token_hash": {
-          "name": "token_hash",
-          "type": "text",
-          "primaryKey": false,
-          "notNull": true
-        },
-        "expires_at": {
-          "name": "expires_at",
-          "type": "timestamp",
-          "primaryKey": false,
-          "notNull": true
-        },
-        "used_at": {
-          "name": "used_at",
-          "type": "timestamp",
-          "primaryKey": false,
-          "notNull": false
-        },
-        "created_at": {
-          "name": "created_at",
-          "type": "timestamp",
-          "primaryKey": false,
-          "notNull": true,
-          "default": "now()"
-        },
-        "updated_at": {
-          "name": "updated_at",
-          "type": "timestamp",
-          "primaryKey": false,
-          "notNull": true,
-          "default": "now()"
-        }
-      },
-      "indexes": {
-        "password_reset_tokens_user_id_idx": {
-          "name": "password_reset_tokens_user_id_idx",
-          "columns": [
-            {
-              "expression": "user_id",
-              "isExpression": false,
-              "asc": true,
-              "nulls": "last"
-            }
-          ],
-          "isUnique": false,
-          "concurrently": false,
-          "method": "btree",
-          "with": {}
-        },
-        "password_reset_tokens_expires_at_idx": {
-          "name": "password_reset_tokens_expires_at_idx",
-          "columns": [
-            {
-              "expression": "expires_at",
-              "isExpression": false,
-              "asc": true,
-              "nulls": "last"
-            }
-          ],
-          "isUnique": false,
-          "concurrently": false,
-          "method": "btree",
-          "with": {}
-        }
-      },
-      "foreignKeys": {
-        "password_reset_tokens_user_id_users_id_fk": {
-          "name": "password_reset_tokens_user_id_users_id_fk",
-          "tableFrom": "password_reset_tokens",
-          "tableTo": "users",
-          "columnsFrom": [
-            "user_id"
-          ],
-          "columnsTo": [
-            "id"
-          ],
-          "onDelete": "cascade",
-          "onUpdate": "no action"
-        }
-      },
-      "compositePrimaryKeys": {},
-      "uniqueConstraints": {
-        "password_reset_tokens_token_hash_unique": {
-          "name": "password_reset_tokens_token_hash_unique",
-          "nullsNotDistinct": false,
-          "columns": [
-            "token_hash"
-          ]
-        }
-      },
+      "uniqueConstraints": {},
       "policies": {},
       "checkConstraints": {},
       "isRLSEnabled": false
@@ -395,12 +193,6 @@
           "primaryKey": false,
           "notNull": true
         },
-        "password": {
-          "name": "password",
-          "type": "text",
-          "primaryKey": false,
-          "notNull": false
-        },
         "date_of_birth": {
           "name": "date_of_birth",
           "type": "timestamp",
@@ -425,9 +217,15 @@
           "primaryKey": false,
           "notNull": false
         },
-        "session_invalid_before": {
-          "name": "session_invalid_before",
-          "type": "timestamp",
+        "phone": {
+          "name": "phone",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "gender": {
+          "name": "gender",
+          "type": "text",
           "primaryKey": false,
           "notNull": false
         },
@@ -464,6 +262,253 @@
           ]
         }
       },
+      "policies": {},
+      "checkConstraints": {},
+      "isRLSEnabled": false
+    },
+    "public.driver_dispatch_attempt": {
+      "name": "driver_dispatch_attempt",
+      "schema": "",
+      "columns": {
+        "id": {
+          "name": "id",
+          "type": "uuid",
+          "primaryKey": true,
+          "notNull": true,
+          "default": "gen_random_uuid()"
+        },
+        "dispatch_id": {
+          "name": "dispatch_id",
+          "type": "uuid",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "driver_id": {
+          "name": "driver_id",
+          "type": "uuid",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "client_request_id": {
+          "name": "client_request_id",
+          "type": "uuid",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "status": {
+          "name": "status",
+          "type": "driver_dispatch_attempt_status",
+          "typeSchema": "public",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "'dialing'"
+        },
+        "retry_number": {
+          "name": "retry_number",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": true,
+          "default": 0
+        },
+        "created_at": {
+          "name": "created_at",
+          "type": "timestamp",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "now()"
+        },
+        "updated_at": {
+          "name": "updated_at",
+          "type": "timestamp",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "now()"
+        }
+      },
+      "indexes": {
+        "driver_dispatch_attempt_client_request_unique_idx": {
+          "name": "driver_dispatch_attempt_client_request_unique_idx",
+          "columns": [
+            {
+              "expression": "client_request_id",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            }
+          ],
+          "isUnique": true,
+          "concurrently": false,
+          "method": "btree",
+          "with": {}
+        },
+        "driver_dispatch_attempt_active_dispatch_unique_idx": {
+          "name": "driver_dispatch_attempt_active_dispatch_unique_idx",
+          "columns": [
+            {
+              "expression": "dispatch_id",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            }
+          ],
+          "isUnique": true,
+          "where": "status IN ('dialing', 'awaiting_dtmf')",
+          "concurrently": false,
+          "method": "btree",
+          "with": {}
+        },
+        "driver_dispatch_attempt_active_driver_unique_idx": {
+          "name": "driver_dispatch_attempt_active_driver_unique_idx",
+          "columns": [
+            {
+              "expression": "driver_id",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            }
+          ],
+          "isUnique": true,
+          "where": "status IN ('dialing', 'awaiting_dtmf')",
+          "concurrently": false,
+          "method": "btree",
+          "with": {}
+        }
+      },
+      "foreignKeys": {
+        "driver_dispatch_attempt_dispatch_id_trip_dispatch_id_fk": {
+          "name": "driver_dispatch_attempt_dispatch_id_trip_dispatch_id_fk",
+          "tableFrom": "driver_dispatch_attempt",
+          "tableTo": "trip_dispatch",
+          "columnsFrom": [
+            "dispatch_id"
+          ],
+          "columnsTo": [
+            "id"
+          ],
+          "onDelete": "cascade",
+          "onUpdate": "no action"
+        },
+        "driver_dispatch_attempt_driver_id_driver_id_fk": {
+          "name": "driver_dispatch_attempt_driver_id_driver_id_fk",
+          "tableFrom": "driver_dispatch_attempt",
+          "tableTo": "driver",
+          "columnsFrom": [
+            "driver_id"
+          ],
+          "columnsTo": [
+            "id"
+          ],
+          "onDelete": "restrict",
+          "onUpdate": "no action"
+        }
+      },
+      "compositePrimaryKeys": {},
+      "uniqueConstraints": {},
+      "policies": {},
+      "checkConstraints": {},
+      "isRLSEnabled": false
+    },
+    "public.trip_dispatch": {
+      "name": "trip_dispatch",
+      "schema": "",
+      "columns": {
+        "id": {
+          "name": "id",
+          "type": "uuid",
+          "primaryKey": true,
+          "notNull": true,
+          "default": "gen_random_uuid()"
+        },
+        "trip_id": {
+          "name": "trip_id",
+          "type": "uuid",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "status": {
+          "name": "status",
+          "type": "trip_dispatch_status",
+          "typeSchema": "public",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "'pending'"
+        },
+        "deadline_at": {
+          "name": "deadline_at",
+          "type": "timestamp",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "created_at": {
+          "name": "created_at",
+          "type": "timestamp",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "now()"
+        },
+        "updated_at": {
+          "name": "updated_at",
+          "type": "timestamp",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "now()"
+        }
+      },
+      "indexes": {
+        "trip_dispatch_trip_id_unique_idx": {
+          "name": "trip_dispatch_trip_id_unique_idx",
+          "columns": [
+            {
+              "expression": "trip_id",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            }
+          ],
+          "isUnique": true,
+          "concurrently": false,
+          "method": "btree",
+          "with": {}
+        },
+        "trip_dispatch_status_deadline_idx": {
+          "name": "trip_dispatch_status_deadline_idx",
+          "columns": [
+            {
+              "expression": "status",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            },
+            {
+              "expression": "deadline_at",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            }
+          ],
+          "isUnique": false,
+          "concurrently": false,
+          "method": "btree",
+          "with": {}
+        }
+      },
+      "foreignKeys": {
+        "trip_dispatch_trip_id_trip_id_fk": {
+          "name": "trip_dispatch_trip_id_trip_id_fk",
+          "tableFrom": "trip_dispatch",
+          "tableTo": "trip",
+          "columnsFrom": [
+            "trip_id"
+          ],
+          "columnsTo": [
+            "id"
+          ],
+          "onDelete": "cascade",
+          "onUpdate": "no action"
+        }
+      },
+      "compositePrimaryKeys": {},
+      "uniqueConstraints": {},
       "policies": {},
       "checkConstraints": {},
       "isRLSEnabled": false
@@ -549,49 +594,30 @@
           "name": "bank_name",
           "type": "text",
           "primaryKey": false,
-          "notNull": true
+          "notNull": false
         },
         "bank_code": {
           "name": "bank_code",
           "type": "text",
           "primaryKey": false,
-          "notNull": true
+          "notNull": false
         },
         "account_number": {
           "name": "account_number",
           "type": "text",
           "primaryKey": false,
-          "notNull": true
+          "notNull": false
         },
         "account_name": {
           "name": "account_name",
           "type": "text",
           "primaryKey": false,
-          "notNull": true
+          "notNull": false
         },
         "bank_verification_status": {
           "name": "bank_verification_status",
           "type": "bank_verification_status",
           "typeSchema": "public",
-          "primaryKey": false,
-          "notNull": true,
-          "default": "'pending'"
-        },
-        "bank_verification_failure_reason": {
-          "name": "bank_verification_failure_reason",
-          "type": "text",
-          "primaryKey": false,
-          "notNull": false
-        },
-        "bank_verification_requested_at": {
-          "name": "bank_verification_requested_at",
-          "type": "timestamp",
-          "primaryKey": false,
-          "notNull": false
-        },
-        "bank_verified_at": {
-          "name": "bank_verified_at",
-          "type": "timestamp",
           "primaryKey": false,
           "notNull": false
         },
@@ -600,8 +626,7 @@
           "type": "kyc_status",
           "typeSchema": "public",
           "primaryKey": false,
-          "notNull": true,
-          "default": "'none'"
+          "notNull": false
         },
         "kyc_type": {
           "name": "kyc_type",
@@ -618,24 +643,6 @@
         "kyc_verification_reference": {
           "name": "kyc_verification_reference",
           "type": "text",
-          "primaryKey": false,
-          "notNull": false
-        },
-        "kyc_failure_reason": {
-          "name": "kyc_failure_reason",
-          "type": "text",
-          "primaryKey": false,
-          "notNull": false
-        },
-        "kyc_requested_at": {
-          "name": "kyc_requested_at",
-          "type": "timestamp",
-          "primaryKey": false,
-          "notNull": false
-        },
-        "kyc_verified_at": {
-          "name": "kyc_verified_at",
-          "type": "timestamp",
           "primaryKey": false,
           "notNull": false
         },
@@ -704,8 +711,8 @@
       "checkConstraints": {},
       "isRLSEnabled": false
     },
-    "public.driver_stats": {
-      "name": "driver_stats",
+    "public.passenger": {
+      "name": "passenger",
       "schema": "",
       "columns": {
         "id": {
@@ -715,177 +722,36 @@
           "notNull": true,
           "default": "gen_random_uuid()"
         },
-        "driver_id": {
-          "name": "driver_id",
+        "booking_id": {
+          "name": "booking_id",
           "type": "uuid",
           "primaryKey": false,
           "notNull": true
         },
-        "total_earnings": {
-          "name": "total_earnings",
-          "type": "bigint",
-          "primaryKey": false,
-          "notNull": true,
-          "default": 0
-        },
-        "pending_payments": {
-          "name": "pending_payments",
-          "type": "bigint",
-          "primaryKey": false,
-          "notNull": true,
-          "default": 0
-        },
-        "total_passengers": {
-          "name": "total_passengers",
-          "type": "integer",
-          "primaryKey": false,
-          "notNull": true,
-          "default": 0
-        },
-        "created_at": {
-          "name": "created_at",
-          "type": "timestamp",
-          "primaryKey": false,
-          "notNull": true,
-          "default": "now()"
-        },
-        "updated_at": {
-          "name": "updated_at",
-          "type": "timestamp",
-          "primaryKey": false,
-          "notNull": true,
-          "default": "now()"
-        }
-      },
-      "indexes": {},
-      "foreignKeys": {
-        "driver_stats_driver_id_driver_id_fk": {
-          "name": "driver_stats_driver_id_driver_id_fk",
-          "tableFrom": "driver_stats",
-          "tableTo": "driver",
-          "columnsFrom": [
-            "driver_id"
-          ],
-          "columnsTo": [
-            "id"
-          ],
-          "onDelete": "cascade",
-          "onUpdate": "no action"
-        }
-      },
-      "compositePrimaryKeys": {},
-      "uniqueConstraints": {
-        "driver_stats_driver_id_unique": {
-          "name": "driver_stats_driver_id_unique",
-          "nullsNotDistinct": false,
-          "columns": [
-            "driver_id"
-          ]
-        }
-      },
-      "policies": {},
-      "checkConstraints": {},
-      "isRLSEnabled": false
-    },
-    "public.notification": {
-      "name": "notification",
-      "schema": "",
-      "columns": {
-        "id": {
-          "name": "id",
-          "type": "uuid",
-          "primaryKey": true,
-          "notNull": true,
-          "default": "gen_random_uuid()"
-        },
-        "driver_id": {
-          "name": "driver_id",
-          "type": "uuid",
-          "primaryKey": false,
-          "notNull": true
-        },
-        "notification_key": {
-          "name": "notification_key",
-          "type": "varchar(191)",
-          "primaryKey": false,
-          "notNull": true
-        },
-        "kind": {
-          "name": "kind",
-          "type": "notification_kind",
-          "typeSchema": "public",
-          "primaryKey": false,
-          "notNull": true,
-          "default": "'event'"
-        },
-        "type": {
-          "name": "type",
-          "type": "varchar(96)",
-          "primaryKey": false,
-          "notNull": true
-        },
-        "title": {
-          "name": "title",
+        "full_name": {
+          "name": "full_name",
           "type": "text",
           "primaryKey": false,
           "notNull": true
         },
-        "message": {
-          "name": "message",
+        "email": {
+          "name": "email",
           "type": "text",
           "primaryKey": false,
           "notNull": true
         },
-        "href": {
-          "name": "href",
-          "type": "text",
-          "primaryKey": false,
-          "notNull": false
-        },
-        "tag": {
-          "name": "tag",
-          "type": "varchar(64)",
+        "phone": {
+          "name": "phone",
+          "type": "varchar(20)",
           "primaryKey": false,
           "notNull": true
         },
-        "tone": {
-          "name": "tone",
-          "type": "notification_tone",
-          "typeSchema": "public",
+        "carries_luggage": {
+          "name": "carries_luggage",
+          "type": "boolean",
           "primaryKey": false,
           "notNull": true,
-          "default": "'info'"
-        },
-        "metadata": {
-          "name": "metadata",
-          "type": "jsonb",
-          "primaryKey": false,
-          "notNull": false
-        },
-        "content_hash": {
-          "name": "content_hash",
-          "type": "varchar(128)",
-          "primaryKey": false,
-          "notNull": true
-        },
-        "read_at": {
-          "name": "read_at",
-          "type": "timestamp",
-          "primaryKey": false,
-          "notNull": false
-        },
-        "occurred_at": {
-          "name": "occurred_at",
-          "type": "timestamp",
-          "primaryKey": false,
-          "notNull": true,
-          "default": "now()"
-        },
-        "archived_at": {
-          "name": "archived_at",
-          "type": "timestamp",
-          "primaryKey": false,
-          "notNull": false
+          "default": false
         },
         "created_at": {
           "name": "created_at",
@@ -903,96 +769,34 @@
         }
       },
       "indexes": {
-        "notification_driver_key_unique": {
-          "name": "notification_driver_key_unique",
+        "passenger_booking_idx": {
+          "name": "passenger_booking_idx",
           "columns": [
             {
-              "expression": "driver_id",
+              "expression": "booking_id",
               "isExpression": false,
               "asc": true,
-              "nulls": "last"
-            },
-            {
-              "expression": "notification_key",
-              "isExpression": false,
-              "asc": true,
-              "nulls": "last"
-            }
-          ],
-          "isUnique": true,
-          "concurrently": false,
-          "method": "btree",
-          "with": {}
-        },
-        "notification_driver_active_cursor_idx": {
-          "name": "notification_driver_active_cursor_idx",
-          "columns": [
-            {
-              "expression": "driver_id",
-              "isExpression": false,
-              "asc": true,
-              "nulls": "last"
-            },
-            {
-              "expression": "occurred_at",
-              "isExpression": false,
-              "asc": false,
-              "nulls": "last"
-            },
-            {
-              "expression": "created_at",
-              "isExpression": false,
-              "asc": false,
               "nulls": "last"
             }
           ],
           "isUnique": false,
-          "where": "\"notification\".\"archived_at\" is null",
-          "concurrently": false,
-          "method": "btree",
-          "with": {}
-        },
-        "notification_driver_unread_active_idx": {
-          "name": "notification_driver_unread_active_idx",
-          "columns": [
-            {
-              "expression": "driver_id",
-              "isExpression": false,
-              "asc": true,
-              "nulls": "last"
-            },
-            {
-              "expression": "occurred_at",
-              "isExpression": false,
-              "asc": false,
-              "nulls": "last"
-            },
-            {
-              "expression": "created_at",
-              "isExpression": false,
-              "asc": false,
-              "nulls": "last"
-            }
-          ],
-          "isUnique": false,
-          "where": "(\"notification\".\"archived_at\" is null and \"notification\".\"read_at\" is null)",
           "concurrently": false,
           "method": "btree",
           "with": {}
         }
       },
       "foreignKeys": {
-        "notification_driver_id_driver_id_fk": {
-          "name": "notification_driver_id_driver_id_fk",
-          "tableFrom": "notification",
-          "tableTo": "driver",
+        "passenger_booking_id_booking_id_fk": {
+          "name": "passenger_booking_id_booking_id_fk",
+          "tableFrom": "passenger",
+          "tableTo": "booking",
           "columnsFrom": [
-            "driver_id"
+            "booking_id"
           ],
           "columnsTo": [
             "id"
           ],
-          "onDelete": "cascade",
+          "onDelete": "restrict",
           "onUpdate": "no action"
         }
       },
@@ -1024,14 +828,6 @@
           "type": "uuid",
           "primaryKey": false,
           "notNull": false
-        },
-        "provider": {
-          "name": "provider",
-          "type": "payment_provider",
-          "typeSchema": "public",
-          "primaryKey": false,
-          "notNull": true,
-          "default": "'kora'"
         },
         "reference": {
           "name": "reference",
@@ -1066,15 +862,15 @@
         },
         "status": {
           "name": "status",
-          "type": "payment_status",
+          "type": "transaction_status",
           "typeSchema": "public",
           "primaryKey": false,
           "notNull": true,
           "default": "'pending'"
         },
-        "provider_status": {
-          "name": "provider_status",
-          "type": "varchar(32)",
+        "refund_id": {
+          "name": "refund_id",
+          "type": "uuid",
           "primaryKey": false,
           "notNull": false
         },
@@ -1102,48 +898,6 @@
           "primaryKey": false,
           "notNull": false
         },
-        "channels": {
-          "name": "channels",
-          "type": "jsonb",
-          "primaryKey": false,
-          "notNull": false
-        },
-        "raw_initialize_response": {
-          "name": "raw_initialize_response",
-          "type": "jsonb",
-          "primaryKey": false,
-          "notNull": false
-        },
-        "last_status_check_at": {
-          "name": "last_status_check_at",
-          "type": "timestamp",
-          "primaryKey": false,
-          "notNull": false
-        },
-        "paid_at": {
-          "name": "paid_at",
-          "type": "timestamp",
-          "primaryKey": false,
-          "notNull": false
-        },
-        "failed_at": {
-          "name": "failed_at",
-          "type": "timestamp",
-          "primaryKey": false,
-          "notNull": false
-        },
-        "failure_code": {
-          "name": "failure_code",
-          "type": "text",
-          "primaryKey": false,
-          "notNull": false
-        },
-        "failure_reason": {
-          "name": "failure_reason",
-          "type": "text",
-          "primaryKey": false,
-          "notNull": false
-        },
         "created_at": {
           "name": "created_at",
           "type": "timestamp",
@@ -1160,77 +914,26 @@
         }
       },
       "indexes": {
-        "payment_user_id_idx": {
-          "name": "payment_user_id_idx",
-          "columns": [
-            {
-              "expression": "user_id",
-              "isExpression": false,
-              "asc": true,
-              "nulls": "last"
-            }
-          ],
-          "isUnique": false,
-          "concurrently": false,
-          "method": "btree",
-          "with": {}
-        },
-        "payment_status_idx": {
-          "name": "payment_status_idx",
-          "columns": [
-            {
-              "expression": "status",
-              "isExpression": false,
-              "asc": true,
-              "nulls": "last"
-            }
-          ],
-          "isUnique": false,
-          "concurrently": false,
-          "method": "btree",
-          "with": {}
-        },
-        "payment_created_at_idx": {
-          "name": "payment_created_at_idx",
-          "columns": [
-            {
-              "expression": "created_at",
-              "isExpression": false,
-              "asc": true,
-              "nulls": "last"
-            }
-          ],
-          "isUnique": false,
-          "concurrently": false,
-          "method": "btree",
-          "with": {}
-        },
-        "payment_status_created_idx": {
-          "name": "payment_status_created_idx",
-          "columns": [
-            {
-              "expression": "status",
-              "isExpression": false,
-              "asc": true,
-              "nulls": "last"
-            },
-            {
-              "expression": "created_at",
-              "isExpression": false,
-              "asc": true,
-              "nulls": "last"
-            }
-          ],
-          "isUnique": false,
-          "concurrently": false,
-          "method": "btree",
-          "with": {}
-        },
         "payment_booking_id_unique_idx": {
           "name": "payment_booking_id_unique_idx",
           "columns": [
             {
               "expression": "booking_id",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            }
+          ],
+          "isUnique": true,
+          "concurrently": false,
+          "method": "btree",
+          "with": {}
+        },
+        "payment_refund_id_unique_idx": {
+          "name": "payment_refund_id_unique_idx",
+          "columns": [
+            {
+              "expression": "refund_id",
               "isExpression": false,
               "asc": true,
               "nulls": "last"
@@ -1262,6 +965,19 @@
           "tableTo": "booking",
           "columnsFrom": [
             "booking_id"
+          ],
+          "columnsTo": [
+            "id"
+          ],
+          "onDelete": "set null",
+          "onUpdate": "no action"
+        },
+        "payment_refund_id_refund_id_fk": {
+          "name": "payment_refund_id_refund_id_fk",
+          "tableFrom": "payment",
+          "tableTo": "refund",
+          "columnsFrom": [
+            "refund_id"
           ],
           "columnsTo": [
             "id"
@@ -1301,23 +1017,11 @@
           "primaryKey": false,
           "notNull": true
         },
-        "booking_id": {
-          "name": "booking_id",
-          "type": "uuid",
-          "primaryKey": false,
-          "notNull": false
-        },
         "reference": {
           "name": "reference",
           "type": "varchar(128)",
           "primaryKey": false,
           "notNull": true
-        },
-        "provider_refund_reference": {
-          "name": "provider_refund_reference",
-          "type": "varchar(128)",
-          "primaryKey": false,
-          "notNull": false
         },
         "amount": {
           "name": "amount",
@@ -1332,32 +1036,13 @@
           "notNull": true,
           "default": "'NGN'"
         },
-        "reason": {
-          "name": "reason",
-          "type": "text",
-          "primaryKey": false,
-          "notNull": false
-        },
         "status": {
           "name": "status",
-          "type": "refund_status",
+          "type": "transaction_status",
           "typeSchema": "public",
           "primaryKey": false,
           "notNull": true,
           "default": "'pending'"
-        },
-        "failure_reason": {
-          "name": "failure_reason",
-          "type": "text",
-          "primaryKey": false,
-          "notNull": false
-        },
-        "initiated_by": {
-          "name": "initiated_by",
-          "type": "varchar(32)",
-          "primaryKey": false,
-          "notNull": true,
-          "default": "'auto'"
         },
         "completed_at": {
           "name": "completed_at",
@@ -1396,47 +1081,18 @@
           "method": "btree",
           "with": {}
         },
-        "refund_booking_id_idx": {
-          "name": "refund_booking_id_idx",
+        "refund_payment_pending_unique_idx": {
+          "name": "refund_payment_pending_unique_idx",
           "columns": [
             {
-              "expression": "booking_id",
+              "expression": "payment_id",
               "isExpression": false,
               "asc": true,
               "nulls": "last"
             }
           ],
-          "isUnique": false,
-          "concurrently": false,
-          "method": "btree",
-          "with": {}
-        },
-        "refund_status_idx": {
-          "name": "refund_status_idx",
-          "columns": [
-            {
-              "expression": "status",
-              "isExpression": false,
-              "asc": true,
-              "nulls": "last"
-            }
-          ],
-          "isUnique": false,
-          "concurrently": false,
-          "method": "btree",
-          "with": {}
-        },
-        "refund_provider_ref_idx": {
-          "name": "refund_provider_ref_idx",
-          "columns": [
-            {
-              "expression": "provider_refund_reference",
-              "isExpression": false,
-              "asc": true,
-              "nulls": "last"
-            }
-          ],
-          "isUnique": false,
+          "isUnique": true,
+          "where": "status = 'pending'",
           "concurrently": false,
           "method": "btree",
           "with": {}
@@ -1454,19 +1110,6 @@
             "id"
           ],
           "onDelete": "restrict",
-          "onUpdate": "no action"
-        },
-        "refund_booking_id_booking_id_fk": {
-          "name": "refund_booking_id_booking_id_fk",
-          "tableFrom": "refund",
-          "tableTo": "booking",
-          "columnsFrom": [
-            "booking_id"
-          ],
-          "columnsTo": [
-            "id"
-          ],
-          "onDelete": "set null",
           "onUpdate": "no action"
         }
       },
@@ -1495,62 +1138,14 @@
           "notNull": true,
           "default": "gen_random_uuid()"
         },
-        "driver_id": {
-          "name": "driver_id",
-          "type": "uuid",
-          "primaryKey": false,
-          "notNull": true
-        },
-        "booking_id": {
-          "name": "booking_id",
-          "type": "uuid",
-          "primaryKey": false,
-          "notNull": true
-        },
         "trip_id": {
           "name": "trip_id",
           "type": "uuid",
           "primaryKey": false,
           "notNull": true
         },
-        "route_id": {
-          "name": "route_id",
-          "type": "uuid",
-          "primaryKey": false,
-          "notNull": true
-        },
-        "trip_date": {
-          "name": "trip_date",
-          "type": "timestamp",
-          "primaryKey": false,
-          "notNull": true
-        },
-        "pickup_title": {
-          "name": "pickup_title",
-          "type": "text",
-          "primaryKey": false,
-          "notNull": true
-        },
-        "dropoff_title": {
-          "name": "dropoff_title",
-          "type": "text",
-          "primaryKey": false,
-          "notNull": true
-        },
-        "gross_amount": {
-          "name": "gross_amount",
-          "type": "bigint",
-          "primaryKey": false,
-          "notNull": true
-        },
-        "fee_amount": {
-          "name": "fee_amount",
-          "type": "bigint",
-          "primaryKey": false,
-          "notNull": true
-        },
-        "net_amount": {
-          "name": "net_amount",
+        "amount": {
+          "name": "amount",
           "type": "bigint",
           "primaryKey": false,
           "notNull": true
@@ -1562,29 +1157,9 @@
           "notNull": true,
           "default": "'NGN'"
         },
-        "status": {
-          "name": "status",
-          "type": "earning_status",
-          "typeSchema": "public",
-          "primaryKey": false,
-          "notNull": true,
-          "default": "'pending_trip_completion'"
-        },
-        "source_event_id": {
-          "name": "source_event_id",
-          "type": "varchar(128)",
-          "primaryKey": false,
-          "notNull": true
-        },
         "payout_id": {
           "name": "payout_id",
           "type": "uuid",
-          "primaryKey": false,
-          "notNull": false
-        },
-        "available_at": {
-          "name": "available_at",
-          "type": "timestamp",
           "primaryKey": false,
           "notNull": false
         },
@@ -1604,23 +1179,8 @@
         }
       },
       "indexes": {
-        "earning_driver_id_idx": {
-          "name": "earning_driver_id_idx",
-          "columns": [
-            {
-              "expression": "driver_id",
-              "isExpression": false,
-              "asc": true,
-              "nulls": "last"
-            }
-          ],
-          "isUnique": false,
-          "concurrently": false,
-          "method": "btree",
-          "with": {}
-        },
-        "earning_trip_id_idx": {
-          "name": "earning_trip_id_idx",
+        "earning_trip_unique_idx": {
+          "name": "earning_trip_unique_idx",
           "columns": [
             {
               "expression": "trip_id",
@@ -1629,111 +1189,13 @@
               "nulls": "last"
             }
           ],
-          "isUnique": false,
-          "concurrently": false,
-          "method": "btree",
-          "with": {}
-        },
-        "earning_route_id_idx": {
-          "name": "earning_route_id_idx",
-          "columns": [
-            {
-              "expression": "route_id",
-              "isExpression": false,
-              "asc": true,
-              "nulls": "last"
-            }
-          ],
-          "isUnique": false,
-          "concurrently": false,
-          "method": "btree",
-          "with": {}
-        },
-        "earning_status_idx": {
-          "name": "earning_status_idx",
-          "columns": [
-            {
-              "expression": "status",
-              "isExpression": false,
-              "asc": true,
-              "nulls": "last"
-            }
-          ],
-          "isUnique": false,
-          "concurrently": false,
-          "method": "btree",
-          "with": {}
-        },
-        "earning_driver_status_idx": {
-          "name": "earning_driver_status_idx",
-          "columns": [
-            {
-              "expression": "driver_id",
-              "isExpression": false,
-              "asc": true,
-              "nulls": "last"
-            },
-            {
-              "expression": "status",
-              "isExpression": false,
-              "asc": true,
-              "nulls": "last"
-            }
-          ],
-          "isUnique": false,
-          "concurrently": false,
-          "method": "btree",
-          "with": {}
-        },
-        "earning_trip_status_idx": {
-          "name": "earning_trip_status_idx",
-          "columns": [
-            {
-              "expression": "trip_id",
-              "isExpression": false,
-              "asc": true,
-              "nulls": "last"
-            },
-            {
-              "expression": "status",
-              "isExpression": false,
-              "asc": true,
-              "nulls": "last"
-            }
-          ],
-          "isUnique": false,
+          "isUnique": true,
           "concurrently": false,
           "method": "btree",
           "with": {}
         }
       },
       "foreignKeys": {
-        "earning_driver_id_driver_id_fk": {
-          "name": "earning_driver_id_driver_id_fk",
-          "tableFrom": "earning",
-          "tableTo": "driver",
-          "columnsFrom": [
-            "driver_id"
-          ],
-          "columnsTo": [
-            "id"
-          ],
-          "onDelete": "restrict",
-          "onUpdate": "no action"
-        },
-        "earning_booking_id_booking_id_fk": {
-          "name": "earning_booking_id_booking_id_fk",
-          "tableFrom": "earning",
-          "tableTo": "booking",
-          "columnsFrom": [
-            "booking_id"
-          ],
-          "columnsTo": [
-            "id"
-          ],
-          "onDelete": "restrict",
-          "onUpdate": "no action"
-        },
         "earning_trip_id_trip_id_fk": {
           "name": "earning_trip_id_trip_id_fk",
           "tableFrom": "earning",
@@ -1747,12 +1209,12 @@
           "onDelete": "restrict",
           "onUpdate": "no action"
         },
-        "earning_route_id_route_id_fk": {
-          "name": "earning_route_id_route_id_fk",
+        "earning_payout_id_payout_id_fk": {
+          "name": "earning_payout_id_payout_id_fk",
           "tableFrom": "earning",
-          "tableTo": "route",
+          "tableTo": "payout",
           "columnsFrom": [
-            "route_id"
+            "payout_id"
           ],
           "columnsTo": [
             "id"
@@ -1762,22 +1224,7 @@
         }
       },
       "compositePrimaryKeys": {},
-      "uniqueConstraints": {
-        "earning_booking_id_unique": {
-          "name": "earning_booking_id_unique",
-          "nullsNotDistinct": false,
-          "columns": [
-            "booking_id"
-          ]
-        },
-        "earning_source_event_id_unique": {
-          "name": "earning_source_event_id_unique",
-          "nullsNotDistinct": false,
-          "columns": [
-            "source_event_id"
-          ]
-        }
-      },
+      "uniqueConstraints": {},
       "policies": {},
       "checkConstraints": {},
       "isRLSEnabled": false
@@ -1850,41 +1297,11 @@
           "typeSchema": "public",
           "primaryKey": false,
           "notNull": true,
-          "default": "'processing'"
+          "default": "'pending'"
         },
         "driver_email": {
           "name": "driver_email",
           "type": "varchar(255)",
-          "primaryKey": false,
-          "notNull": false
-        },
-        "failure_code": {
-          "name": "failure_code",
-          "type": "text",
-          "primaryKey": false,
-          "notNull": false
-        },
-        "failure_reason": {
-          "name": "failure_reason",
-          "type": "text",
-          "primaryKey": false,
-          "notNull": false
-        },
-        "initiated_at": {
-          "name": "initiated_at",
-          "type": "timestamp",
-          "primaryKey": false,
-          "notNull": false
-        },
-        "settled_at": {
-          "name": "settled_at",
-          "type": "timestamp",
-          "primaryKey": false,
-          "notNull": false
-        },
-        "failed_at": {
-          "name": "failed_at",
-          "type": "timestamp",
           "primaryKey": false,
           "notNull": false
         },
@@ -1903,113 +1320,7 @@
           "default": "now()"
         }
       },
-      "indexes": {
-        "payout_driver_id_idx": {
-          "name": "payout_driver_id_idx",
-          "columns": [
-            {
-              "expression": "driver_id",
-              "isExpression": false,
-              "asc": true,
-              "nulls": "last"
-            }
-          ],
-          "isUnique": false,
-          "concurrently": false,
-          "method": "btree",
-          "with": {}
-        },
-        "payout_status_idx": {
-          "name": "payout_status_idx",
-          "columns": [
-            {
-              "expression": "status",
-              "isExpression": false,
-              "asc": true,
-              "nulls": "last"
-            }
-          ],
-          "isUnique": false,
-          "concurrently": false,
-          "method": "btree",
-          "with": {}
-        },
-        "payout_driver_created_at_idx": {
-          "name": "payout_driver_created_at_idx",
-          "columns": [
-            {
-              "expression": "driver_id",
-              "isExpression": false,
-              "asc": true,
-              "nulls": "last"
-            },
-            {
-              "expression": "created_at",
-              "isExpression": false,
-              "asc": false,
-              "nulls": "last"
-            }
-          ],
-          "isUnique": false,
-          "concurrently": false,
-          "method": "btree",
-          "with": {}
-        },
-        "payout_driver_status_created_at_idx": {
-          "name": "payout_driver_status_created_at_idx",
-          "columns": [
-            {
-              "expression": "driver_id",
-              "isExpression": false,
-              "asc": true,
-              "nulls": "last"
-            },
-            {
-              "expression": "status",
-              "isExpression": false,
-              "asc": true,
-              "nulls": "last"
-            },
-            {
-              "expression": "created_at",
-              "isExpression": false,
-              "asc": false,
-              "nulls": "last"
-            }
-          ],
-          "isUnique": false,
-          "concurrently": false,
-          "method": "btree",
-          "with": {}
-        },
-        "payout_driver_status_settled_at_idx": {
-          "name": "payout_driver_status_settled_at_idx",
-          "columns": [
-            {
-              "expression": "driver_id",
-              "isExpression": false,
-              "asc": true,
-              "nulls": "last"
-            },
-            {
-              "expression": "status",
-              "isExpression": false,
-              "asc": true,
-              "nulls": "last"
-            },
-            {
-              "expression": "settled_at",
-              "isExpression": false,
-              "asc": false,
-              "nulls": "last"
-            }
-          ],
-          "isUnique": false,
-          "concurrently": false,
-          "method": "btree",
-          "with": {}
-        }
-      },
+      "indexes": {},
       "foreignKeys": {
         "payout_driver_id_driver_id_fk": {
           "name": "payout_driver_id_driver_id_fk",
@@ -2063,24 +1374,36 @@
           "notNull": true,
           "default": "gen_random_uuid()"
         },
-        "route_id": {
-          "name": "route_id",
+        "origin_id": {
+          "name": "origin_id",
+          "type": "uuid",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "destination_id": {
+          "name": "destination_id",
           "type": "uuid",
           "primaryKey": false,
           "notNull": true
         },
         "trip_date": {
           "name": "trip_date",
-          "type": "timestamp",
+          "type": "date",
           "primaryKey": false,
           "notNull": true
         },
-        "vehicle_type": {
-          "name": "vehicle_type",
-          "type": "vehicle_type",
-          "typeSchema": "public",
+        "departure_time": {
+          "name": "departure_time",
+          "type": "time",
           "primaryKey": false,
           "notNull": true
+        },
+        "luggage_count": {
+          "name": "luggage_count",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": true,
+          "default": 0
         },
         "trip_id": {
           "name": "trip_id",
@@ -2094,33 +1417,15 @@
           "primaryKey": false,
           "notNull": true
         },
-        "seat_number": {
-          "name": "seat_number",
-          "type": "integer",
-          "primaryKey": false,
-          "notNull": false
-        },
-        "first_name": {
-          "name": "first_name",
-          "type": "text",
-          "primaryKey": false,
-          "notNull": false
-        },
-        "last_name": {
-          "name": "last_name",
-          "type": "text",
-          "primaryKey": false,
-          "notNull": false
-        },
-        "fare_amount": {
-          "name": "fare_amount",
+        "total_amount": {
+          "name": "total_amount",
           "type": "bigint",
           "primaryKey": false,
           "notNull": true,
           "default": 0
         },
-        "fee_amount": {
-          "name": "fee_amount",
+        "total_fee": {
+          "name": "total_fee",
           "type": "bigint",
           "primaryKey": false,
           "notNull": true,
@@ -2135,7 +1440,7 @@
         },
         "status": {
           "name": "status",
-          "type": "trip_status",
+          "type": "booking_status",
           "typeSchema": "public",
           "primaryKey": false,
           "notNull": true,
@@ -2146,13 +1451,6 @@
           "type": "varchar(128)",
           "primaryKey": false,
           "notNull": false
-        },
-        "payment_status": {
-          "name": "payment_status",
-          "type": "varchar(32)",
-          "primaryKey": false,
-          "notNull": true,
-          "default": "'initialized'"
         },
         "created_at": {
           "name": "created_at",
@@ -2170,105 +1468,17 @@
         }
       },
       "indexes": {
-        "booking_trip_id_idx": {
-          "name": "booking_trip_id_idx",
+        "booking_origin_destination_date_user_departure_idx": {
+          "name": "booking_origin_destination_date_user_departure_idx",
           "columns": [
             {
-              "expression": "trip_id",
-              "isExpression": false,
-              "asc": true,
-              "nulls": "last"
-            }
-          ],
-          "isUnique": false,
-          "concurrently": false,
-          "method": "btree",
-          "with": {}
-        },
-        "booking_user_id_idx": {
-          "name": "booking_user_id_idx",
-          "columns": [
-            {
-              "expression": "user_id",
-              "isExpression": false,
-              "asc": true,
-              "nulls": "last"
-            }
-          ],
-          "isUnique": false,
-          "concurrently": false,
-          "method": "btree",
-          "with": {}
-        },
-        "booking_route_date_vt_idx": {
-          "name": "booking_route_date_vt_idx",
-          "columns": [
-            {
-              "expression": "route_id",
+              "expression": "origin_id",
               "isExpression": false,
               "asc": true,
               "nulls": "last"
             },
             {
-              "expression": "trip_date",
-              "isExpression": false,
-              "asc": true,
-              "nulls": "last"
-            },
-            {
-              "expression": "vehicle_type",
-              "isExpression": false,
-              "asc": true,
-              "nulls": "last"
-            }
-          ],
-          "isUnique": false,
-          "concurrently": false,
-          "method": "btree",
-          "with": {}
-        },
-        "booking_payment_reference_idx": {
-          "name": "booking_payment_reference_idx",
-          "columns": [
-            {
-              "expression": "payment_reference",
-              "isExpression": false,
-              "asc": true,
-              "nulls": "last"
-            }
-          ],
-          "isUnique": false,
-          "concurrently": false,
-          "method": "btree",
-          "with": {}
-        },
-        "booking_user_visible_created_at_idx": {
-          "name": "booking_user_visible_created_at_idx",
-          "columns": [
-            {
-              "expression": "user_id",
-              "isExpression": false,
-              "asc": true,
-              "nulls": "last"
-            },
-            {
-              "expression": "created_at",
-              "isExpression": false,
-              "asc": false,
-              "nulls": "last"
-            }
-          ],
-          "isUnique": false,
-          "where": "\"booking\".\"status\" in ('confirmed', 'completed') and \"booking\".\"payment_status\" not in ('failed', 'cancelled', 'expired')",
-          "concurrently": false,
-          "method": "btree",
-          "with": {}
-        },
-        "booking_route_user_vt_active_idx": {
-          "name": "booking_route_user_vt_active_idx",
-          "columns": [
-            {
-              "expression": "route_id",
+              "expression": "destination_id",
               "isExpression": false,
               "asc": true,
               "nulls": "last"
@@ -2286,48 +1496,38 @@
               "nulls": "last"
             },
             {
-              "expression": "vehicle_type",
+              "expression": "departure_time",
               "isExpression": false,
               "asc": true,
               "nulls": "last"
             }
           ],
           "isUnique": true,
-          "where": "\"booking\".\"status\" in ('pending', 'confirmed')",
-          "concurrently": false,
-          "method": "btree",
-          "with": {}
-        },
-        "booking_trip_id_seat_number_active_idx": {
-          "name": "booking_trip_id_seat_number_active_idx",
-          "columns": [
-            {
-              "expression": "trip_id",
-              "isExpression": false,
-              "asc": true,
-              "nulls": "last"
-            },
-            {
-              "expression": "seat_number",
-              "isExpression": false,
-              "asc": true,
-              "nulls": "last"
-            }
-          ],
-          "isUnique": true,
-          "where": "\"booking\".\"seat_number\" is not null and \"booking\".\"status\" in ('pending', 'confirmed')",
           "concurrently": false,
           "method": "btree",
           "with": {}
         }
       },
       "foreignKeys": {
-        "booking_route_id_route_id_fk": {
-          "name": "booking_route_id_route_id_fk",
+        "booking_origin_id_origin_id_fk": {
+          "name": "booking_origin_id_origin_id_fk",
           "tableFrom": "booking",
-          "tableTo": "route",
+          "tableTo": "origin",
           "columnsFrom": [
-            "route_id"
+            "origin_id"
+          ],
+          "columnsTo": [
+            "id"
+          ],
+          "onDelete": "restrict",
+          "onUpdate": "no action"
+        },
+        "booking_destination_id_destination_id_fk": {
+          "name": "booking_destination_id_destination_id_fk",
+          "tableFrom": "booking",
+          "tableTo": "destination",
+          "columnsFrom": [
+            "destination_id"
           ],
           "columnsTo": [
             "id"
@@ -2368,8 +1568,8 @@
       "checkConstraints": {},
       "isRLSEnabled": false
     },
-    "public.external_driver": {
-      "name": "external_driver",
+    "public.destination": {
+      "name": "destination",
       "schema": "",
       "columns": {
         "id": {
@@ -2379,214 +1579,15 @@
           "notNull": true,
           "default": "gen_random_uuid()"
         },
-        "trip_id": {
-          "name": "trip_id",
-          "type": "uuid",
-          "primaryKey": false,
-          "notNull": true
-        },
-        "name": {
-          "name": "name",
+        "title": {
+          "name": "title",
           "type": "text",
           "primaryKey": false,
           "notNull": true
         },
-        "phone": {
-          "name": "phone",
+        "locality": {
+          "name": "locality",
           "type": "text",
-          "primaryKey": false,
-          "notNull": true
-        },
-        "first_name": {
-          "name": "first_name",
-          "type": "text",
-          "primaryKey": false,
-          "notNull": true
-        },
-        "last_name": {
-          "name": "last_name",
-          "type": "text",
-          "primaryKey": false,
-          "notNull": true
-        },
-        "country": {
-          "name": "country",
-          "type": "text",
-          "primaryKey": false,
-          "notNull": false
-        },
-        "state": {
-          "name": "state",
-          "type": "text",
-          "primaryKey": false,
-          "notNull": false
-        },
-        "vehicle_make": {
-          "name": "vehicle_make",
-          "type": "text",
-          "primaryKey": false,
-          "notNull": false
-        },
-        "vehicle_model": {
-          "name": "vehicle_model",
-          "type": "text",
-          "primaryKey": false,
-          "notNull": false
-        },
-        "vehicle_plate_number": {
-          "name": "vehicle_plate_number",
-          "type": "text",
-          "primaryKey": false,
-          "notNull": false
-        },
-        "vehicle_color": {
-          "name": "vehicle_color",
-          "type": "text",
-          "primaryKey": false,
-          "notNull": false
-        },
-        "vehicle_capacity": {
-          "name": "vehicle_capacity",
-          "type": "integer",
-          "primaryKey": false,
-          "notNull": false
-        },
-        "assigned_by": {
-          "name": "assigned_by",
-          "type": "text",
-          "primaryKey": false,
-          "notNull": true
-        },
-        "assigned_at": {
-          "name": "assigned_at",
-          "type": "timestamp",
-          "primaryKey": false,
-          "notNull": true,
-          "default": "now()"
-        }
-      },
-      "indexes": {},
-      "foreignKeys": {
-        "external_driver_trip_id_trip_id_fk": {
-          "name": "external_driver_trip_id_trip_id_fk",
-          "tableFrom": "external_driver",
-          "tableTo": "trip",
-          "columnsFrom": [
-            "trip_id"
-          ],
-          "columnsTo": [
-            "id"
-          ],
-          "onDelete": "restrict",
-          "onUpdate": "no action"
-        }
-      },
-      "compositePrimaryKeys": {},
-      "uniqueConstraints": {
-        "external_driver_trip_id_unique": {
-          "name": "external_driver_trip_id_unique",
-          "nullsNotDistinct": false,
-          "columns": [
-            "trip_id"
-          ]
-        }
-      },
-      "policies": {},
-      "checkConstraints": {},
-      "isRLSEnabled": false
-    },
-    "public.route": {
-      "name": "route",
-      "schema": "",
-      "columns": {
-        "id": {
-          "name": "id",
-          "type": "uuid",
-          "primaryKey": true,
-          "notNull": true,
-          "default": "gen_random_uuid()"
-        },
-        "pickup_location_title": {
-          "name": "pickup_location_title",
-          "type": "text",
-          "primaryKey": false,
-          "notNull": true
-        },
-        "pickup_location_locality": {
-          "name": "pickup_location_locality",
-          "type": "text",
-          "primaryKey": false,
-          "notNull": true
-        },
-        "pickup_location_label": {
-          "name": "pickup_location_label",
-          "type": "text",
-          "primaryKey": false,
-          "notNull": true
-        },
-        "dropoff_location_title": {
-          "name": "dropoff_location_title",
-          "type": "text",
-          "primaryKey": false,
-          "notNull": true
-        },
-        "dropoff_location_locality": {
-          "name": "dropoff_location_locality",
-          "type": "text",
-          "primaryKey": false,
-          "notNull": true
-        },
-        "dropoff_location_label": {
-          "name": "dropoff_location_label",
-          "type": "text",
-          "primaryKey": false,
-          "notNull": true
-        },
-        "intermediate_stops_title": {
-          "name": "intermediate_stops_title",
-          "type": "text",
-          "primaryKey": false,
-          "notNull": false
-        },
-        "intermediate_stops_locality": {
-          "name": "intermediate_stops_locality",
-          "type": "text",
-          "primaryKey": false,
-          "notNull": false
-        },
-        "intermediate_stops_label": {
-          "name": "intermediate_stops_label",
-          "type": "text",
-          "primaryKey": false,
-          "notNull": false
-        },
-        "meeting_point": {
-          "name": "meeting_point",
-          "type": "text",
-          "primaryKey": false,
-          "notNull": true
-        },
-        "price_car": {
-          "name": "price_car",
-          "type": "bigint",
-          "primaryKey": false,
-          "notNull": true
-        },
-        "price_bus": {
-          "name": "price_bus",
-          "type": "bigint",
-          "primaryKey": false,
-          "notNull": true
-        },
-        "departure_time": {
-          "name": "departure_time",
-          "type": "time",
-          "primaryKey": false,
-          "notNull": true
-        },
-        "arrival_time": {
-          "name": "arrival_time",
-          "type": "time",
           "primaryKey": false,
           "notNull": true
         },
@@ -2597,12 +1598,6 @@
           "primaryKey": false,
           "notNull": true,
           "default": "'active'"
-        },
-        "zone_id": {
-          "name": "zone_id",
-          "type": "uuid",
-          "primaryKey": false,
-          "notNull": false
         },
         "created_at": {
           "name": "created_at",
@@ -2620,47 +1615,17 @@
         }
       },
       "indexes": {
-        "route_origin_destination_departure_unique_idx": {
-          "name": "route_origin_destination_departure_unique_idx",
+        "destination_title_locality_unique_idx": {
+          "name": "destination_title_locality_unique_idx",
           "columns": [
             {
-              "expression": "pickup_location_title",
+              "expression": "title",
               "isExpression": false,
               "asc": true,
               "nulls": "last"
             },
             {
-              "expression": "pickup_location_locality",
-              "isExpression": false,
-              "asc": true,
-              "nulls": "last"
-            },
-            {
-              "expression": "pickup_location_label",
-              "isExpression": false,
-              "asc": true,
-              "nulls": "last"
-            },
-            {
-              "expression": "dropoff_location_title",
-              "isExpression": false,
-              "asc": true,
-              "nulls": "last"
-            },
-            {
-              "expression": "dropoff_location_locality",
-              "isExpression": false,
-              "asc": true,
-              "nulls": "last"
-            },
-            {
-              "expression": "dropoff_location_label",
-              "isExpression": false,
-              "asc": true,
-              "nulls": "last"
-            },
-            {
-              "expression": "departure_time",
+              "expression": "locality",
               "isExpression": false,
               "asc": true,
               "nulls": "last"
@@ -2670,134 +1635,121 @@
           "concurrently": false,
           "method": "btree",
           "with": {}
+        }
+      },
+      "foreignKeys": {},
+      "compositePrimaryKeys": {},
+      "uniqueConstraints": {},
+      "policies": {},
+      "checkConstraints": {},
+      "isRLSEnabled": false
+    },
+    "public.origin": {
+      "name": "origin",
+      "schema": "",
+      "columns": {
+        "id": {
+          "name": "id",
+          "type": "uuid",
+          "primaryKey": true,
+          "notNull": true,
+          "default": "gen_random_uuid()"
         },
-        "route_created_at_idx": {
-          "name": "route_created_at_idx",
+        "title": {
+          "name": "title",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "locality": {
+          "name": "locality",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "meeting_point": {
+          "name": "meeting_point",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "departure_time": {
+          "name": "departure_time",
+          "type": "time[]",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "price": {
+          "name": "price",
+          "type": "bigint",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "fee": {
+          "name": "fee",
+          "type": "bigint",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "luggage_fee": {
+          "name": "luggage_fee",
+          "type": "bigint",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "destination_ids": {
+          "name": "destination_ids",
+          "type": "uuid[]",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "status": {
+          "name": "status",
+          "type": "status",
+          "typeSchema": "public",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "'active'"
+        },
+        "created_at": {
+          "name": "created_at",
+          "type": "timestamp",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "now()"
+        },
+        "updated_at": {
+          "name": "updated_at",
+          "type": "timestamp",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "now()"
+        }
+      },
+      "indexes": {
+        "origin_title_locality_unique_idx": {
+          "name": "origin_title_locality_unique_idx",
           "columns": [
             {
-              "expression": "created_at",
+              "expression": "title",
               "isExpression": false,
-              "asc": false,
+              "asc": true,
+              "nulls": "last"
+            },
+            {
+              "expression": "locality",
+              "isExpression": false,
+              "asc": true,
               "nulls": "last"
             }
           ],
-          "isUnique": false,
+          "isUnique": true,
           "concurrently": false,
           "method": "btree",
           "with": {}
-        },
-        "pickup_location_title_trgm_idx": {
-          "name": "pickup_location_title_trgm_idx",
-          "columns": [
-            {
-              "expression": "pickup_location_title",
-              "isExpression": false,
-              "asc": true,
-              "nulls": "last",
-              "opclass": "gin_trgm_ops"
-            }
-          ],
-          "isUnique": false,
-          "concurrently": false,
-          "method": "gin",
-          "with": {}
-        },
-        "pickup_location_locality_trgm_idx": {
-          "name": "pickup_location_locality_trgm_idx",
-          "columns": [
-            {
-              "expression": "pickup_location_locality",
-              "isExpression": false,
-              "asc": true,
-              "nulls": "last",
-              "opclass": "gin_trgm_ops"
-            }
-          ],
-          "isUnique": false,
-          "concurrently": false,
-          "method": "gin",
-          "with": {}
-        },
-        "pickup_location_label_trgm_idx": {
-          "name": "pickup_location_label_trgm_idx",
-          "columns": [
-            {
-              "expression": "pickup_location_label",
-              "isExpression": false,
-              "asc": true,
-              "nulls": "last",
-              "opclass": "gin_trgm_ops"
-            }
-          ],
-          "isUnique": false,
-          "concurrently": false,
-          "method": "gin",
-          "with": {}
-        },
-        "dropoff_location_title_trgm_idx": {
-          "name": "dropoff_location_title_trgm_idx",
-          "columns": [
-            {
-              "expression": "dropoff_location_title",
-              "isExpression": false,
-              "asc": true,
-              "nulls": "last",
-              "opclass": "gin_trgm_ops"
-            }
-          ],
-          "isUnique": false,
-          "concurrently": false,
-          "method": "gin",
-          "with": {}
-        },
-        "dropoff_location_locality_trgm_idx": {
-          "name": "dropoff_location_locality_trgm_idx",
-          "columns": [
-            {
-              "expression": "dropoff_location_locality",
-              "isExpression": false,
-              "asc": true,
-              "nulls": "last",
-              "opclass": "gin_trgm_ops"
-            }
-          ],
-          "isUnique": false,
-          "concurrently": false,
-          "method": "gin",
-          "with": {}
-        },
-        "dropoff_location_label_trgm_idx": {
-          "name": "dropoff_location_label_trgm_idx",
-          "columns": [
-            {
-              "expression": "dropoff_location_label",
-              "isExpression": false,
-              "asc": true,
-              "nulls": "last",
-              "opclass": "gin_trgm_ops"
-            }
-          ],
-          "isUnique": false,
-          "concurrently": false,
-          "method": "gin",
-          "with": {}
         }
       },
-      "foreignKeys": {
-        "route_zone_id_zone_id_fk": {
-          "name": "route_zone_id_zone_id_fk",
-          "tableFrom": "route",
-          "tableTo": "zone",
-          "columnsFrom": [
-            "zone_id"
-          ],
-          "columnsTo": [
-            "id"
-          ],
-          "onDelete": "set null",
-          "onUpdate": "no action"
-        }
-      },
+      "foreignKeys": {},
       "compositePrimaryKeys": {},
       "uniqueConstraints": {},
       "policies": {},
@@ -2815,8 +1767,14 @@
           "notNull": true,
           "default": "gen_random_uuid()"
         },
-        "route_id": {
-          "name": "route_id",
+        "origin_id": {
+          "name": "origin_id",
+          "type": "uuid",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "destination_id": {
+          "name": "destination_id",
           "type": "uuid",
           "primaryKey": false,
           "notNull": true
@@ -2829,14 +1787,13 @@
         },
         "date": {
           "name": "date",
-          "type": "timestamp",
+          "type": "date",
           "primaryKey": false,
           "notNull": true
         },
-        "vehicle_type": {
-          "name": "vehicle_type",
-          "type": "vehicle_type",
-          "typeSchema": "public",
+        "departure_time": {
+          "name": "departure_time",
+          "type": "time",
           "primaryKey": false,
           "notNull": true
         },
@@ -2861,18 +1818,6 @@
           "notNull": true,
           "default": "'awaiting_driver'"
         },
-        "driver_claimed_at": {
-          "name": "driver_claimed_at",
-          "type": "timestamp",
-          "primaryKey": false,
-          "notNull": false
-        },
-        "vehicle_id": {
-          "name": "vehicle_id",
-          "type": "uuid",
-          "primaryKey": false,
-          "notNull": false
-        },
         "created_at": {
           "name": "created_at",
           "type": "timestamp",
@@ -2889,9 +1834,21 @@
         }
       },
       "indexes": {
-        "trip_driver_date_idx": {
-          "name": "trip_driver_date_idx",
+        "trip_origin_destination_driver_date_departure_unique_idx": {
+          "name": "trip_origin_destination_driver_date_departure_unique_idx",
           "columns": [
+            {
+              "expression": "origin_id",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            },
+            {
+              "expression": "destination_id",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            },
             {
               "expression": "driver_id",
               "isExpression": false,
@@ -2903,48 +1860,40 @@
               "isExpression": false,
               "asc": true,
               "nulls": "last"
-            }
-          ],
-          "isUnique": false,
-          "concurrently": false,
-          "method": "btree",
-          "with": {}
-        },
-        "trip_route_date_vt_idx": {
-          "name": "trip_route_date_vt_idx",
-          "columns": [
-            {
-              "expression": "route_id",
-              "isExpression": false,
-              "asc": true,
-              "nulls": "last"
             },
             {
-              "expression": "date",
-              "isExpression": false,
-              "asc": true,
-              "nulls": "last"
-            },
-            {
-              "expression": "vehicle_type",
+              "expression": "departure_time",
               "isExpression": false,
               "asc": true,
               "nulls": "last"
             }
           ],
-          "isUnique": false,
+          "isUnique": true,
           "concurrently": false,
           "method": "btree",
           "with": {}
         }
       },
       "foreignKeys": {
-        "trip_route_id_route_id_fk": {
-          "name": "trip_route_id_route_id_fk",
+        "trip_origin_id_origin_id_fk": {
+          "name": "trip_origin_id_origin_id_fk",
           "tableFrom": "trip",
-          "tableTo": "route",
+          "tableTo": "origin",
           "columnsFrom": [
-            "route_id"
+            "origin_id"
+          ],
+          "columnsTo": [
+            "id"
+          ],
+          "onDelete": "restrict",
+          "onUpdate": "no action"
+        },
+        "trip_destination_id_destination_id_fk": {
+          "name": "trip_destination_id_destination_id_fk",
+          "tableFrom": "trip",
+          "tableTo": "destination",
+          "columnsFrom": [
+            "destination_id"
           ],
           "columnsTo": [
             "id"
@@ -2964,193 +1913,46 @@
           ],
           "onDelete": "restrict",
           "onUpdate": "no action"
-        },
-        "trip_vehicle_id_vehicle_id_fk": {
-          "name": "trip_vehicle_id_vehicle_id_fk",
-          "tableFrom": "trip",
-          "tableTo": "vehicle",
-          "columnsFrom": [
-            "vehicle_id"
-          ],
-          "columnsTo": [
-            "id"
-          ],
-          "onDelete": "set null",
-          "onUpdate": "no action"
         }
       },
       "compositePrimaryKeys": {},
       "uniqueConstraints": {},
       "policies": {},
       "checkConstraints": {
-        "trip_booked_seats_check": {
-          "name": "trip_booked_seats_check",
+        "trip_booked_seats_not_over_capacity_check": {
+          "name": "trip_booked_seats_not_over_capacity_check",
           "value": "\"trip\".\"booked_seats\" <= \"trip\".\"capacity\""
         }
       },
       "isRLSEnabled": false
-    },
-    "public.vehicle": {
-      "name": "vehicle",
-      "schema": "",
-      "columns": {
-        "id": {
-          "name": "id",
-          "type": "uuid",
-          "primaryKey": true,
-          "notNull": true,
-          "default": "gen_random_uuid()"
-        },
-        "driver_id": {
-          "name": "driver_id",
-          "type": "uuid",
-          "primaryKey": false,
-          "notNull": true
-        },
-        "plate_number": {
-          "name": "plate_number",
-          "type": "text",
-          "primaryKey": false,
-          "notNull": true
-        },
-        "make": {
-          "name": "make",
-          "type": "text",
-          "primaryKey": false,
-          "notNull": true
-        },
-        "model": {
-          "name": "model",
-          "type": "text",
-          "primaryKey": false,
-          "notNull": true
-        },
-        "capacity": {
-          "name": "capacity",
-          "type": "integer",
-          "primaryKey": false,
-          "notNull": true
-        },
-        "color": {
-          "name": "color",
-          "type": "text",
-          "primaryKey": false,
-          "notNull": true
-        },
-        "created_at": {
-          "name": "created_at",
-          "type": "timestamp",
-          "primaryKey": false,
-          "notNull": true,
-          "default": "now()"
-        },
-        "updated_at": {
-          "name": "updated_at",
-          "type": "timestamp",
-          "primaryKey": false,
-          "notNull": true,
-          "default": "now()"
-        }
-      },
-      "indexes": {
-        "vehicle_driver_id_idx": {
-          "name": "vehicle_driver_id_idx",
-          "columns": [
-            {
-              "expression": "driver_id",
-              "isExpression": false,
-              "asc": true,
-              "nulls": "last"
-            }
-          ],
-          "isUnique": false,
-          "concurrently": false,
-          "method": "btree",
-          "with": {}
-        }
-      },
-      "foreignKeys": {
-        "vehicle_driver_id_driver_id_fk": {
-          "name": "vehicle_driver_id_driver_id_fk",
-          "tableFrom": "vehicle",
-          "tableTo": "driver",
-          "columnsFrom": [
-            "driver_id"
-          ],
-          "columnsTo": [
-            "id"
-          ],
-          "onDelete": "cascade",
-          "onUpdate": "no action"
-        }
-      },
-      "compositePrimaryKeys": {},
-      "uniqueConstraints": {},
-      "policies": {},
-      "checkConstraints": {},
-      "isRLSEnabled": false
-    },
-    "public.zone": {
-      "name": "zone",
-      "schema": "",
-      "columns": {
-        "id": {
-          "name": "id",
-          "type": "uuid",
-          "primaryKey": true,
-          "notNull": true,
-          "default": "gen_random_uuid()"
-        },
-        "name": {
-          "name": "name",
-          "type": "text",
-          "primaryKey": false,
-          "notNull": true
-        },
-        "fee": {
-          "name": "fee",
-          "type": "bigint",
-          "primaryKey": false,
-          "notNull": true
-        },
-        "created_at": {
-          "name": "created_at",
-          "type": "timestamp",
-          "primaryKey": false,
-          "notNull": true,
-          "default": "now()"
-        },
-        "updated_at": {
-          "name": "updated_at",
-          "type": "timestamp",
-          "primaryKey": false,
-          "notNull": true,
-          "default": "now()"
-        }
-      },
-      "indexes": {},
-      "foreignKeys": {},
-      "compositePrimaryKeys": {},
-      "uniqueConstraints": {
-        "zone_name_unique": {
-          "name": "zone_name_unique",
-          "nullsNotDistinct": false,
-          "columns": [
-            "name"
-          ]
-        }
-      },
-      "policies": {},
-      "checkConstraints": {},
-      "isRLSEnabled": false
     }
   },
   "enums": {
+    "public.driver_dispatch_attempt_status": {
+      "name": "driver_dispatch_attempt_status",
+      "schema": "public",
+      "values": [
+        "dialing",
+        "awaiting_dtmf",
+        "accepted",
+        "declined",
+        "unavailable"
+      ]
+    },
+    "public.trip_dispatch_status": {
+      "name": "trip_dispatch_status",
+      "schema": "public",
+      "values": [
+        "pending",
+        "searching",
+        "assigned",
+        "cancelled"
+      ]
+    },
     "public.bank_verification_status": {
       "name": "bank_verification_status",
       "schema": "public",
       "values": [
-        "pending",
         "active",
         "failed"
       ]
@@ -3159,71 +1961,17 @@
       "name": "kyc_status",
       "schema": "public",
       "values": [
-        "none",
-        "pending",
         "active",
         "failed"
       ]
     },
-    "public.notification_kind": {
-      "name": "notification_kind",
-      "schema": "public",
-      "values": [
-        "event",
-        "state"
-      ]
-    },
-    "public.notification_tone": {
-      "name": "notification_tone",
-      "schema": "public",
-      "values": [
-        "critical",
-        "attention",
-        "positive",
-        "info"
-      ]
-    },
-    "public.payment_provider": {
-      "name": "payment_provider",
-      "schema": "public",
-      "values": [
-        "kora"
-      ]
-    },
-    "public.payment_status": {
-      "name": "payment_status",
-      "schema": "public",
-      "values": [
-        "initialized",
-        "pending",
-        "processing",
-        "successful",
-        "failed",
-        "cancelled",
-        "expired",
-        "refund_pending",
-        "refunded",
-        "refund_failed"
-      ]
-    },
-    "public.refund_status": {
-      "name": "refund_status",
+    "public.transaction_status": {
+      "name": "transaction_status",
       "schema": "public",
       "values": [
         "pending",
         "successful",
         "failed"
-      ]
-    },
-    "public.earning_status": {
-      "name": "earning_status",
-      "schema": "public",
-      "values": [
-        "pending_trip_completion",
-        "available",
-        "processing",
-        "paid",
-        "cancelled"
       ]
     },
     "public.payout_provider": {
@@ -3238,9 +1986,16 @@
       "schema": "public",
       "values": [
         "pending",
-        "processing",
-        "success",
+        "successful",
         "failed"
+      ]
+    },
+    "public.booking_status": {
+      "name": "booking_status",
+      "schema": "public",
+      "values": [
+        "pending",
+        "confirmed"
       ]
     },
     "public.status": {
@@ -3256,19 +2011,9 @@
       "name": "trip_status",
       "schema": "public",
       "values": [
-        "pending",
-        "confirmed",
         "cancelled",
         "completed",
         "awaiting_driver"
-      ]
-    },
-    "public.vehicle_type": {
-      "name": "vehicle_type",
-      "schema": "public",
-      "values": [
-        "car",
-        "bus"
       ]
     }
   },
