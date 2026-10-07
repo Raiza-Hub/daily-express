@@ -21,7 +21,7 @@ export class PayoutRepository {
       .onConflictDoUpdate({
         target: earning.tripId,
         set: {
-          amount: sql`excluded.amount`,
+          amount: sql`${earning.amount} + excluded.amount`,
           updatedAt: new Date(),
         },
       });

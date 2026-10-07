@@ -10,10 +10,10 @@
 -- trip.status -- so the addition is forward-looking. It is needed now only
 -- so the query parses.
 --
--- Numbered 0041 with 0040 absent on this branch: 0040_trip_dispatch.sql
--- carries an identical ADD VALUE IF NOT EXISTS for this same value, and
--- numbering this 0040 would collide with it on merge. IF NOT EXISTS makes
--- the two statements safe to apply in either order.
+-- Numbered 0041 because 0040_trip_dispatch.sql is numbered 0040 on this
+-- branch. 0040 no longer touches booking_status, so this file is the only
+-- place the value is added. It must still be applied BEFORE
+-- 0042_booking_status_confirmed_only.sql, which removes it again.
 --
 -- Apply via `railway connect Postgres` (autocommit per statement). A value
 -- added here cannot be used in the same transaction, which does not apply

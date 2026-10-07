@@ -16,6 +16,7 @@ import { getConfig } from "../config/index";
 import { logger } from "../utils/logger";
 import { formatAmount } from "../utils/payout";
 import { enqueueEmail } from "../mail/email-dispatcher.service";
+import { tripDispatchService } from "../dispatch/trip-dispatch.service";
 import { earningService } from "../payout/earning.service";
 import { RouteRepository } from "./route.repository";
 
@@ -86,9 +87,11 @@ export class BookingFinalizerService {
 
         if (!tripId) return null;
 
-        await this.upsertTripEarning(tx, tripId);
+        await this.addToTripEarning(tx, tripId, updatedBooking.totalAmount);
 
         await this.dispatchConfirmationEmails(tx, updatedBooking, originRecord, destinationRecord, passengers);
+
+        await tripDispatchService.trackTripAfterBooking(tx, tripId);
 
         return { tripId };
       },
@@ -220,25 +223,11 @@ export class BookingFinalizerService {
     return createdTrip;
   }
 
-  private async upsertTripEarning(
+  private async addToTripEarning(
     tx: RouteTransaction,
     tripId: string,
+    amount: number,
   ) {
-    const tripBookings = await tx.query.booking.findMany({
-      where: and(
-        eq(booking.tripId, tripId),
-        eq(booking.status, "confirmed"),
-      ),
-    });
-
-    const firstBooking = tripBookings[0];
-    if (!firstBooking) return;
-
-    let amount = 0;
-    for (const tripBooking of tripBookings) {
-      amount += tripBooking.totalAmount;
-    }
-
     if (amount <= 0) return;
 
     await earningService.createEarning(tx, {
@@ -247,11 +236,7 @@ export class BookingFinalizerService {
       currency: "NGN",
     });
 
-    logger.info("booking_finalizer.earning_upserted", {
-      tripId,
-      amount,
-      bookingCount: tripBookings.length,
-    });
+    logger.info("booking_finalizer.earning_added", { tripId, amount });
   }
 }
 
