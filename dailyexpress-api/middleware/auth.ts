@@ -9,10 +9,17 @@ import type { JWTPayload } from "@shared/types";
 import { logger } from "../utils/logger";
 import { sendErrorResponse } from "./apiResponses";
 
-const ACCESS_TOKEN_MAX_AGE_MS = 15 * 60 * 1000;
-const REFRESH_TOKEN_MAX_AGE_MS = 7 * 24 * 60 * 60 * 1000;
-const ACCESS_TOKEN_EXPIRES_IN: SignOptions["expiresIn"] = "15m";
-const REFRESH_TOKEN_EXPIRES_IN: SignOptions["expiresIn"] = "7d";
+const DURATION_UNIT_MS: Record<string, number> = {
+  s: 1000,
+  m: 60 * 1000,
+  h: 60 * 60 * 1000,
+  d: 24 * 60 * 60 * 1000,
+};
+
+function expiresInToMs(value: string): number {
+  const n = parseInt(value, 10);
+  return n * (DURATION_UNIT_MS[value.slice(-1)] ?? 1000);
+}
 
 function isJwtPayload(
   payload: string | JsonWebTokenPayload,
@@ -68,7 +75,7 @@ export function setAuthCookies(
   };
 
   const tokenSignOptions: SignOptions = {
-    expiresIn: ACCESS_TOKEN_EXPIRES_IN,
+    expiresIn: config.JWT_EXPIRES_IN as SignOptions["expiresIn"],
     issuer: "dailyexpress-api",
     audience: "dailyexpress-app",
   };
@@ -78,14 +85,18 @@ export function setAuthCookies(
   const refreshToken = jwt.sign(
     accessPayload,
     config.JWT_REFRESH_SECRET as Secret,
-    { ...tokenSignOptions, expiresIn: REFRESH_TOKEN_EXPIRES_IN },
+    { ...tokenSignOptions, expiresIn: config.JWT_REFRESH_EXPIRES_IN as SignOptions["expiresIn"] },
   );
 
-  res.cookie("token", accessToken, getCookieOptions(ACCESS_TOKEN_MAX_AGE_MS));
+  res.cookie(
+    "token",
+    accessToken,
+    getCookieOptions(expiresInToMs(config.JWT_EXPIRES_IN)),
+  );
   res.cookie(
     "refreshToken",
     refreshToken,
-    getCookieOptions(REFRESH_TOKEN_MAX_AGE_MS),
+    getCookieOptions(expiresInToMs(config.JWT_REFRESH_EXPIRES_IN)),
   );
 }
 
