@@ -72,6 +72,10 @@ export const driverDispatchAttempt = pgTable(
     uniqueIndex("driver_dispatch_attempt_active_driver_unique_idx")
       .on(table.driverId)
       .where(sql`status IN ('dialing', 'awaiting_dtmf')`),
+    index("driver_dispatch_attempt_driver_created_idx").on(
+      table.driverId,
+      table.createdAt,
+    ),
   ],
 );
 
