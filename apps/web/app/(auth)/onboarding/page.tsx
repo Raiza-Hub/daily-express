@@ -1,7 +1,13 @@
+import type { Metadata } from "next";
 import { redirect } from "next/navigation";
 import { AuthLogo } from "~/components/auth/AuthLogo";
 import OnboardingForm from "~/components/auth/OnboardingForm";
 import { getUserProfile } from "~/lib/user-session";
+
+export const metadata: Metadata = {
+    title: "Complete your profile",
+    robots: { index: false },
+};
 
 const Page = async () => {
     const user = await getUserProfile();

@@ -1,4 +1,10 @@
+import type { Metadata } from "next";
 import { ProfileCard } from "~/components/user/ProfileCard";
+
+export const metadata: Metadata = {
+    title: "Profile",
+    robots: { index: false },
+};
 
 const ProfilePage = () => (
     <main className="flex flex-col gap-6">

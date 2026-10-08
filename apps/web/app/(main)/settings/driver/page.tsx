@@ -1,4 +1,10 @@
+import type { Metadata } from "next";
 import { DriverCard } from "~/components/driver/DriverCard";
+
+export const metadata: Metadata = {
+    title: "Driver profile",
+    robots: { index: false },
+};
 
 const DriverPage = () => (
     <main className="flex flex-col gap-6">

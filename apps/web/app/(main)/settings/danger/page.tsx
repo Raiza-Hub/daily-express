@@ -1,5 +1,11 @@
+import type { Metadata } from "next";
 import { DangerCard } from "~/components/user/DangerCard";
 import { getDriverProfileState } from "~/lib/driver-session";
+
+export const metadata: Metadata = {
+    title: "Danger zone",
+    robots: { index: false },
+};
 
 const DangerPage = async () => {
     const canDeactivate = (await getDriverProfileState()) === "active";

@@ -1,7 +1,13 @@
+import type { Metadata } from "next";
 import Image from "next/image";
 import { Mail } from "lucide-react";
 import { redirect } from "next/navigation";
 import { getDriverProfileState } from "~/lib/driver-session";
+
+export const metadata: Metadata = {
+    title: "Account deactivated",
+    robots: { index: false },
+};
 
 export default async function DriverDeactivatedPage() {
     if ((await getDriverProfileState()) === "active") {
@@ -11,10 +17,10 @@ export default async function DriverDeactivatedPage() {
     return (
         <div className="mx-auto flex min-h-[70vh] w-full max-w-md flex-col items-center justify-center gap-5 px-6 text-center">
             <Image
-                src="/not-found-duck3.jpg"
+                src="/deactivate-4.jpg"
                 alt=""
-                width={480}
-                height={404}
+                width={736}
+                height={684}
                 className="h-auto w-80 sm:w-96"
             />
             <h2 className="text-xl font-semibold text-neutral-900 dark:text-neutral-50">
