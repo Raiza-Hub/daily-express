@@ -3,6 +3,7 @@ import {
   and,
   asc,
   eq,
+  gte,
   inArray,
   isNull,
   notInArray,
@@ -42,6 +43,12 @@ import {
   nextCallRetryAt,
   type CallOutcome,
 } from "./dispatch-policy";
+import {
+  OFFER_HISTORY_WINDOW_DAYS,
+  rankDrivers,
+  type DriverRankingInput,
+  type RankedCandidate,
+} from "./driver-ranking";
 
 type AttemptToDial = {
   id: string;
@@ -87,11 +94,25 @@ function localityMatches(column: SQLWrapper, locality: string): SQL {
 const SEARCH_WINDOW_MS = 30 * 60 * 1_000;
 const RECHECK_INTERVAL_MS = 120 * 1_000;
 const GET_DIGITS_TIMEOUT_SECONDS = 20;
+const DAY_MS = 24 * 60 * 60 * 1_000;
+const RANKING_AUDIT_LIMIT = 5;
 const ACTIVE_ATTEMPT_STATUSES: DriverDispatchAttemptRecord["status"][] = [
   "dialing",
   "awaiting_dtmf",
 ];
 const TERMINAL_TRIP_STATUSES: TripRecord["status"][] = ["cancelled", "completed"];
+const COMPLETION_TRIP_STATUSES: TripRecord["status"][] = [
+  "completed",
+  "cancelled",
+];
+const EMPTY_RANKING_STATS: Omit<DriverRankingInput, "id"> = {
+  offers: 0,
+  answered: 0,
+  accepted: 0,
+  lastOfferedAt: null,
+  completedTrips: 0,
+  cancelledTrips: 0,
+};
 
 export type VoiceCallbackPayload = {
   clientRequestId?: string;
@@ -255,6 +276,19 @@ export class TripDispatchService {
         dispatch,
         lockedTrip.record,
       );
+
+      logger.info("trip_dispatch.ranked", {
+        tripId,
+        candidateCount: candidates.length,
+        top: candidates.slice(0, RANKING_AUDIT_LIMIT).map((candidate) => ({
+          driverId: candidate.id,
+          rankingScore: Number(candidate.rankingScore.toFixed(4)),
+          fairnessScore: Number(candidate.fairnessScore.toFixed(4)),
+          acceptanceScore: Number(candidate.acceptanceScore.toFixed(4)),
+          completionScore: Number(candidate.completionScore.toFixed(4)),
+          isNew: candidate.isNew,
+        })),
+      });
 
       for (const candidate of candidates) {
         const created = await this.createAttempt(
@@ -573,7 +607,7 @@ export class TripDispatchService {
     tx: DbTransaction,
     dispatch: TripDispatchRecord,
     lockedTrip: TripRecord,
-  ): Promise<DriverRecord[]> {
+  ): Promise<RankedCandidate<DriverRecord>[]> {
     const [tripOrigin] = await tx
       .select({ locality: origin.locality })
       .from(origin)
@@ -624,7 +658,106 @@ export class TripDispatchService {
     for (const active of activeAttempts) unavailable.add(active.driverId);
     for (const prior of priorAttempts) unavailable.add(prior.driverId);
 
-    return drivers.filter((candidate) => !unavailable.has(candidate.id));
+    const eligible = drivers.filter(
+      (candidate) => !unavailable.has(candidate.id),
+    );
+    if (eligible.length === 0) return [];
+
+    const now = new Date();
+    const stats = await this.loadRankingStats(
+      tx,
+      eligible.map((candidate) => candidate.id),
+      now,
+    );
+
+    return rankDrivers(
+      eligible.map((candidate) => ({
+        ...candidate,
+        ...EMPTY_RANKING_STATS,
+        ...(stats.get(candidate.id) ?? EMPTY_RANKING_STATS),
+      })),
+      now,
+    );
+  }
+
+  private async loadRankingStats(
+    tx: DbTransaction,
+    driverIds: string[],
+    now: Date,
+  ): Promise<Map<string, Omit<DriverRankingInput, "id">>> {
+    const stats = new Map<string, Omit<DriverRankingInput, "id">>();
+    if (driverIds.length === 0) return stats;
+
+    for (const driverId of driverIds) {
+      stats.set(driverId, { ...EMPTY_RANKING_STATS });
+    }
+
+    const windowStart = new Date(
+      now.getTime() - OFFER_HISTORY_WINDOW_DAYS * DAY_MS,
+    );
+
+    const [attemptRows, tripRows] = await Promise.all([
+      tx
+        .select({
+          driverId: driverDispatchAttempt.driverId,
+          status: driverDispatchAttempt.status,
+          attempts: sql<number>`count(*)`.as("attempts"),
+          latestOfferAt: sql<Date>`max(${driverDispatchAttempt.createdAt})`.as(
+            "latestOfferAt",
+          ),
+        })
+        .from(driverDispatchAttempt)
+        .where(
+          and(
+            inArray(driverDispatchAttempt.driverId, driverIds),
+            gte(driverDispatchAttempt.createdAt, windowStart),
+          ),
+        )
+        .groupBy(driverDispatchAttempt.driverId, driverDispatchAttempt.status),
+      tx
+        .select({
+          driverId: trip.driverId,
+          status: trip.status,
+        })
+        .from(trip)
+        .where(
+          and(
+            inArray(trip.driverId, driverIds),
+            inArray(trip.status, COMPLETION_TRIP_STATUSES),
+          ),
+        ),
+    ]);
+
+    for (const row of attemptRows) {
+      if (!row.driverId) continue;
+      const bucket = stats.get(row.driverId) ?? { ...EMPTY_RANKING_STATS };
+      const attempts = Number(row.attempts);
+      bucket.offers += attempts;
+      if (row.status === "accepted") {
+        bucket.answered += attempts;
+        bucket.accepted += attempts;
+      }
+      if (row.status === "declined") bucket.answered += attempts;
+
+      const latest =
+        row.latestOfferAt instanceof Date
+          ? row.latestOfferAt
+          : new Date(row.latestOfferAt);
+      if (!bucket.lastOfferedAt || latest > bucket.lastOfferedAt) {
+        bucket.lastOfferedAt = latest;
+      }
+      stats.set(row.driverId, bucket);
+    }
+
+    for (const row of tripRows) {
+      if (!row.driverId) continue;
+      const bucket = stats.get(row.driverId) ?? { ...EMPTY_RANKING_STATS };
+      if (row.status === "completed") bucket.completedTrips += 1;
+      if (row.status === "cancelled") bucket.cancelledTrips += 1;
+      stats.set(row.driverId, bucket);
+    }
+
+    return stats;
   }
 
   private async createAttempt(
