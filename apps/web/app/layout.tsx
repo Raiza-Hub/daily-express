@@ -11,8 +11,19 @@ const onest = Onest({
 });
 
 export const metadata: Metadata = {
-  title: { template: "%s | Daily Express", default: "Daily Express" },
-  description: "Book intercity trips",
+  metadataBase: new URL(
+    process.env.NEXT_PUBLIC_WEB_APP_URL ?? "https://dailyexpress.app",
+  ),
+  title: { template: "%s | Beckōn", default: "Beckōn" },
+  description: "Get there comfortably, book your trip in seconds.",
+  openGraph: {
+    type: "website",
+    siteName: "Beckōn",
+    locale: "en_US",
+  },
+  twitter: {
+    card: "summary_large_image",
+  },
 };
 
 export default function RootLayout({

@@ -1,7 +1,12 @@
+import type { Metadata } from "next";
 import Link from "next/link";
 import GoogleSignInButton from "~/components/auth/GoogleSigInButton";
 import { AuthLogo } from "~/components/auth/AuthLogo";
 
+export const metadata: Metadata = {
+    title: "Sign in",
+    robots: { index: false },
+};
 
 const Page = () => {
     return (

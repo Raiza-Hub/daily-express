@@ -1,6 +1,12 @@
+import type { Metadata } from "next";
 import { redirect } from "next/navigation";
 import { EventCalendarSection } from "~/components/EventCalendarSection";
 import { getDriverProfileState } from "~/lib/driver-session";
+
+export const metadata: Metadata = {
+  title: "Driver calendar",
+  robots: { index: false },
+};
 
 interface DriverCalendarPageProps {
   searchParams: Promise<{ from?: string | string[]; to?: string | string[] }>;

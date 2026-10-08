@@ -1,7 +1,13 @@
+import type { Metadata } from "next";
 import { redirect } from "next/navigation";
 import { AuthLogo } from "~/components/auth/AuthLogo";
 import { DriverSignupForm } from "~/components/driver/DriverSignupForm";
 import { getDriverProfileState } from "~/lib/driver-session";
+
+export const metadata: Metadata = {
+    title: "Become a driver",
+    robots: { index: false },
+};
 
 const DriverSignupPage = async () => {
     const state = await getDriverProfileState();

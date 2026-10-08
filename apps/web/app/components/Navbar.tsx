@@ -20,7 +20,7 @@ export async function Navbar() {
             src="/logo.png"
             width={120}
             height={40}
-            alt="Daily Express"
+            alt="Beckōn"
             className="h-10 w-auto object-contain"
             priority
           />

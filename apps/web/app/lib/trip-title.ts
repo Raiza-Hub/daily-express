@@ -1,4 +1,4 @@
-export const SITE_NAME = "Daily Express";
+export const SITE_NAME = "Beckōn";
 
 export function tripTitle(originTitle?: string): string {
   return originTitle
