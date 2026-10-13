@@ -118,6 +118,7 @@ export type VoiceCallbackPayload = {
   isActive?: string;
   status?: string;
   hangupCause?: string;
+  direction?: string;
 };
 
 export class TripDispatchService {
@@ -195,6 +196,10 @@ export class TripDispatchService {
   }
 
   async handleVoiceCallback(payload: VoiceCallbackPayload): Promise<string> {
+    if (payload.direction === "Inbound") {
+      return this.rejectedCallXml();
+    }
+
     if (payload.isActive !== "1") {
       await this.handleCallEnded(payload);
       return "";
@@ -1030,6 +1035,10 @@ export class TripDispatchService {
 
   private closedCallXml(): string {
     return '<?xml version="1.0" encoding="UTF-8"?><Response><Say>This trip is no longer available. Goodbye.</Say></Response>';
+  }
+
+  private rejectedCallXml(): string {
+    return '<?xml version="1.0" encoding="UTF-8"?><Response><Reject/></Response>';
   }
 }
 

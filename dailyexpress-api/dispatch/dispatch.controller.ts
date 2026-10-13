@@ -12,6 +12,7 @@ export const voiceCallback: RequestHandler = asyncHandler(async (req, res) => {
     status: typeof body.status === "string" ? body.status : undefined,
     hangupCause:
       typeof body.hangupCause === "string" ? body.hangupCause : undefined,
+    direction: typeof body.direction === "string" ? body.direction : undefined,
   });
   res.type("text/xml").status(200).send(xml);
 });
