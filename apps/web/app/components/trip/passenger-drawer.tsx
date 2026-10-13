@@ -62,6 +62,7 @@ function PassengerDrawer({
 }: PassengerDrawerProps) {
   const [form, setForm] = useState(emptyForm);
   const [touched, setTouched] = useState(false);
+  const [submitError, setSubmitError] = useState<string | null>(null);
 
   const isEditing = editingId !== null;
   const editingPassenger = isEditing
@@ -83,6 +84,7 @@ function PassengerDrawer({
       setForm(emptyForm());
     }
     setTouched(false);
+    setSubmitError(null);
   }, [open, editingPassenger]);
 
   const fullName = `${form.firstName.trim()} ${form.lastName.trim()}`.trim();
@@ -120,6 +122,19 @@ function PassengerDrawer({
   const handleSave = () => {
     setTouched(true);
     if (!formValid) return;
+
+    const normalizedEmail = form.email.trim().toLowerCase();
+    const isDuplicate = passengers.some(
+      (passenger) =>
+        passenger.id !== editingId &&
+        passenger.email.trim().toLowerCase() === normalizedEmail,
+    );
+    if (isDuplicate) {
+      setSubmitError("This email is already used by another passenger.");
+      return;
+    }
+    setSubmitError(null);
+
     if (isEditing) {
       onPassengersChange(
         passengers.map((passenger) =>
@@ -153,6 +168,7 @@ function PassengerDrawer({
     key: K,
     value: ReturnType<typeof emptyForm>[K],
   ) => {
+    setSubmitError(null);
     setForm((current) => ({ ...current, [key]: value }));
   };
 
@@ -224,7 +240,12 @@ function PassengerDrawer({
               </Checkbox>
             </div>
           </div>
-          <DrawerFooter>
+          <DrawerFooter className="flex-col">
+            {submitError && (
+              <p role="alert" className="text-sm text-destructive">
+                {submitError}
+              </p>
+            )}
             <Button
               type="submit"
               pill

@@ -3,6 +3,7 @@
 import { useEffect, useMemo, useState } from "react";
 import { parseAsString, useQueryStates } from "nuqs";
 import { Loader2, Plus } from "lucide-react";
+import { toast } from "sonner";
 import { format } from "date-fns";
 import { cn } from "@repo/ui/lib/utils";
 import { Button } from "~/components/ui/button";
@@ -45,6 +46,7 @@ export default function NewTripBooking({
   const [passengers, setPassengers] = useState<TripPassenger[]>([]);
   const [drawerOpen, setDrawerOpen] = useState(false);
   const [editingId, setEditingId] = useState<string | null>(null);
+  const [isRedirecting, setIsRedirecting] = useState(false);
 
   const {
     data: origins = [],
@@ -52,7 +54,13 @@ export default function NewTripBooking({
     error: originsError,
   } = useGetOrigins({ initialData: initialOrigins });
   const { data: user, isPending: isUserPending } = useGetMe();
-  const createCheckout = useCreateTripCheckout();
+  const createCheckout = useCreateTripCheckout({
+    onError: (error) => {
+      toast.error(
+        getApiErrorMessage(error, "Something went wrong. Please try again."),
+      );
+    },
+  });
 
   const atLimit = passengers.length >= MAX_PASSENGERS;
 
@@ -138,7 +146,8 @@ export default function NewTripBooking({
     selectedTime !== "" &&
     passengers.length >= 1 &&
     !drawerOpen &&
-    !createCheckout.isPending;
+    !createCheckout.isPending &&
+    !isRedirecting;
 
   const handleConfirm = () => {
     if (!canConfirm) return;
@@ -173,10 +182,12 @@ export default function NewTripBooking({
         tripDate: effectiveDateKey,
         departureTime: selectedTime,
         passengers: passengerInput,
+        channels: ["bank_transfer"],
       },
       {
         onSuccess: (checkout) => {
           if (checkout?.checkoutUrl) {
+            setIsRedirecting(true);
             window.location.href = checkout.checkoutUrl;
           }
         },
@@ -374,7 +385,7 @@ export default function NewTripBooking({
           onClick={handleConfirm}
           className="mt-5 w-full text font-semibold"
         >
-          {createCheckout.isPending && (
+          {(createCheckout.isPending || isRedirecting) && (
             <Loader2 className="h-4 w-4 animate-spin" aria-hidden />
           )}
           Confirm Booking
