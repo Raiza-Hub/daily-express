@@ -135,12 +135,11 @@ export function buildOfferPrompt(input: {
   departureTime: string;
   amount: number;
   currency: string;
-  bookedSeats: number;
   capacity: number;
 }): string {
   const route = `${input.originTitle} to ${input.destinationTitle}`;
   const when = `${formatTripDate(input.tripDate)} at ${formatDepartureTime(input.departureTime)}`;
-  const pay = `${formatOfferAmount(input.amount, input.currency)} for ${input.bookedSeats} of ${input.capacity} seats`;
+  const pay = `${formatOfferAmount(input.amount, input.currency)} for ${input.capacity} seats`;
 
   return [
     "You have a Daily Express trip offer.",
@@ -148,7 +147,6 @@ export function buildOfferPrompt(input: {
     `${when}.`,
     `Pickup is at ${input.meetingPoint}.`,
     `The trip currently pays ${pay}.`,
-    "More passengers can still join.",
     "Press 1 to accept.",
     "Press 2 to decline.",
   ].join(" ");

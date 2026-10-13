@@ -62,7 +62,6 @@ type OfferDetails = {
   meetingPoint: string;
   tripDate: string;
   departureTime: string;
-  bookedSeats: number;
   capacity: number;
   amount: number;
   currency: string;
@@ -145,7 +144,7 @@ export class TripDispatchService {
 
     const now = new Date();
     const shouldOpen =
-      lockedTrip.record.bookedSeats >= lockedTrip.record.capacity - 1 &&
+      lockedTrip.record.bookedSeats >= lockedTrip.record.capacity &&
       !lockedTrip.record.driverId &&
       dispatch.status === "pending";
     const deadlineAt = shouldOpen
@@ -862,7 +861,6 @@ export class TripDispatchService {
         meetingPoint: origin.meetingPoint,
         tripDate: trip.date,
         departureTime: trip.departureTime,
-        bookedSeats: trip.bookedSeats,
         capacity: trip.capacity,
         amount: earning.amount,
         currency: earning.currency,
@@ -880,7 +878,6 @@ export class TripDispatchService {
       meetingPoint: row?.meetingPoint ?? "the meeting point",
       tripDate: row?.tripDate ?? lockedTrip.date,
       departureTime: row?.departureTime ?? lockedTrip.departureTime,
-      bookedSeats: row?.bookedSeats ?? lockedTrip.bookedSeats,
       capacity: row?.capacity ?? lockedTrip.capacity,
       amount: row?.amount ?? 0,
       currency: row?.currency ?? "NGN",
@@ -1022,7 +1019,6 @@ export class TripDispatchService {
       departureTime: offer.departureTime,
       amount: offer.amount,
       currency: offer.currency,
-      bookedSeats: offer.bookedSeats,
       capacity: offer.capacity,
     });
     return `<?xml version="1.0" encoding="UTF-8"?><Response><GetDigits timeout="${GET_DIGITS_TIMEOUT_SECONDS}" numDigits="1" callbackUrl="${callbackUrl}"><Say>${escapeXml(prompt)}</Say></GetDigits><Say>We did not receive your response. Goodbye.</Say></Response>`;

@@ -9,16 +9,12 @@ import type { JWTPayload } from "@shared/types";
 import { logger } from "../utils/logger";
 import { sendErrorResponse } from "./apiResponses";
 
-const DURATION_UNIT_MS: Record<string, number> = {
-  s: 1000,
-  m: 60 * 1000,
-  h: 60 * 60 * 1000,
-  d: 24 * 60 * 60 * 1000,
-};
-
-function expiresInToMs(value: string): number {
-  const n = parseInt(value, 10);
-  return n * (DURATION_UNIT_MS[value.slice(-1)] ?? 1000);
+function tokenExpiresAt(token: string): Date {
+  const decoded = jwt.decode(token) as JsonWebTokenPayload | null;
+  if (!decoded || typeof decoded.exp !== "number") {
+    throw new Error("Signed token is missing an exp claim");
+  }
+  return new Date(decoded.exp * 1000);
 }
 
 function isJwtPayload(
@@ -60,11 +56,11 @@ export function setAuthCookies(
   config: ReturnType<typeof getConfig>,
 ): void {
   const cookieDomain = getCookieDomain(config);
-  const getCookieOptions = (maxAge: number): CookieOptions => ({
+  const getCookieOptions = (expires: Date): CookieOptions => ({
     httpOnly: true,
     secure: config.NODE_ENV === "production",
     sameSite: "lax",
-    maxAge,
+    expires,
     ...(cookieDomain ? { domain: cookieDomain } : {}),
   });
 
@@ -88,15 +84,11 @@ export function setAuthCookies(
     { ...tokenSignOptions, expiresIn: config.JWT_REFRESH_EXPIRES_IN as SignOptions["expiresIn"] },
   );
 
-  res.cookie(
-    "token",
-    accessToken,
-    getCookieOptions(expiresInToMs(config.JWT_EXPIRES_IN)),
-  );
+  res.cookie("token", accessToken, getCookieOptions(tokenExpiresAt(accessToken)));
   res.cookie(
     "refreshToken",
     refreshToken,
-    getCookieOptions(expiresInToMs(config.JWT_REFRESH_EXPIRES_IN)),
+    getCookieOptions(tokenExpiresAt(refreshToken)),
   );
 }
 

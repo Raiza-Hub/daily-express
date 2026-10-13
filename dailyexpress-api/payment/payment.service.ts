@@ -27,7 +27,7 @@ export class PaymentService {
   }
 
   async resolveReturnUrl() {
-    return `${this.config.FRONTEND_URL}/trip-status`;
+    return `${this.config.FRONTEND_URL}/trip/bookings`;
   }
 
   async handleKoraWebhook(webhook: KoraWebhookPayload, signature?: string) {
