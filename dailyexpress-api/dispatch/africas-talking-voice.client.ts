@@ -53,7 +53,6 @@ export class AfricasTalkingVoiceClient {
           "Content-Type": "application/x-www-form-urlencoded",
           apiKey: config.AFRICASTALKING_API_KEY,
         },
-        timeout: 10_000,
       },
     );
 

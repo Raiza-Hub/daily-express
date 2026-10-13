@@ -4,7 +4,7 @@ import { verifyAttemptToken } from "./callback-token";
 import { tripDispatchService } from "./trip-dispatch.service";
 
 export const voiceCallback: RequestHandler = asyncHandler(async (req, res) => {
-  const body = req.body as Record<string, unknown>;
+  const body = (req.body ?? {}) as Record<string, unknown>;
   const xml = await tripDispatchService.handleVoiceCallback({
     clientRequestId:
       typeof body.clientRequestId === "string" ? body.clientRequestId : undefined,
@@ -25,7 +25,7 @@ export const voiceDtmf: RequestHandler = asyncHandler(async (req, res) => {
     return;
   }
 
-  const body = req.body as Record<string, unknown>;
+  const body = (req.body ?? {}) as Record<string, unknown>;
   const xml = await tripDispatchService.handleDtmf(
     attemptId,
     typeof body.dtmfDigits === "string" ? body.dtmfDigits : undefined,
