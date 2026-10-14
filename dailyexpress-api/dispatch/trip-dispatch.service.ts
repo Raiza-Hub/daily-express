@@ -1030,7 +1030,7 @@ export class TripDispatchService {
   }
 
   private acceptedCallXml(): string {
-    return '<?xml version="1.0" encoding="UTF-8"?><Response><Say>Trip accepted. Thank you.</Say></Response>';
+    return '<?xml version="1.0" encoding="UTF-8"?><Response><Say>Trip accepted. You can view the trip details in your driver calendar dashboard.</Say></Response>';
   }
 
   private closedCallXml(): string {
