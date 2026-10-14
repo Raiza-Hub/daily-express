@@ -1015,7 +1015,13 @@ export class TripDispatchService {
   }
 
   private dtmfPromptXml(attemptId: string, offer: OfferDetails): string {
-    const callbackUrl = `${this.callbackBaseUrl()}/api/v1/dispatch/voice/dtmf/${attemptId}?token=${createAttemptToken(attemptId)}`;
+    const token = createAttemptToken(attemptId);
+    const callbackUrl = `${this.callbackBaseUrl()}/api/v1/dispatch/voice/dtmf/${attemptId}?token=${token}`;
+    logger.info("trip_dispatch.dtmf_prompt", {
+      attemptId,
+      dtmfToken: token,
+      dtmfCallbackUrl: callbackUrl,
+    });
     const prompt = buildOfferPrompt({
       originTitle: offer.originTitle,
       destinationTitle: offer.destinationTitle,
