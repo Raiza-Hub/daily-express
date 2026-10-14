@@ -147,7 +147,7 @@ export function buildOfferPrompt(input: {
     `${when}.`,
     `Pickup is at ${input.meetingPoint}.`,
     `The trip currently pays ${pay}.`,
-    "Press 1 to accept.",
-    "Press 2 to decline.",
+    "To accept, press 1 then the hash key.",
+    "To decline, press 2 then the hash key.",
   ].join(" ");
 }

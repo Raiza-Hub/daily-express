@@ -260,7 +260,9 @@ export class TripDispatchService {
   }
 
   async handleDtmf(attemptId: string, digits: string | undefined): Promise<string> {
-    if (digits === "1" && (await this.acceptAttempt(attemptId))) {
+    const pressed = digits?.match(/[0-9]/)?.[0];
+    logger.info("trip_dispatch.dtmf_received", { attemptId, digits, pressed });
+    if (pressed === "1" && (await this.acceptAttempt(attemptId))) {
       return this.acceptedCallXml();
     }
 
@@ -1060,7 +1062,7 @@ export class TripDispatchService {
       currency: offer.currency,
       capacity: offer.capacity,
     });
-    return `<?xml version="1.0" encoding="UTF-8"?><Response><GetDigits timeout="${GET_DIGITS_TIMEOUT_SECONDS}" numDigits="1" callbackUrl="${callbackUrl}"><Say>${escapeXml(prompt)}</Say></GetDigits><Say>We did not receive your response. Goodbye.</Say></Response>`;
+    return `<?xml version="1.0" encoding="UTF-8"?><Response><GetDigits timeout="${GET_DIGITS_TIMEOUT_SECONDS}" numDigits="1" finishOnKey="#" callbackUrl="${callbackUrl}"><Say>${escapeXml(prompt)}</Say></GetDigits><Say>We did not receive your response. Goodbye.</Say></Response>`;
   }
 
   private acceptedCallXml(): string {
