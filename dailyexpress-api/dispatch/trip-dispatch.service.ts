@@ -25,7 +25,6 @@ import {
   type TripDispatchRecord,
   type TripRecord,
 } from "../db/index";
-import { getConfig } from "../config/index";
 import { getRouteServiceTimeZone } from "../utils/db-datetime";
 import { logger } from "../utils/logger";
 import { jobService } from "../workers/job.service";
@@ -35,7 +34,6 @@ import {
   africasTalkingVoiceClient,
   AfricasTalkingVoiceClient,
 } from "./africas-talking-voice.client";
-import { createAttemptToken } from "./callback-token";
 import {
   buildOfferPrompt,
   classifyCallOutcome,
@@ -92,7 +90,6 @@ function localityMatches(column: SQLWrapper, locality: string): SQL {
 
 const SEARCH_WINDOW_MS = 30 * 60 * 1_000;
 const RECHECK_INTERVAL_MS = 120 * 1_000;
-const GET_DIGITS_TIMEOUT_SECONDS = 20;
 const DAY_MS = 24 * 60 * 60 * 1_000;
 const RANKING_AUDIT_LIMIT = 5;
 const ACTIVE_ATTEMPT_STATUSES: DriverDispatchAttemptRecord["status"][] = [
@@ -256,12 +253,12 @@ export class TripDispatchService {
     });
 
     if (!prompted) return this.closedCallXml();
-    return this.dtmfPromptXml(prompted.attempt.id, prompted.offer);
+    return this.dtmfPromptXml(prompted.offer);
   }
 
   async handleDtmf(attemptId: string, digits: string | undefined): Promise<string> {
     const pressed = digits?.match(/[0-9]/)?.[0];
-    logger.info("trip_dispatch.dtmf_received", { attemptId, digits, pressed });
+    logger.info("trip_dispatch.dtmf_received", { attemptId, pressed });
     if (pressed === "1" && (await this.acceptAttempt(attemptId))) {
       return this.acceptedCallXml();
     }
@@ -384,7 +381,6 @@ export class TripDispatchService {
       await this.voiceClient.call({
         to: attempt.phone,
         clientRequestId: attempt.clientRequestId,
-        callbackUrl: this.voiceCallbackUrl(),
       });
       logger.info("trip_dispatch.call_submitted", { attemptId: attempt.id });
     } catch (error) {
@@ -1032,26 +1028,7 @@ export class TripDispatchService {
       .where(eq(tripDispatch.id, dispatchId));
   }
 
-  private callbackBaseUrl(): string {
-    const baseUrl = getConfig().AFRICASTALKING_CALLBACK_BASE_URL;
-    if (!baseUrl) {
-      throw new Error("Africa's Talking callback URL is not configured");
-    }
-    return baseUrl.replace(/\/$/, "");
-  }
-
-  private voiceCallbackUrl(): string {
-    return `${this.callbackBaseUrl()}/api/v1/dispatch/voice/callback`;
-  }
-
-  private dtmfPromptXml(attemptId: string, offer: OfferDetails): string {
-    const token = createAttemptToken(attemptId);
-    const callbackUrl = `${this.callbackBaseUrl()}/api/v1/dispatch/voice/dtmf/${attemptId}?token=${token}`;
-    logger.info("trip_dispatch.dtmf_prompt", {
-      attemptId,
-      dtmfToken: token,
-      dtmfCallbackUrl: callbackUrl,
-    });
+  private dtmfPromptXml(offer: OfferDetails): string {
     const prompt = buildOfferPrompt({
       originTitle: offer.originTitle,
       destinationTitle: offer.destinationTitle,
@@ -1062,7 +1039,7 @@ export class TripDispatchService {
       currency: offer.currency,
       capacity: offer.capacity,
     });
-    return `<?xml version="1.0" encoding="UTF-8"?><Response><GetDigits timeout="${GET_DIGITS_TIMEOUT_SECONDS}" numDigits="1" finishOnKey="#" callbackUrl="${callbackUrl}"><Say>${escapeXml(prompt)}</Say></GetDigits><Say>We did not receive your response. Goodbye.</Say></Response>`;
+    return `<?xml version="1.0" encoding="UTF-8"?><Response><GetDigits numDigits="1"><Say>${escapeXml(prompt)}</Say></GetDigits><Say>We did not receive your response. Goodbye.</Say></Response>`;
   }
 
   private acceptedCallXml(): string {

@@ -20,11 +20,7 @@ function toE164(phone: string): string {
 }
 
 export class AfricasTalkingVoiceClient {
-  async call(input: {
-    to: string;
-    clientRequestId: string;
-    callbackUrl: string;
-  }): Promise<void> {
+  async call(input: { to: string; clientRequestId: string }): Promise<void> {
     const config = getConfig();
     if (
       !config.AFRICASTALKING_USERNAME ||
@@ -41,7 +37,6 @@ export class AfricasTalkingVoiceClient {
       from: config.AFRICASTALKING_VOICE_NUMBER,
       to,
       clientRequestId: input.clientRequestId,
-      voiceCallBackUrl: input.callbackUrl,
     });
 
     const response = await axios.post<CallResponse>(

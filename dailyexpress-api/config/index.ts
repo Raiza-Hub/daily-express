@@ -100,9 +100,6 @@ const envSchema = z.object({
   AFRICASTALKING_API_KEY: optionalString(),
   AFRICASTALKING_VOICE_NUMBER: optionalString(),
   AFRICASTALKING_VOICE_BASE_URL: optionalUrl(),
-  AFRICASTALKING_CALLBACK_BASE_URL: optionalUrl(),
-  AFRICASTALKING_CALLBACK_SECRET: optionalString(),
-
 
   // Route
   ROUTE_SERVICE_TIMEZONE: z.string().min(1),
