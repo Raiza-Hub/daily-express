@@ -119,6 +119,7 @@ export type VoiceCallbackPayload = {
   status?: string;
   hangupCause?: string;
   direction?: string;
+  dtmfDigits?: string;
 };
 
 export class TripDispatchService {
@@ -196,8 +197,21 @@ export class TripDispatchService {
   }
 
   async handleVoiceCallback(payload: VoiceCallbackPayload): Promise<string> {
+    logger.info("trip_dispatch.voice_callback", {
+      clientRequestId: payload.clientRequestId,
+      isActive: payload.isActive,
+      status: payload.status,
+      hangupCause: payload.hangupCause,
+      direction: payload.direction,
+      dtmfDigits: payload.dtmfDigits,
+    });
+
     if (payload.direction === "Inbound") {
       return this.rejectedCallXml();
+    }
+
+    if (payload.dtmfDigits !== undefined) {
+      return this.handleCallbackDtmf(payload);
     }
 
     if (payload.isActive !== "1") {
@@ -252,6 +266,20 @@ export class TripDispatchService {
 
     await this.resolveAttempt(attemptId, "declined");
     return this.closedCallXml();
+  }
+
+  private async handleCallbackDtmf(
+    payload: VoiceCallbackPayload,
+  ): Promise<string> {
+    const clientRequestId = payload.clientRequestId;
+    if (!clientRequestId) return this.closedCallXml();
+
+    const located = await db.transaction(async (tx) =>
+      this.locateAttemptByClientRequestId(tx, clientRequestId),
+    );
+    if (!located) return this.closedCallXml();
+
+    return this.handleDtmf(located.id, payload.dtmfDigits);
   }
 
   private async advance(tripId: string): Promise<void> {
