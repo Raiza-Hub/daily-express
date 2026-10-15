@@ -154,7 +154,7 @@ export const passengerFeatures: Step[] = [
     {
         title: "We Find Your Driver",
         description:
-            "We verify every driver's identity and bank account before they can take a trip, then start looking the moment your booking is paid for.",
+            "We verify every driver's identity before they can take a trip, then start looking once your booking is paid.",
         colorTheme: "orange",
     },
     {
