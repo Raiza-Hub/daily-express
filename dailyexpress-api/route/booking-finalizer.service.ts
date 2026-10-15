@@ -1,11 +1,10 @@
 import { renderEmail, getEmailSubject } from "@repo/email";
-import { and, eq, sql } from "drizzle-orm";
+import { and, eq } from "drizzle-orm";
 import { db, type DbTransaction } from "../db/connection";
 import {
   booking,
   origin,
   destination,
-  trip,
   TRIP_CAPACITY,
   type BookingRecord,
   type OriginRecord,
@@ -139,33 +138,6 @@ export class BookingFinalizerService {
       passengerCount: number;
     },
   ): Promise<string> {
-    const slotKey = `${input.originId}::${input.destinationId}::${input.dateKey}::${input.departureTime}`;
-    await tx.execute(sql`select pg_advisory_xact_lock(hashtextextended(${slotKey}, 0))`);
-
-    const trips = await this.repo.findTripsForSlot(
-      tx,
-      input.originId,
-      input.destinationId,
-      input.dateKey,
-      input.departureTime,
-    );
-
-    const fit = trips.find((trip) => trip.bookedSeats + input.passengerCount <= trip.capacity);
-    if (fit) {
-      await tx
-        .update(booking)
-        .set({ tripId: fit.id, updatedAt: new Date() })
-        .where(eq(booking.id, input.bookingId));
-      await tx
-        .update(trip)
-        .set({
-          bookedSeats: sql`${trip.bookedSeats} + ${input.passengerCount}`,
-          updatedAt: new Date(),
-        })
-        .where(eq(trip.id, fit.id));
-      return fit.id;
-    }
-
     const createdTrip = await this.createSlotTrip(tx, {
       originId: input.originId,
       destinationId: input.destinationId,

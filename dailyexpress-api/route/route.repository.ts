@@ -1,4 +1,4 @@
-import { and, asc, desc, eq, gte, inArray, lt, lte, sql } from "drizzle-orm";
+import { and, asc, desc, eq, gte, inArray, lte, sql } from "drizzle-orm";
 import { db } from "../db/connection";
 import {
   booking,
@@ -22,7 +22,6 @@ import {
   getRouteServiceTimeZone,
   scheduledAtSql,
 } from "../utils/db-datetime";
-import { addDaysToDateKey } from "../utils/route";
 
 type RouteTransaction = DbTransaction;
 
@@ -161,33 +160,6 @@ export class RouteRepository {
       .update(destination)
       .set({ status: "inactive", updatedAt: new Date() })
       .where(eq(destination.id, id));
-  }
-
-  async findTripsForSlot(
-    tx: RouteTransaction,
-    originId: string,
-    destinationId: string,
-    dateKey: string,
-    departureTime: string,
-  ): Promise<TripRecord[]> {
-    return tx
-      .select()
-      .from(trip)
-      .where(
-        and(
-          eq(trip.originId, originId),
-          eq(trip.destinationId, destinationId),
-          gte(trip.date, dateKey),
-          lt(trip.date, addDaysToDateKey(dateKey, 1)),
-          eq(trip.departureTime, departureTime),
-          eq(trip.status, "awaiting_driver"),
-        ),
-      )
-      .orderBy(
-        asc(sql`${trip.capacity} - ${trip.bookedSeats}`),
-        asc(trip.createdAt),
-      )
-      .for("update");
   }
 
   async createTrip(
