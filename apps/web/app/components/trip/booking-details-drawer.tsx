@@ -17,10 +17,7 @@ import { PassengerSection } from "./passenger-section";
 import { getInitials } from "../user/settings-shared";
 import { formatPhoneDisplay } from "~/lib/phone";
 import { formatTripTime } from "~/lib/trip";
-import {
-  deriveTripBookingStatus,
-  remainingPassengerCopy,
-} from "~/lib/trip-bookings";
+import { deriveTripBookingStatus } from "~/lib/trip-bookings";
 import Image from "next/image";
 
 interface BookingDetailsDrawerProps {
@@ -52,10 +49,6 @@ function BookingDetailsDrawer({
   const status = deriveTripBookingStatus(booking.refundStatus);
   const totalPaid = booking.totalAmount + booking.totalFee;
   const driver = trip?.driver ?? null;
-  const remainingCopy =
-    status === "confirmed" && trip
-      ? remainingPassengerCopy(trip.capacity, trip.bookedSeats)
-      : null;
   const driverName = driver
     ? `${driver.firstName} ${driver.lastName}`.trim()
     : "";
@@ -78,11 +71,6 @@ function BookingDetailsDrawer({
             <div className="flex flex-col gap-6">
               <div className="flex flex-col gap-2">
                 <BookingStatusBadge status={status} />
-                {remainingCopy ? (
-                  <p className="text-sm text-muted-foreground">
-                    {remainingCopy}
-                  </p>
-                ) : null}
               </div>
 
               <div className="flex items-center justify-between">

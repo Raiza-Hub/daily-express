@@ -17,7 +17,7 @@ import {
 import type { OriginDetails, PassengerInput } from "@shared/types";
 import {
   PassengerDrawer,
-  MAX_PASSENGERS,
+  REQUIRED_PASSENGERS,
   type TripPassenger,
 } from "./passenger-drawer";
 import { PassengerListItem } from "./passenger-list-item";
@@ -62,7 +62,7 @@ export default function NewTripBooking({
     },
   });
 
-  const atLimit = passengers.length >= MAX_PASSENGERS;
+  const atLimit = passengers.length >= REQUIRED_PASSENGERS;
 
   const handleAddPassenger = () => {
     setEditingId(null);
@@ -133,18 +133,19 @@ export default function NewTripBooking({
   };
 
   const luggageCount = passengers.filter((p) => p.carriesLuggage).length;
-  const fareTotal =
-    passengers.length *
-    ((selectedOriginData?.price ?? 0) + (selectedOriginData?.fee ?? 0));
+  const unitFare = selectedOriginData?.price ?? 0;
+  const unitFee = selectedOriginData?.fee ?? 0;
+  const fareTotal = REQUIRED_PASSENGERS * unitFare;
+  const feeTotal = REQUIRED_PASSENGERS * unitFee;
   const luggageTotal = luggageCount * (selectedOriginData?.luggageFee ?? 0);
-  const total = fareTotal + luggageTotal;
+  const total = fareTotal + feeTotal + luggageTotal;
 
   const canConfirm =
     selectedOrigin !== "" &&
     selectedDestinationId !== "" &&
     effectiveDateKey !== "" &&
     selectedTime !== "" &&
-    passengers.length >= 1 &&
+    passengers.length === REQUIRED_PASSENGERS &&
     !drawerOpen &&
     !createCheckout.isPending &&
     !isRedirecting;
@@ -321,9 +322,7 @@ export default function NewTripBooking({
             })}
           </div>
         ) : (
-          <p className="mt-4 text-sm text-muted-foreground">
-            Select an origin first.
-          </p>
+          <p className="mt-4 text-sm">Select an origin first.</p>
         )}
       </div>
 
@@ -337,8 +336,14 @@ export default function NewTripBooking({
       <div className="max-w-md">
         <SectionLabel>Passengers</SectionLabel>
         <p className="mt-2 text-sm text-muted-foreground">
-          Maximum of {MAX_PASSENGERS} passengers per booking.
+          A booking covers all {REQUIRED_PASSENGERS} seats. Add all{" "}
+          {REQUIRED_PASSENGERS} passengers to continue.
         </p>
+        {passengers.length === REQUIRED_PASSENGERS && (
+          <p className="mt-2 text-sm font-medium text-foreground">
+            All {REQUIRED_PASSENGERS} passengers added.
+          </p>
+        )}
 
         {passengers.length > 0 && (
           <ul className="mt-4 flex flex-col gap-3">
@@ -360,7 +365,7 @@ export default function NewTripBooking({
           className="mt-4 flex w-full cursor-pointer items-center justify-center gap-2 rounded-full border border-neutral-300 px-6 py-3 font-semibold text-sm text-neutral-900 transition-colors hover:bg-neutral-50 disabled:cursor-not-allowed disabled:opacity-50"
         >
           <Plus className="h-4 w-4" />
-          {atLimit ? "Maximum reached" : "Add passenger"}
+          {atLimit ? `All ${REQUIRED_PASSENGERS} seats filled` : "Add passenger"}
         </button>
       </div>
 

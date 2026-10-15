@@ -148,19 +148,19 @@ export const passengerFeatures: Step[] = [
     {
         title: "Book & Pay",
         description:
-            "Confirm your seat and pay securely. Your fare is locked in the moment you book, with no hidden extras.",
+            "Add your four passengers and pay. The total is fixed before you confirm, with nothing added later.",
         colorTheme: "purple",
     },
     {
-        title: "Get Matched",
+        title: "We Find Your Driver",
         description:
-            "We find you a verified driver heading your way and share their details as soon as the trip is set.",
+            "We verify every driver's identity and bank account before they can take a trip, then start looking the moment your booking is paid for.",
         colorTheme: "orange",
     },
     {
-        title: "Ride & Track",
+        title: "Go, or Get Refunded",
         description:
-            "Follow your trip in real time and get notified on arrival. Sit back and enjoy the ride.",
+            "The ride only leaves once a driver is confirmed. If none is, your fare comes back automatically.",
         colorTheme: "blue",
     },
 ];
@@ -181,7 +181,7 @@ export const driverFeatures: Step[] = [
     {
         title: "Accept Trip Offers",
         description:
-            "We match you to trips on your routes. Accept with a tap when we call.",
+            "We call you when a trip near you needs a driver. Press 1 to accept, 2 to decline.",
         colorTheme: "purple",
     },
     {

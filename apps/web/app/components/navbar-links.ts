@@ -15,7 +15,7 @@ export interface NavLink {
 
 export const MARKETING_NAV_LINKS: readonly NavLink[] = [
     { href: "/#how-it-works", label: "How It Works", icon: "sparkles" },
-    { href: "/#faq", label: "About Us", icon: "info" },
+    { href: "/about", label: "About Us", icon: "info" },
     { href: "/#faq", label: "FAQ", icon: "helpCircle" },
 ];
 
