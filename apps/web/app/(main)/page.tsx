@@ -3,8 +3,10 @@ import Link from "next/link";
 import FaqSection from "~/components/FaqSection";
 import HowItWorksSection from "~/components/HowItWorksSection";
 
+import { SITE_NAME, TAGLINE } from "~/lib/brand";
+
 export const metadata: Metadata = {
-  title: { absolute: "Beckōn" },
+  title: { absolute: SITE_NAME },
 };
 
 export default function Home() {
@@ -12,7 +14,7 @@ export default function Home() {
     <div className="w-full">
       <section className="flex flex-col items-center text-center py-16 md:py-28">
         <h1 className="text-5xl md:text-6xl font-bold tracking-tight mb-6">
-          Your ride, at your beck and call.
+          {TAGLINE}
         </h1>
         <p className="text-neutral-500 text-lg max-w-xl mb-8">
           Book your next ride in seconds. Fast, reliable, and always at your

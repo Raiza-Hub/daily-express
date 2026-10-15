@@ -148,7 +148,7 @@ export const passengerFeatures: Step[] = [
     {
         title: "Book & Pay",
         description:
-            "Confirm your seat and pay securely. Your fare is locked in the moment you book — no hidden extras.",
+            "Confirm your seat and pay securely. Your fare is locked in the moment you book, with no hidden extras.",
         colorTheme: "purple",
     },
     {

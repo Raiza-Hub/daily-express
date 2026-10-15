@@ -29,7 +29,7 @@ export default function HowItWorksSection() {
                             setAudience(next);
                         }
                     }}
-                    aria-label="Choose how Beckōn works for you"
+                    aria-label="Choose how Daily Express works for you"
                     className="order-3 flex w-fit rounded-full bg-neutral-100 p-1 md:order-1 md:col-span-2 md:col-start-1 md:row-start-1 md:justify-self-center"
                 >
                     {AUDIENCE_OPTIONS.map((option) => (
@@ -44,7 +44,7 @@ export default function HowItWorksSection() {
                 </ToggleGroup>
 
                 <h2 className="order-2 text-center text-4xl font-bold tracking-tight md:order-2 md:col-start-1 md:row-start-2 md:justify-self-start md:text-left md:text-5xl">
-                    How Beckōn Works
+                    How Daily Express Works
                 </h2>
                 <Image
                     src="/how-it-works.png"

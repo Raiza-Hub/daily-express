@@ -18,7 +18,7 @@ const Page = () => {
                         Sign in or sign up
                     </h1>
                     <p className="text-sm text-muted-foreground">
-                        Welcome to Beckōn
+                        Welcome to Daily Express
                     </p>
                 </div>
 
