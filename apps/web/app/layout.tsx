@@ -3,6 +3,7 @@ import { Onest } from "next/font/google";
 import { NuqsAdapter } from "nuqs/adapters/next/app";
 import { QueryProvider } from "@repo/api";
 import { Toaster } from "sonner";
+import { SITE_NAME } from "~/lib/brand";
 import "./globals.css";
 
 const onest = Onest({
@@ -14,11 +15,11 @@ export const metadata: Metadata = {
   metadataBase: new URL(
     process.env.NEXT_PUBLIC_WEB_APP_URL ?? "https://dailyexpress.app",
   ),
-  title: { template: "%s | Beckōn", default: "Beckōn" },
+  title: { template: `%s | ${SITE_NAME}`, default: SITE_NAME },
   description: "Get there comfortably, book your trip in seconds.",
   openGraph: {
     type: "website",
-    siteName: "Beckōn",
+    siteName: SITE_NAME,
     locale: "en_US",
   },
   twitter: {

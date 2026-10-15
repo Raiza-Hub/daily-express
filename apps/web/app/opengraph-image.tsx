@@ -1,8 +1,9 @@
 import { readFile } from "node:fs/promises";
 import { join } from "node:path";
 import { ImageResponse } from "next/og";
+import { SITE_NAME } from "~/lib/brand";
 
-export const alt = "Beckōn — Get there comfortably, book your trip in seconds.";
+export const alt = `${SITE_NAME}: get there comfortably, book your trip in seconds.`;
 export const size = { width: 1200, height: 630 };
 export const contentType = "image/png";
 
@@ -33,9 +34,9 @@ export default function Image() {
                         background: "#f4f4f5",
                     }}
                 >
-                    <img src={logoSrc} width={320} height={240} alt="Beckōn" />
+                    <img src={logoSrc} width={320} height={240} alt={SITE_NAME} />
                 </div>
-                <div style={{ fontSize: 88, fontWeight: 700 }}>Beckōn</div>
+                <div style={{ fontSize: 88, fontWeight: 700 }}>{SITE_NAME}</div>
                 <div style={{ fontSize: 36, color: "#52525b" }}>
                     Get there comfortably, book your trip in seconds.
                 </div>

@@ -26,7 +26,7 @@ const DriverSignupPage = async () => {
                 <div className="flex flex-col items-center space-y-2 text-center">
                     <AuthLogo />
                     <h1 className="text-3xl font-semibold tracking-tight sm:text-4xl">
-                        Join Beckōn as a driver
+                        Join Daily Express as a driver
                     </h1>
                     <p className="text-sm text-muted-foreground">
                         Complete your profile to start accepting bookings.

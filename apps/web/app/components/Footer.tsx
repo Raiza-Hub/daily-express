@@ -1,10 +1,12 @@
+import { LEGAL_ENTITY, SUPPORT_EMAIL } from "~/lib/brand";
+
 export function Footer() {
     const year = new Date().getFullYear();
 
     return (
         <footer className="border-t border-neutral-100 bg-white px-6">
             <div className="max-w-7xl mx-auto flex flex-col md:flex-row items-center justify-between gap-4 py-5">
-                <p className="text-sm text-neutral-500">© {year} Beckōn, Inc.</p>
+                <p className="text-sm text-neutral-500">© {year} {LEGAL_ENTITY}</p>
                 <ul className="flex items-center gap-6">
                     <li>
                         <a
@@ -24,7 +26,7 @@ export function Footer() {
                     </li>
                     <li>
                         <a
-                            href="mailto:help@beckon.taxi"
+                            href={`mailto:${SUPPORT_EMAIL}`}
                             className="text-sm text-neutral-500 hover:text-neutral-800 transition-colors"
                         >
                             Support

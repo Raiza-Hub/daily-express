@@ -19,12 +19,12 @@ const DEFAULT_FAQS: FaqItem[] = [
     {
         question: "How is pricing calculated?",
         answer:
-            "Fares are based on the route you pick and are shown upfront before you confirm your booking — no surprises.",
+            "Fares are based on the route you pick and are shown upfront before you confirm your booking, with no surprises.",
     },
     {
         question: "Are drivers verified?",
         answer:
-            "Yes. Every driver undergoes identity and bank verification before they can accept rides on Beckōn.",
+            "Yes. Every driver undergoes identity and bank verification before they can accept rides on Daily Express.",
     },
     {
         question: "Can I cancel or change my ride?",

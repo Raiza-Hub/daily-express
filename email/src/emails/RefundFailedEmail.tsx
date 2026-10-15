@@ -261,7 +261,7 @@ RefundFailedEmail.PreviewProps = {
   currency: "NGN",
   productName: "Lagos to Abuja Trip",
   failureReason: "Bank reversal timed out",
-  supportEmail: "support@dailyexpress.com",
+  supportEmail: "support@dailyexpress.app",
   supportPhone: "+234 9063611541",
 } as RefundFailedEmailProps;
 

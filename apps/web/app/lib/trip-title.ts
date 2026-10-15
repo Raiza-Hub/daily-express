@@ -1,4 +1,4 @@
-export const SITE_NAME = "Beckōn";
+import { SITE_NAME } from "./brand";
 
 export function tripTitle(originTitle?: string): string {
   return originTitle

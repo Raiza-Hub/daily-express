@@ -3,6 +3,7 @@ import Image from "next/image";
 import { Mail } from "lucide-react";
 import { redirect } from "next/navigation";
 import { getDriverProfileState } from "~/lib/driver-session";
+import { SUPPORT_EMAIL } from "~/lib/brand";
 
 export const metadata: Metadata = {
     title: "Account deactivated",
@@ -32,7 +33,7 @@ export default async function DriverDeactivatedPage() {
                 support and we&apos;ll get you back on the road.
             </p>
             <a
-                href="mailto:help@beckon.taxi?subject=Driver%20account%20reactivation"
+                href={`mailto:${SUPPORT_EMAIL}?subject=Driver%20account%20reactivation`}
                 className="inline-flex items-center justify-center gap-2 rounded-full bg-neutral-900 px-6 py-3 text-sm font-semibold text-white transition-colors hover:bg-neutral-800 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ring"
             >
                 <Mail aria-hidden="true" className="h-4 w-4" />
