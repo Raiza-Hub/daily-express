@@ -1,6 +1,7 @@
 import { asyncHandler } from "@shared/middleware";
 import { createSuccessResponse } from "@shared/utils";
 import type { Request, RequestHandler, Response } from "express";
+import { TRIP_CAPACITY } from "../db/index";
 import { sendErrorResponse } from "../middleware/apiResponses";
 import { getAuthenticatedUser } from "../middleware/auth";
 import { timeAsync } from "../utils/timing";
@@ -184,11 +185,11 @@ export const createCheckoutBooking: RequestHandler = asyncHandler(
         code: "MISSING_SELECTED_TIME",
       });
     }
-    if (!Array.isArray(passengers) || passengers.length < 1 || passengers.length > 4) {
+    if (!Array.isArray(passengers) || passengers.length !== TRIP_CAPACITY) {
       return sendErrorResponse(
         res,
         400,
-        "Passengers are required (1 to 4 travelers).",
+        `A booking must include all ${TRIP_CAPACITY} passengers.`,
         { code: "INVALID_PASSENGERS" },
       );
     }
