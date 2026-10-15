@@ -26,7 +26,9 @@ export interface TripPassenger extends PassengerInput {
   id: string;
 }
 
-export const MAX_PASSENGERS = 4;
+// Must match TRIP_CAPACITY in dailyexpress-api/db/route-schema.ts, which the
+// checkout endpoint enforces. Changing one without the other breaks bookings.
+export const REQUIRED_PASSENGERS = 4;
 
 const EMAIL_PATTERN = /^\S+@\S+\.\S+$/;
 

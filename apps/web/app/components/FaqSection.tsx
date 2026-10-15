@@ -14,12 +14,12 @@ const DEFAULT_FAQS: FaqItem[] = [
     {
         question: "How do I book a ride?",
         answer:
-            "Select your pickup location and destination, pick a date, and confirm. Your driver will be matched and details shared instantly.",
+            "Select your pickup location and destination, pick a date and a departure time, and add your four passengers. We look for a verified driver once your booking is paid for.",
     },
     {
         question: "How is pricing calculated?",
         answer:
-            "Fares are based on the route you pick and are shown upfront before you confirm your booking, with no surprises.",
+            "Fares are based on the route you pick, and a booking covers all four seats. Your total is shown upfront before you confirm, with no surprises.",
     },
     {
         question: "Are drivers verified?",
@@ -29,7 +29,7 @@ const DEFAULT_FAQS: FaqItem[] = [
     {
         question: "Can I cancel or change my ride?",
         answer:
-            "You can cancel or withdraw from your trip before your driver departs, and refunds are handled straight back to your account.",
+            "There is no self service cancellation in the app yet. Tell us before the departure time and we will look at what we can do. If we cancel the trip, your fare goes back automatically. Service fees are not refunded.",
     },
     {
         question: "What if my train is delayed?",

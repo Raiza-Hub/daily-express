@@ -33,23 +33,6 @@ export function deriveTripBookingStatus(
   }
 }
 
-export function remainingPassengerCount(
-  capacity: number,
-  bookedSeats: number,
-): number {
-  return Math.max(capacity - bookedSeats, 0);
-}
-
-export function remainingPassengerCopy(
-  capacity: number,
-  bookedSeats: number,
-): string | null {
-  const remaining = remainingPassengerCount(capacity, bookedSeats);
-  if (remaining === 0) return null;
-  const noun = remaining === 1 ? "passenger" : "passengers";
-  return `${remaining} ${noun} before we dispatch a driver`;
-}
-
 function originImageKey(title: string): string {
   return title
     .toLowerCase()
