@@ -35,10 +35,11 @@ import {
   AfricasTalkingVoiceClient,
 } from "./africas-talking-voice.client";
 import {
-  buildOfferPrompt,
+  buildOfferPromptLines,
   classifyCallOutcome,
   MAX_CALL_RETRIES,
   nextCallRetryAt,
+  OFFER_VOICE,
   type CallOutcome,
 } from "./dispatch-policy";
 import {
@@ -1029,7 +1030,7 @@ export class TripDispatchService {
   }
 
   private dtmfPromptXml(offer: OfferDetails): string {
-    const prompt = buildOfferPrompt({
+    const lines = buildOfferPromptLines({
       originTitle: offer.originTitle,
       destinationTitle: offer.destinationTitle,
       meetingPoint: offer.meetingPoint,
@@ -1039,15 +1040,18 @@ export class TripDispatchService {
       currency: offer.currency,
       capacity: offer.capacity,
     });
-    return `<?xml version="1.0" encoding="UTF-8"?><Response><GetDigits numDigits="1"><Say>${escapeXml(prompt)}</Say></GetDigits><Say>We did not receive your response. Goodbye.</Say></Response>`;
+    const speech = lines
+      .map((line) => `<s>${escapeXml(line)}</s>`)
+      .join('<break time="400ms"/>');
+    return `<?xml version="1.0" encoding="UTF-8"?><Response><GetDigits numDigits="1"><Say voice="${OFFER_VOICE}" playBeep="true"><speak><prosody rate="90%">${speech}</prosody></speak></Say></GetDigits><Say voice="${OFFER_VOICE}">We did not receive your response. Goodbye.</Say></Response>`;
   }
 
   private acceptedCallXml(): string {
-    return '<?xml version="1.0" encoding="UTF-8"?><Response><Say>Trip accepted. You can view the trip details in your driver calendar dashboard.</Say></Response>';
+    return `<?xml version="1.0" encoding="UTF-8"?><Response><Say voice="${OFFER_VOICE}">Trip accepted. You can view the trip details in your driver calendar dashboard.</Say></Response>`;
   }
 
   private closedCallXml(): string {
-    return '<?xml version="1.0" encoding="UTF-8"?><Response><Say>This trip is no longer available. Goodbye.</Say></Response>';
+    return `<?xml version="1.0" encoding="UTF-8"?><Response><Say voice="${OFFER_VOICE}">This trip is no longer available. Goodbye.</Say></Response>`;
   }
 
   private rejectedCallXml(): string {

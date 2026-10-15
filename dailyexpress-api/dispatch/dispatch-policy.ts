@@ -127,7 +127,9 @@ export function formatOfferAmount(amount: number, currency: string): string {
   return `${grouped} ${CURRENCY_NAMES[currency.toUpperCase()] ?? currency}`;
 }
 
-export function buildOfferPrompt(input: {
+export const OFFER_VOICE = "en-US-Wavenet-D";
+
+export function buildOfferPromptLines(input: {
   originTitle: string;
   destinationTitle: string;
   meetingPoint: string;
@@ -136,7 +138,7 @@ export function buildOfferPrompt(input: {
   amount: number;
   currency: string;
   capacity: number;
-}): string {
+}): string[] {
   const route = `${input.originTitle} to ${input.destinationTitle}`;
   const when = `${formatTripDate(input.tripDate)} at ${formatDepartureTime(input.departureTime)}`;
   const pay = `${formatOfferAmount(input.amount, input.currency)} for ${input.capacity} seats`;
@@ -149,5 +151,5 @@ export function buildOfferPrompt(input: {
     `The trip currently pays ${pay}.`,
     "To accept, press 1.",
     "To decline, press 2.",
-  ].join(" ");
+  ];
 }
