@@ -462,11 +462,8 @@ export class TripDispatchService {
       if (!located) return null;
 
       const dispatch = await this.lockDispatch(tx, located.dispatchId);
-      const lockedTrip = dispatch
-        ? await this.lockTrip(tx, dispatch.tripId)
-        : null;
       const attempt = await this.lockAttempt(tx, attemptId);
-      if (!dispatch || !lockedTrip || !attempt) return null;
+      if (!dispatch || !attempt) return null;
       if (!ACTIVE_ATTEMPT_STATUSES.includes(attempt.status)) return null;
       if (dispatch.status !== "searching") return null;
 
@@ -505,9 +502,7 @@ export class TripDispatchService {
   private async guard(tripId: string): Promise<void> {
     const shouldCancel = await db.transaction(async (tx) => {
       const dispatch = await this.lockDispatchByTrip(tx, tripId);
-      const lockedTrip = dispatch ? await this.lockTrip(tx, dispatch.tripId) : null;
-      if (!dispatch || !lockedTrip) return false;
-      if (lockedTrip.driverId) return false;
+      if (!dispatch) return false;
       if (dispatch.status === "assigned" || dispatch.status === "cancelled") {
         return false;
       }
