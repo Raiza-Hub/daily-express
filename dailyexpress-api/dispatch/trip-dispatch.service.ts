@@ -25,7 +25,6 @@ import {
   type TripDispatchRecord,
   type TripRecord,
 } from "../db/index";
-import { getRouteServiceTimeZone } from "../utils/db-datetime";
 import { logger } from "../utils/logger";
 import { jobService } from "../workers/job.service";
 import type { TripDispatchJobData } from "../workers/boss";
@@ -64,11 +63,6 @@ type OfferDetails = {
   capacity: number;
   amount: number;
   currency: string;
-};
-
-type LockedTrip = {
-  record: TripRecord;
-  departureAt: Date;
 };
 
 function escapeXml(value: string): string {
@@ -140,27 +134,22 @@ export class TripDispatchService {
     if (!dispatch) return;
 
     const lockedTrip = await this.lockTrip(tx, tripId);
-    if (!lockedTrip || lockedTrip.record.status !== "awaiting_driver") return;
+    if (!lockedTrip || lockedTrip.status !== "awaiting_driver") return;
 
     const now = new Date();
     const shouldOpen =
-      lockedTrip.record.bookedSeats >= lockedTrip.record.capacity &&
-      !lockedTrip.record.driverId &&
+      lockedTrip.bookedSeats >= lockedTrip.capacity &&
+      !lockedTrip.driverId &&
       dispatch.status === "pending";
     const deadlineAt = shouldOpen
       ? new Date(now.getTime() + SEARCH_WINDOW_MS)
       : dispatch.deadlineAt;
 
-    if (created || shouldOpen) {
+    if ((created || shouldOpen) && deadlineAt) {
       await jobService.enqueueTripDispatch(
         tx,
         { action: "guard", tripId },
-        {
-          startAfter: this.searchStopAt(
-            { ...dispatch, deadlineAt },
-            lockedTrip.departureAt,
-          ),
-        },
+        { startAfter: deadlineAt },
       );
     }
 
@@ -175,7 +164,7 @@ export class TripDispatchService {
       });
       logger.info("trip_dispatch.opened", {
         tripId,
-        bookedSeats: lockedTrip.record.bookedSeats,
+        bookedSeats: lockedTrip.bookedSeats,
       });
     }
   }
@@ -232,12 +221,12 @@ export class TripDispatchService {
         : null;
       const attempt = await this.lockAttempt(tx, located.id);
       if (!dispatch || !lockedTrip || !attempt) return null;
-      if (dispatch.status !== "searching" || lockedTrip.record.driverId) {
+      if (dispatch.status !== "searching" || lockedTrip.driverId) {
         return null;
       }
       if (!ACTIVE_ATTEMPT_STATUSES.includes(attempt.status)) return null;
       if (attempt.status === "awaiting_dtmf") {
-        return { attempt, offer: await this.getOfferDetails(tx, lockedTrip.record) };
+        return { attempt, offer: await this.getOfferDetails(tx, lockedTrip) };
       }
 
       const [updated] = await tx
@@ -249,7 +238,7 @@ export class TripDispatchService {
 
       return {
         attempt: updated,
-        offer: await this.getOfferDetails(tx, lockedTrip.record),
+        offer: await this.getOfferDetails(tx, lockedTrip),
       };
     });
 
@@ -288,25 +277,25 @@ export class TripDispatchService {
       const lockedTrip = dispatch ? await this.lockTrip(tx, dispatch.tripId) : null;
       if (!dispatch || !lockedTrip || dispatch.status !== "searching") return null;
 
-      if (lockedTrip.record.driverId) {
+      if (lockedTrip.driverId) {
         await this.markDispatchAssigned(tx, dispatch.id);
         return null;
       }
-      if (this.stopReached(dispatch, lockedTrip.departureAt)) return null;
+      if (this.searchExpired(dispatch)) return null;
 
       const activeAttempt = await this.findActiveAttemptForDispatch(
         tx,
         dispatch.id,
       );
       if (activeAttempt) {
-        await this.scheduleAdvance(tx, dispatch, lockedTrip.departureAt);
+        await this.scheduleAdvance(tx, dispatch);
         return null;
       }
 
       const candidates = await this.findEligibleCandidates(
         tx,
         dispatch,
-        lockedTrip.record,
+        lockedTrip,
       );
 
       logger.info("trip_dispatch.ranked", {
@@ -326,14 +315,14 @@ export class TripDispatchService {
         const created = await this.createAttempt(
           tx,
           dispatch,
-          lockedTrip.record,
+          lockedTrip,
           candidate,
           0,
         );
         if (created) return created;
       }
 
-      await this.scheduleAdvance(tx, dispatch, lockedTrip.departureAt);
+      await this.scheduleAdvance(tx, dispatch);
       return null;
     });
 
@@ -349,27 +338,27 @@ export class TripDispatchService {
       const lockedTrip = dispatch ? await this.lockTrip(tx, dispatch.tripId) : null;
       const previous = await this.lockAttempt(tx, previousAttemptId);
       if (!dispatch || !lockedTrip || !previous) return null;
-      if (dispatch.status !== "searching" || lockedTrip.record.driverId) {
+      if (dispatch.status !== "searching" || lockedTrip.driverId) {
         return null;
       }
-      if (this.stopReached(dispatch, lockedTrip.departureAt)) return null;
+      if (this.searchExpired(dispatch)) return null;
       if (previous.retryNumber >= MAX_CALL_RETRIES) return null;
 
       const candidate = await this.lockEligibleDriver(tx, previous.driverId);
       if (!candidate) {
-        await this.scheduleAdvance(tx, dispatch, lockedTrip.departureAt);
+        await this.scheduleAdvance(tx, dispatch);
         return null;
       }
 
       const created = await this.createAttempt(
         tx,
         dispatch,
-        lockedTrip.record,
+        lockedTrip,
         candidate,
         previous.retryNumber + 1,
       );
       if (!created) {
-        await this.scheduleAdvance(tx, dispatch, lockedTrip.departureAt);
+        await this.scheduleAdvance(tx, dispatch);
       }
       return created;
     });
@@ -423,7 +412,7 @@ export class TripDispatchService {
       const attempt = await this.lockAttempt(tx, attemptId);
       if (!dispatch || !lockedTrip || !attempt) return false;
       if (attempt.status !== "awaiting_dtmf") return false;
-      if (dispatch.status !== "searching" || lockedTrip.record.driverId) {
+      if (dispatch.status !== "searching" || lockedTrip.driverId) {
         return false;
       }
 
@@ -436,8 +425,8 @@ export class TripDispatchService {
         .where(
           and(
             eq(trip.driverId, candidate.id),
-            eq(trip.date, lockedTrip.record.date),
-            eq(trip.departureTime, lockedTrip.record.departureTime),
+            eq(trip.date, lockedTrip.date),
+            eq(trip.departureTime, lockedTrip.departureTime),
             notInArray(trip.status, TERMINAL_TRIP_STATUSES),
           ),
         )
@@ -448,7 +437,7 @@ export class TripDispatchService {
       await tx
         .update(trip)
         .set({ driverId: candidate.id, updatedAt: now })
-        .where(eq(trip.id, lockedTrip.record.id));
+        .where(eq(trip.id, lockedTrip.id));
       await tx
         .update(driverDispatchAttempt)
         .set({ status: "accepted", updatedAt: now })
@@ -456,7 +445,7 @@ export class TripDispatchService {
       await this.markDispatchAssigned(tx, dispatch.id, now);
 
       logger.info("trip_dispatch.driver_assigned", {
-        tripId: lockedTrip.record.id,
+        tripId: lockedTrip.id,
         driverId: candidate.id,
         attemptId,
       });
@@ -487,7 +476,7 @@ export class TripDispatchService {
         .set({ status: outcome, updatedAt: now })
         .where(eq(driverDispatchAttempt.id, attempt.id));
 
-      if (this.stopReached(dispatch, lockedTrip.departureAt)) {
+      if (this.searchExpired(dispatch)) {
         return { cancel: true as const, tripId: dispatch.tripId };
       }
 
@@ -506,7 +495,7 @@ export class TripDispatchService {
         return null;
       }
 
-      await this.scheduleAdvance(tx, dispatch, lockedTrip.departureAt);
+      await this.scheduleAdvance(tx, dispatch);
       return null;
     });
 
@@ -514,48 +503,32 @@ export class TripDispatchService {
   }
 
   private async guard(tripId: string): Promise<void> {
-    const action = await db.transaction(async (tx) => {
+    const shouldCancel = await db.transaction(async (tx) => {
       const dispatch = await this.lockDispatchByTrip(tx, tripId);
       const lockedTrip = dispatch ? await this.lockTrip(tx, dispatch.tripId) : null;
-      if (!dispatch || !lockedTrip) return null;
-      if (lockedTrip.record.driverId) return null;
+      if (!dispatch || !lockedTrip) return false;
+      if (lockedTrip.driverId) return false;
       if (dispatch.status === "assigned" || dispatch.status === "cancelled") {
-        return null;
+        return false;
       }
+      if (!dispatch.deadlineAt) return false;
 
-      const stopAt = this.searchStopAt(dispatch, lockedTrip.departureAt);
-      if (stopAt.getTime() > Date.now()) {
+      if (!this.searchExpired(dispatch)) {
         await jobService.enqueueTripDispatch(
           tx,
           { action: "guard", tripId },
-          { startAfter: stopAt },
+          { startAfter: dispatch.deadlineAt },
         );
-        return null;
+        return false;
       }
 
       const live = await this.findActiveAttemptForDispatch(tx, dispatch.id);
-      if (live && live.status === "awaiting_dtmf") {
-        const honourUntil = dispatch.deadlineAt ?? stopAt;
-        if (honourUntil.getTime() > Date.now()) {
-          await jobService.enqueueTripDispatch(
-            tx,
-            { action: "guard", tripId },
-            { startAfter: honourUntil },
-          );
-          return null;
-        }
-      }
+      if (live && live.status === "awaiting_dtmf") return false;
 
-      if (live) {
-        await tx
-          .update(driverDispatchAttempt)
-          .set({ status: "unavailable", updatedAt: new Date() })
-          .where(eq(driverDispatchAttempt.id, live.id));
-      }
-      return { cancel: true as const };
+      return true;
     });
 
-    if (action?.cancel) await this.cancelDriverlessDispatch(tripId);
+    if (shouldCancel) await this.cancelDriverlessDispatch(tripId);
   }
 
   private async cancelDriverlessDispatch(tripId: string): Promise<void> {
@@ -600,37 +573,21 @@ export class TripDispatchService {
     if (cancelled) logger.info("trip_dispatch.cancelled", { tripId });
   }
 
-  private searchStopAt(
-    dispatch: TripDispatchRecord,
-    departureAt: Date,
-  ): Date {
-    if (!dispatch.deadlineAt) return departureAt;
-    return dispatch.deadlineAt.getTime() <= departureAt.getTime()
-      ? dispatch.deadlineAt
-      : departureAt;
-  }
-
-  private stopReached(
-    dispatch: TripDispatchRecord,
-    departureAt: Date,
-  ): boolean {
-    return this.searchStopAt(dispatch, departureAt).getTime() <= Date.now();
+  private searchExpired(dispatch: TripDispatchRecord): boolean {
+    return (
+      dispatch.deadlineAt !== null &&
+      dispatch.deadlineAt.getTime() <= Date.now()
+    );
   }
 
   private async scheduleAdvance(
     tx: DbTransaction,
     dispatch: TripDispatchRecord,
-    departureAt: Date,
   ): Promise<void> {
-    const stopAt = this.searchStopAt(dispatch, departureAt);
-    const startAfter = Math.min(
-      Date.now() + RECHECK_INTERVAL_MS,
-      stopAt.getTime(),
-    );
     await jobService.enqueueTripDispatch(
       tx,
       { action: "advance", tripId: dispatch.tripId },
-      { startAfter: new Date(startAfter) },
+      { startAfter: new Date(Date.now() + RECHECK_INTERVAL_MS) },
     );
   }
 
@@ -931,25 +888,14 @@ export class TripDispatchService {
   private async lockTrip(
     tx: DbTransaction,
     tripId: string,
-  ): Promise<LockedTrip | null> {
+  ): Promise<TripRecord | null> {
     const [row] = await tx
-      .select({
-        record: trip,
-        departureAt: sql<Date>`((${trip.date}::date + ${trip.departureTime}::time)
-          at time zone ${getRouteServiceTimeZone()})`.as("departureAt"),
-      })
+      .select()
       .from(trip)
       .where(eq(trip.id, tripId))
       .for("update")
       .limit(1);
-    if (!row) return null;
-    return {
-      record: row.record,
-      departureAt:
-        row.departureAt instanceof Date
-          ? row.departureAt
-          : new Date(row.departureAt),
-    };
+    return row ?? null;
   }
 
   private async lockDispatchByTrip(
