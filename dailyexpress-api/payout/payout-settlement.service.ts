@@ -2,7 +2,7 @@ import { eq } from "drizzle-orm";
 import { db } from "../db/connection";
 import { payout as payoutTable } from "../db/index";
 import { koraClient } from "../payment/kora.client";
-import type { KoraPayoutHistoryItem } from "../payment/payment.types";
+import { logger } from "../utils/logger";
 import type { PayoutRecord } from "../db/index";
 
 export type PayoutVerificationOutcome =
@@ -17,32 +17,30 @@ export class PayoutSettlementService {
   async verifyWithProvider(
     payout: PayoutRecord,
   ): Promise<PayoutVerificationOutcome> {
-    try {
-      const verifiedPayout = await this.kora.findPayoutByReference(
-        payout.reference,
-      ) as KoraPayoutHistoryItem | null;
+    const lookup = await this.kora.findPayoutByReference(payout.reference);
 
-      if (!verifiedPayout) {
-        // Reference not found at the provider: the transfer was never
-        // created, so it is safe to treat this as failed.
+    switch (lookup.kind) {
+      case "notFound":
         return "failed";
-      }
-
-      const providerStatus = verifiedPayout.status.toLowerCase();
-      if (providerStatus === "success") {
-        await this.finalizePayout(payout);
-        return "settled";
-      }
-
-      if (providerStatus === "failed") {
-        return "failed";
-      }
-
-      return "processing";
-    } catch (error) {
-      // Lookup API itself failed: we cannot determine the transfer's state,
-      // so leave the payout pending and let the provider webhook resolve it.
-      return "unknown";
+      case "error":
+        logger.warn("payout.verify_lookup_failed", {
+          reference: payout.reference,
+          error:
+            lookup.error instanceof Error
+              ? lookup.error.message
+              : String(lookup.error),
+        });
+        return "unknown";
+      case "found":
+        switch (lookup.payout.status.toLowerCase()) {
+          case "success":
+            await this.finalizePayout(payout);
+            return "settled";
+          case "failed":
+            return "failed";
+          default:
+            return "processing";
+        }
     }
   }
 

@@ -23,7 +23,7 @@ export class PaymentInitService {
     authenticatedEmail: string,
     input: InitializePaymentInput,
   ) {
-    const existing = await this.repo.findPaymentByBookingId(input.bookingId);
+    const existing = await this.repo.findPaymentByBookingId(input.bookingId, userId);
     if (existing) {
       logger.info("payment.initialize_existing_returned", {
         bookingId: input.bookingId,
@@ -51,7 +51,7 @@ export class PaymentInitService {
     });
 
     if (!created) {
-      const winner = await this.repo.findPaymentByBookingId(input.bookingId);
+      const winner = await this.repo.findPaymentByBookingId(input.bookingId, userId);
       if (!winner) {
         throw new Error(
           "Payment conflict occurred but existing record not found",

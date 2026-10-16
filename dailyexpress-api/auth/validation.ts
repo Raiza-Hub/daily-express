@@ -2,8 +2,8 @@ import z from "zod";
 
 export const MINIMUM_ACCOUNT_AGE = 14;
 
-export const ONBOARDING_PHONE_REGEX = /^\+234[789]\d{9}$/;
-export const ONBOARDING_GENDERS = ["male", "female"] as const;
+const ONBOARDING_PHONE_REGEX = /^\+234[789]\d{9}$/;
+const ONBOARDING_GENDERS = ["male", "female"] as const;
 
 export function isUnder14(dateOfBirth: Date): boolean {
   const today = new Date();

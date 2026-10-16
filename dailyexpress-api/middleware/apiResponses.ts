@@ -38,7 +38,7 @@ const DEFAULT_MESSAGES: Record<number, string> = {
 
 const PROVIDER_ERROR_PREFIX_PATTERN = /^[A-Z][A-Za-z0-9 _-]* API error:\s*/i;
 
-export function getRequestIdFromResponse(res: Response): string | undefined {
+function getRequestIdFromResponse(res: Response): string | undefined {
   const value = res.getHeader("x-request-id");
   return typeof value === "string" ? value : undefined;
 }

@@ -36,6 +36,10 @@ const redis =
       })
     : null;
 
+export function getRateLimitRedis(): Redis | null {
+  return redis;
+}
+
 export function createTokenBucketLimiter(
   opts: TokenBucketConfig,
 ): RequestHandler {

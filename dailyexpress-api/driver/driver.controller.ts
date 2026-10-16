@@ -219,8 +219,21 @@ export const confirmProfileUpload: RequestHandler = asyncHandler(
     }
 
     const { key } = req.body;
-    if (!key) {
+    if (typeof key !== "string" || !key) {
       return sendErrorResponse(res, 400, "key is required.", { code: "MISSING_KEY" });
+    }
+
+    const driverRecord = await driverRepository.findDriverByUserId(gatewayUser.userId);
+    if (!driverRecord) {
+      return sendErrorResponse(res, 404, "Driver not found.", {
+        code: "DRIVER_NOT_FOUND",
+      });
+    }
+
+    if (!key.startsWith(`profiles/${driverRecord.id}/`)) {
+      return sendErrorResponse(res, 403, "That upload does not belong to you.", {
+        code: "KEY_NOT_OWNED",
+      });
     }
 
     const { publicUrl } = await r2ProfileService.confirmUpload(key);

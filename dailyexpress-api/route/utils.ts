@@ -4,7 +4,7 @@ import { eq } from "drizzle-orm";
 import { db } from "../db/connection";
 import { driver } from "../db/index";
 
-export async function resolveDriverRecord(user: JWTPayload) {
+async function resolveDriverRecord(user: JWTPayload) {
   const driverRecord = await db.query.driver.findFirst({
     where: eq(driver.userId, user.userId),
   });

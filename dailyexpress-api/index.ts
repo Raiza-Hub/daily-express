@@ -3,8 +3,8 @@ import express, { type Express } from "express";
 import helmet from "helmet";
 import cors from "cors";
 import cookieParser from "cookie-parser";
-import { Redis } from "@upstash/redis";
-import { loadConfig, getConfig } from "./config/index";
+import { loadConfig } from "./config/index";
+import { getRateLimitRedis } from "./middleware/tokenBucket";
 import { errorHandler, notFoundHandler } from "./middleware/errorHandler";
 import authRoutes from "./auth/auth.routes";
 import dispatchRoutes from "./dispatch/dispatch.routes";
@@ -38,6 +38,12 @@ async function createApp(): Promise<Express> {
   ) {
     throw new Error(
       "PROXY_IP_DEBUG_TOKEN is required when ENABLE_PROXY_IP_DEBUG is enabled in production.",
+    );
+  }
+
+  if (config.NODE_ENV === "production" && !config.APPSMITH_SIGNATURE_SECRET) {
+    throw new Error(
+      "APPSMITH_SIGNATURE_SECRET is required in production so admin endpoints cannot be served without signature verification.",
     );
   }
 
@@ -93,14 +99,12 @@ async function createApp(): Promise<Express> {
       checks.database = { status: "error", message: "connection failed" };
     }
 
-    const cfg = getConfig();
-    if (cfg.RATE_LIMIT_UPSTASH_REDIS_REST_URL) {
+    const redis = getRateLimitRedis();
+    if (!redis) {
+      checks.redis = { status: "not_configured" };
+    } else {
       try {
         const start = Date.now();
-        const redis = new Redis({
-          url: cfg.RATE_LIMIT_UPSTASH_REDIS_REST_URL,
-          token: cfg.RATE_LIMIT_UPSTASH_REDIS_REST_TOKEN!,
-        });
         await redis.ping();
         checks.redis = { status: "ok", latencyMs: Date.now() - start };
       } catch {

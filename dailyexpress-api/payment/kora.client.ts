@@ -45,6 +45,11 @@ export function isKoraRequestError(
   );
 }
 
+export type KoraPayoutLookup =
+  | { kind: "found"; payout: KoraPayoutHistoryItem }
+  | { kind: "notFound" }
+  | { kind: "error"; error: unknown };
+
 function getKoraErrorMessage(
   message: string | undefined,
   fallback: string,
@@ -279,14 +284,17 @@ export class KoraClient {
     );
   }
 
-  async findPayoutByReference(reference: string) {
+  async findPayoutByReference(reference: string): Promise<KoraPayoutLookup> {
     try {
       const response = await this.request<KoraPayoutHistoryItem>(
         `/merchant/api/v1/transactions/${encodeURIComponent(reference)}`,
       );
-      return response.data;
-    } catch {
-      return null;
+      return { kind: "found", payout: response.data };
+    } catch (error) {
+      if (isKoraRequestError(error) && error.koraHttpStatus === 404) {
+        return { kind: "notFound" };
+      }
+      return { kind: "error", error };
     }
   }
 

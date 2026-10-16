@@ -12,9 +12,9 @@ export class PaymentRepository {
     });
   }
 
-  findPaymentByBookingId(bookingId: string) {
+  findPaymentByBookingId(bookingId: string, userId: string) {
     return db.query.payment.findFirst({
-      where: eq(payment.bookingId, bookingId),
+      where: and(eq(payment.bookingId, bookingId), eq(payment.userId, userId)),
     });
   }
 
@@ -118,6 +118,17 @@ export class PaymentRepository {
     return tx.query.refund.findFirst({
       where: and(eq(refund.paymentId, paymentId), eq(refund.status, "pending")),
     });
+  }
+
+  async countFailedRefundsByPaymentId(
+    tx: PaymentTransaction,
+    paymentId: string,
+  ) {
+    const [row] = await tx
+      .select({ refundCount: count() })
+      .from(refund)
+      .where(and(eq(refund.paymentId, paymentId), eq(refund.status, "failed")));
+    return Number(row?.refundCount ?? 0);
   }
 
   pointPaymentAtRefund(

@@ -33,7 +33,7 @@ export function runWithTimingContext<T>(
   return timingContext.run(context, callback);
 }
 
-export function getTimingContext(): TimingContext {
+function getTimingContext(): TimingContext {
   return timingContext.getStore() || {};
 }
 

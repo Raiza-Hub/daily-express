@@ -11,6 +11,7 @@ import {
   lte,
   or,
   sql,
+  type SQL,
 } from "drizzle-orm";
 import { db } from "../db/connection";
 import { booking, driver, origin, destination, payment, refund, trip } from "../db/index";
@@ -150,14 +151,18 @@ export class BookingService {
         )
       : undefined;
 
-    const statusFilter =
-      status === undefined || status === "confirmed"
-        ? status === "confirmed"
-          ? isNull(refund.status)
-          : undefined
-        : status in REFUND_STATUS_BY_FILTER
-          ? eq(refund.status, REFUND_STATUS_BY_FILTER[status])
-          : undefined;
+    let statusFilter: SQL<unknown> | undefined;
+
+    if (status === undefined || status === "confirmed") {
+      statusFilter = status === "confirmed" ? isNull(refund.status) : undefined;
+    } else if (status !== undefined && status in REFUND_STATUS_BY_FILTER) {
+      statusFilter = eq(
+        refund.status,
+        REFUND_STATUS_BY_FILTER[status as keyof typeof REFUND_STATUS_BY_FILTER],
+      );
+    } else {
+      statusFilter = undefined;
+    }
 
     const rows = await db
       .select({

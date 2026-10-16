@@ -9,12 +9,3 @@ export function parseDateKey(value: string): string {
   }
   return trimmed;
 }
-
-export function addDaysToDateKey(dateKey: string, days: number): string {
-  const [year, month, day] = dateKey.split("-").map(Number);
-  const date = new Date(Date.UTC(year, month - 1, day + days));
-  const nextYear = date.getUTCFullYear();
-  const nextMonth = `${date.getUTCMonth() + 1}`.padStart(2, "0");
-  const nextDay = `${date.getUTCDate()}`.padStart(2, "0");
-  return `${nextYear}-${nextMonth}-${nextDay}`;
-}

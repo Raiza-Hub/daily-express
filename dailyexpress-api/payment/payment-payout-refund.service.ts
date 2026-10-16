@@ -137,12 +137,21 @@ export class PaymentPayoutRefundService {
     const { refund: refundRecord, created } = refundRow;
 
     if (!created) {
-      const resolved = await this.reconcileExistingRefund(refundRecord);
-      if (resolved) return;
-      logger.info("payout_refund.awaiting_webhook", {
-        reference: refundRecord.reference,
-      });
-      return;
+      const outcome = await this.reconcileExistingRefund(refundRecord);
+      switch (outcome) {
+        case "resolved":
+          return;
+        case "in_flight":
+          logger.info("payout_refund.awaiting_webhook", {
+            reference: refundRecord.reference,
+          });
+          return;
+        case "inconclusive":
+          logger.warn("payout_refund.reconcile_inconclusive", {
+            reference: refundRecord.reference,
+          });
+          throw new Error("Refund state is inconclusive at the provider");
+      }
     }
 
     let accountNumber: string;
@@ -176,9 +185,11 @@ export class PaymentPayoutRefundService {
         narration: reason,
       });
     } catch (error) {
-      const found = await this.kora.findPayoutByReference(refundRecord.reference);
+      const lookup = await this.kora.findPayoutByReference(refundRecord.reference);
+      const providerStatus =
+        lookup.kind === "found" ? lookup.payout.status.toLowerCase() : null;
 
-      switch (found?.status) {
+      switch (providerStatus) {
         case "success":
           await this.finalizeRefund(refundRecord.id, "successful");
           return;
@@ -189,7 +200,7 @@ export class PaymentPayoutRefundService {
         case "processing":
           logger.info("payout_refund.provider_owns_transfer", {
             reference: refundRecord.reference,
-            status: found.status,
+            status: providerStatus,
           });
           return;
         default:
@@ -197,7 +208,7 @@ export class PaymentPayoutRefundService {
             reference: refundRecord.reference,
             error: error instanceof Error ? error.message : String(error),
           });
-          return;
+          throw error;
       }
     }
 
@@ -214,17 +225,26 @@ export class PaymentPayoutRefundService {
       }
     });
   }
-  private async reconcileExistingRefund(refundRecord: RefundRecord) {
-    const found = await this.kora.findPayoutByReference(refundRecord.reference);
-    if (found?.status === "success") {
-      await this.finalizeRefund(refundRecord.id, "successful");
-      return true;
+  private async reconcileExistingRefund(
+    refundRecord: RefundRecord,
+  ): Promise<"resolved" | "in_flight" | "inconclusive"> {
+    const lookup = await this.kora.findPayoutByReference(refundRecord.reference);
+
+    if (lookup.kind !== "found") return "inconclusive";
+
+    switch (lookup.payout.status.toLowerCase()) {
+      case "success":
+        await this.finalizeRefund(refundRecord.id, "successful");
+        return "resolved";
+      case "failed":
+        await this.finalizeRefund(refundRecord.id, "failed");
+        return "resolved";
+      case "pending":
+      case "processing":
+        return "in_flight";
+      default:
+        return "inconclusive";
     }
-    if (found?.status === "failed") {
-      await this.finalizeRefund(refundRecord.id, "failed");
-      return true;
-    }
-    return false;
   }
   async finalizeRefund(
     refundId: string,

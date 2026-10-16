@@ -80,7 +80,7 @@ function likePattern(value: string): string {
 
 function localityMatches(column: SQLWrapper, locality: string): SQL {
   const pattern = likePattern(locality.trim());
-  return sql`(btrim(${column}) ILIKE ${pattern} ESCAPE '\\' OR ('%' || btrim(${column}) || '%') ILIKE ${pattern} ESCAPE '\\')`;
+  return sql`(btrim(${column}) ILIKE ${pattern} ESCAPE '\\')`;
 }
 
 const SEARCH_WINDOW_MS = 30 * 60 * 1_000;

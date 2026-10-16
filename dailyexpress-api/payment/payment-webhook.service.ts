@@ -44,9 +44,7 @@ export class PaymentWebhookService {
         data: webhook.data,
         _retryCount: 0,
       });
-    }
-
-    if (!signatureValid) {
+    } else {
       logger.warn("payment.webhook_invalid_signature_ignored", {
         event: webhook.event,
         paymentReference: paymentRef,
