@@ -14,7 +14,16 @@ import {
   type SQL,
 } from "drizzle-orm";
 import { db } from "../db/connection";
-import { booking, driver, origin, destination, payment, refund, trip } from "../db/index";
+import {
+  booking,
+  driver,
+  origin,
+  destination,
+  payment,
+  refund,
+  trip,
+  TRIP_CAPACITY,
+} from "../db/index";
 import { logger } from "../utils/logger";
 import { parseDateKey } from "../utils/route";
 import { RouteRepository } from "./route.repository";
@@ -78,11 +87,14 @@ export class BookingService {
     const luggageCount = input.passengers.filter(
       (traveler) => traveler.carriesLuggage,
     ).length;
+    // A booking is the whole vehicle: the fare and service fee are charged for
+    // every seat on it no matter how many travellers are named on it. Only the
+    // luggage charge follows the actual passenger list.
     const passengerCount = input.passengers.length;
     const totalAmount =
-      originRecord.price * passengerCount +
+      TRIP_CAPACITY * originRecord.price +
       luggageCount * (originRecord.luggageFee ?? 0);
-    const totalFee = originRecord.fee * passengerCount;
+    const totalFee = TRIP_CAPACITY * originRecord.fee;
 
     const newBooking = await db.transaction(async (tx) => {
       const created = await this.repo.insertBooking(tx, {

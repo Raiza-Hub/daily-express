@@ -137,10 +137,7 @@ export class TripDispatchService {
     if (!lockedTrip || lockedTrip.status !== "awaiting_driver") return;
 
     const now = new Date();
-    const shouldOpen =
-      lockedTrip.bookedSeats >= lockedTrip.capacity &&
-      !lockedTrip.driverId &&
-      dispatch.status === "pending";
+    const shouldOpen = !lockedTrip.driverId && dispatch.status === "pending";
     const deadlineAt = shouldOpen
       ? new Date(now.getTime() + SEARCH_WINDOW_MS)
       : dispatch.deadlineAt;

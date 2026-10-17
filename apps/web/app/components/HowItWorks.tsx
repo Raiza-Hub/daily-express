@@ -148,7 +148,7 @@ export const passengerFeatures: Step[] = [
     {
         title: "Book & Pay",
         description:
-            "Add your four passengers and pay. The total is fixed before you confirm, with nothing added later.",
+            "Add the passengers travelling and pay. You book the whole vehicle, so the total is fixed before you confirm, with nothing added later.",
         colorTheme: "purple",
     },
     {

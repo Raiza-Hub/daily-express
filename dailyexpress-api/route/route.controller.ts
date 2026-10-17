@@ -1,7 +1,7 @@
 import { asyncHandler } from "@shared/middleware";
 import { createSuccessResponse } from "@shared/utils";
 import type { Request, RequestHandler, Response } from "express";
-import { TRIP_CAPACITY } from "../db/index";
+import { MIN_PASSENGERS, TRIP_CAPACITY } from "../db/index";
 import { sendErrorResponse } from "../middleware/apiResponses";
 import { getAuthenticatedUser } from "../middleware/auth";
 import { timeAsync } from "../utils/timing";
@@ -185,11 +185,19 @@ export const createCheckoutBooking: RequestHandler = asyncHandler(
         code: "MISSING_SELECTED_TIME",
       });
     }
-    if (!Array.isArray(passengers) || passengers.length !== TRIP_CAPACITY) {
+    if (!Array.isArray(passengers) || passengers.length < MIN_PASSENGERS) {
       return sendErrorResponse(
         res,
         400,
-        `A booking must include all ${TRIP_CAPACITY} passengers.`,
+        `Add at least ${MIN_PASSENGERS} passenger to continue.`,
+        { code: "INVALID_PASSENGERS" },
+      );
+    }
+    if (passengers.length > TRIP_CAPACITY) {
+      return sendErrorResponse(
+        res,
+        400,
+        `A booking can include at most ${TRIP_CAPACITY} passengers.`,
         { code: "INVALID_PASSENGERS" },
       );
     }

@@ -13,7 +13,7 @@ export async function Navbar() {
   const hasSession = session !== null;
 
   return (
-    <nav className="sticky top-0 z-50 border-b border-neutral-100 bg-background">
+    <nav className="sticky top-0 z-50 bg-background/80 backdrop-blur-md">
       <div className="mx-auto flex h-16 max-w-7xl items-center px-4 sm:px-6">
         <Link href="/">
           <Image

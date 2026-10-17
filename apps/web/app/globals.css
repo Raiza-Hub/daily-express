@@ -1,1 +1,6 @@
 @import "@repo/ui/globals.css";
+
+::selection {
+    background-color: color-mix(in oklab, #f108ac 22%, transparent);
+    color: oklch(0.145 0 0);
+}
