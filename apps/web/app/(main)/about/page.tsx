@@ -19,9 +19,10 @@ const values = [
         body: (
             <>
                 We believe a trip should go when you said it would. A booking is
-                the whole vehicle: all four seats, or it does not run. Once it is
-                paid for we go and look for a driver, and if none accepts in time
-                the fare comes back automatically, without you having to ask.
+                the whole vehicle: all four seats are yours, whether you fill
+                them or not. Once it is paid for we go and look for a driver, and
+                if none accepts in time the fare comes back automatically,
+                without you having to ask.
             </>
         ),
     },
@@ -30,10 +31,11 @@ const values = [
         title: "Clarity",
         body: (
             <>
-                We believe the price you see is the price you pay. Four fares,
-                four service fees, and a luggage charge only when someone is
-                travelling with luggage. The total is on the screen before you
-                confirm, and nothing is added afterwards.
+                We believe the price you see is the price you pay. A booking is
+                the whole vehicle, so you pay for all four seats and four service
+                fees, with a luggage charge only when someone is travelling with
+                luggage. The total is on the screen before you confirm, and
+                nothing is added afterwards.
             </>
         ),
     },
@@ -65,7 +67,7 @@ const values = [
 
 const steps = [
     "Choose where you are going, the date, and one of the published departure times.",
-    "Name all four passengers. Each one needs a full name, an email address and a phone number.",
+    "Name the passengers travelling — at least one, up to four. Each one needs a full name, an email address and a phone number.",
     "Pay. The total was already on the screen.",
     "We look for a verified driver as soon as your booking is paid for.",
     "The trip leaves, or your fare comes back.",
@@ -119,7 +121,7 @@ const AboutPage = () => (
                 <div className="mt-12 grid gap-10 md:grid-cols-2">
                     <div>
                         <h3 className="text-xl font-semibold tracking-tight text-neutral-900">
-                            Groups of four travelling together
+                            Travelling together, or on your own
                         </h3>
                         <p className={`${prose} mt-4`}>
                             Book the whole vehicle for a departure on one of our

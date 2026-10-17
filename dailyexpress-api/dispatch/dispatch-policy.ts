@@ -127,7 +127,7 @@ export function formatOfferAmount(amount: number, currency: string): string {
   return `${grouped} ${CURRENCY_NAMES[currency.toUpperCase()] ?? currency}`;
 }
 
-export const OFFER_VOICE = "en-US-Wavenet-D";
+export const OFFER_VOICE = "en-GB-Wavenet-D";
 
 export function buildOfferPromptLines(input: {
   originTitle: string;

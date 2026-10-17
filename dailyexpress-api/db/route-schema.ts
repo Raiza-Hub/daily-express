@@ -132,6 +132,12 @@ export const booking = pgTable(
 
 export const TRIP_CAPACITY = 4;
 
+// A booking is the whole vehicle and is charged in full for TRIP_CAPACITY
+// seats, but the passenger list on it may hold anywhere from one traveller
+// up to that capacity. Keep this in sync with MIN_PASSENGERS / MAX_PASSENGERS
+// in apps/web/app/components/trip/passenger-drawer.tsx.
+export const MIN_PASSENGERS = 1;
+
 export const bookingRelations = relations(booking, ({ one }) => ({
   origin: one(origin, {
     fields: [booking.originId],

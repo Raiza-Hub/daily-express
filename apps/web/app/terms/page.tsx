@@ -106,7 +106,7 @@ const clauses: LegalClause[] = [
                 kind: "p",
                 text: (
                     <>
-                        To book, you choose a departure point, a destination, a date, and one of the published departure times. You then tell us who is travelling: up to four passengers, each with a full name, email address and phone number.
+                        To book, you choose a departure point, a destination, a date, and one of the published departure times. You then tell us who is travelling: at least one and up to four passengers, each with a full name, email address and phone number.
                     </>
                 ),
             },
@@ -114,7 +114,7 @@ const clauses: LegalClause[] = [
                 kind: "p",
                 text: (
                     <>
-                        A booking is confirmed once we have received your payment. We send a confirmation email to you, and one to each passenger, with the trip details. Each trip seats up to four passengers; once a departure is full we will not let another booking through.
+                        A booking is confirmed once we have received your payment. We send a confirmation email to you, and one to each passenger, with the trip details. A booking is the whole vehicle and seats up to four passengers. You pay for all four seats whether or not you fill them. A very busy departure may carry more than one booking, each in its own vehicle.
                     </>
                 ),
             },
@@ -122,7 +122,7 @@ const clauses: LegalClause[] = [
                 kind: "p",
                 text: (
                     <>
-                        A departure only actually runs once all four seats on it are booked and a verified driver has accepted it. We start looking for a driver as soon as a departure fills up. If a departure never fills, or no driver accepts it before the departure time, the trip does not run: we cancel it and refund the fare to everyone who paid, as set out under Cancellations and refunds below.
+                        We start looking for a driver as soon as your booking is paid for. A departure runs once a verified driver has accepted it. If no driver accepts it before the departure time, the trip does not run: we cancel it and refund the fare to everyone who paid, as set out under Cancellations and refunds below.
                     </>
                 ),
             },
@@ -151,9 +151,9 @@ const clauses: LegalClause[] = [
             {
                 kind: "list",
                 items: [
-                    <>the fare for each passenger;</>,
+                    <>the fare for all four seats on the vehicle;</>,
                     <>
-                        a service fee for each passenger; and
+                        a service fee for all four seats; and
                     </>,
                     <>
                         a luggage charge for each passenger who is travelling with luggage.
@@ -216,7 +216,7 @@ const clauses: LegalClause[] = [
                 kind: "p",
                 text: (
                     <>
-                        A trip is also cancelled when we cannot find a driver for it. That happens when a departure does not fill up, or when no verified driver accepts it before the departure time. You are never charged for a trip that did not run: we refund the fare to everyone who paid.
+                        A trip is also cancelled when we cannot find a driver for it. That happens when no verified driver accepts it before the departure time. You are never charged for a trip that did not run: we refund the fare to everyone who paid.
                     </>
                 ),
             },
@@ -276,7 +276,7 @@ const clauses: LegalClause[] = [
                 kind: "p",
                 text: (
                     <>
-                        Drivers are not employees of Daily Express. Driving with us is a separate arrangement between you and Daily Express LTD, and it does not create an employment relationship, a partnership, or an agency.
+                        Driving with us is a separate arrangement between you and Daily Express LTD. You use your own vehicle, you pick which trips to take and when, and there is no fixed roster, no set hours and no minimum number of trips.
                     </>
                 ),
             },

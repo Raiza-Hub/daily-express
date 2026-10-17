@@ -261,8 +261,8 @@ const clauses: LegalClause[] = [
                         When a departure needs a driver, our system scores the eligible drivers nearby and works down the list. The score blends how recently they were last called, how often they accepted when called, and how many of their trips they completed or cancelled. A driver with no track record starts on a neutral score rather than a penalty. Declining a call does not remove you or lower your score; not answering because your phone was off does not count against you either.
                     </>,
                     <>
-                        <span className="font-medium text-neutral-900">Whether a seat is still available.</span>{" "}
-                        A departure closes automatically once it has four passengers booked.
+                        <span className="font-medium text-neutral-900">Whether a departure is still open to book.</span>{" "}
+                        A departure stops accepting bookings at its scheduled departure time.
                     </>,
                     <>
                         <span className="font-medium text-neutral-900">Whether a slot has departed.</span>{" "}
